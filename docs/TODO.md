@@ -2,22 +2,17 @@
 
 ## Сделано
 - [x] Репо + docs (CONCEPT, PROMPTS)
-- [x] Legacy-бот в `legacy/` (архив)
-- [x] Каркас FastAPI `backend/app/main.py`
-
-## Документация / дизайн-брифы
-- [ ] Бриф Home / Майнер / Задания / Награды / Профиль / Shell → `docs/PROMPTS.md`
+- [x] Legacy-архив (частично)
+- [x] Каркас FastAPI
+- [x] Модели SQLAlchemy (users, balance, miner, tasks, economy, promo, withdraw)
+- [x] docs/SCHEMA.md
 
 ## Backend
-- [ ] Модели SQLAlchemy + Alembic
+- [ ] Alembic миграции
 - [ ] Сиды `economy_settings`
 - [ ] Auth через Telegram WebApp `initData`
-- [ ] Users / balance / balance_history
-- [ ] Tasks (заказчик + исполнитель)
-- [ ] Miner start/claim
-- [ ] UpgradeService (type wheel → success wheel, 100% burn)
-- [ ] Prize wheel, daily, promo
-- [ ] Manual withdraw + admin
+- [ ] Сервисы: balance, miner, upgrade, tasks, withdraw
+- [ ] API routes
 - [ ] Симулятор экономики 30 дней
 
 ## Frontend
