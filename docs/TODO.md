@@ -1,27 +1,31 @@
 # TODO
 
+## Сделано
+- [x] Репо + docs (CONCEPT, PROMPTS)
+- [x] Legacy-бот в `legacy/` (архив)
+- [x] Каркас FastAPI `backend/app/main.py`
+
 ## Документация / дизайн-брифы
+- [ ] Бриф Home / Майнер / Задания / Награды / Профиль / Shell → `docs/PROMPTS.md`
 
-- [ ] Бриф Home (по `PROMPTS.md` §0.1) — при необходимости усилить §1  
-- [ ] Бриф Майнер + усиление — усилить §2  
-- [ ] Бриф Задания (исполнитель + заказчик) → новый § в PROMPTS.md  
-- [ ] Бриф Колесо наград → новый §  
-- [ ] Бриф Профиль (daily / промо / вывод) → новый §  
-- [ ] Бриф Shell (tab / toast / empty / loading) → новый §  
+## Backend
+- [ ] Модели SQLAlchemy + Alembic
+- [ ] Сиды `economy_settings`
+- [ ] Auth через Telegram WebApp `initData`
+- [ ] Users / balance / balance_history
+- [ ] Tasks (заказчик + исполнитель)
+- [ ] Miner start/claim
+- [ ] UpgradeService (type wheel → success wheel, 100% burn)
+- [ ] Prize wheel, daily, promo
+- [ ] Manual withdraw + admin
+- [ ] Симулятор экономики 30 дней
 
-## Продукт (порядок)
+## Frontend
+- [ ] Vite + React + Tailwind shell
+- [ ] Экраны по PROMPTS.md
 
-- [ ] Сиды `economy_settings` (веса типов, success, prizes)  
-- [ ] Схема БД + каркас FastAPI  
-- [ ] UpgradeService (type → success, 100% burn)  
-- [ ] Tasks (заказчик / исполнитель)  
-- [ ] Balance + history + manual withdraw  
-- [ ] Daily, promo, levels  
-- [ ] Mini App: shell → Home → Miner → Tasks  
-- [ ] Симулятор экономики 30 дней перед калибровкой прод-весов  
+## Bot
+- [ ] Тонкий /start + WebApp button
 
 ## Не сейчас
-
-- Игры  
-- Дома инвесторов  
-- Второй слот майнера  
+- Игры, дома инвесторов, 2-й слот майнера
