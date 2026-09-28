@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { useMe, useDailyClaim } from "@/api/hooks";
 import { Link } from "react-router-dom";
+import { useMe, useDailyClaim } from "@/api/hooks";
 
 export function Home() {
   const { data: me, isLoading, error } = useMe();
@@ -51,7 +51,12 @@ export function Home() {
       )}
 
       <section className="grid grid-cols-2 gap-3">
-        <button type="button" className="btn-primary" disabled={daily.isPending} onClick={() => daily.mutate()}>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={daily.isPending}
+          onClick={() => daily.mutate()}
+        >
           Daily
         </button>
         <Link to="/miner" className="btn-ghost text-center no-underline">
