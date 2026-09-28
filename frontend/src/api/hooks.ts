@@ -150,3 +150,52 @@ export function useWheelSpin() {
     },
   });
 }
+
+export type TaskDetail = {
+  id: number;
+  title: string;
+  description: string;
+  task_type: string;
+  target_url: string | null;
+  reward: string;
+  total_slots: number;
+  filled_slots: number;
+  status: string;
+  min_level: number;
+  xp_reward: number;
+  creator_id: number;
+  expires_at?: string | null;
+};
+
+export type SubmissionOut = {
+  id: number;
+  task_id: number;
+  user_id: number;
+  status: string;
+  proof_text: string | null;
+  proof_url: string | null;
+  review_note: string | null;
+};
+
+export function useTask(taskId: number | null) {
+  return useQuery({
+    queryKey: ["task", taskId],
+    queryFn: () => api<TaskDetail>(`/api/v1/tasks/${taskId}`),
+    enabled: taskId != null && taskId > 0,
+  });
+}
+
+export function useTaskSubmit(taskId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { proof_text?: string | null; proof_url?: string | null }) =>
+      api<SubmissionOut>(`/api/v1/tasks/${taskId}/submit`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["task", taskId] });
+    },
+  });
+}
