@@ -11,6 +11,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.miner import Miner
 from app.models.user import User
+from app.services.roles import is_platform_owner
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -39,6 +40,8 @@ class MeOut(BaseModel):
     block_tokens: int
     success_boost_bp: int
     is_ambassador: bool
+    is_admin: bool
+    is_owner: bool
     miner: MinerOut | None
 
     model_config = {"from_attributes": True}
@@ -62,5 +65,7 @@ async def me(
         block_tokens=user.block_tokens,
         success_boost_bp=user.success_boost_bp,
         is_ambassador=user.is_ambassador,
+        is_admin=bool(getattr(user, "is_admin", False)),
+        is_owner=is_platform_owner(user),
         miner=MinerOut.model_validate(miner) if miner else None,
     )
