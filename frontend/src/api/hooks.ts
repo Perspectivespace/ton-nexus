@@ -199,3 +199,30 @@ export function useTaskSubmit(taskId: number) {
     },
   });
 }
+
+export type EconomySetting = {
+  key: string;
+  value: unknown;
+  description: string | null;
+  group: string | null;
+  label: string | null;
+};
+
+export function useEconomySettings() {
+  return useQuery({
+    queryKey: ["economy"],
+    queryFn: () => api<EconomySetting[]>("/api/v1/economy/settings"),
+  });
+}
+
+export function useEconomyUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, value }: { key: string; value: unknown }) =>
+      api<EconomySetting>(`/api/v1/economy/settings/${key}`, {
+        method: "PUT",
+        body: JSON.stringify({ value }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["economy"] }),
+  });
+}
