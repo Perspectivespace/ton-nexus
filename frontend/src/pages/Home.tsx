@@ -39,8 +39,8 @@ export function Home() {
             </div>
             <div className="text-right">
               <p className="text-xs text-[var(--text-dim)]">Уровень</p>
-              <p className="mono text-xl">{me.level}</p>
-              <p className="text-xs text-[var(--text-dim)]">{me.xp} XP</p>
+              <p className={"mono text-xl"}>{me.level}</p>
+              <p className={"text-xs text-[var(--text-dim)]"}>{me.xp} XP</p>
             </div>
           </div>
           <div className="flex gap-3 text-xs text-[var(--text-dim)]">
