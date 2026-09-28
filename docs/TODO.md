@@ -1,30 +1,26 @@
 # TODO
 
 ## Сделано
-- [x] Репо + docs
-- [x] Модели SQLAlchemy
-- [x] Alembic initial migration (`001_initial_schema`)
-- [x] Сиды economy_settings (`services/economy_seed.py`)
-- [x] Balance service (credit/debit + ledger)
-- [x] Telegram WebApp initData validation
-- [x] User upsert + auto miner slot
-- [x] API `GET /api/v1/me`
+- [x] Модели + Alembic 001
+- [x] economy seeds
+- [x] balance service
+- [x] Telegram initData auth + GET /me
+- [x] MinerService start / claim / sync
+- [x] UpgradeService double-wheel + 100% burn
+- [x] API: GET/POST /api/v1/miner, /start, /claim, /upgrade
 
 ## Backend next
-- [ ] Скрипт seed CLI / startup
-- [ ] MinerService start/claim
-- [ ] UpgradeService (double wheel, 100% burn)
 - [ ] Tasks API
 - [ ] Withdraw API (manual)
-- [ ] Daily + promo
-- [ ] Docker-compose (Postgres)
+- [ ] Daily + promo + prize wheel
+- [ ] Docker-compose Postgres
+- [ ] Economy 30-day simulator
 
 ## Frontend
-- [ ] Vite + React + Tailwind shell
-- [ ] Экраны по PROMPTS.md
+- [ ] Vite + React shell + screens
 
 ## Bot
-- [ ] Тонкий /start + WebApp button
+- [ ] Thin /start + WebApp
 
 ## Не сейчас
 - Игры, дома, 2-й слот
