@@ -1,4 +1,4 @@
-"""Task marketplace service."""
+"""Task marketplace — roles: owner > admin > ambassador."""
 
 from __future__ import annotations
 
@@ -9,11 +9,16 @@ from decimal import Decimal
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.telegram_auth import is_owner
 from app.models.task import Task, TaskSubmission
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services.economy import get_setting
+from app.services.roles import (
+    can_approve_ambassador_task,
+    can_create_task,
+    can_manage_any_task,
+    can_publish_directly,
+)
 
 
 class TaskError(Exception):
@@ -63,6 +68,16 @@ def _view(t: Task) -> TaskView:
     )
 
 
+def _can_edit_task(actor: User, task: Task) -> bool:
+    if can_manage_any_task(actor):
+        return True
+    return task.creator_id == actor.id and task.status in (
+        "draft",
+        "pending_approval",
+        "paused",
+    )
+
+
 async def create_task(
     session: AsyncSession,
     *,
@@ -77,14 +92,20 @@ async def create_task(
     xp_reward: int = 10,
     publish: bool = False,
 ) -> TaskView:
-    if not creator.is_ambassador and not is_owner(creator.telegram_id):
-        raise TaskPermissionError("only ambassadors can create tasks")
+    if not can_create_task(creator):
+        raise TaskPermissionError("need ambassador, admin or owner role")
     if reward <= 0:
         raise TaskError("reward must be positive")
     if total_slots < 1 or total_slots > 10_000:
         raise TaskError("invalid slots")
     if not title.strip() or not description.strip():
         raise TaskError("title and description required")
+
+    if can_publish_directly(creator):
+        initial = "draft"
+    else:
+        initial = "pending_approval"
+        publish = False
 
     task = Task(
         creator_id=creator.id,
@@ -95,7 +116,7 @@ async def create_task(
         reward=reward,
         total_slots=total_slots,
         filled_slots=0,
-        status="draft",
+        status=initial,
         budget_locked=Decimal("0"),
         min_level=max(1, min_level),
         xp_reward=max(0, xp_reward),
@@ -103,8 +124,102 @@ async def create_task(
     session.add(task)
     await session.flush()
 
-    if publish:
+    if publish and can_publish_directly(creator):
         return await publish_task(session, task_id=task.id, actor=creator)
+    return _view(task)
+
+
+async def update_task(
+    session: AsyncSession,
+    *,
+    task_id: int,
+    actor: User,
+    title: str | None = None,
+    description: str | None = None,
+    reward: Decimal | None = None,
+    total_slots: int | None = None,
+    task_type: str | None = None,
+    target_url: str | None = None,
+    min_level: int | None = None,
+    xp_reward: int | None = None,
+) -> TaskView:
+    task = await session.get(Task, task_id)
+    if not task:
+        raise TaskError("task not found")
+    if not _can_edit_task(actor, task):
+        raise TaskPermissionError("cannot edit this task")
+    if task.status == "completed":
+        raise TaskStateError("completed task is frozen")
+
+    if task.status == "active" and task.budget_locked and task.budget_locked > 0:
+        if reward is not None and reward != task.reward:
+            raise TaskStateError("cannot change reward after publish")
+        if total_slots is not None and total_slots < task.filled_slots:
+            raise TaskError("total_slots < filled_slots")
+
+    if title is not None:
+        task.title = title.strip()[:255]
+    if description is not None:
+        task.description = description.strip()
+    if reward is not None and task.status in ("draft", "pending_approval", "paused", "rejected"):
+        if reward <= 0:
+            raise TaskError("reward must be positive")
+        task.reward = reward
+    if total_slots is not None:
+        if total_slots < max(1, task.filled_slots):
+            raise TaskError("invalid total_slots")
+        task.total_slots = total_slots
+    if task_type is not None:
+        task.task_type = task_type
+    if target_url is not None:
+        task.target_url = target_url or None
+    if min_level is not None:
+        task.min_level = max(1, min_level)
+    if xp_reward is not None:
+        task.xp_reward = max(0, xp_reward)
+
+    await session.flush()
+    return _view(task)
+
+
+async def submit_for_approval(session: AsyncSession, *, task_id: int, actor: User) -> TaskView:
+    task = await session.get(Task, task_id)
+    if not task:
+        raise TaskError("task not found")
+    if task.creator_id != actor.id and not can_manage_any_task(actor):
+        raise TaskPermissionError("not your task")
+    if task.status not in ("draft", "rejected"):
+        raise TaskStateError(f"cannot submit from {task.status}")
+    task.status = "pending_approval"
+    await session.flush()
+    return _view(task)
+
+
+async def approve_task(session: AsyncSession, *, task_id: int, actor: User) -> TaskView:
+    if not can_approve_ambassador_task(actor):
+        raise TaskPermissionError("admin or owner required")
+    task = await session.get(Task, task_id)
+    if not task:
+        raise TaskError("task not found")
+    if task.status != "pending_approval":
+        raise TaskStateError("not pending approval")
+    task.status = "draft"
+    await session.flush()
+    return _view(task)
+
+
+async def reject_task(
+    session: AsyncSession, *, task_id: int, actor: User, note: str | None = None
+) -> TaskView:
+    if not can_approve_ambassador_task(actor):
+        raise TaskPermissionError("admin or owner required")
+    task = await session.get(Task, task_id)
+    if not task:
+        raise TaskError("task not found")
+    if task.status != "pending_approval":
+        raise TaskStateError("not pending approval")
+    task.status = "rejected"
+    await session.flush()
     return _view(task)
 
 
@@ -112,10 +227,22 @@ async def publish_task(session: AsyncSession, *, task_id: int, actor: User) -> T
     task = await session.get(Task, task_id)
     if not task:
         raise TaskError("task not found")
-    if task.creator_id != actor.id and not is_owner(actor.telegram_id):
-        raise TaskPermissionError("not your task")
-    if task.status not in ("draft", "paused"):
-        raise TaskStateError(f"cannot publish from {task.status}")
+    if not _can_edit_task(actor, task) and not can_manage_any_task(actor):
+        raise TaskPermissionError("not allowed")
+
+    if not can_publish_directly(actor):
+        if task.status != "draft":
+            raise TaskStateError("wait for admin approval first")
+        if task.creator_id != actor.id:
+            raise TaskPermissionError("not your task")
+    else:
+        if task.status not in ("draft", "paused"):
+            raise TaskStateError(f"cannot publish from {task.status}")
+
+    if task.budget_locked and task.budget_locked > 0 and task.status == "paused":
+        task.status = "active"
+        await session.flush()
+        return _view(task)
 
     payout = Decimal(task.reward) * task.total_slots
     bp = int((await get_setting(session, "task_platform_commission_bp"))["bp"])
@@ -124,7 +251,7 @@ async def publish_task(session: AsyncSession, *, task_id: int, actor: User) -> T
 
     await balance_svc.debit(
         session,
-        user_id=actor.id,
+        user_id=task.creator_id,
         amount=total,
         balance_type="tasks",
         description=f"Бюджет задания #{task.id}",
@@ -141,8 +268,8 @@ async def pause_task(session: AsyncSession, *, task_id: int, actor: User) -> Tas
     task = await session.get(Task, task_id)
     if not task:
         raise TaskError("task not found")
-    if task.creator_id != actor.id and not is_owner(actor.telegram_id):
-        raise TaskPermissionError("not your task")
+    if not _can_edit_task(actor, task) and not can_manage_any_task(actor):
+        raise TaskPermissionError("not allowed")
     if task.status != "active":
         raise TaskStateError("only active tasks can be paused")
     task.status = "paused"
@@ -151,10 +278,7 @@ async def pause_task(session: AsyncSession, *, task_id: int, actor: User) -> Tas
 
 
 async def list_active(
-    session: AsyncSession,
-    *,
-    limit: int = 50,
-    offset: int = 0,
+    session: AsyncSession, *, limit: int = 50, offset: int = 0
 ) -> list[TaskView]:
     result = await session.execute(
         select(Task)
@@ -162,6 +286,16 @@ async def list_active(
         .order_by(Task.created_at.desc())
         .limit(min(limit, 100))
         .offset(max(0, offset))
+    )
+    return [_view(t) for t in result.scalars().all()]
+
+
+async def list_pending_approval(session: AsyncSession, *, limit: int = 50) -> list[TaskView]:
+    result = await session.execute(
+        select(Task)
+        .where(Task.status == "pending_approval")
+        .order_by(Task.created_at.asc())
+        .limit(min(limit, 100))
     )
     return [_view(t) for t in result.scalars().all()]
 
@@ -202,7 +336,6 @@ async def submit(
     )
     if existing:
         raise TaskStateError("already submitted")
-
     if not (proof_text or proof_url):
         raise TaskError("proof required")
 
@@ -221,16 +354,16 @@ async def submit(
 async def list_pending_for_creator(
     session: AsyncSession, *, creator: User, limit: int = 50
 ) -> list[TaskSubmission]:
-    result = await session.execute(
+    q = (
         select(TaskSubmission)
         .join(Task, Task.id == TaskSubmission.task_id)
-        .where(
-            Task.creator_id == creator.id,
-            TaskSubmission.status == "pending",
-        )
+        .where(TaskSubmission.status == "pending")
         .order_by(TaskSubmission.created_at.asc())
         .limit(min(limit, 100))
     )
+    if not can_manage_any_task(creator):
+        q = q.where(Task.creator_id == creator.id)
+    result = await session.execute(q)
     return list(result.scalars().all())
 
 
@@ -249,7 +382,9 @@ async def review_submission(
     task = await session.get(Task, sub.task_id)
     if not task:
         raise TaskError("task not found")
-    if task.creator_id != actor.id and not is_owner(actor.telegram_id):
+
+    allowed = can_manage_any_task(actor) or task.creator_id == actor.id
+    if not allowed:
         raise TaskPermissionError("not allowed to review")
 
     now = datetime.now(timezone.utc)
