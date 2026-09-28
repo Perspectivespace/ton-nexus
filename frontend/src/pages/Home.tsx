@@ -101,6 +101,12 @@ export function Home() {
         </Link>
       </div>
 
+      {me?.is_owner && (
+        <Link to="/owner" className="btn-ghost flex w-full justify-center text-[13px]">
+          Owner · экономика
+        </Link>
+      )}
+
       <div className="panel p-4">
         <p className="eyebrow mb-2">Система</p>
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
