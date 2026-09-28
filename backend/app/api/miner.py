@@ -27,6 +27,9 @@ class MinerOut(BaseModel):
     status: str
     pending_reward: Decimal
     estimated_reward: Decimal
+    storage_cap: Decimal
+    cycle_hours: float
+    accrued_now: Decimal
     session_started_at: str | None = None
     session_ends_at: str | None = None
 
@@ -62,6 +65,9 @@ def _miner_out(v: miner_svc.MinerView) -> MinerOut:
         status=v.status,
         pending_reward=v.pending_reward,
         estimated_reward=v.estimated_reward,
+        storage_cap=v.storage_cap,
+        cycle_hours=v.cycle_hours,
+        accrued_now=v.accrued_now,
         session_started_at=v.session_started_at.isoformat() if v.session_started_at else None,
         session_ends_at=v.session_ends_at.isoformat() if v.session_ends_at else None,
     )
