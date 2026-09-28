@@ -5,6 +5,7 @@ import { Miner } from "@/pages/Miner";
 import { Tasks } from "@/pages/Tasks";
 import { Wallet } from "@/pages/Wallet";
 import { Upgrade } from "@/pages/Upgrade";
+import { Wheel } from "@/pages/Wheel";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/upgrade" element={<Upgrade />} />
+          <Route path="/wheel" element={<Wheel />} />
         </Route>
       </Routes>
     </BrowserRouter>

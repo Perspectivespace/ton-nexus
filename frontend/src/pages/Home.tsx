@@ -1,30 +1,36 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useMe, useDailyClaim } from "@/api/hooks";
-import { IconSpark, IconArrow, IconLevel, IconReactor } from "@/components/icons";
+import { IconSpark, IconArrow, IconReactor, IconLevel } from "@/components/icons";
+import {
+  ScreenHeader,
+  StatusPill,
+  LoadingPanel,
+  ErrorPanel,
+  Readout,
+} from "@/components/ui";
 
 export function Home() {
-  const { data: me, isLoading, error } = useMe();
+  const { data: me, isLoading, error, isFetching } = useMe();
   const daily = useDailyClaim();
 
   return (
     <div className="space-y-5">
-      <header className="space-y-1">
-        <p className="eyebrow">TON Nexus</p>
-        <h1 className="text-[26px] font-semibold tracking-tight leading-tight">
-          {me?.first_name || me?.username || "Контур"}
-        </h1>
-      </header>
+      <ScreenHeader
+        eyebrow="TON Nexus"
+        title={me?.first_name || me?.username || "Контур"}
+        action={
+          me ? (
+            <StatusPill tone={isFetching ? "live" : "ok"}>
+              {isFetching ? "sync" : "online"}
+            </StatusPill>
+          ) : undefined
+        }
+      />
 
-      {isLoading && (
-        <div className="panel panel-glow p-5 text-sm text-[var(--text-dim)]">
-          Синхронизация контура…
-        </div>
-      )}
+      {isLoading && <LoadingPanel label="Синхронизация контура…" />}
       {error && (
-        <div className="panel border-[var(--danger)]/20 p-4 text-sm text-[var(--danger)]">
-          Нет связи с API. Нужны backend и Telegram initData.
-        </div>
+        <ErrorPanel message="Нет связи с API. Нужны backend и Telegram initData." />
       )}
 
       {me && (
@@ -35,26 +41,21 @@ export function Home() {
           className="panel panel-glow relative overflow-hidden p-5"
         >
           <div
-            className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-40"
+            className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full opacity-50"
             style={{
-              background: "radial-gradient(circle, rgba(107,155,255,0.35), transparent 70%)",
+              background:
+                "radial-gradient(circle, rgba(107,155,255,0.28), transparent 70%)",
             }}
           />
-          <div className="relative flex items-end justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-medium text-[var(--text-dim)]">Баланс</p>
-              <p className="mono mt-1 text-[32px] font-semibold leading-none tracking-tight">
-                {Number(me.balance).toFixed(4)}
-              </p>
-              <p className="mt-1 text-xs text-[var(--text-dim)]">TON</p>
-            </div>
+          <div className="relative grid grid-cols-[1fr_auto] gap-4">
+            <Readout label="Баланс" value={Number(me.balance).toFixed(4)} unit="TON" />
             <div className="rounded-2xl border border-[var(--line)] bg-white/[0.03] px-3 py-2 text-right">
               <div className="mb-1 flex items-center justify-end gap-1 text-[var(--text-dim)]">
                 <IconLevel size={14} />
                 <span className="text-[10px] uppercase tracking-wider">ур.</span>
               </div>
-              <p className={"mono text-xl font-semibold"}>{me.level}</p>
-              <p className={"mono text-[11px] text-[var(--text-dim)]"}>{me.xp} XP</p>
+              <p className="mono text-xl font-semibold">{me.level}</p>
+              <p className="mono text-[11px] text-[var(--text-dim)]">{me.xp} XP</p>
             </div>
           </div>
 
@@ -66,10 +67,10 @@ export function Home() {
               Запрет · {me.block_tokens}
             </span>
             {me.success_boost_bp > 0 && (
-              <span className="rounded-full border border-[var(--success)]/30 bg-[var(--success)]/10 px-2.5 py-1 text-[11px] text-[var(--success)]">
-                +{(me.success_boost_bp / 100).toFixed(0)}% успех
-              </span>
+              <StatusPill tone="ok">+{(me.success_boost_bp / 100).toFixed(0)}% успех</StatusPill>
             )}
+            {me.is_owner && <StatusPill tone="live">owner</StatusPill>}
+            {me.is_admin && !me.is_owner && <StatusPill tone="neutral">admin</StatusPill>}
           </div>
         </motion.section>
       )}
@@ -82,7 +83,7 @@ export function Home() {
           onClick={() => daily.mutate()}
         >
           <IconSpark size={16} />
-          Daily
+          {daily.isPending ? "…" : "Daily"}
         </button>
         <Link to="/miner" className="btn-ghost">
           <IconReactor size={16} />
@@ -91,18 +92,22 @@ export function Home() {
         </Link>
       </section>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.15 }}
-        className="panel p-4"
-      >
+      <div className="grid grid-cols-2 gap-3">
+        <Link to="/wheel" className="btn-ghost text-center text-[13px]">
+          Рулетка
+        </Link>
+        <Link to="/tasks" className="btn-ghost text-center text-[13px]">
+          Задания
+        </Link>
+      </div>
+
+      <div className="panel p-4">
         <p className="eyebrow mb-2">Система</p>
-        <p className="text-sm leading-relaxed text-[var(--text-dim)]">
-          Длинный цикл майнера, задания с модерацией, ручной вывод. Экономика крутится
-          владельцем без деплоя.
+        <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
+          Приборный контур: длинный цикл майнера, double-wheel усиление, задания с модерацией,
+          ручной вывод.
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 }
