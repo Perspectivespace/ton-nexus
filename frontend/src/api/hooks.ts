@@ -53,3 +53,29 @@ export function useDailyClaim() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
   });
 }
+
+export type UpgradeOut = {
+  upgrade_type: string;
+  cost: string;
+  success_chance_bp: number;
+  success: boolean;
+  new_level: number | null;
+  used_focus: boolean;
+  used_block_type: string | null;
+  burned: boolean;
+};
+
+export function useMinerUpgrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body?: { use_focus_on?: string | null; block_type?: string | null }) =>
+      api<UpgradeOut>("/api/v1/miner/upgrade", {
+        method: "POST",
+        body: JSON.stringify(body ?? {}),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["miner"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
