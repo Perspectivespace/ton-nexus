@@ -50,7 +50,10 @@ export function useDailyClaim() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api("/api/v1/daily/claim", { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["me"] });
+      qc.invalidateQueries({ queryKey: ["daily"] });
+    },
   });
 }
 
@@ -76,6 +79,74 @@ export function useMinerUpgrade() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["miner"] });
       qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export type DailyStatus = {
+  claimed_today: boolean;
+  streak: number;
+  check_date: string;
+};
+
+export type DailyClaim = {
+  already_claimed: boolean;
+  streak: number;
+  reward_ton: string;
+  reward_xp: number;
+  reward_focus: number;
+  check_date: string;
+};
+
+export function useDailyStatus() {
+  return useQuery({
+    queryKey: ["daily"],
+    queryFn: () => api<DailyStatus>("/api/v1/daily/status"),
+  });
+}
+
+export function useDailyClaimFull() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<DailyClaim>("/api/v1/daily/claim", { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["me"] });
+      qc.invalidateQueries({ queryKey: ["daily"] });
+    },
+  });
+}
+
+export type WheelStatus = {
+  free_spins_per_day: number;
+  used_today: number;
+  left_today: number;
+};
+
+export type SpinOut = {
+  item_id: string;
+  label: string;
+  reward_ton: string;
+  reward_xp: number;
+  reward_focus: number;
+  reward_block: number;
+  success_boost_bp: number;
+  free_spins_left_today: number;
+};
+
+export function useWheelStatus() {
+  return useQuery({
+    queryKey: ["wheel"],
+    queryFn: () => api<WheelStatus>("/api/v1/wheel/status"),
+  });
+}
+
+export function useWheelSpin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<SpinOut>("/api/v1/wheel/spin", { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["me"] });
+      qc.invalidateQueries({ queryKey: ["wheel"] });
     },
   });
 }
