@@ -1,6 +1,8 @@
-import { useMe } from "@/api/hooks";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { useMe } from "@/api/hooks";
 import { api } from "@/api/client";
+import { IconWallet } from "@/components/icons";
 
 export function Wallet() {
   const { data: me, refetch } = useMe();
@@ -17,7 +19,7 @@ export function Wallet() {
         method: "POST",
         body: JSON.stringify({ amount, wallet_address: wallet }),
       });
-      setMsg("Заявка отправлена. Ожидает подтверждения владельца.");
+      setMsg("Заявка принята. Владелец подтвердит вручную.");
       refetch();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Ошибка");
@@ -27,43 +29,57 @@ export function Wallet() {
   }
 
   return (
-    <div className="space-y-4">
-      <header>
-        <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-dim)]">Кошелёк</p>
-        <h1 className="text-2xl font-semibold">Баланс</h1>
+    <div className="space-y-5">
+      <header className="flex items-start justify-between">
+        <div>
+          <p className="eyebrow">Кошелёк</p>
+          <h1 className="text-[26px] font-semibold tracking-tight">Баланс</h1>
+        </div>
+        <div className="rounded-2xl border border-[var(--line)] p-3 text-[var(--text-dim)]">
+          <IconWallet size={22} />
+        </div>
       </header>
 
-      <div className="panel p-4">
-        <p className="text-xs text-[var(--text-dim)]">Доступно</p>
-        <p className="mono text-3xl">
-          {me ? Number(me.balance).toFixed(4) : "—"}{" "}
-          <span className="text-sm text-[var(--text-dim)]">TON</span>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="panel panel-glow p-5"
+      >
+        <p className="text-[11px] font-medium text-[var(--text-dim)]">Доступно</p>
+        <p className="mono mt-1 text-[32px] font-semibold tracking-tight">
+          {me ? Number(me.balance).toFixed(4) : "—"}
+          <span className="ml-1 text-sm font-normal text-[var(--text-dim)]">TON</span>
         </p>
-      </div>
+      </motion.div>
 
-      <div className="panel space-y-3 p-4">
-        <h2 className="text-sm font-medium">Вывод (manual)</h2>
-        <label className="block text-xs text-[var(--text-dim)]">
+      <div className="panel space-y-4 p-5">
+        <div>
+          <h2 className="text-sm font-semibold">Вывод</h2>
+          <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-dim)]">
+            Средства холдятся до решения владельца. При отказе — возврат на баланс.
+          </p>
+        </div>
+        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
           Сумма
           <input
-            className="mt-1 w-full rounded-xl border border-[var(--line-strong)] bg-[var(--bg-elevated)] px-3 py-2 text-[var(--text)] outline-none"
+            className="input-field mono"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
         </label>
-        <label className="block text-xs text-[var(--text-dim)]">
-          Адрес TON (UQ/EQ…)
+        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
+          Адрес TON
           <input
-            className="mt-1 w-full rounded-xl border border-[var(--line-strong)] bg-[var(--bg-elevated)] px-3 py-2 font-mono text-sm text-[var(--text)] outline-none"
+            className="input-field mono text-[13px]"
             value={wallet}
             onChange={(e) => setWallet(e.target.value)}
-            placeholder="UQ..."
+            placeholder="UQ… / EQ…"
           />
         </label>
         <button type="button" className="btn-primary w-full" disabled={loading} onClick={submit}>
           Запросить вывод
         </button>
-        {msg && <p className="text-sm text-[var(--text-dim)]">{msg}</p>}
+        {msg && <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">{msg}</p>}
       </div>
     </div>
   );
