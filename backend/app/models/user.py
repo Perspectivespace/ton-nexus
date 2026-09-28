@@ -31,6 +31,7 @@ class User(Base):
     referred_by_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_ambassador: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
