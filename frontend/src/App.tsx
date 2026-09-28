@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { Home } from "@/pages/Home";
 import { Miner } from "@/pages/Miner";
 import { Tasks } from "@/pages/Tasks";
+import { TaskDetail } from "@/pages/TaskDetail";
 import { Wallet } from "@/pages/Wallet";
 import { Upgrade } from "@/pages/Upgrade";
 import { Wheel } from "@/pages/Wheel";
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/miner" element={<Miner />} />
           <Route path="/tasks" element={<Tasks />} />
+          <Route path="/tasks/:id" element={<TaskDetail />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/upgrade" element={<Upgrade />} />
           <Route path="/wheel" element={<Wheel />} />
