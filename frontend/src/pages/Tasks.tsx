@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useTasks } from "@/api/hooks";
+import { useMe, useTasks } from "@/api/hooks";
 import {
   ScreenHeader,
   StatusPill,
@@ -10,7 +10,9 @@ import {
 } from "@/components/ui";
 
 export function Tasks() {
+  const { data: me } = useMe();
   const { data, isLoading, error, isFetching } = useTasks();
+  const canCreate = me?.is_owner || me?.is_admin || me?.is_ambassador;
 
   return (
     <div className="space-y-5">
@@ -18,9 +20,19 @@ export function Tasks() {
         eyebrow="Маркет"
         title="Задания"
         action={
-          <StatusPill tone={isFetching ? "live" : "neutral"}>
-            {isFetching ? "sync" : `${data?.length ?? 0} active`}
-          </StatusPill>
+          <div className="flex items-center gap-2">
+            {canCreate && (
+              <Link
+                to="/tasks/new"
+                className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-3 py-1.5 text-[11px] font-medium text-[var(--accent)] no-underline"
+              >
+                + Создать
+              </Link>
+            )}
+            <StatusPill tone={isFetching ? "live" : "neutral"}>
+              {isFetching ? "sync" : `${data?.length ?? 0} active`}
+            </StatusPill>
+          </div>
         }
       />
 

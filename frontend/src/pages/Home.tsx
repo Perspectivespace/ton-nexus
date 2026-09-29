@@ -102,9 +102,14 @@ export function Home() {
       </div>
 
       {(me?.is_owner || me?.is_admin || me?.is_ambassador) && (
-        <Link to="/inbox" className="btn-ghost flex w-full justify-center text-[13px]">
-          Inbox · модерация
-        </Link>
+        <>
+          <Link to="/tasks/new" className="btn-ghost flex w-full justify-center text-[13px]">
+            Создать задание
+          </Link>
+          <Link to="/inbox" className="btn-ghost flex w-full justify-center text-[13px]">
+            Inbox · модерация
+          </Link>
+        </>
       )}
 
       {(me?.is_owner || me?.is_admin) && (
