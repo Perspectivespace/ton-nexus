@@ -381,3 +381,44 @@ export function usePromoCreate() {
       }),
   });
 }
+
+export type TaskCreateBody = {
+  title: string;
+  description: string;
+  reward: string | number;
+  total_slots: number;
+  task_type?: string;
+  target_url?: string | null;
+  min_level?: number;
+  xp_reward?: number;
+  publish?: boolean;
+};
+
+export function useCreateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TaskCreateBody) =>
+      api<TaskDetail>("/api/v1/tasks", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export function usePublishTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: number) =>
+      api<TaskOut>(`/api/v1/tasks/${taskId}/publish`, { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
