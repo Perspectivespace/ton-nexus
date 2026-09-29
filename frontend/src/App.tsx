@@ -9,6 +9,7 @@ import { Upgrade } from "@/pages/Upgrade";
 import { Wheel } from "@/pages/Wheel";
 import { Owner } from "@/pages/Owner";
 import { Inbox } from "@/pages/Inbox";
+import { WithdrawQueue } from "@/pages/WithdrawQueue";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/wheel" element={<Wheel />} />
           <Route path="/owner" element={<Owner />} />
           <Route path="/inbox" element={<Inbox />} />
+          <Route path="/withdraws" element={<WithdrawQueue />} />
         </Route>
       </Routes>
     </BrowserRouter>
