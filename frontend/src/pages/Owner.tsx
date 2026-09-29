@@ -5,6 +5,7 @@ import {
   useMe,
   useEconomySettings,
   useEconomyUpdate,
+  usePromoCreate,
   type EconomySetting,
 } from "@/api/hooks";
 import {
@@ -133,6 +134,87 @@ function SettingRow({
   );
 }
 
+function PromoCreatePanel() {
+  const create = usePromoCreate();
+  const [code, setCode] = useState("");
+  const [ton, setTon] = useState("0.1");
+  const [xp, setXp] = useState("0");
+  const [focus, setFocus] = useState("0");
+  const [maxUses, setMaxUses] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function submit() {
+    setMsg(null);
+    try {
+      const r = await create.mutateAsync({
+        code: code.trim().toUpperCase(),
+        reward_ton: ton || 0,
+        reward_xp: Number(xp) || 0,
+        reward_focus: Number(focus) || 0,
+        max_uses: maxUses ? Number(maxUses) : null,
+      });
+      setMsg(`Создан: ${r.code}`);
+      setCode("");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Ошибка");
+    }
+  }
+
+  return (
+    <div className="panel space-y-3 p-4">
+      <div className="flex items-center justify-between">
+        <p className="eyebrow">Новый промокод</p>
+        <StatusPill tone="neutral">create</StatusPill>
+      </div>
+      <label className="block text-[11px] font-medium text-[var(--text-dim)]">
+        Код
+        <input
+          className="input-field mono uppercase"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="WELCOME"
+        />
+      </label>
+      <div className="grid grid-cols-3 gap-2">
+        <label className="block text-[11px] text-[var(--text-dim)]">
+          TON
+          <input className="input-field mono" value={ton} onChange={(e) => setTon(e.target.value)} />
+        </label>
+        <label className="block text-[11px] text-[var(--text-dim)]">
+          XP
+          <input className="input-field mono" value={xp} onChange={(e) => setXp(e.target.value)} />
+        </label>
+        <label className="block text-[11px] text-[var(--text-dim)]">
+          Фокус
+          <input
+            className="input-field mono"
+            value={focus}
+            onChange={(e) => setFocus(e.target.value)}
+          />
+        </label>
+      </div>
+      <label className="block text-[11px] text-[var(--text-dim)]">
+        Max uses (пусто = ∞)
+        <input
+          className="input-field mono"
+          value={maxUses}
+          onChange={(e) => setMaxUses(e.target.value)}
+          placeholder="100"
+        />
+      </label>
+      <button
+        type="button"
+        className="btn-primary w-full"
+        disabled={create.isPending || code.length < 3}
+        onClick={submit}
+      >
+        {create.isPending ? "…" : "Создать промокод"}
+      </button>
+      {msg && <p className="text-[12px] text-[var(--text-dim)]">{msg}</p>}
+    </div>
+  );
+}
+
 export function Owner() {
   const { data: me, isLoading: meLoading } = useMe();
   const { data, isLoading, error, refetch, isFetching } = useEconomySettings();
@@ -223,6 +305,8 @@ export function Owner() {
           </li>
         ))}
       </ul>
+
+      <PromoCreatePanel />
 
       <Link to="/" className="btn-ghost inline-flex text-[13px] no-underline">
         ← Контур
