@@ -340,3 +340,44 @@ export function useMyWithdrawals() {
     queryFn: () => api<WithdrawOut[]>("/api/v1/withdraw/mine"),
   });
 }
+
+export type PromoRedeemOut = {
+  code: string;
+  reward_ton: string;
+  reward_xp: number;
+  reward_focus: number;
+};
+
+export function usePromoRedeem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) =>
+      api<PromoRedeemOut>("/api/v1/promo/redeem", {
+        method: "POST",
+        body: JSON.stringify({ code: code.trim() }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+  });
+}
+
+export type PromoCreateOut = {
+  id: number;
+  code: string;
+  is_active: boolean;
+};
+
+export function usePromoCreate() {
+  return useMutation({
+    mutationFn: (body: {
+      code: string;
+      reward_ton?: string | number;
+      reward_xp?: number;
+      reward_focus?: number;
+      max_uses?: number | null;
+    }) =>
+      api<PromoCreateOut>("/api/v1/promo/create", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+  });
+}
