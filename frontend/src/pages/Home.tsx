@@ -101,6 +101,12 @@ export function Home() {
         </Link>
       </div>
 
+      {(me?.is_owner || me?.is_admin || me?.is_ambassador) && (
+        <Link to="/inbox" className="btn-ghost flex w-full justify-center text-[13px]">
+          Inbox · модерация
+        </Link>
+      )}
+
       {me?.is_owner && (
         <Link to="/owner" className="btn-ghost flex w-full justify-center text-[13px]">
           Owner · экономика
