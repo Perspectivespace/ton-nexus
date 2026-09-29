@@ -107,6 +107,12 @@ export function Home() {
         </Link>
       )}
 
+      {(me?.is_owner || me?.is_admin) && (
+        <Link to="/withdraws" className="btn-ghost flex w-full justify-center text-[13px]">
+          Касса · выводы
+        </Link>
+      )}
+
       {me?.is_owner && (
         <Link to="/owner" className="btn-ghost flex w-full justify-center text-[13px]">
           Owner · экономика

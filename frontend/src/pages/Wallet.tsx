@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useMe } from "@/api/hooks";
+import { useMe, useMyWithdrawals } from "@/api/hooks";
 import { api } from "@/api/client";
 import { IconWallet } from "@/components/icons";
 
 export function Wallet() {
   const { data: me, refetch } = useMe();
+  const mine = useMyWithdrawals();
   const [amount, setAmount] = useState("0.2");
   const [wallet, setWallet] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
@@ -21,6 +22,7 @@ export function Wallet() {
       });
       setMsg("Заявка принята. Владелец подтвердит вручную.");
       refetch();
+      mine.refetch();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Ошибка");
     } finally {
@@ -81,6 +83,23 @@ export function Wallet() {
         </button>
         {msg && <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">{msg}</p>}
       </div>
+
+      {(mine.data?.length ?? 0) > 0 && (
+        <div className="panel space-y-3 p-4">
+          <p className="eyebrow">Мои заявки</p>
+          <ul className="space-y-2">
+            {(mine.data || []).slice(0, 5).map((w) => (
+              <li
+                key={w.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] px-3 py-2"
+              >
+                <span className="mono text-[13px]">{Number(w.amount).toFixed(4)} TON</span>
+                <span className="text-[11px] text-[var(--text-dim)]">{w.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
