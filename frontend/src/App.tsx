@@ -8,6 +8,7 @@ import { Wallet } from "@/pages/Wallet";
 import { Upgrade } from "@/pages/Upgrade";
 import { Wheel } from "@/pages/Wheel";
 import { Owner } from "@/pages/Owner";
+import { Inbox } from "@/pages/Inbox";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/upgrade" element={<Upgrade />} />
           <Route path="/wheel" element={<Wheel />} />
           <Route path="/owner" element={<Owner />} />
+          <Route path="/inbox" element={<Inbox />} />
         </Route>
       </Routes>
     </BrowserRouter>
