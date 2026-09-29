@@ -5,8 +5,10 @@ import {
   useDailyClaimFull,
   useWheelStatus,
   useWheelSpin,
+  usePromoRedeem,
   type SpinOut,
   type DailyClaim,
+  type PromoRedeemOut,
 } from "@/api/hooks";
 import {
   ScreenHeader,
@@ -22,9 +24,13 @@ export function Wheel() {
   const dailyClaim = useDailyClaimFull();
   const wheelSt = useWheelStatus();
   const spin = useWheelSpin();
+  const promo = usePromoRedeem();
+
   const [spinning, setSpinning] = useState(false);
   const [lastSpin, setLastSpin] = useState<SpinOut | null>(null);
   const [lastDaily, setLastDaily] = useState<DailyClaim | null>(null);
+  const [code, setCode] = useState("");
+  const [lastPromo, setLastPromo] = useState<PromoRedeemOut | null>(null);
 
   async function onDaily() {
     try {
@@ -48,6 +54,17 @@ export function Wheel() {
     }
   }
 
+  async function onPromo() {
+    setLastPromo(null);
+    try {
+      const r = await promo.mutateAsync(code);
+      setLastPromo(r);
+      setCode("");
+    } catch {
+      /* */
+    }
+  }
+
   if (dailySt.isLoading || wheelSt.isLoading) {
     return <LoadingPanel label="Загрузка контуров наград…" />;
   }
@@ -59,7 +76,7 @@ export function Wheel() {
     <div className="space-y-5">
       <ScreenHeader
         eyebrow="Награды"
-        title="Daily · Рулетка"
+        title="Daily · Promo · Wheel"
         action={
           <StatusPill tone={d?.claimed_today ? "ok" : "live"}>
             {d?.claimed_today ? "daily ✓" : "daily open"}
@@ -108,6 +125,70 @@ export function Wheel() {
               +{Number(lastDaily.reward_ton).toFixed(4)} TON
               {lastDaily.reward_xp > 0 && ` · +${lastDaily.reward_xp} XP`}
               {lastDaily.reward_focus > 0 && ` · Фокус +${lastDaily.reward_focus}`}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="panel panel-glow space-y-4 p-5">
+        <div className="flex items-center justify-between">
+          <p className="eyebrow">Промокод</p>
+          <StatusPill tone={promo.isSuccess ? "ok" : "neutral">redeem</StatusPill>
+        </div>
+        <p className="text-[12px] leading-relaxed text-[var(--text-dim)]">
+          Один код — один раз на аккаунт. Награда сразу на баланс / XP / Фокус.
+        </p>
+        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
+          Код
+          <input
+            className="input-field mono uppercase tracking-wider"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="NEXUS-START"
+            disabled={promo.isPending}
+            autoCapitalize="characters"
+            autoCorrect="off"
+          />
+        </label>
+        <button
+          type="button"
+          className="btn-primary w-full"
+          disabled={promo.isPending || code.trim().length < 3}
+          onClick={onPromo}
+        >
+          {promo.isPending ? "Проверка…" : "Активировать"}
+        </button>
+        {promo.isError && (
+          <ErrorPanel
+            message={promo.error instanceof Error ? promo.error.message : "Код не принят"}
+          />
+        )}
+        <AnimatePresence>
+          {lastPromo && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl border border-[var(--success)]/25 bg-[var(--success)]/5 p-4"
+            >
+              <p className="eyebrow text-[var(--success)]">Активирован</p>
+              <p className="mono mt-1 text-sm font-semibold">{lastPromo.code}</p>
+              <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-[var(--text-dim)]">
+                {Number(lastPromo.reward_ton) > 0 && (
+                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
+                    +{Number(lastPromo.reward_ton).toFixed(4)} TON
+                  </span>
+                )}
+                {lastPromo.reward_xp > 0 && (
+                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
+                    +{lastPromo.reward_xp} XP
+                  </span>
+                )}
+                {lastPromo.reward_focus > 0 && (
+                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
+                    Фокус +{lastPromo.reward_focus}
+                  </span>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
