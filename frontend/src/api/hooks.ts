@@ -226,3 +226,69 @@ export function useEconomyUpdate() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["economy"] }),
   });
 }
+
+export type InboxSubmission = {
+  id: number;
+  task_id: number;
+  user_id: number;
+  status: string;
+  proof_text: string | null;
+  proof_url: string | null;
+  review_note: string | null;
+};
+
+export function usePendingSubmissions() {
+  return useQuery({
+    queryKey: ["inbox", "submissions"],
+    queryFn: () => api<InboxSubmission[]>("/api/v1/tasks/inbox/pending"),
+  });
+}
+
+export function useReviewSubmission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      approve,
+      note,
+    }: {
+      id: number;
+      approve: boolean;
+      note?: string | null;
+    }) =>
+      api<InboxSubmission>(`/api/v1/tasks/submissions/${id}/review`, {
+        method: "POST",
+        body: JSON.stringify({ approve, note: note || null }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+export function usePendingTaskApprovals() {
+  return useQuery({
+    queryKey: ["inbox", "task-approvals"],
+    queryFn: () => api<TaskOut[]>("/api/v1/tasks/approval/pending"),
+    retry: false,
+  });
+}
+
+export function useApproveTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: number) =>
+      api<TaskOut>(`/api/v1/tasks/${taskId}/approve`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
+  });
+}
+
+export function useRejectTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: number) =>
+      api<TaskOut>(`/api/v1/tasks/${taskId}/reject`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
+  });
+}
