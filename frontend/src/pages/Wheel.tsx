@@ -133,7 +133,7 @@ export function Wheel() {
       <div className="panel panel-glow space-y-4 p-5">
         <div className="flex items-center justify-between">
           <p className="eyebrow">Промокод</p>
-          <StatusPill tone={promo.isSuccess ? "ok" : "neutral">redeem</StatusPill>
+          <StatusPill tone={promo.isSuccess ? "ok" : "neutral"}>redeem</StatusPill>
         </div>
         <p className="text-[12px] leading-relaxed text-[var(--text-dim)]">
           Один код — один раз на аккаунт. Награда сразу на баланс / XP / Фокус.
