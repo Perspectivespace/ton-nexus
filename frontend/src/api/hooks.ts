@@ -292,3 +292,51 @@ export function useRejectTask() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
   });
 }
+
+export type WithdrawOut = {
+  id: number;
+  user_id: number;
+  amount: string;
+  wallet_address: string;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+};
+
+export function usePendingWithdrawals() {
+  return useQuery({
+    queryKey: ["withdraw", "pending"],
+    queryFn: () => api<WithdrawOut[]>("/api/v1/withdraw/pending"),
+  });
+}
+
+export function useReviewWithdraw() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      approve,
+      note,
+    }: {
+      id: number;
+      approve: boolean;
+      note?: string | null;
+    }) =>
+      api<WithdrawOut>(`/api/v1/withdraw/${id}/review`, {
+        method: "POST",
+        body: JSON.stringify({ approve, note: note || null }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["withdraw"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export function useMyWithdrawals() {
+  return useQuery({
+    queryKey: ["withdraw", "mine"],
+    queryFn: () => api<WithdrawOut[]>("/api/v1/withdraw/mine"),
+  });
+}
