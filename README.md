@@ -7,41 +7,51 @@ Telegram Mini App: **рынок заданий (TON)** + **майнер-конт
 | Путь | Назначение |
 |------|------------|
 | `docs/` | Концепция, промпты ИИ, TODO — **источник правды** |
-| `backend/` | FastAPI API (новое ядро) |
-| `frontend/` | React Mini App (далее) |
-| `bot/` | Тонкий бот (WebApp-кнопка, уведомления) |
-| `legacy/` | Старый бот — архив логики, не прод |
+| `backend/` | FastAPI API |
+| `frontend/` | React Mini App |
+| `bot/` | Тонкий бот (WebApp-кнопка) |
+| `legacy/` | Старый бот — архив |
 
 ## Документы
 
-- [docs/CONCEPT.md](docs/CONCEPT.md) — продукт, MVP, монетизация
-- [docs/PROMPTS.md](docs/PROMPTS.md) — дизайн и эталоны для ИИ
+- [docs/CONCEPT.md](docs/CONCEPT.md) — продукт, MVP
+- [docs/PROMPTS.md](docs/PROMPTS.md) — дизайн для ИИ
+- [docs/LOCAL_RUN.md](docs/LOCAL_RUN.md) — **локальный запуск без Docker**
 - [docs/TODO.md](docs/TODO.md) — задачи
-- [legacy/README.md](legacy/README.md) — что брать из старого кода
 
 ## Стек
 
 - Backend: FastAPI + SQLAlchemy 2 async + PostgreSQL
 - Frontend: React 19 + Vite + TypeScript + Tailwind + Framer Motion
-- Bot: тонкий python-telegram-bot / aiogram
+- Bot: aiogram 3
 
-## Быстрый старт backend (каркас)
+## Локальный запуск
+
+Полная инструкция: **[docs/LOCAL_RUN.md](docs/LOCAL_RUN.md)**
+
+Кратко:
 
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
+# 1) Postgres: user nexus / db ton_nexus
+
+# 2) Backend
+cd backend && python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && cp .env.example .env
+alembic upgrade head
 uvicorn app.main:app --reload --port 8000
+
+# 3) Frontend (другой терминал)
+cd frontend && cp .env.example .env && npm install && npm run dev
 ```
 
-Health: http://localhost:8000/health · Docs: http://localhost:8000/docs
+- API: http://localhost:8000/docs  
+- App: http://localhost:5173  
+- DEBUG-логин в браузере: `dev:<telegram_id>` (см. LOCAL_RUN)
 
 ## Принципы
 
-1. UI — продуктовый custom, не miner-шаблон
+1. UI — продуктовый custom, не шаблон
 2. Вывод TON — только manual
 3. Экономика — `economy_settings`
-4. MVP: 1 слот майнера; игры и «дома» — не сейчас
-5. Усиление — на экране Майнер (double wheel, 100% burn)
+4. MVP: 1 слот майнера; игры позже
+5. Усиление — double wheel, 100% burn
