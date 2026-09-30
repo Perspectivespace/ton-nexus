@@ -7,16 +7,22 @@ export function initTelegram() {
     WebApp.setHeaderColor("#07090f");
     WebApp.setBackgroundColor("#07090f");
   } catch {
-    /* outside Telegram */
+    // browser outside Telegram
   }
 }
 
+/** Real Telegram initData, or "dev:<id>" when running Vite without Telegram. */
 export function getInitData(): string {
   try {
-    return WebApp.initData || "";
+    if (WebApp.initData) return WebApp.initData;
   } catch {
-    return "";
+    /* */
   }
+  const devId = import.meta.env.VITE_DEV_TG_ID || "1";
+  if (import.meta.env.DEV) {
+    return `dev:${devId}`;
+  }
+  return "";
 }
 
 export function getTelegramUser() {
