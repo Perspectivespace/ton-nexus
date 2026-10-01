@@ -1,4 +1,8 @@
-# Force Docker build — Railpack cannot detect Python in monorepo root
+# Prefer backend as service root on Railway:
+# Settings → Root Directory = backend
+# Builder = Dockerfile
+# Dockerfile path = Dockerfile (inside backend)
+
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
