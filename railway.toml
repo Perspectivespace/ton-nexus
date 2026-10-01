@@ -1,0 +1,8 @@
+# Deploy API from monorepo root (when Root Directory UI is missing)
+[build]
+builder = "NIXPACKS"
+buildCommand = "pip install -r backend/requirements.txt"
+
+[deploy]
+startCommand = "cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+restartPolicyType = "ON_FAILURE"
