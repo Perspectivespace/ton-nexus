@@ -1,0 +1,14 @@
+frontend
+bot
+legacy
+docs
+.git
+**/.venv
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+**/__pycache__
+**/*.pyc
+ton-nexus-snapshot.zip
+_bot_parts.json
