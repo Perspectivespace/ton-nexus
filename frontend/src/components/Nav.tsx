@@ -10,11 +10,8 @@ const items = [
 
 export function Nav() {
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-20 border-t border-[var(--line)] bg-[#0a0e16]/92 backdrop-blur-xl"
-      style={{ paddingBottom: "var(--safe-b)" }}
-    >
-      <div className="mx-auto flex max-w-lg px-2 py-1.5">
+    <div className="nav-dock">
+      <div className="nav-dock-inner">
         {items.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
@@ -27,6 +24,6 @@ export function Nav() {
           </NavLink>
         ))}
       </div>
-    </nav>
+    </div>
   );
 }

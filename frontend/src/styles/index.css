@@ -1,11 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --bg-deep: #06080e;
-  --bg-panel: rgba(14, 18, 28, 0.85);
-  --bg-elevated: #141a28;
-  --line: rgba(255, 255, 255, 0.055);
-  --line-strong: rgba(255, 255, 255, 0.11);
+  --bg-deep: #05070c;
+  --bg-mid: #0b0f18;
+  --bg-panel: rgba(16, 20, 32, 0.72);
+  --bg-panel-solid: #101420;
+  --bg-elevated: #161c2c;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --line-accent: rgba(107, 155, 255, 0.22);
   --text: #eef2f8;
   --text-dim: #7a8499;
   --text-meta: #5c6578;
@@ -15,12 +18,11 @@
   --success: #3dd68c;
   --warn: #f5c14a;
   --danger: #f07178;
-  --glow: 0 0 48px rgba(107, 155, 255, 0.14);
-  --radius: 18px;
+  --glow: 0 0 40px rgba(107, 155, 255, 0.12);
+  --radius: 20px;
   --font: "Syne", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   --safe-b: env(safe-area-inset-bottom, 0px);
-  /* type scale */
   --label-size: 10px;
   --label-tracking: 0.2em;
   --label-weight: 600;
@@ -43,41 +45,84 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* ========== Atmosphere: not flat black — staged product space ========== */
 .app-shell {
   min-height: 100%;
   position: relative;
+  isolation: isolate;
   background: var(--bg-deep);
 }
 
+/* Base vertical wash */
 .app-shell::before {
   content: "";
   pointer-events: none;
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(107, 155, 255, 0.11), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 100% 80%, rgba(139, 124, 247, 0.06), transparent 50%),
-    linear-gradient(180deg, #080b13 0%, var(--bg-deep) 40%, #04060a 100%);
   z-index: 0;
+  background:
+    /* top product light */
+    radial-gradient(ellipse 120% 70% at 50% -20%, rgba(90, 130, 220, 0.22), transparent 55%),
+    /* left ambient */
+    radial-gradient(ellipse 60% 50% at 0% 40%, rgba(107, 155, 255, 0.07), transparent 50%),
+    /* right violet */
+    radial-gradient(ellipse 55% 45% at 100% 70%, rgba(139, 124, 247, 0.09), transparent 50%),
+    /* bottom dock pool */
+    radial-gradient(ellipse 90% 40% at 50% 110%, rgba(40, 60, 110, 0.35), transparent 55%),
+    /* core vertical */
+    linear-gradient(180deg, #0c101c 0%, #070a12 42%, #04060b 100%);
 }
 
+/* Fine grid + vignette */
 .app-shell::after {
   content: "";
   pointer-events: none;
   position: fixed;
   inset: 0;
-  opacity: 0.35;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent);
   z-index: 0;
+  opacity: 1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image:
+    radial-gradient(ellipse 85% 70% at 50% 35%, black 20%, transparent 75%),
+    linear-gradient(180deg, black 0%, black 70%, transparent 100%);
+  mask-composite: intersect;
+  -webkit-mask-image:
+    radial-gradient(ellipse 85% 70% at 50% 35%, black 20%, transparent 75%);
 }
 
-.app-shell > * { position: relative; z-index: 1; }
+.app-shell > * {
+  position: relative;
+  z-index: 1;
+}
 
-/* —— Premium label system (same language as “Liquid balance / level”) —— */
+/* Content stage — cards sit on a defined surface, not void */
+.app-stage {
+  position: relative;
+}
+
+.app-stage::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  top: -8px;
+  bottom: 8px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 28%),
+    rgba(8, 11, 20, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
+  z-index: -1;
+}
+
+/* —— Type —— */
 .eyebrow,
 .label-caps {
   font-size: var(--label-size);
@@ -112,16 +157,29 @@ body {
   line-height: 1.1;
 }
 
+/* —— Surfaces: glass plates with edge light —— */
 .panel {
-  background: var(--bg-panel);
+  position: relative;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.04) 0%, transparent 42%),
+    var(--bg-panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 12px 32px rgba(0, 0, 0, 0.28);
 }
 
 .panel-glow {
-  box-shadow: var(--glow), inset 0 1px 0 rgba(255,255,255,0.04);
+  border-color: rgba(107, 155, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 0 1px rgba(107, 155, 255, 0.06),
+    0 16px 40px rgba(0, 0, 0, 0.32),
+    0 0 48px rgba(107, 155, 255, 0.08);
 }
 
 .btn-primary {
@@ -129,7 +187,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, var(--accent) 0%, #5a7ef0 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #5a7ef0 55%, #7b6ef0 100%);
   color: #fff;
   border: none;
   border-radius: 14px;
@@ -139,7 +197,9 @@ body {
   letter-spacing: 0.04em;
   padding: 13px 18px;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(107, 155, 255, 0.25);
+  box-shadow:
+    0 4px 20px rgba(107, 155, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 .btn-primary:active:not(:disabled) { transform: scale(0.97); }
@@ -150,7 +210,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text);
   border: 1px solid var(--line-strong);
   border-radius: 14px;
@@ -161,9 +221,13 @@ body {
   padding: 12px 16px;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.btn-ghost:active { background: rgba(255,255,255,0.06); }
+.btn-ghost:active {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line-accent);
+}
 
 .mono {
   font-family: var(--font-mono);
@@ -174,9 +238,10 @@ body {
 .stat-chip {
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.02);
+  background: rgba(255, 255, 255, 0.03);
   padding: 10px 6px;
   text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .stat-chip .chip-k {
@@ -192,17 +257,51 @@ body {
   width: 100%;
   border-radius: 14px;
   border: 1px solid var(--line-strong);
-  background: var(--bg-elevated);
+  background: rgba(8, 10, 18, 0.85);
   padding: 12px 14px;
   color: var(--text);
   font-family: var(--font-mono);
   font-size: 13px;
   letter-spacing: 0.06em;
   outline: none;
-  transition: border-color 0.15s ease;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input-field:focus {
   border-color: rgba(107, 155, 255, 0.45);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.25),
+    0 0 0 3px rgba(107, 155, 255, 0.12);
+}
+
+/* Floating dock nav */
+.nav-dock {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 0 12px;
+  padding-bottom: max(10px, var(--safe-b));
+  pointer-events: none;
+}
+
+.nav-dock-inner {
+  pointer-events: auto;
+  margin: 0 auto;
+  max-width: 28rem;
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 20px;
+  background: rgba(12, 16, 26, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  box-shadow:
+    0 -8px 40px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(107, 155, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .nav-item {
@@ -215,13 +314,14 @@ body {
   padding: 8px 4px 7px;
   font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-dim);
   text-decoration: none;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 .nav-item.active {
   color: var(--accent);
-  background: var(--accent-soft);
+  background: rgba(107, 155, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(107, 155, 255, 0.15);
 }
