@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   useDailyStatus,
   useDailyClaimFull,
@@ -36,20 +36,17 @@ function prizeIndex(itemId: string): number {
   return i >= 0 ? i : PRIZES.length - 1;
 }
 
-/** Degrees to rotate so segment center lands under top pointer. */
-function targetRotation(index: number, spins: number): number {
+function targetOffset(index: number): number {
   const center = index * SEG + SEG / 2;
-  return spins * 360 + (360 - center);
+  return 360 - center;
 }
 
 function CyberWheel({
   rotation,
   spinning,
-  dim,
 }: {
   rotation: number;
   spinning: boolean;
-  dim: boolean;
 }) {
   const r = 110;
   const cx = 120;
@@ -68,25 +65,23 @@ function CyberWheel({
       const mid = ((i * SEG + SEG / 2 - 90) * Math.PI) / 180;
       const tx = cx + r * 0.62 * Math.cos(mid);
       const ty = cy + r * 0.62 * Math.sin(mid);
-      return { p, path, tx, ty, midDeg: i * SEG + SEG / 2 };
+      return { p, path, tx, ty };
     });
   }, []);
 
   return (
     <div className="relative mx-auto w-[min(100%,280px)]">
-      {/* outer neon ring */}
       <div
         className="pointer-events-none absolute -inset-3 rounded-full opacity-80"
         style={{
           background: spinning
-            ? `conic-gradient(from 0deg, #5ce1ff, #8b7cf7, #ff2d95, #5ce1ff)`
-            : `conic-gradient(from 0deg, rgba(92,225,255,0.35), rgba(139,124,247,0.25), rgba(255,45,149,0.2), rgba(92,225,255,0.35))`,
+            ? "conic-gradient(from 0deg, #5ce1ff, #8b7cf7, #ff2d95, #5ce1ff)"
+            : "conic-gradient(from 0deg, rgba(92,225,255,0.35), rgba(139,124,247,0.25), rgba(255,45,149,0.2), rgba(92,225,255,0.35))",
           filter: spinning ? "blur(8px)" : "blur(12px)",
           animation: spinning ? "wheel-aura 1.2s linear infinite" : undefined,
         }}
       />
 
-      {/* pointer */}
       <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1">
         <div
           className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent"
@@ -103,9 +98,8 @@ function CyberWheel({
         transition={
           spinning
             ? { duration: 4.2, ease: [0.12, 0.8, 0.15, 1] }
-            : { duration: 0.4 }
+            : { duration: 0.35 }
         }
-        style={{ filter: dim ? "brightness(0.85)" : undefined }}
       >
         <svg viewBox="0 0 240 240" className="h-full w-full">
           <defs>
@@ -120,7 +114,14 @@ function CyberWheel({
           <circle cx={cx} cy={cy} r={r + 4} fill="#0a0e18" stroke="rgba(92,225,255,0.35)" strokeWidth="2" />
           {slices.map(({ p, path, tx, ty }) => (
             <g key={p.id}>
-              <path d={path} fill={p.color} fillOpacity={0.22} stroke={p.color} strokeWidth="1.2" strokeOpacity={0.85} />
+              <path
+                d={path}
+                fill={p.color}
+                fillOpacity={0.22}
+                stroke={p.color}
+                strokeWidth="1.2"
+                strokeOpacity={0.85}
+              />
               <text
                 x={tx}
                 y={ty}
@@ -137,19 +138,15 @@ function CyberWheel({
             </g>
           ))}
           <circle cx={cx} cy={cy} r={28} fill="#06080e" stroke="#5ce1ff" strokeWidth="2" />
-          <circle cx={cx} cy={cy} r={18} fill="rgba(92,225,255,0.12)" stroke="rgba(255,45,149,0.5)" strokeWidth="1" />
-        </svg>
-
-        {spinning && (
-          <div
-            className="pointer-events-none absolute inset-0 rounded-full"
-            style={{
-              background:
-                "conic-gradient(from 0deg, transparent 0%, rgba(92,225,255,0.15) 40%, transparent 70%)",
-              mixBlendMode: "screen",
-            }}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={18}
+            fill="rgba(92,225,255,0.12)"
+            stroke="rgba(255,45,149,0.5)"
+            strokeWidth="1"
           />
-        )}
+        </svg>
       </motion.div>
 
       <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-dim)]">
@@ -163,7 +160,7 @@ export function Wheel() {
   const dailySt = useDailyStatus();
   const dailyClaim = useDailyClaimFull();
   const wheelSt = useWheelStatus();
-  const spin = useWheelSpin();
+  const spinMut = useWheelSpin();
   const promo = usePromoRedeem();
 
   const [spinning, setSpinning] = useState(false);
@@ -172,7 +169,6 @@ export function Wheel() {
   const [lastDaily, setLastDaily] = useState<DailyClaim | null>(null);
   const [code, setCode] = useState("");
   const [lastPromo, setLastPromo] = useState<PromoRedeemOut | null>(null);
-  const [phase, setPhase] = useState<"idle" | "spin" | "reveal">("idle");
 
   async function onDaily() {
     try {
@@ -186,51 +182,39 @@ export function Wheel() {
   async function onSpin() {
     if (spinning) return;
     setLastSpin(null);
-    setPhase("spin");
     setSpinning(true);
 
-    // Start visual spin immediately; resolve API in parallel
     const extraSpins = 5 + Math.floor(Math.random() * 3);
     let result: SpinOut | null = null;
-    let apiError: Error | null = null;
 
-    const apiPromise = spin
+    const apiPromise = spinMut
       .mutateAsync()
       .then((r) => {
         result = r;
       })
-      .catch((e) => {
-        apiError = e instanceof Error ? e : new Error("spin failed");
+      .catch(() => {
+        result = null;
       });
 
-    // Optimistic long spin toward a random sector, then correct if needed
-    const provisional = Math.floor(Math.random() * PRIZES.length);
-    const provisionalRot = rotation + targetRotation(provisional, extraSpins);
-    setRotation(provisionalRot);
+    // Kick off long rotation; final index applied after API returns
+    const startRot = rotation;
+    const placeholderIdx = Math.floor(Math.random() * PRIZES.length);
+    setRotation(startRot + extraSpins * 360 + targetOffset(placeholderIdx));
 
-    await Promise.all([
-      apiPromise,
-      new Promise((r) => setTimeout(r, 4200)),
-    ]);
+    await Promise.all([apiPromise, new Promise((r) => setTimeout(r, 4200))]);
 
-    if (apiError || !result) {
+    if (!result) {
       setSpinning(false);
-      setPhase("idle");
       return;
     }
 
     const idx = prizeIndex(result.item_id);
-    // Snap final angle so pointer matches real prize (small correction)
-    const finalRot = rotation + targetRotation(idx, 0);
-    // Use cumulative: base from provisional path
-    const base = provisionalRot;
-    const desired = Math.ceil(base / 360) * 360 + (360 - (idx * SEG + SEG / 2));
-    setRotation(desired);
+    const finalRot = startRot + extraSpins * 360 + targetOffset(idx);
+    setRotation(finalRot);
 
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 450));
     setLastSpin(result);
     setSpinning(false);
-    setPhase("reveal");
   }
 
   async function onPromo() {
@@ -264,7 +248,6 @@ export function Wheel() {
         }
       />
 
-      {/* Prize wheel — primary focal */}
       <div className="panel relative overflow-hidden p-5">
         <div
           className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-40"
@@ -280,15 +263,14 @@ export function Wheel() {
         </div>
 
         <p className="mt-2 text-[12px] leading-relaxed text-[var(--text-dim)]">
-          Секторы ниже — возможные дропы. Указатель сверху; после остановки сектор под ним —
-          награда.
+          Секторы на диске и в легенде — возможные дропы. Указатель сверху; после остановки сектор
+          под ним — награда.
         </p>
 
         <div className="mt-5">
-          <CyberWheel rotation={rotation} spinning={spinning} dim={phase === "reveal"} />
+          <CyberWheel rotation={rotation} spinning={spinning} />
         </div>
 
-        {/* Legend */}
         <ul className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {PRIZES.map((p) => (
             <li
@@ -313,7 +295,7 @@ export function Wheel() {
               : "linear-gradient(135deg, #5ce1ff 0%, #8b7cf7 50%, #ff2d95 100%)",
             boxShadow: spinning ? "none" : "0 0 28px rgba(92,225,255,0.35)",
           }}
-          disabled={spinning || spin.isPending || (w?.left_today ?? 0) <= 0}
+          disabled={spinning || spinMut.isPending || (w?.left_today ?? 0) <= 0}
           onClick={onSpin}
         >
           {spinning
@@ -323,10 +305,10 @@ export function Wheel() {
               : "Крутить колесо"}
         </button>
 
-        {spin.isError && (
+        {spinMut.isError && (
           <div className="mt-3">
             <ErrorPanel
-              message={spin.error instanceof Error ? spin.error.message : "Ошибка рулетки"}
+              message={spinMut.error instanceof Error ? spinMut.error.message : "Ошибка рулетки"}
             />
           </div>
         )}
@@ -343,7 +325,7 @@ export function Wheel() {
               style={{
                 borderColor: won ? `${won.color}55` : "var(--line)",
                 background: won
-                  ? `linear-gradient(145deg, ${won.glow.replace("0.55", "0.12")}, rgba(6,8,14,0.9))`
+                  ? `linear-gradient(145deg, ${won.glow.replace("0.55", "0.12").replace("0.5", "0.12").replace("0.4", "0.1")}, rgba(6,8,14,0.9))`
                   : "var(--bg-panel)",
                 boxShadow: won ? `0 0 32px ${won.glow}` : undefined,
               }}
@@ -387,7 +369,6 @@ export function Wheel() {
         </AnimatePresence>
       </div>
 
-      {/* Daily */}
       <div className="panel panel-glow space-y-4 p-5">
         <div className="flex items-center justify-between">
           <p className="eyebrow">Check-in</p>
@@ -434,7 +415,6 @@ export function Wheel() {
         </AnimatePresence>
       </div>
 
-      {/* Promo */}
       <div className="panel panel-glow space-y-4 p-5">
         <div className="flex items-center justify-between">
           <p className="eyebrow">Промокод</p>
