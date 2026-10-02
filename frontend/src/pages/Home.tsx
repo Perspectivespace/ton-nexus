@@ -17,10 +17,38 @@ import {
 } from "@/components/ui";
 
 const modules = [
-  { to: "/miner", title: "Майнер", sub: "01 · Реактор", Icon: IconReactor },
-  { to: "/wheel", title: "Рулетка", sub: "02 · Удача", Icon: IconSpark },
-  { to: "/tasks", title: "Задания", sub: "03 · Рынок", Icon: IconTasks },
-  { to: "/wallet", title: "Баланс", sub: "04 · Касса", Icon: IconWallet },
+  {
+    to: "/miner",
+    idx: "01",
+    title: "Майнер",
+    channel: "Реактор",
+    Icon: IconReactor,
+    tone: "#7a9fd4",
+  },
+  {
+    to: "/wheel",
+    idx: "02",
+    title: "Рулетка",
+    channel: "Удача",
+    Icon: IconSpark,
+    tone: "#6eb8c9",
+  },
+  {
+    to: "/tasks",
+    idx: "03",
+    title: "Задания",
+    channel: "Рынок",
+    Icon: IconTasks,
+    tone: "#8f8fd4",
+  },
+  {
+    to: "/wallet",
+    idx: "04",
+    title: "Баланс",
+    channel: "Касса",
+    Icon: IconWallet,
+    tone: "#6fbf9a",
+  },
 ] as const;
 
 export function Home() {
@@ -131,33 +159,49 @@ export function Home() {
         <IconArrow size={15} />
       </motion.button>
 
+      {/* Modules — console rows, not tile buttons */}
       <div>
         <p className="eyebrow mb-2.5">Modules</p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="panel overflow-hidden p-0">
           {modules.map((m, i) => {
             const Icon = m.Icon;
+            const last = i === modules.length - 1;
             return (
-              <motion.div
+              <Link
                 key={m.to}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.03 * i, duration: 0.28 }}
+                to={m.to}
+                className={`module-row group flex items-center gap-3.5 px-4 py-3.5 no-underline active:bg-white/[0.04] ${
+                  last ? "" : "border-b border-[var(--line)]"
+                }`}
+                style={{ ["--row-tone" as string]: m.tone }}
               >
-                <Link to={m.to} className="panel flex h-[96px] flex-col justify-between p-3.5 no-underline">
-                  <div className="flex items-center justify-between">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-black/20 text-[var(--accent-bright)]">
-                      <Icon size={15} />
-                    </span>
-                    <span className="eyebrow text-[9px] !tracking-[0.14em]">{m.sub.split(" · ")[0]}</span>
-                  </div>
-                  <div>
-                    <p className="text-[13px] font-semibold tracking-tight text-[var(--text)]">{m.title}</p>
-                    <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
-                      {m.sub.split(" · ")[1]}
-                    </p>
-                  </div>
-                </Link>
-              </motion.div>
+                <span className="mono w-6 shrink-0 text-[11px] text-[var(--text-meta)]">{m.idx}</span>
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[var(--line)]"
+                  style={{
+                    background: `color-mix(in srgb, ${m.tone} 12%, transparent)`,
+                    color: m.tone,
+                  }}
+                >
+                  <Icon size={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold tracking-tight text-[var(--text)]">
+                    {m.title}
+                  </span>
+                  <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
+                    {m.channel}
+                  </span>
+                </span>
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text-dim)] transition-colors"
+                  style={{
+                    // soft press affordance on touch devices via active on parent
+                  }}
+                >
+                  <IconArrow size={13} />
+                </span>
+              </Link>
             );
           })}
         </div>
@@ -195,7 +239,7 @@ function OpsLink({ to, label, last }: { to: string; label: string; last?: boolea
   return (
     <Link
       to={to}
-      className={`flex items-center justify-between px-4 py-3.5 text-[13px] tracking-wide text-[var(--text)] no-underline transition-colors hover:bg-white/[0.025] ${
+      className={`flex items-center justify-between px-4 py-3.5 text-[13px] tracking-wide text-[var(--text)] no-underline active:bg-white/[0.03] ${
         last ? "" : "border-b border-[var(--line)]"
       }`}
     >
