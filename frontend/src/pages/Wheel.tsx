@@ -19,7 +19,6 @@ import {
 } from "@/components/ui";
 import { IconSpark } from "@/components/icons";
 
-/** Mirror of default economy prize_wheel items (visual only until API exposes table). */
 const PRIZES = [
   { id: "success_plus_5", label: "+5% успех", short: "+5%", color: "#3dd68c", glow: "rgba(61,214,140,0.55)" },
   { id: "focus_1", label: "Фокус ×1", short: "Фокус", color: "#6b9bff", glow: "rgba(107,155,255,0.55)" },
@@ -41,13 +40,7 @@ function targetOffset(index: number): number {
   return 360 - center;
 }
 
-function CyberWheel({
-  rotation,
-  spinning,
-}: {
-  rotation: number;
-  spinning: boolean;
-}) {
+function CyberWheel({ rotation, spinning }: { rotation: number; spinning: boolean }) {
   const r = 110;
   const cx = 120;
   const cy = 120;
@@ -185,35 +178,30 @@ export function Wheel() {
     setSpinning(true);
 
     const extraSpins = 5 + Math.floor(Math.random() * 3);
-    let result: SpinOut | null = null;
-
-    const apiPromise = spinMut
-      .mutateAsync()
-      .then((r) => {
-        result = r;
-      })
-      .catch(() => {
-        result = null;
-      });
-
-    // Kick off long rotation; final index applied after API returns
     const startRot = rotation;
     const placeholderIdx = Math.floor(Math.random() * PRIZES.length);
     setRotation(startRot + extraSpins * 360 + targetOffset(placeholderIdx));
 
-    await Promise.all([apiPromise, new Promise((r) => setTimeout(r, 4200))]);
+    let outcome: SpinOut | null = null;
+    try {
+      const [apiResult] = await Promise.all([
+        spinMut.mutateAsync(),
+        new Promise<void>((resolve) => setTimeout(resolve, 4200)),
+      ]);
+      outcome = apiResult;
+    } catch {
+      outcome = null;
+    }
 
-    if (!result) {
+    if (!outcome) {
       setSpinning(false);
       return;
     }
 
-    const idx = prizeIndex(result.item_id);
-    const finalRot = startRot + extraSpins * 360 + targetOffset(idx);
-    setRotation(finalRot);
-
-    await new Promise((r) => setTimeout(r, 450));
-    setLastSpin(result);
+    const idx = prizeIndex(outcome.item_id);
+    setRotation(startRot + extraSpins * 360 + targetOffset(idx));
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    setLastSpin(outcome);
     setSpinning(false);
   }
 
@@ -325,7 +313,7 @@ export function Wheel() {
               style={{
                 borderColor: won ? `${won.color}55` : "var(--line)",
                 background: won
-                  ? `linear-gradient(145deg, ${won.glow.replace("0.55", "0.12").replace("0.5", "0.12").replace("0.4", "0.1")}, rgba(6,8,14,0.9))`
+                  ? `linear-gradient(145deg, rgba(92,225,255,0.08), rgba(6,8,14,0.9))`
                   : "var(--bg-panel)",
                 boxShadow: won ? `0 0 32px ${won.glow}` : undefined,
               }}
