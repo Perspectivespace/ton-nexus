@@ -2,10 +2,10 @@ import { NavLink } from "react-router-dom";
 import { IconHome, IconReactor, IconTasks, IconWallet } from "./icons";
 
 const items = [
-  { to: "/", label: "Home", Icon: IconHome },
-  { to: "/miner", label: "Miner", Icon: IconReactor },
-  { to: "/tasks", label: "Tasks", Icon: IconTasks },
-  { to: "/wallet", label: "Wallet", Icon: IconWallet },
+  { to: "/", label: "Контур", Icon: IconHome },
+  { to: "/miner", label: "Майнер", Icon: IconReactor },
+  { to: "/tasks", label: "Задания", Icon: IconTasks },
+  { to: "/wallet", label: "Баланс", Icon: IconWallet },
 ];
 
 export function Nav() {
