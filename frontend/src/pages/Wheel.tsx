@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useState } from "react";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import {
   useDailyStatus,
   useDailyClaimFull,
@@ -19,6 +19,146 @@ import {
 } from "@/components/ui";
 import { IconSpark } from "@/components/icons";
 
+/** Mirror of default economy prize_wheel items (visual only until API exposes table). */
+const PRIZES = [
+  { id: "success_plus_5", label: "+5% успех", short: "+5%", color: "#3dd68c", glow: "rgba(61,214,140,0.55)" },
+  { id: "focus_1", label: "Фокус ×1", short: "Фокус", color: "#6b9bff", glow: "rgba(107,155,255,0.55)" },
+  { id: "block_1", label: "Запрет ×1", short: "Запрет", color: "#8b7cf7", glow: "rgba(139,124,247,0.55)" },
+  { id: "xp_small", label: "XP", short: "XP", color: "#f5c14a", glow: "rgba(245,193,74,0.5)" },
+  { id: "ton_dust", label: "Пыль TON", short: "TON", color: "#5ce1ff", glow: "rgba(92,225,255,0.55)" },
+  { id: "nothing", label: "Пусто", short: "—", color: "#4a5568", glow: "rgba(74,85,104,0.4)" },
+] as const;
+
+const SEG = 360 / PRIZES.length;
+
+function prizeIndex(itemId: string): number {
+  const i = PRIZES.findIndex((p) => p.id === itemId);
+  return i >= 0 ? i : PRIZES.length - 1;
+}
+
+/** Degrees to rotate so segment center lands under top pointer. */
+function targetRotation(index: number, spins: number): number {
+  const center = index * SEG + SEG / 2;
+  return spins * 360 + (360 - center);
+}
+
+function CyberWheel({
+  rotation,
+  spinning,
+  dim,
+}: {
+  rotation: number;
+  spinning: boolean;
+  dim: boolean;
+}) {
+  const r = 110;
+  const cx = 120;
+  const cy = 120;
+
+  const slices = useMemo(() => {
+    return PRIZES.map((p, i) => {
+      const a0 = ((i * SEG - 90) * Math.PI) / 180;
+      const a1 = (((i + 1) * SEG - 90) * Math.PI) / 180;
+      const x0 = cx + r * Math.cos(a0);
+      const y0 = cy + r * Math.sin(a0);
+      const x1 = cx + r * Math.cos(a1);
+      const y1 = cy + r * Math.sin(a1);
+      const large = SEG > 180 ? 1 : 0;
+      const path = `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`;
+      const mid = ((i * SEG + SEG / 2 - 90) * Math.PI) / 180;
+      const tx = cx + r * 0.62 * Math.cos(mid);
+      const ty = cy + r * 0.62 * Math.sin(mid);
+      return { p, path, tx, ty, midDeg: i * SEG + SEG / 2 };
+    });
+  }, []);
+
+  return (
+    <div className="relative mx-auto w-[min(100%,280px)]">
+      {/* outer neon ring */}
+      <div
+        className="pointer-events-none absolute -inset-3 rounded-full opacity-80"
+        style={{
+          background: spinning
+            ? `conic-gradient(from 0deg, #5ce1ff, #8b7cf7, #ff2d95, #5ce1ff)`
+            : `conic-gradient(from 0deg, rgba(92,225,255,0.35), rgba(139,124,247,0.25), rgba(255,45,149,0.2), rgba(92,225,255,0.35))`,
+          filter: spinning ? "blur(8px)" : "blur(12px)",
+          animation: spinning ? "wheel-aura 1.2s linear infinite" : undefined,
+        }}
+      />
+
+      {/* pointer */}
+      <div className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1">
+        <div
+          className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent"
+          style={{
+            borderTopColor: "#5ce1ff",
+            filter: "drop-shadow(0 0 8px rgba(92,225,255,0.9))",
+          }}
+        />
+      </div>
+
+      <motion.div
+        className="relative aspect-square w-full"
+        animate={{ rotate: rotation }}
+        transition={
+          spinning
+            ? { duration: 4.2, ease: [0.12, 0.8, 0.15, 1] }
+            : { duration: 0.4 }
+        }
+        style={{ filter: dim ? "brightness(0.85)" : undefined }}
+      >
+        <svg viewBox="0 0 240 240" className="h-full w-full">
+          <defs>
+            <filter id="neon">
+              <feGaussianBlur stdDeviation="1.2" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx={cx} cy={cy} r={r + 4} fill="#0a0e18" stroke="rgba(92,225,255,0.35)" strokeWidth="2" />
+          {slices.map(({ p, path, tx, ty }) => (
+            <g key={p.id}>
+              <path d={path} fill={p.color} fillOpacity={0.22} stroke={p.color} strokeWidth="1.2" strokeOpacity={0.85} />
+              <text
+                x={tx}
+                y={ty}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill={p.color}
+                fontSize="11"
+                fontFamily="IBM Plex Mono, monospace"
+                fontWeight="600"
+                filter="url(#neon)"
+              >
+                {p.short}
+              </text>
+            </g>
+          ))}
+          <circle cx={cx} cy={cy} r={28} fill="#06080e" stroke="#5ce1ff" strokeWidth="2" />
+          <circle cx={cx} cy={cy} r={18} fill="rgba(92,225,255,0.12)" stroke="rgba(255,45,149,0.5)" strokeWidth="1" />
+        </svg>
+
+        {spinning && (
+          <div
+            className="pointer-events-none absolute inset-0 rounded-full"
+            style={{
+              background:
+                "conic-gradient(from 0deg, transparent 0%, rgba(92,225,255,0.15) 40%, transparent 70%)",
+              mixBlendMode: "screen",
+            }}
+          />
+        )}
+      </motion.div>
+
+      <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-dim)]">
+        {spinning ? "сканирование сектора…" : "nexus roulette"}
+      </p>
+    </div>
+  );
+}
+
 export function Wheel() {
   const dailySt = useDailyStatus();
   const dailyClaim = useDailyClaimFull();
@@ -27,10 +167,12 @@ export function Wheel() {
   const promo = usePromoRedeem();
 
   const [spinning, setSpinning] = useState(false);
+  const [rotation, setRotation] = useState(0);
   const [lastSpin, setLastSpin] = useState<SpinOut | null>(null);
   const [lastDaily, setLastDaily] = useState<DailyClaim | null>(null);
   const [code, setCode] = useState("");
   const [lastPromo, setLastPromo] = useState<PromoRedeemOut | null>(null);
+  const [phase, setPhase] = useState<"idle" | "spin" | "reveal">("idle");
 
   async function onDaily() {
     try {
@@ -42,16 +184,53 @@ export function Wheel() {
   }
 
   async function onSpin() {
+    if (spinning) return;
+    setLastSpin(null);
+    setPhase("spin");
     setSpinning(true);
-    await new Promise((r) => setTimeout(r, 900));
-    try {
-      const r = await spin.mutateAsync();
-      setLastSpin(r);
-    } catch {
-      /* */
-    } finally {
+
+    // Start visual spin immediately; resolve API in parallel
+    const extraSpins = 5 + Math.floor(Math.random() * 3);
+    let result: SpinOut | null = null;
+    let apiError: Error | null = null;
+
+    const apiPromise = spin
+      .mutateAsync()
+      .then((r) => {
+        result = r;
+      })
+      .catch((e) => {
+        apiError = e instanceof Error ? e : new Error("spin failed");
+      });
+
+    // Optimistic long spin toward a random sector, then correct if needed
+    const provisional = Math.floor(Math.random() * PRIZES.length);
+    const provisionalRot = rotation + targetRotation(provisional, extraSpins);
+    setRotation(provisionalRot);
+
+    await Promise.all([
+      apiPromise,
+      new Promise((r) => setTimeout(r, 4200)),
+    ]);
+
+    if (apiError || !result) {
       setSpinning(false);
+      setPhase("idle");
+      return;
     }
+
+    const idx = prizeIndex(result.item_id);
+    // Snap final angle so pointer matches real prize (small correction)
+    const finalRot = rotation + targetRotation(idx, 0);
+    // Use cumulative: base from provisional path
+    const base = provisionalRot;
+    const desired = Math.ceil(base / 360) * 360 + (360 - (idx * SEG + SEG / 2));
+    setRotation(desired);
+
+    await new Promise((r) => setTimeout(r, 500));
+    setLastSpin(result);
+    setSpinning(false);
+    setPhase("reveal");
   }
 
   async function onPromo() {
@@ -71,12 +250,13 @@ export function Wheel() {
 
   const d = dailySt.data;
   const w = wheelSt.data;
+  const won = lastSpin ? PRIZES[prizeIndex(lastSpin.item_id)] : null;
 
   return (
     <div className="space-y-5">
       <ScreenHeader
         eyebrow="Награды"
-        title="Daily · Promo · Wheel"
+        title="Контур удачи"
         action={
           <StatusPill tone={d?.claimed_today ? "ok" : "live"}>
             {d?.claimed_today ? "daily ✓" : "daily open"}
@@ -84,6 +264,130 @@ export function Wheel() {
         }
       />
 
+      {/* Prize wheel — primary focal */}
+      <div className="panel relative overflow-hidden p-5">
+        <div
+          className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-40"
+          style={{
+            background: "radial-gradient(circle, rgba(255,45,149,0.25), transparent 70%)",
+          }}
+        />
+        <div className="relative flex items-center justify-between">
+          <p className="eyebrow text-[#5ce1ff]">Prize wheel</p>
+          <StatusPill tone={(w?.left_today ?? 0) > 0 ? "live" : "neutral"}>
+            {w?.left_today ?? 0}/{w?.free_spins_per_day ?? 0} спин
+          </StatusPill>
+        </div>
+
+        <p className="mt-2 text-[12px] leading-relaxed text-[var(--text-dim)]">
+          Секторы ниже — возможные дропы. Указатель сверху; после остановки сектор под ним —
+          награда.
+        </p>
+
+        <div className="mt-5">
+          <CyberWheel rotation={rotation} spinning={spinning} dim={phase === "reveal"} />
+        </div>
+
+        {/* Legend */}
+        <ul className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {PRIZES.map((p) => (
+            <li
+              key={p.id}
+              className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-1.5"
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: p.color, boxShadow: `0 0 8px ${p.glow}` }}
+              />
+              <span className="truncate text-[11px] text-[var(--text-dim)]">{p.label}</span>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          type="button"
+          className="btn-primary mt-5 w-full"
+          style={{
+            background: spinning
+              ? "linear-gradient(135deg, #3a4a6a, #2a3550)"
+              : "linear-gradient(135deg, #5ce1ff 0%, #8b7cf7 50%, #ff2d95 100%)",
+            boxShadow: spinning ? "none" : "0 0 28px rgba(92,225,255,0.35)",
+          }}
+          disabled={spinning || spin.isPending || (w?.left_today ?? 0) <= 0}
+          onClick={onSpin}
+        >
+          {spinning
+            ? "Крутится…"
+            : (w?.left_today ?? 0) <= 0
+              ? "Лимит на сегодня"
+              : "Крутить колесо"}
+        </button>
+
+        {spin.isError && (
+          <div className="mt-3">
+            <ErrorPanel
+              message={spin.error instanceof Error ? spin.error.message : "Ошибка рулетки"}
+            />
+          </div>
+        )}
+
+        <AnimatePresence mode="wait">
+          {lastSpin && !spinning && (
+            <motion.div
+              key={lastSpin.item_id + lastSpin.label}
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ type: "spring", stiffness: 320, damping: 22 }}
+              className="mt-4 overflow-hidden rounded-2xl border p-4"
+              style={{
+                borderColor: won ? `${won.color}55` : "var(--line)",
+                background: won
+                  ? `linear-gradient(145deg, ${won.glow.replace("0.55", "0.12")}, rgba(6,8,14,0.9))`
+                  : "var(--bg-panel)",
+                boxShadow: won ? `0 0 32px ${won.glow}` : undefined,
+              }}
+            >
+              <p className="eyebrow" style={{ color: won?.color }}>
+                Выпало
+              </p>
+              <p className="mt-1 text-lg font-semibold tracking-tight">{lastSpin.label}</p>
+              <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-[var(--text-dim)]">
+                {Number(lastSpin.reward_ton) > 0 && (
+                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
+                    +{Number(lastSpin.reward_ton).toFixed(4)} TON
+                  </span>
+                )}
+                {lastSpin.reward_xp > 0 && (
+                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
+                    +{lastSpin.reward_xp} XP
+                  </span>
+                )}
+                {lastSpin.reward_focus > 0 && (
+                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
+                    Фокус +{lastSpin.reward_focus}
+                  </span>
+                )}
+                {lastSpin.reward_block > 0 && (
+                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
+                    Запрет +{lastSpin.reward_block}
+                  </span>
+                )}
+                {lastSpin.success_boost_bp > 0 && (
+                  <span className="rounded-md border border-[var(--success)]/30 px-2 py-0.5 text-[var(--success)]">
+                    +{lastSpin.success_boost_bp / 100}% успех
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 font-mono text-[11px] text-[var(--text-dim)]">
+                осталось спинов: {lastSpin.free_spins_left_today}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Daily */}
       <div className="panel panel-glow space-y-4 p-5">
         <div className="flex items-center justify-between">
           <p className="eyebrow">Check-in</p>
@@ -130,6 +434,7 @@ export function Wheel() {
         </AnimatePresence>
       </div>
 
+      {/* Promo */}
       <div className="panel panel-glow space-y-4 p-5">
         <div className="flex items-center justify-between">
           <p className="eyebrow">Промокод</p>
@@ -194,96 +499,12 @@ export function Wheel() {
         </AnimatePresence>
       </div>
 
-      <div className="panel panel-glow space-y-4 p-5">
-        <div className="flex items-center justify-between">
-          <p className="eyebrow">Prize wheel</p>
-          <StatusPill tone={(w?.left_today ?? 0) > 0 ? "live" : "neutral"}>
-            {w?.left_today ?? 0}/{w?.free_spins_per_day ?? 0} спин
-          </StatusPill>
-        </div>
-
-        <div className="flex justify-center py-2">
-          <motion.div
-            animate={spinning ? { rotate: 360 } : { rotate: 0 }}
-            transition={
-              spinning
-                ? { repeat: Infinity, duration: 0.6, ease: "linear" }
-                : { duration: 0.4 }
-            }
-            className="flex h-28 w-28 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--accent-soft)]"
-            style={{
-              boxShadow: spinning ? "0 0 40px rgba(107,155,255,0.35)" : undefined,
-            }}
-          >
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[var(--accent)]/40 bg-[var(--bg-deep)]">
-              <IconSpark size={22} className="text-[var(--accent)]" />
-            </div>
-          </motion.div>
-        </div>
-
-        <button
-          type="button"
-          className="btn-primary w-full"
-          disabled={spinning || spin.isPending || (w?.left_today ?? 0) <= 0}
-          onClick={onSpin}
-        >
-          {spinning || spin.isPending
-            ? "Крутится…"
-            : (w?.left_today ?? 0) <= 0
-              ? "Лимит на сегодня"
-              : "Крутить"}
-        </button>
-
-        {spin.isError && (
-          <ErrorPanel
-            message={spin.error instanceof Error ? spin.error.message : "Ошибка рулетки"}
-          />
-        )}
-
-        <AnimatePresence mode="wait">
-          {lastSpin && !spinning && (
-            <motion.div
-              key={lastSpin.item_id + lastSpin.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="panel border-[var(--accent)]/20 p-4"
-            >
-              <p className="eyebrow">Выпало</p>
-              <p className="mt-1 text-base font-semibold">{lastSpin.label}</p>
-              <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-[var(--text-dim)]">
-                {Number(lastSpin.reward_ton) > 0 && (
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    +{Number(lastSpin.reward_ton).toFixed(4)} TON
-                  </span>
-                )}
-                {lastSpin.reward_xp > 0 && (
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    +{lastSpin.reward_xp} XP
-                  </span>
-                )}
-                {lastSpin.reward_focus > 0 && (
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    Фокус +{lastSpin.reward_focus}
-                  </span>
-                )}
-                {lastSpin.reward_block > 0 && (
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    Запрет +{lastSpin.reward_block}
-                  </span>
-                )}
-                {lastSpin.success_boost_bp > 0 && (
-                  <span className="rounded-md border border-[var(--success)]/30 px-2 py-0.5 text-[var(--success)]">
-                    +{lastSpin.success_boost_bp / 100}% успех
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-[11px] text-[var(--text-dim)]">
-                Осталось спинов: {lastSpin.free_spins_left_today}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      <style>{`
+        @keyframes wheel-aura {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
