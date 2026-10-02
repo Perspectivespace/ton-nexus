@@ -9,20 +9,20 @@ export function StatusPill({
   children: ReactNode;
 }) {
   const map = {
-    neutral: "bg-white/[0.06] text-[var(--text-dim)]",
-    live: "bg-[var(--accent-soft)] text-[var(--accent)]",
-    warn: "bg-[var(--warn)]/15 text-[var(--warn)]",
-    danger: "bg-[var(--danger)]/15 text-[var(--danger)]",
-    ok: "bg-[var(--success)]/15 text-[var(--success)]",
+    neutral: "bg-black/25 text-[var(--text-dim)] border-[var(--line)]",
+    live: "bg-[var(--accent-soft)] text-[var(--accent-bright)] border-[rgba(122,159,212,0.25)]",
+    warn: "bg-[var(--warn)]/10 text-[var(--warn)] border-[var(--warn)]/25",
+    danger: "bg-[var(--danger)]/10 text-[var(--danger)] border-[var(--danger)]/25",
+    ok: "bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/25",
   };
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${map[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${map[tone]}`}
     >
       <span
         className={`h-1.5 w-1.5 rounded-full ${
           tone === "live"
-            ? "bg-[var(--accent)] animate-pulse"
+            ? "bg-[var(--accent-bright)] animate-pulse"
             : tone === "ok"
               ? "bg-[var(--success)]"
               : tone === "warn"
@@ -39,9 +39,9 @@ export function StatusPill({
 
 export function LoadingPanel({ label = "Синхронизация…" }: { label?: string }) {
   return (
-    <div className="panel panel-glow flex items-center gap-3 p-5">
-      <div className="relative h-9 w-9 shrink-0">
-        <div className="absolute inset-0 rounded-full border border-[var(--line-strong)]" />
+    <div className="panel flex items-center gap-3 p-5">
+      <div className="relative h-8 w-8 shrink-0">
+        <div className="absolute inset-0 rounded-full border border-[var(--line-metal)]" />
         <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-[var(--accent)]" />
       </div>
       <div>
@@ -54,9 +54,9 @@ export function LoadingPanel({ label = "Синхронизация…" }: { labe
 
 export function ErrorPanel({ message }: { message: string }) {
   return (
-    <div className="panel border-[var(--danger)]/25 p-4">
+    <div className="panel border-[var(--danger)]/30 p-4">
       <p className="eyebrow text-[var(--danger)]">Fault</p>
-      <p className="mt-1.5 text-[13px] leading-relaxed tracking-wide text-[var(--danger)]">{message}</p>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--danger)]">{message}</p>
     </div>
   );
 }
@@ -85,10 +85,11 @@ export function Readout({
   return (
     <div className="min-w-0">
       <p className="eyebrow">{label}</p>
-      <p className="value-display mt-1.5 truncate text-xl">
+      <hr className="rule mt-1.5 mb-2" />
+      <p className="value-display truncate text-xl">
         {value}
         {unit && (
-          <span className="ml-1.5 text-[11px] font-medium tracking-[0.12em] text-[var(--text-dim)]">
+          <span className="ml-1.5 text-[10px] font-medium tracking-[0.14em] text-[var(--text-dim)]">
             {unit}
           </span>
         )}
@@ -118,26 +119,20 @@ export function Gauge({
     <div className="flex flex-col items-center">
       <div className="relative h-[96px] w-[96px]">
         <svg viewBox="0 0 96 96" className="h-full w-full -rotate-90">
-          <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+          <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
           <motion.circle
             cx="48"
             cy="48"
             r={r}
             fill="none"
-            stroke="url(#g)"
-            strokeWidth="6"
+            stroke="var(--accent)"
+            strokeWidth="5"
             strokeLinecap="round"
             strokeDasharray={c}
             initial={{ strokeDashoffset: c }}
             animate={{ strokeDashoffset: offset }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           />
-          <defs>
-            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#6b9bff" />
-              <stop offset="100%" stopColor="#8b7cf7" />
-            </linearGradient>
-          </defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="value-display text-lg">{Math.round(pct * 100)}</span>

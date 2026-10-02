@@ -17,30 +17,10 @@ import {
 } from "@/components/ui";
 
 const modules = [
-  {
-    to: "/miner",
-    title: "Майнер",
-    sub: "Реактор · цикл",
-    Icon: IconReactor,
-  },
-  {
-    to: "/wheel",
-    title: "Рулетка",
-    sub: "Контур удачи",
-    Icon: IconSpark,
-  },
-  {
-    to: "/tasks",
-    title: "Задания",
-    sub: "Рынок · TON",
-    Icon: IconTasks,
-  },
-  {
-    to: "/wallet",
-    title: "Баланс",
-    sub: "Вывод · история",
-    Icon: IconWallet,
-  },
+  { to: "/miner", title: "Майнер", sub: "01 · Реактор", Icon: IconReactor },
+  { to: "/wheel", title: "Рулетка", sub: "02 · Удача", Icon: IconSpark },
+  { to: "/tasks", title: "Задания", sub: "03 · Рынок", Icon: IconTasks },
+  { to: "/wallet", title: "Баланс", sub: "04 · Касса", Icon: IconWallet },
 ] as const;
 
 export function Home() {
@@ -48,7 +28,7 @@ export function Home() {
   const daily = useDailyClaim();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <ScreenHeader
         eyebrow="TON Nexus"
         title={me?.first_name || me?.username || "Контур"}
@@ -68,112 +48,112 @@ export function Home() {
 
       {me && (
         <motion.section
-          initial={{ opacity: 0, y: 14 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="panel panel-glow relative overflow-hidden p-5"
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="panel panel-glow p-5"
         >
-          <div className="relative">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="eyebrow">Liquid balance</p>
-                <p className="value-display mt-1.5 text-[32px]">
-                  {Number(me.balance).toFixed(4)}
-                  <span className="ml-2 text-[11px] font-medium tracking-[0.14em] text-[var(--text-dim)]">
-                    TON
-                  </span>
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[var(--line)] bg-white/[0.03] px-3.5 py-2.5 text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <IconLevel size={12} className="text-[var(--text-dim)]" />
-                  <span className="eyebrow">level</span>
-                </div>
-                <p className="value-display mt-1 text-2xl">{me.level}</p>
-                <p className="mono mt-0.5 text-[10px] tracking-wide text-[var(--text-dim)]">
-                  {me.xp} XP
-                </p>
-              </div>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="eyebrow">Liquid balance</p>
+              <hr className="rule mt-2 mb-3" />
+              <p className="value-display text-[34px]">
+                {Number(me.balance).toFixed(4)}
+                <span className="ml-2 text-[11px] font-medium tracking-[0.16em] text-[var(--text-dim)]">
+                  TON
+                </span>
+              </p>
             </div>
+            <div className="shrink-0 rounded-[12px] border border-[var(--line)] bg-black/25 px-3 py-2.5 text-right">
+              <div className="flex items-center justify-end gap-1.5">
+                <IconLevel size={11} className="text-[var(--text-dim)]" />
+                <span className="eyebrow">level</span>
+              </div>
+              <p className="value-display mt-1 text-[22px]">{me.level}</p>
+              <p className="mono mt-0.5 text-[10px] text-[var(--text-dim)]">{me.xp} XP</p>
+            </div>
+          </div>
 
-            <div className="mt-4">
-              <div className="mb-1.5 flex justify-between">
-                <span className="eyebrow">Progress</span>
-                <span className="mono text-[10px] text-[var(--text-dim)]">{me.xp} XP</span>
-              </div>
-              <div className="h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                <motion.div
-                  className="h-full rounded-full bg-[var(--accent)]"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, (me.xp % 100) || 8)}%` }}
-                  transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                />
-              </div>
+          <div className="mt-5">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="eyebrow">Progress</span>
+              <span className="mono text-[10px] text-[var(--text-dim)]">{me.xp} XP</span>
             </div>
+            <div className="flex h-1 gap-0.5 overflow-hidden">
+              {Array.from({ length: 12 }).map((_, i) => {
+                const filled = i < Math.max(1, Math.floor(((me.xp % 100) / 100) * 12));
+                return (
+                  <div
+                    key={i}
+                    className="h-full flex-1 rounded-[1px]"
+                    style={{
+                      background: filled ? "var(--accent)" : "rgba(255,255,255,0.06)",
+                      opacity: filled ? 0.85 - i * 0.02 : 1,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <TokenChip label="Фокус" value={me.focus_tokens} />
-              <TokenChip label="Запрет" value={me.block_tokens} />
-              {me.success_boost_bp > 0 && (
-                <StatusPill tone="ok">+{(me.success_boost_bp / 100).toFixed(0)}% успех</StatusPill>
-              )}
-              {me.is_owner && <StatusPill tone="live">owner</StatusPill>}
-              {me.is_admin && !me.is_owner && <StatusPill tone="neutral">admin</StatusPill>}
-            </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <TokenChip label="Focus" value={me.focus_tokens} />
+            <TokenChip label="Block" value={me.block_tokens} />
+            {me.success_boost_bp > 0 && (
+              <StatusPill tone="ok">+{(me.success_boost_bp / 100).toFixed(0)}% boost</StatusPill>
+            )}
+            {me.is_owner && <StatusPill tone="live">owner</StatusPill>}
+            {me.is_admin && !me.is_owner && <StatusPill tone="neutral">admin</StatusPill>}
           </div>
         </motion.section>
       )}
 
       <motion.button
         type="button"
-        whileTap={{ scale: 0.98 }}
-        className="btn-primary relative w-full overflow-hidden px-5 py-4 text-left"
+        whileTap={{ scale: 0.985 }}
+        className="btn-primary w-full justify-between px-4 py-3.5 text-left"
         disabled={daily.isPending}
         onClick={() => daily.mutate()}
       >
-        <div className="relative flex w-full items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-              <IconSpark size={17} />
+        <span className="flex items-center gap-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/15">
+            <IconSpark size={16} />
+          </span>
+          <span>
+            <span className="block text-[13px] font-semibold tracking-[0.04em]">
+              {daily.isPending ? "Начисление…" : "Daily check-in"}
             </span>
-            <div>
-              <p className="text-[14px] font-semibold tracking-wide">
-                {daily.isPending ? "Начисление…" : "Ежедневный check-in"}
-              </p>
-              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-white/65">
-                Серия · награда · XP
-              </p>
-            </div>
-          </div>
-          <IconArrow size={16} />
-        </div>
+            <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.16em] opacity-70">
+              Серия · награда · XP
+            </span>
+          </span>
+        </span>
+        <IconArrow size={15} />
       </motion.button>
 
       <div>
-        <p className="eyebrow mb-3">Модули</p>
-        <div className="grid grid-cols-2 gap-2.5">
+        <p className="eyebrow mb-2.5">Modules</p>
+        <div className="grid grid-cols-2 gap-2">
           {modules.map((m, i) => {
             const Icon = m.Icon;
             return (
               <motion.div
                 key={m.to}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.04 * i, duration: 0.3 }}
+                transition={{ delay: 0.03 * i, duration: 0.28 }}
               >
-                <Link
-                  to={m.to}
-                  className="panel flex h-[100px] flex-col justify-between p-3.5 no-underline transition-[border-color,background] duration-150 hover:border-[var(--line-strong)]"
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-white/[0.03] text-[var(--text)]">
-                    <Icon size={16} />
-                  </span>
+                <Link to={m.to} className="panel flex h-[96px] flex-col justify-between p-3.5 no-underline">
+                  <div className="flex items-center justify-between">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-black/20 text-[var(--accent-bright)]">
+                      <Icon size={15} />
+                    </span>
+                    <span className="eyebrow text-[9px] !tracking-[0.14em]">{m.sub.split(" · ")[0]}</span>
+                  </div>
                   <div>
-                    <p className="text-[13px] font-semibold tracking-tight text-[var(--text)]">
-                      {m.title}
-                    </p>
-                    <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--text-dim)]">
-                      {m.sub}
+                    <p className="text-[13px] font-semibold tracking-tight text-[var(--text)]">{m.title}</p>
+                    <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
+                      {m.sub.split(" · ")[1]}
                     </p>
                   </div>
                 </Link>
@@ -185,7 +165,7 @@ export function Home() {
 
       {(me?.is_owner || me?.is_admin || me?.is_ambassador) && (
         <div className="space-y-2">
-          <p className="eyebrow">Операции</p>
+          <p className="eyebrow">Operations</p>
           <div className="panel overflow-hidden p-0">
             {(me.is_owner || me.is_admin || me.is_ambassador) && (
               <OpsLink to="/tasks/new" label="Создать задание" />
@@ -193,9 +173,7 @@ export function Home() {
             {(me.is_owner || me.is_admin || me.is_ambassador) && (
               <OpsLink to="/inbox" label="Inbox · модерация" />
             )}
-            {(me.is_owner || me.is_admin) && (
-              <OpsLink to="/withdraws" label="Касса · выводы" />
-            )}
+            {(me.is_owner || me.is_admin) && <OpsLink to="/withdraws" label="Касса · выводы" />}
             {me.is_owner && <OpsLink to="/owner" label="Owner · экономика" last />}
           </div>
         </div>
@@ -206,9 +184,9 @@ export function Home() {
 
 function TokenChip({ label, value }: { label: string; value: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-dim)]">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-black/20 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
       <span className="h-1 w-1 rounded-full bg-[var(--accent)]" />
-      {label} · {value}
+      {label} {value}
     </span>
   );
 }
@@ -217,7 +195,7 @@ function OpsLink({ to, label, last }: { to: string; label: string; last?: boolea
   return (
     <Link
       to={to}
-      className={`flex items-center justify-between px-4 py-3.5 text-[13px] tracking-wide text-[var(--text)] no-underline transition-colors hover:bg-white/[0.03] ${
+      className={`flex items-center justify-between px-4 py-3.5 text-[13px] tracking-wide text-[var(--text)] no-underline transition-colors hover:bg-white/[0.025] ${
         last ? "" : "border-b border-[var(--line)]"
       }`}
     >
