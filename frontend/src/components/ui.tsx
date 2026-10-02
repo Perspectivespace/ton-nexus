@@ -17,7 +17,7 @@ export function StatusPill({
   };
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium tracking-wide ${map[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${map[tone]}`}
     >
       <span
         className={`h-1.5 w-1.5 rounded-full ${
@@ -46,7 +46,7 @@ export function LoadingPanel({ label = "Синхронизация…" }: { labe
       </div>
       <div>
         <p className="eyebrow">Telemetry</p>
-        <p className="text-sm text-[var(--text-dim)]">{label}</p>
+        <p className="label-meta mt-1">{label}</p>
       </div>
     </div>
   );
@@ -56,7 +56,7 @@ export function ErrorPanel({ message }: { message: string }) {
   return (
     <div className="panel border-[var(--danger)]/25 p-4">
       <p className="eyebrow text-[var(--danger)]">Fault</p>
-      <p className="mt-1 text-sm leading-relaxed text-[var(--danger)]">{message}</p>
+      <p className="mt-1.5 text-[13px] leading-relaxed tracking-wide text-[var(--danger)]">{message}</p>
     </div>
   );
 }
@@ -65,8 +65,8 @@ export function EmptyPanel({ title, body }: { title: string; body: string }) {
   return (
     <div className="panel p-6 text-center">
       <p className="eyebrow mb-2">Idle</p>
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mt-2 text-[13px] leading-relaxed text-[var(--text-dim)]">{body}</p>
+      <p className="text-sm font-semibold tracking-tight">{title}</p>
+      <p className="label-meta mt-2">{body}</p>
     </div>
   );
 }
@@ -84,14 +84,16 @@ export function Readout({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
-        {label}
-      </p>
-      <p className="mono mt-1 truncate text-xl font-semibold tracking-tight">
+      <p className="eyebrow">{label}</p>
+      <p className="value-display mt-1.5 truncate text-xl">
         {value}
-        {unit && <span className="ml-1 text-xs font-normal text-[var(--text-dim)]">{unit}</span>}
+        {unit && (
+          <span className="ml-1.5 text-[11px] font-medium tracking-[0.12em] text-[var(--text-dim)]">
+            {unit}
+          </span>
+        )}
       </p>
-      {hint && <p className="mt-0.5 text-[11px] text-[var(--text-dim)]">{hint}</p>}
+      {hint && <p className="label-meta mt-1">{hint}</p>}
     </div>
   );
 }
@@ -138,12 +140,12 @@ export function Gauge({
           </defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="mono text-lg font-semibold">{Math.round(pct * 100)}</span>
-          <span className="text-[9px] text-[var(--text-dim)]">%</span>
+          <span className="value-display text-lg">{Math.round(pct * 100)}</span>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">%</span>
         </div>
       </div>
-      <p className="mt-2 text-[11px] font-medium">{label}</p>
-      {sub && <p className="mono text-[10px] text-[var(--text-dim)]">{sub}</p>}
+      <p className="eyebrow mt-2">{label}</p>
+      {sub && <p className="mono mt-0.5 text-[10px] text-[var(--text-dim)]">{sub}</p>}
     </div>
   );
 }
@@ -161,7 +163,7 @@ export function ScreenHeader({
     <header className="flex items-start justify-between gap-3">
       <div>
         <p className="eyebrow">{eyebrow}</p>
-        <h1 className="mt-0.5 text-[26px] font-semibold tracking-tight">{title}</h1>
+        <h1 className="title-display mt-1">{title}</h1>
       </div>
       {action}
     </header>
