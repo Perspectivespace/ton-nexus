@@ -11,16 +11,24 @@ export function initTelegram() {
   }
 }
 
-/** Real Telegram initData, or "dev:<id>" when running Vite without Telegram. */
+/**
+ * Real Telegram initData when inside Mini App.
+ * Outside Telegram: if VITE_DEV_TG_ID is set, send "dev:<id>"
+ * (backend accepts only when DEBUG=true).
+ */
 export function getInitData(): string {
   try {
     if (WebApp.initData) return WebApp.initData;
   } catch {
     /* */
   }
-  const devId = import.meta.env.VITE_DEV_TG_ID || "1";
-  if (import.meta.env.DEV) {
+  // Browser demo (local Vite OR Vercel): need matching DEBUG=true on API
+  const devId = import.meta.env.VITE_DEV_TG_ID;
+  if (devId) {
     return `dev:${devId}`;
+  }
+  if (import.meta.env.DEV) {
+    return "dev:1";
   }
   return "";
 }
