@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   useDailyStatus,
@@ -25,7 +25,8 @@ const PRIZES = [
     label: "+5% к успеху",
     short: "+5%",
     weight: 8,
-    color: "#5cbf8a",
+    color: "#6db8a0",
+    kind: "spin" as const,
     use: "Добавляет +5% к шансу успеха следующей попытки усиления майнера. Не гарантирует успех.",
   },
   {
@@ -33,7 +34,8 @@ const PRIZES = [
     label: "Фокус ×1",
     short: "Фокус",
     weight: 15,
-    color: "#7a9fd4",
+    color: "#9bb8e0",
+    kind: "prize" as const,
     use: "Повышает вес нужного типа на колесе апгрейда (чаще выпадает выбранный стат).",
   },
   {
@@ -41,7 +43,8 @@ const PRIZES = [
     label: "Запрет ×1",
     short: "Запрет",
     weight: 12,
-    color: "#9b8fd4",
+    color: "#b0a8e0",
+    kind: "prize" as const,
     use: "Блокирует выпадение одного нежелательного типа апгрейда.",
   },
   {
@@ -49,7 +52,8 @@ const PRIZES = [
     label: "XP",
     short: "XP",
     weight: 25,
-    color: "#d4b46a",
+    color: "#9bb8e0",
+    kind: "xp" as const,
     use: "Опыт уровня аккаунта.",
   },
   {
@@ -57,21 +61,28 @@ const PRIZES = [
     label: "Пыль TON",
     short: "TON",
     weight: 20,
-    color: "#6eb8c9",
+    color: "#c8d0de",
+    kind: "prize" as const,
     use: "Небольшая сумма TON на баланс.",
   },
   {
     id: "nothing",
     label: "Пусто",
-    short: "—",
+    short: "МИСС",
     weight: 20,
-    color: "#5e6678",
+    color: "#c47a7a",
+    kind: "miss" as const,
     use: "Пустой сектор — без награды.",
   },
 ] as const;
 
 const WEIGHT_SUM = PRIZES.reduce((s, p) => s + p.weight, 0);
 const SEG = 360 / PRIZES.length;
+
+const WHEEL_SIZE = 240;
+const WHEEL_SVG = WHEEL_SIZE + 20;
+const WHEEL_RADIUS = WHEEL_SIZE / 2 - 4;
+const TEXT_RADIUS = WHEEL_RADIUS - 22;
 
 type Tab = "wheel" | "daily" | "promo";
 
@@ -80,84 +91,112 @@ function prizeIndex(itemId: string): number {
   return i >= 0 ? i : PRIZES.length - 1;
 }
 
+/** Match Test geometry: segment i centered at i * SEG */
 function targetOffset(index: number): number {
-  const center = index * SEG + SEG / 2;
-  return 360 - center;
+  return 360 - index * SEG;
 }
 
 function chancePct(weight: number): string {
   return `${((weight / WEIGHT_SUM) * 100).toFixed(0)}%`;
 }
 
-function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: boolean }) {
-  const size = 260;
-  const svg = size + 20;
-  const cx = svg / 2;
-  const cy = svg / 2;
-  const r = size / 2 - 4;
+function segmentFill(kind: (typeof PRIZES)[number]["kind"]): string {
+  if (kind === "miss") return "url(#segmentMiss)";
+  if (kind === "spin") return "url(#segmentSpin)";
+  if (kind === "xp") return "url(#segmentXp)";
+  return "url(#segmentPrize)";
+}
 
-  const slices = useMemo(() => {
-    return PRIZES.map((p, i) => {
-      const a0 = ((i * SEG - 90) * Math.PI) / 180;
-      const a1 = (((i + 1) * SEG - 90) * Math.PI) / 180;
-      const x0 = cx + r * Math.cos(a0);
-      const y0 = cy + r * Math.sin(a0);
-      const x1 = cx + r * Math.cos(a1);
-      const y1 = cy + r * Math.sin(a1);
-      const path = `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1} Z`;
-      const mid = ((i * SEG + SEG / 2 - 90) * Math.PI) / 180;
-      const tx = cx + r * 0.62 * Math.cos(mid);
-      const ty = cy + r * 0.62 * Math.sin(mid);
-      return { p, path, tx, ty };
-    });
-  }, [cx, cy, r]);
+function segmentStroke(kind: (typeof PRIZES)[number]["kind"]): string {
+  if (kind === "miss") return "rgba(224,150,177,0.46)";
+  if (kind === "spin") return "rgba(109,216,190,0.48)";
+  if (kind === "xp") return "rgba(155,184,224,0.52)";
+  return "rgba(122,159,212,0.48)";
+}
+
+function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: boolean }) {
+  const cx = WHEEL_SVG / 2;
+  const cy = WHEEL_SVG / 2;
 
   return (
-    <div className="relative mx-auto" style={{ width: svg, height: svg }}>
-      <div className={`wheel-aura absolute inset-0 rounded-full${spinning ? " spinning" : ""}`} />
+    <div className="relative mb-2" style={{ width: WHEEL_SVG, height: WHEEL_SVG }}>
+      <div className={`wheel-aura absolute inset-0 rounded-full${spinning ? " spinning" : ""}`} aria-hidden />
 
-      <svg width={svg} height={svg} viewBox={`0 0 ${svg} ${svg}`} className="relative z-10">
+      <svg width={WHEEL_SVG} height={WHEEL_SVG} viewBox={`0 0 ${WHEEL_SVG} ${WHEEL_SVG}`} className="relative z-10">
         <defs>
-          <radialGradient id="wbg" cx="50%" cy="50%" r="50%">
+          <radialGradient id="wheelBg" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#0c1220" />
             <stop offset="70%" stopColor="#080c16" />
             <stop offset="100%" stopColor="#040608" />
           </radialGradient>
-          <radialGradient id="wcenter" cx="50%" cy="50%" r="50%">
+          <radialGradient id="wheelCenterGrad" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#1a2236" />
+            <stop offset="60%" stopColor="#0e1422" />
             <stop offset="100%" stopColor="#080c14" />
           </radialGradient>
-          <linearGradient id="wrim" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id="rimGrad" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="rgba(155,184,224,0.3)" />
             <stop offset="50%" stopColor="rgba(122,159,212,0.08)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.4)" />
           </linearGradient>
-          <filter id="wglow">
-            <feGaussianBlur stdDeviation="1.5" result="b" />
+          <linearGradient id="segmentPrize" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#263b65" />
+            <stop offset="45%" stopColor="#172743" />
+            <stop offset="100%" stopColor="#0c1426" />
+          </linearGradient>
+          <linearGradient id="segmentMiss" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3a2d42" />
+            <stop offset="48%" stopColor="#241c31" />
+            <stop offset="100%" stopColor="#141321" />
+          </linearGradient>
+          <linearGradient id="segmentSpin" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#244b4b" />
+            <stop offset="48%" stopColor="#17373a" />
+            <stop offset="100%" stopColor="#0d2028" />
+          </linearGradient>
+          <linearGradient id="segmentXp" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#30446a" />
+            <stop offset="48%" stopColor="#1c304f" />
+            <stop offset="100%" stopColor="#101b32" />
+          </linearGradient>
+          <linearGradient id="nexusTextGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#dce9ff" />
+            <stop offset="50%" stopColor="#9bb8e0" />
+            <stop offset="100%" stopColor="#6681ae" />
+          </linearGradient>
+          <filter id="segmentGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.4" result="soft" />
             <feMerge>
-              <feMergeNode in="b" />
+              <feMergeNode in="soft" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="wheelGlow">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
         </defs>
 
-        <circle cx={cx} cy={cy} r={r + 8} fill="none" stroke="url(#wrim)" strokeWidth={3} />
-        <circle cx={cx} cy={cy} r={r + 8} fill="none" stroke="rgba(155,184,224,0.15)" strokeWidth={1} />
+        <circle cx={cx} cy={cy} r={WHEEL_RADIUS + 8} fill="none" stroke="url(#rimGrad)" strokeWidth={3} />
+        <circle cx={cx} cy={cy} r={WHEEL_RADIUS + 8} fill="none" stroke="rgba(155,184,224,0.15)" strokeWidth={1} />
 
         {Array.from({ length: 48 }).map((_, i) => {
-          const a = (i / 48) * Math.PI * 2 - Math.PI / 2;
-          const major = i % 6 === 0;
-          const r1 = r + 4;
-          const r2 = r + (major ? 7 : 5.5);
+          const angle = (i / 48) * 2 * Math.PI - Math.PI / 2;
+          const r1 = WHEEL_RADIUS + 4;
+          const r2 = WHEEL_RADIUS + 7;
+          const isMajor = i % 6 === 0;
           return (
             <line
               key={i}
-              x1={cx + r1 * Math.cos(a)}
-              y1={cy + r1 * Math.sin(a)}
-              x2={cx + r2 * Math.cos(a)}
-              y2={cy + r2 * Math.sin(a)}
-              stroke={major ? "rgba(155,184,224,0.4)" : "rgba(122,159,212,0.12)"}
-              strokeWidth={major ? 1.5 : 0.8}
+              x1={cx + r1 * Math.cos(angle)}
+              y1={cy + r1 * Math.sin(angle)}
+              x2={cx + r2 * Math.cos(angle)}
+              y2={cy + r2 * Math.sin(angle)}
+              stroke={isMajor ? "rgba(155,184,224,0.4)" : "rgba(122,159,212,0.12)"}
+              strokeWidth={isMajor ? 1.5 : 0.8}
             />
           );
         })}
@@ -167,42 +206,73 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
           transition={
             spinning
               ? { duration: 4.8, ease: [0.17, 0.67, 0.12, 0.99] }
-              : { duration: 0.2 }
+              : { duration: 0 }
           }
-          style={{ transformOrigin: `${cx}px ${cy}px` }}
+          style={{
+            transformOrigin: `${cx}px ${cy}px`,
+            transformBox: "view-box",
+          }}
         >
-          <circle cx={cx} cy={cy} r={r} fill="url(#wbg)" />
-          {slices.map(({ p, path, tx, ty }) => (
-            <g key={p.id}>
-              <path
-                d={path}
-                fill={p.id === "nothing" ? "#1a1f2e" : "#121828"}
-                stroke={p.color}
-                strokeOpacity={0.35}
-                strokeWidth={1}
-              />
-              <text
-                x={tx}
-                y={ty}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill={p.color}
-                fontSize={11}
-                fontFamily="IBM Plex Mono, monospace"
-                fontWeight={600}
-                filter="url(#wglow)"
-              >
-                {p.short}
-              </text>
-            </g>
-          ))}
-          <circle cx={cx} cy={cy} r={r * 0.45} fill="none" stroke="rgba(122,159,212,0.08)" strokeWidth={1} />
-          <circle cx={cx} cy={cy} r={22} fill="url(#wcenter)" stroke="rgba(155,184,224,0.2)" strokeWidth={1} />
+          <circle cx={cx} cy={cy} r={WHEEL_RADIUS} fill="url(#wheelBg)" />
+
+          {PRIZES.map((seg, i) => {
+            const startAngle = ((i * SEG - 90 - SEG / 2) * Math.PI) / 180;
+            const endAngle = ((i * SEG - 90 + SEG / 2) * Math.PI) / 180;
+            const x1 = cx + WHEEL_RADIUS * Math.cos(startAngle);
+            const y1 = cy + WHEEL_RADIUS * Math.sin(startAngle);
+            const x2 = cx + WHEEL_RADIUS * Math.cos(endAngle);
+            const y2 = cy + WHEEL_RADIUS * Math.sin(endAngle);
+            return (
+              <g key={seg.id}>
+                <path
+                  d={`M ${cx} ${cy} L ${x1} ${y1} A ${WHEEL_RADIUS} ${WHEEL_RADIUS} 0 0 1 ${x2} ${y2} Z`}
+                  fill={segmentFill(seg.kind)}
+                  stroke={segmentStroke(seg.kind)}
+                  strokeWidth={1.35}
+                  strokeLinejoin="round"
+                  filter="url(#segmentGlow)"
+                />
+                <path
+                  d={`M ${cx + (WHEEL_RADIUS - 8) * Math.cos(startAngle)} ${cy + (WHEEL_RADIUS - 8) * Math.sin(startAngle)} A ${WHEEL_RADIUS - 8} ${WHEEL_RADIUS - 8} 0 0 1 ${cx + (WHEEL_RADIUS - 8) * Math.cos(endAngle)} ${cy + (WHEEL_RADIUS - 8) * Math.sin(endAngle)}`}
+                  fill="none"
+                  stroke="rgba(214,229,255,0.15)"
+                  strokeWidth={1.1}
+                />
+              </g>
+            );
+          })}
+
+          {PRIZES.map((seg, i) => {
+            const angle = i * SEG;
+            return (
+              <g key={`t-${seg.id}`} transform={`rotate(${angle} ${cx} ${cy})`}>
+                <text
+                  x={cx}
+                  y={cy - TEXT_RADIUS + 6}
+                  textAnchor="middle"
+                  fill={seg.color}
+                  fontSize={11}
+                  fontFamily="'IBM Plex Mono', monospace"
+                  fontWeight={600}
+                  style={{ letterSpacing: "0.02em" }}
+                  filter="url(#wheelGlow)"
+                >
+                  {seg.short}
+                </text>
+              </g>
+            );
+          })}
+
+          <circle cx={cx} cy={cy} r={WHEEL_RADIUS * 0.45} fill="none" stroke="rgba(122,159,212,0.08)" strokeWidth={1} />
+          <circle cx={cx} cy={cy} r={WHEEL_RADIUS * 0.42} fill="none" stroke="rgba(155,184,224,0.04)" strokeWidth={0.5} />
+
+          <circle cx={cx} cy={cy} r={22} fill="url(#wheelCenterGrad)" stroke="rgba(155,184,224,0.2)" strokeWidth={1} />
+          <circle cx={cx} cy={cy} r={18} fill="none" stroke="rgba(122,159,212,0.08)" strokeWidth={0.5} />
           <text
             x={cx}
             y={cy + 4}
             textAnchor="middle"
-            fill="#9bb8e0"
+            fill="url(#nexusTextGrad)"
             fontSize={10}
             fontFamily="Syne, sans-serif"
             fontWeight={700}
@@ -210,6 +280,7 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
           >
             NEXUS
           </text>
+
           {[0, 90, 180, 270].map((a) => {
             const rad = (a * Math.PI) / 180;
             return (
@@ -225,7 +296,7 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
         </motion.g>
 
         <g transform={`translate(${cx}, 10)`}>
-          <path d="M 0 0 L -7 -6 L 7 -6 Z" fill="#9bb8e0" filter="url(#wglow)" />
+          <path d="M 0 0 L -7 -6 L 7 -6 Z" fill="#9bb8e0" filter="url(#wheelGlow)" />
           <path d="M 0 0 L -5 -4 L 5 -4 Z" fill="rgba(155,184,224,0.5)" />
           <circle cx={0} cy={-2} r={2} fill="#9bb8e0" />
         </g>
@@ -354,9 +425,8 @@ export function Wheel() {
     }
 
     const idx = prizeIndex(outcome.item_id);
-    const extra = 6;
-    setRotation(startRot + extra * 360 + targetOffset(idx));
-    await new Promise<void>((r) => setTimeout(r, 4900));
+    setRotation(startRot + 360 * 6 + targetOffset(idx));
+    await new Promise<void>((r) => setTimeout(r, 4800));
     setLastSpin(outcome);
     setSpinning(false);
   }
@@ -421,10 +491,10 @@ export function Wheel() {
         {tab === "wheel" && (
           <motion.div
             key="wheel"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.28 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
             className="flex flex-col items-center"
           >
             <div className="mb-5 flex items-center gap-3 rounded-full metal-plate-dim px-4 py-2">
@@ -446,7 +516,7 @@ export function Wheel() {
 
             <FortuneWheel rotation={rotation} spinning={spinning} />
 
-            <div className="mb-4 mt-2 flex h-10 items-center justify-center">
+            <div className="mb-4 flex h-10 items-center justify-center">
               {spinning && (
                 <span className="subtle-glow text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-dim)]">
                   Вращение…
@@ -532,10 +602,10 @@ export function Wheel() {
         {tab === "daily" && (
           <motion.div
             key="daily"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.28 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
           >
             <div className="metal-plate-hero space-y-4 p-5">
               <div className="flex items-center justify-between">
@@ -586,10 +656,10 @@ export function Wheel() {
         {tab === "promo" && (
           <motion.div
             key="promo"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.28 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
           >
             <div className="metal-plate-hero space-y-4 p-5">
               <div className="flex items-center justify-between">
