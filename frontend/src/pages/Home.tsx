@@ -51,23 +51,50 @@ const modules = [
   },
 ] as const;
 
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
 export function Home() {
   const { data: me, isLoading, error, isFetching } = useMe();
   const daily = useDailyClaim();
 
   return (
-    <div className="space-y-5">
-      <ScreenHeader
-        eyebrow="TON Nexus"
-        title={me?.first_name || me?.username || "Контур"}
-        action={
-          me ? (
-            <StatusPill tone={isFetching ? "live" : "ok"}>
-              {isFetching ? "sync" : "online"}
-            </StatusPill>
-          ) : undefined
-        }
-      />
+    <motion.div
+      className="space-y-5"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
+      <motion.div variants={item}>
+        <ScreenHeader
+          eyebrow="TON Nexus"
+          title={me?.first_name || me?.username || "Контур"}
+          action={
+            me ? (
+              <StatusPill tone={isFetching ? "live" : "ok"}>
+                {isFetching ? "sync" : "online"}
+              </StatusPill>
+            ) : undefined
+          }
+        />
+      </motion.div>
 
       {isLoading && <LoadingPanel label="Синхронизация контура…" />}
       {error && (
@@ -76,9 +103,7 @@ export function Home() {
 
       {me && (
         <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          variants={item}
           className="panel panel-glow p-5"
         >
           <div className="flex items-start justify-between gap-4">
@@ -111,12 +136,15 @@ export function Home() {
               {Array.from({ length: 12 }).map((_, i) => {
                 const filled = i < Math.max(1, Math.floor(((me.xp % 100) / 100) * 12));
                 return (
-                  <div
+                  <motion.div
                     key={i}
                     className="h-full flex-1 rounded-[1px]"
+                    initial={{ scaleX: 0, opacity: 0 }}
+                    animate={{ scaleX: 1, opacity: filled ? 0.85 - i * 0.02 : 1 }}
+                    transition={{ duration: 0.4, delay: 0.3 + i * 0.03, ease: "easeOut" }}
                     style={{
                       background: filled ? "var(--accent)" : "rgba(255,255,255,0.06)",
-                      opacity: filled ? 0.85 - i * 0.02 : 1,
+                      transformOrigin: "left",
                     }}
                   />
                 );
@@ -137,6 +165,7 @@ export function Home() {
       )}
 
       <motion.button
+        variants={item}
         type="button"
         whileTap={{ scale: 0.985 }}
         className="btn-primary w-full justify-between px-4 py-3.5 text-left"
@@ -160,55 +189,56 @@ export function Home() {
       </motion.button>
 
       {/* Modules — console rows, not tile buttons */}
-      <div>
+      <motion.div variants={item}>
         <p className="eyebrow mb-2.5">Modules</p>
         <div className="panel overflow-hidden p-0">
           {modules.map((m, i) => {
             const Icon = m.Icon;
             const last = i === modules.length - 1;
             return (
-              <Link
+              <motion.div
                 key={m.to}
-                to={m.to}
-                className={`module-row group flex items-center gap-3.5 px-4 py-3.5 no-underline active:bg-white/[0.04] ${
-                  last ? "" : "border-b border-[var(--line)]"
-                }`}
-                style={{ ["--row-tone" as string]: m.tone }}
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.45 + i * 0.06, ease: [0.22, 1, 0.36, 1] }}
               >
-                <span className="mono w-6 shrink-0 text-[11px] text-[var(--text-meta)]">{m.idx}</span>
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[var(--line)]"
-                  style={{
-                    background: `color-mix(in srgb, ${m.tone} 12%, transparent)`,
-                    color: m.tone,
-                  }}
+                <Link
+                  to={m.to}
+                  className={`module-row group flex items-center gap-3.5 px-4 py-3.5 no-underline active:bg-white/[0.04] ${
+                    last ? "" : "border-b border-[var(--line)]"
+                  }`}
+                  style={{ ["--row-tone" as string]: m.tone }}
                 >
-                  <Icon size={18} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[14px] font-semibold tracking-tight text-[var(--text)]">
-                    {m.title}
+                  <span className="mono w-6 shrink-0 text-[11px] text-[var(--text-meta)]">{m.idx}</span>
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[var(--line)]"
+                    style={{
+                      background: `color-mix(in srgb, ${m.tone} 12%, transparent)`,
+                      color: m.tone,
+                    }}
+                  >
+                    <Icon size={18} />
                   </span>
-                  <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
-                    {m.channel}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-semibold tracking-tight text-[var(--text)]">
+                      {m.title}
+                    </span>
+                    <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
+                      {m.channel}
+                    </span>
                   </span>
-                </span>
-                <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text-dim)] transition-colors"
-                  style={{
-                    // soft press affordance on touch devices via active on parent
-                  }}
-                >
-                  <IconArrow size={13} />
-                </span>
-              </Link>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text-dim)] transition-colors">
+                    <IconArrow size={13} />
+                  </span>
+                </Link>
+              </motion.div>
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
       {(me?.is_owner || me?.is_admin || me?.is_ambassador) && (
-        <div className="space-y-2">
+        <motion.div variants={item} className="space-y-2">
           <p className="eyebrow">Operations</p>
           <div className="panel overflow-hidden p-0">
             {(me.is_owner || me.is_admin || me.is_ambassador) && (
@@ -220,9 +250,9 @@ export function Home() {
             {(me.is_owner || me.is_admin) && <OpsLink to="/withdraws" label="Касса · выводы" />}
             {me.is_owner && <OpsLink to="/owner" label="Owner · экономика" last />}
           </div>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
