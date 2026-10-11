@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useMe, useDailyClaim } from "@/api/hooks";
 import {
@@ -51,7 +51,7 @@ const modules = [
   },
 ] as const;
 
-const container = {
+const container: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -62,12 +62,12 @@ const container = {
   },
 };
 
-const item = {
+const item: Variants = {
   hidden: { opacity: 0, y: 16 },
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
   },
 };
 
@@ -200,7 +200,7 @@ export function Home() {
                 key={m.to}
                 initial={{ opacity: 0, x: -12 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.45 + i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.4, delay: 0.45 + i * 0.06, ease: [0.22, 1, 0.36, 1] as const }}
               >
                 <Link
                   to={m.to}
