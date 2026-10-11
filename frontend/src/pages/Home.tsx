@@ -104,7 +104,7 @@ export function Home() {
       {me && (
         <motion.section
           variants={item}
-          className="panel panel-glow p-5"
+          className="metal-plate-hero p-5"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
@@ -117,7 +117,7 @@ export function Home() {
                 </span>
               </p>
             </div>
-            <div className="shrink-0 rounded-[12px] border border-[var(--line)] bg-black/25 px-3 py-2.5 text-right">
+            <div className="shrink-0 rounded-[12px] border border-[var(--line-metal)] bg-black/30 px-3 py-2.5 text-right">
               <div className="flex items-center justify-end gap-1.5">
                 <IconLevel size={11} className="text-[var(--text-dim)]" />
                 <span className="eyebrow">level</span>
@@ -132,15 +132,15 @@ export function Home() {
               <span className="eyebrow">Progress</span>
               <span className="mono text-[10px] text-[var(--text-dim)]">{me.xp} XP</span>
             </div>
-            <div className="flex h-1 gap-0.5 overflow-hidden">
+            <div className="flex h-1 gap-0.5 overflow-hidden rounded-[1px]">
               {Array.from({ length: 12 }).map((_, i) => {
                 const filled = i < Math.max(1, Math.floor(((me.xp % 100) / 100) * 12));
                 return (
                   <motion.div
                     key={i}
-                    className="h-full flex-1 rounded-[1px]"
+                    className="h-full flex-1"
                     initial={{ scaleX: 0, opacity: 0 }}
-                    animate={{ scaleX: 1, opacity: filled ? 0.85 - i * 0.02 : 1 }}
+                    animate={{ scaleX: 1, opacity: filled ? 0.9 - i * 0.015 : 1 }}
                     transition={{ duration: 0.4, delay: 0.3 + i * 0.03, ease: "easeOut" }}
                     style={{
                       background: filled ? "var(--accent)" : "rgba(255,255,255,0.06)",
@@ -188,10 +188,9 @@ export function Home() {
         <IconArrow size={15} />
       </motion.button>
 
-      {/* Modules — console rows, not tile buttons */}
       <motion.div variants={item}>
         <p className="eyebrow mb-2.5">Modules</p>
-        <div className="panel overflow-hidden p-0">
+        <div className="metal-plate overflow-hidden p-0">
           {modules.map((m, i) => {
             const Icon = m.Icon;
             const last = i === modules.length - 1;
@@ -204,14 +203,14 @@ export function Home() {
               >
                 <Link
                   to={m.to}
-                  className={`module-row group flex items-center gap-3.5 px-4 py-3.5 no-underline active:bg-white/[0.04] ${
+                  className={`module-row group flex items-center gap-3.5 px-4 py-3.5 no-underline transition-colors active:bg-white/[0.04] ${
                     last ? "" : "border-b border-[var(--line)]"
                   }`}
                   style={{ ["--row-tone" as string]: m.tone }}
                 >
                   <span className="mono w-6 shrink-0 text-[11px] text-[var(--text-meta)]">{m.idx}</span>
                   <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[var(--line)]"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[var(--line-metal)]"
                     style={{
                       background: `color-mix(in srgb, ${m.tone} 12%, transparent)`,
                       color: m.tone,
@@ -227,7 +226,7 @@ export function Home() {
                       {m.channel}
                     </span>
                   </span>
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text-dim)] transition-colors">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text-dim)] transition-colors group-active:border-[var(--line-metal)] group-active:text-[var(--text)]">
                     <IconArrow size={13} />
                   </span>
                 </Link>
@@ -240,7 +239,7 @@ export function Home() {
       {(me?.is_owner || me?.is_admin || me?.is_ambassador) && (
         <motion.div variants={item} className="space-y-2">
           <p className="eyebrow">Operations</p>
-          <div className="panel overflow-hidden p-0">
+          <div className="metal-plate-dim overflow-hidden p-0">
             {(me.is_owner || me.is_admin || me.is_ambassador) && (
               <OpsLink to="/tasks/new" label="Создать задание" />
             )}
@@ -258,7 +257,7 @@ export function Home() {
 
 function TokenChip({ label, value }: { label: string; value: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-black/20 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line-metal)] bg-black/25 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
       <span className="h-1 w-1 rounded-full bg-[var(--accent)]" />
       {label} {value}
     </span>
@@ -269,7 +268,7 @@ function OpsLink({ to, label, last }: { to: string; label: string; last?: boolea
   return (
     <Link
       to={to}
-      className={`flex items-center justify-between px-4 py-3.5 text-[13px] tracking-wide text-[var(--text)] no-underline active:bg-white/[0.03] ${
+      className={`flex items-center justify-between px-4 py-3.5 text-[13px] tracking-wide text-[var(--text)] no-underline transition-colors active:bg-white/[0.03] ${
         last ? "" : "border-b border-[var(--line)]"
       }`}
     >
