@@ -93,3 +93,35 @@ async def owner_stats(
         "total_users": total or 0,
         "registrations_today": today or 0,
     }
+
+
+import subprocess
+from pathlib import Path
+
+@router.post("/deploy")
+async def deploy_test(
+    user: User = Depends(get_current_user),
+):
+    if not is_platform_owner(user):
+        raise HTTPException(status_code=403, detail="owner only")
+
+    script = Path("/opt/taskbot_test/miniapp/scripts/deploy-test.sh")
+    if not script.exists():
+        raise HTTPException(status_code=500, detail="deploy script not found")
+
+    try:
+        result = subprocess.run(
+            ["bash", str(script)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        return {
+            "ok": result.returncode == 0,
+            "stdout": result.stdout[-2000:],
+            "stderr": result.stderr[-2000:],
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="deploy timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

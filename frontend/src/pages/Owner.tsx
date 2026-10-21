@@ -9,6 +9,7 @@ import {
   usePromoList,
   type EconomySetting,
 } from "@/api/hooks";
+import { api } from "@/api/client";
 import {
   ScreenHeader,
   StatusPill,
@@ -313,6 +314,36 @@ function PromosTab() {
   );
 }
 
+function DeployButton() {
+  const [status, setStatus] = useState<"idle" | "running" | "ok" | "err">("idle");
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function run() {
+    if (!confirm("Обновить Mini App с GitHub и пересобрать?")) return;
+    setStatus("running");
+    setMsg(null);
+    try {
+      const data = await api<{ ok: boolean; stdout: string; stderr: string }>("/api/v1/admin/deploy", { method: "POST" });
+      setStatus(data.ok ? "ok" : "err");
+      setMsg(data.ok ? "Обновлено" : (data.stderr || "Ошибка сборки"));
+    } catch (e) {
+      setStatus("err");
+      setMsg(e instanceof Error ? e.message : "Ошибка");
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={run}
+      disabled={status === "running"}
+      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] font-medium text-[var(--text-dim)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+    >
+      {status === "running" ? "Обновление…" : status === "ok" ? "Готово" : "Обновить"}
+    </button>
+  );
+}
+
 export function Owner() {
   const { data: me, isLoading: meLoading } = useMe();
   const { data, isLoading, error, refetch, isFetching } = useEconomySettings();
@@ -353,9 +384,12 @@ export function Owner() {
         eyebrow="Owner"
         title="Кабинет"
         action={
-          <StatusPill tone={isFetching ? "live" : "ok"}>
-            {isFetching ? "sync" : "online"}
-          </StatusPill>
+          <div className="flex items-center gap-2">
+            <DeployButton />
+            <StatusPill tone={isFetching ? "live" : "ok"}>
+              {isFetching ? "sync" : "online"}
+            </StatusPill>
+          </div>
         }
       />
 
