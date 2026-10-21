@@ -29,14 +29,6 @@ const GROUP_RU: Record<string, string> = {
   custom: "Прочее",
 };
 
-function pretty(value: unknown): string {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
 function formatValue(v: unknown): string {
   if (v == null) return "—";
   if (typeof v !== "object") return String(v);
