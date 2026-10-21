@@ -132,23 +132,17 @@ export function Home() {
               <span className="eyebrow">Progress</span>
               <span className="mono text-[10px] text-[var(--text-dim)]">{me.xp} XP</span>
             </div>
-            <div className="flex h-1 gap-0.5 overflow-hidden rounded-[1px]">
-              {Array.from({ length: 12 }).map((_, i) => {
-                const filled = i < Math.max(1, Math.floor(((me.xp % 100) / 100) * 12));
-                return (
-                  <motion.div
-                    key={i}
-                    className="h-full flex-1"
-                    initial={{ scaleX: 0, opacity: 0 }}
-                    animate={{ scaleX: 1, opacity: filled ? 0.9 - i * 0.015 : 1 }}
-                    transition={{ duration: 0.4, delay: 0.3 + i * 0.03, ease: "easeOut" }}
-                    style={{
-                      background: filled ? "var(--accent)" : "rgba(255,255,255,0.06)",
-                      transformOrigin: "left",
-                    }}
-                  />
-                );
-              })}
+            <div className="relative h-1.5 overflow-hidden rounded-full bg-white/5">
+              <motion.div
+                className="absolute inset-y-0 left-0 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (me.xp % 100))}%` }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                style={{
+                  background: "linear-gradient(90deg, var(--accent), #7dd3fc)",
+                  boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 60%, transparent)",
+                }}
+              />
             </div>
           </div>
 
