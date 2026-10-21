@@ -46,109 +46,65 @@ function SettingRow({
   onSaved: () => void;
 }) {
   const update = useEconomyUpdate();
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<string>(() => {
-    if (typeof item.value === "object" && item.value !== null) return pretty(item.value);
-    return String(item.value ?? "");
-  });
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(item.value ?? ""));
+  const [err, setErr] = useState<string | null>(null);
 
-  const isObject = typeof item.value === "object" && item.value !== null;
+  const isComplex = typeof item.value === "object" && item.value !== null;
 
   async function save() {
-    setLocalError(null);
-    let parsed: unknown = draft;
-    if (isObject) {
-      try {
-        parsed = JSON.parse(draft);
-      } catch {
-        setLocalError("Некорректный формат");
-        return;
-      }
-    } else if (!Number.isNaN(Number(draft)) && draft.trim() !== "") {
-      parsed = Number(draft);
+    setErr(null);
+    let value: unknown = draft;
+    if (!isComplex && draft.trim() !== "" && !Number.isNaN(Number(draft))) {
+      value = Number(draft);
     }
     try {
-      await update.mutateAsync({ key: item.key, value: parsed });
+      await update.mutateAsync({ key: item.key, value });
       onSaved();
-      setOpen(false);
+      setEditing(false);
     } catch (e) {
-      setLocalError(e instanceof Error ? e.message : "Ошибка сохранения");
+      setErr(e instanceof Error ? e.message : "Ошибка");
     }
   }
 
   return (
-    <div className="panel overflow-hidden">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between gap-3 p-4 text-left"
-        onClick={() => {
-          setOpen((v) => !v);
-          setDraft(isObject ? pretty(item.value) : String(item.value ?? ""));
-          setLocalError(null);
-        }}
-      >
-        <div className="min-w-0">
-          <p className="text-[13px] font-medium leading-snug">{item.label || item.key}</p>
-          {item.description && (
-            <p className="mt-0.5 line-clamp-1 text-[11px] text-[var(--text-dim)]">{item.description}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[12px] text-[var(--text)]">
-            {isObject ? "…" : String(item.value)}
-          </span>
-          <StatusPill tone={open ? "live" : "neutral"}>{open ? "edit" : "view"}</StatusPill>
-        </div>
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-[var(--line)]"
-          >
-            <div className="space-y-3 p-4">
-              {isObject ? (
-                <textarea
-                  className="input-field mono min-h-[100px] resize-y text-[12px]"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  spellCheck={false}
-                />
-              ) : (
-                <input
-                  className="input-field mono"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                />
-              )}
-              {localError && <p className="text-[12px] text-[var(--danger)]">{localError}</p>}
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-                <button
-                  type="button"
-                  className="btn-primary flex-1"
-                  disabled={update.isPending}
-                  onClick={save}
-                >
-                  {update.isPending ? "Запись…" : "Применить"}
-                </button>
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={() => {
-                    setDraft(isObject ? pretty(item.value) : String(item.value ?? ""));
-                    setLocalError(null);
-                  }}
-                >
-                  Сброс
-                </button>
-              </div>
-            </div>
-          </motion.div>
+    <div className="panel flex items-center justify-between gap-3 p-3">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-medium">{item.label || item.key}</p>
+        {item.description && (
+          <p className="truncate text-[11px] text-[var(--text-dim)]">{item.description}</p>
         )}
-      </AnimatePresence>
+      </div>
+      <div className="flex items-center gap-2">
+        {editing ? (
+          <>
+            <input
+              className="input-field mono w-24 text-right text-[13px]"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              autoFocus
+            />
+            <button type="button" className="btn-primary px-3 py-1 text-[12px]" onClick={save} disabled={update.isPending}>
+              OK
+            </button>
+            <button type="button" className="btn-ghost px-2 py-1 text-[12px]" onClick={() => { setEditing(false); setErr(null); }}>
+              ✕
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="font-mono text-[13px] text-[var(--accent)]"
+            onClick={() => {
+              setDraft(isComplex ? pretty(item.value) : String(item.value ?? ""));
+              setEditing(true);
+            }}
+          >
+            {isComplex ? "изменить" : String(item.value)}
+          </button>
+        )}
+      </div>
+      {err && <p className="text-[11px] text-[var(--danger)]">{err}</p>}
     </div>
   );
 }
