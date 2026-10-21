@@ -34,8 +34,25 @@ function formatValue(v: unknown): string {
   if (typeof v !== "object") return String(v);
   if (Array.isArray(v)) return v.join(", ");
   const entries = Object.entries(v as Record<string, unknown>);
-  if (entries.length === 0) return "{}";
-  return entries.map(([k, val]) => `${k}: ${val}`).join("  ·  ");
+  if (entries.length === 0) return "—";
+  // single key → just the value
+  if (entries.length === 1) {
+    const val = entries[0][1];
+    if (typeof val === "object" && val !== null) return formatValue(val);
+    return String(val);
+  }
+  // multiple → show values only, nested objects summarized
+  return entries
+    .map(([, val]) => {
+      if (typeof val === "object" && val !== null) {
+        const inner = Object.entries(val as Record<string, unknown>)
+          .map(([, iv]) => String(iv))
+          .join("/");
+        return inner || "—";
+      }
+      return String(val);
+    })
+    .join(" · ");
 }
 
 function SettingRow({
