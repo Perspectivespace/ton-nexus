@@ -37,6 +37,16 @@ function pretty(value: unknown): string {
   }
 }
 
+function formatValue(v: unknown): string {
+  if (v == null) return "—";
+  if (typeof v !== "object") return String(v);
+  if (Array.isArray(v)) return v.join(", ");
+  const entries = Object.entries(v as Record<string, unknown>);
+  if (entries.length === 0) return "{}";
+  if (entries.length === 1) return `${entries[0][0]}: ${entries[0][1]}`;
+  return entries.map(([k, val]) => `${k}: ${val}`).join(" · ");
+}
+
 function SettingRow({
   item,
   onSaved,
@@ -46,16 +56,37 @@ function SettingRow({
 }) {
   const update = useEconomyUpdate();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(String(item.value ?? ""));
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const [err, setErr] = useState<string | null>(null);
 
-  const isComplex = typeof item.value === "object" && item.value !== null;
+  const isComplex = typeof item.value === "object" && item.value !== null && !Array.isArray(item.value);
+
+  function startEdit() {
+    if (isComplex) {
+      const obj = item.value as Record<string, unknown>;
+      const d: Record<string, string> = {};
+      for (const [k, v] of Object.entries(obj)) d[k] = String(v ?? "");
+      setDraft(d);
+    } else {
+      setDraft({ value: String(item.value ?? "") });
+    }
+    setEditing(true);
+    setErr(null);
+  }
 
   async function save() {
     setErr(null);
-    let value: unknown = draft;
-    if (!isComplex && draft.trim() !== "" && !Number.isNaN(Number(draft))) {
-      value = Number(draft);
+    let value: unknown;
+    if (isComplex) {
+      value = {};
+      for (const [k, v] of Object.entries(draft)) {
+        const num = Number(v);
+        (value as Record<string, unknown>)[k] = v.trim() !== "" && !Number.isNaN(num) ? num : v;
+      }
+    } else {
+      const v = draft.value ?? "";
+      const num = Number(v);
+      value = v.trim() !== "" && !Number.isNaN(num) ? num : v;
     }
     try {
       await update.mutateAsync({ key: item.key, value });
@@ -67,43 +98,56 @@ function SettingRow({
   }
 
   return (
-    <div className="panel flex items-center justify-between gap-3 p-3">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium">{item.label || item.key}</p>
-        {item.description && (
-          <p className="truncate text-[11px] text-[var(--text-dim)]">{item.description}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-2">
-        {editing ? (
-          <>
-            <input
-              className="input-field mono w-24 text-right text-[13px]"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              autoFocus
-            />
-            <button type="button" className="btn-primary px-3 py-1 text-[12px]" onClick={save} disabled={update.isPending}>
-              OK
-            </button>
-            <button type="button" className="btn-ghost px-2 py-1 text-[12px]" onClick={() => { setEditing(false); setErr(null); }}>
-              ✕
-            </button>
-          </>
-        ) : (
+    <div className="panel p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-medium">{item.label || item.key}</p>
+          {item.description && (
+            <p className="truncate text-[11px] text-[var(--text-dim)]">{item.description}</p>
+          )}
+        </div>
+        {!editing && (
           <button
             type="button"
-            className="font-mono text-[13px] text-[var(--accent)]"
-            onClick={() => {
-              setDraft(isComplex ? pretty(item.value) : String(item.value ?? ""));
-              setEditing(true);
-            }}
+            className="shrink-0 font-mono text-[12px] text-[var(--accent)]"
+            onClick={startEdit}
           >
-            {isComplex ? "изменить" : String(item.value)}
+            {formatValue(item.value)}
           </button>
         )}
       </div>
-      {err && <p className="text-[11px] text-[var(--danger)]">{err}</p>}
+      {editing && (
+        <div className="mt-3 space-y-2">
+          {isComplex ? (
+            Object.keys(draft).map((k) => (
+              <label key={k} className="flex items-center gap-2 text-[12px]">
+                <span className="w-28 shrink-0 text-[var(--text-dim)]">{k}</span>
+                <input
+                  className="input-field mono flex-1 text-[13px]"
+                  value={draft[k]}
+                  onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
+                />
+              </label>
+            ))
+          ) : (
+            <input
+              className="input-field mono w-full text-[13px]"
+              value={draft.value ?? ""}
+              onChange={(e) => setDraft({ value: e.target.value })}
+              autoFocus
+            />
+          )}
+          {err && <p className="text-[11px] text-[var(--danger)]">{err}</p>}
+          <div className="flex gap-2 pt-1">
+            <button type="button" className="btn-primary flex-1 text-[12px]" onClick={save} disabled={update.isPending}>
+              {update.isPending ? "…" : "Применить"}
+            </button>
+            <button type="button" className="btn-ghost px-3 text-[12px]" onClick={() => setEditing(false)}>
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
