@@ -35,8 +35,7 @@ function formatValue(v: unknown): string {
   if (Array.isArray(v)) return v.join(", ");
   const entries = Object.entries(v as Record<string, unknown>);
   if (entries.length === 0) return "{}";
-  if (entries.length === 1) return `${entries[0][0]}: ${entries[0][1]}`;
-  return entries.map(([k, val]) => `${k}: ${val}`).join(" · ");
+  return entries.map(([k, val]) => `${k}: ${val}`).join("  ·  ");
 }
 
 function SettingRow({
@@ -90,51 +89,71 @@ function SettingRow({
   }
 
   return (
-    <div className="panel p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-medium">{item.label || item.key}</p>
-          {item.description && (
-            <p className="truncate text-[11px] text-[var(--text-dim)]">{item.description}</p>
+    <div className="panel overflow-hidden">
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-medium leading-snug">{item.label || item.key}</p>
+            {item.description && (
+              <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-dim)]">{item.description}</p>
+            )}
+          </div>
+          {!editing && (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="shrink-0 rounded-lg border border-[var(--line)] bg-[var(--bg-elev)] px-3 py-1.5 font-mono text-[12px] text-[var(--accent)] transition hover:border-[var(--accent)]"
+            >
+              Изменить
+            </button>
           )}
         </div>
         {!editing && (
-          <button
-            type="button"
-            className="shrink-0 font-mono text-[12px] text-[var(--accent)]"
-            onClick={startEdit}
-          >
+          <p className="mt-3 font-mono text-[15px] leading-relaxed text-[var(--text)]">
             {formatValue(item.value)}
-          </button>
+          </p>
         )}
       </div>
       {editing && (
-        <div className="mt-3 space-y-2">
+        <div className="space-y-3 border-t border-[var(--line)] bg-[var(--bg-elev)]/40 p-4">
           {isComplex ? (
-            Object.keys(draft).map((k) => (
-              <label key={k} className="flex items-center gap-2 text-[12px]">
-                <span className="w-28 shrink-0 text-[var(--text-dim)]">{k}</span>
-                <input
-                  className="input-field mono flex-1 text-[13px]"
-                  value={draft[k]}
-                  onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
-                />
-              </label>
-            ))
+            <div className="space-y-2.5">
+              {Object.keys(draft).map((k) => (
+                <label key={k} className="block">
+                  <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[var(--text-dim)]">
+                    {k.replace(/_/g, " ")}
+                  </span>
+                  <input
+                    className="input-field mono w-full text-[14px]"
+                    value={draft[k]}
+                    onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
+                  />
+                </label>
+              ))}
+            </div>
           ) : (
             <input
-              className="input-field mono w-full text-[13px]"
+              className="input-field mono w-full text-[14px]"
               value={draft.value ?? ""}
               onChange={(e) => setDraft({ value: e.target.value })}
               autoFocus
             />
           )}
-          {err && <p className="text-[11px] text-[var(--danger)]">{err}</p>}
+          {err && <p className="text-[12px] text-[var(--danger)]">{err}</p>}
           <div className="flex gap-2 pt-1">
-            <button type="button" className="btn-primary flex-1 text-[12px]" onClick={save} disabled={update.isPending}>
-              {update.isPending ? "…" : "Применить"}
+            <button
+              type="button"
+              className="btn-primary flex-1"
+              onClick={save}
+              disabled={update.isPending}
+            >
+              {update.isPending ? "Сохранение…" : "Применить"}
             </button>
-            <button type="button" className="btn-ghost px-3 text-[12px]" onClick={() => setEditing(false)}>
+            <button
+              type="button"
+              className="btn-ghost px-4"
+              onClick={() => setEditing(false)}
+            >
               Отмена
             </button>
           </div>
