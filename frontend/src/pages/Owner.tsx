@@ -30,30 +30,18 @@ const GROUP_RU: Record<string, string> = {
   custom: "Прочее",
 };
 
-function formatValue(v: unknown): string {
+function formatValue(v: unknown, depth = 0): string {
   if (v == null) return "—";
   if (typeof v !== "object") return String(v);
-  if (Array.isArray(v)) return v.join(", ");
+  if (Array.isArray(v)) {
+    if (depth > 1) return `${v.length} шт.`;
+    return v.map((x) => formatValue(x, depth + 1)).join(", ");
+  }
   const entries = Object.entries(v as Record<string, unknown>);
   if (entries.length === 0) return "—";
-  // single key → just the value
-  if (entries.length === 1) {
-    const val = entries[0][1];
-    if (typeof val === "object" && val !== null) return formatValue(val);
-    return String(val);
-  }
-  // multiple → show values only, nested objects summarized
-  return entries
-    .map(([, val]) => {
-      if (typeof val === "object" && val !== null) {
-        const inner = Object.entries(val as Record<string, unknown>)
-          .map(([, iv]) => String(iv))
-          .join("/");
-        return inner || "—";
-      }
-      return String(val);
-    })
-    .join(" · ");
+  if (depth > 1) return "…";
+  if (entries.length === 1) return formatValue(entries[0][1], depth + 1);
+  return entries.map(([, val]) => formatValue(val, depth + 1)).join(" · ");
 }
 
 function SettingRow({
