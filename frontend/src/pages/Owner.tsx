@@ -6,6 +6,8 @@ import {
   useEconomySettings,
   useEconomyUpdate,
   usePromoCreate,
+  useOwnerStats,
+  usePromoList,
   type EconomySetting,
 } from "@/api/hooks";
 import {
@@ -86,7 +88,6 @@ function SettingRow({
         </div>
         <StatusPill tone={open ? "live" : "neutral"}>{open ? "edit" : "view"}</StatusPill>
       </button>
-
       <AnimatePresence>
         {open && (
           <motion.div
@@ -215,9 +216,62 @@ function PromoCreatePanel() {
   );
 }
 
+function OverviewTab() {
+  const { data, isLoading, error } = useOwnerStats();
+  if (isLoading) return <LoadingPanel label="Загрузка статистики…" />;
+  if (error) return <ErrorPanel message="Не удалось загрузить статистику" />;
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="panel p-4">
+        <p className="eyebrow">Пользователи</p>
+        <p className="mt-1 font-mono text-2xl font-medium">{data?.total_users ?? 0}</p>
+      </div>
+      <div className="panel p-4">
+        <p className="eyebrow">Сегодня</p>
+        <p className="mt-1 font-mono text-2xl font-medium">{data?.registrations_today ?? 0}</p>
+      </div>
+    </div>
+  );
+}
+
+function PromosTab() {
+  const { data, isLoading, error, refetch } = usePromoList();
+  if (isLoading) return <LoadingPanel label="Загрузка промокодов…" />;
+  if (error) return <ErrorPanel message="Не удалось загрузить промокоды" />;
+  return (
+    <div className="space-y-4">
+      <PromoCreatePanel />
+      {!data?.length ? (
+        <EmptyPanel title="Нет промокодов" body="Создайте первый код выше." />
+      ) : (
+        <ul className="space-y-2">
+          {data.map((p) => (
+            <li key={p.id} className="panel flex items-center justify-between p-3">
+              <div>
+                <p className="font-mono text-[13px] font-medium">{p.code}</p>
+                <p className="text-[11px] text-[var(--text-dim)]">
+                  {p.reward_ton} TON · {p.reward_xp} XP · {p.used_count}
+                  {p.max_uses != null ? ` / ${p.max_uses}` : ""}
+                </p>
+              </div>
+              <StatusPill tone={p.is_active ? "ok" : "neutral"}>
+                {p.is_active ? "active" : "off"}
+              </StatusPill>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" className="btn-ghost text-[12px]" onClick={() => refetch()}>
+        Обновить список
+      </button>
+    </div>
+  );
+}
+
 export function Owner() {
   const { data: me, isLoading: meLoading } = useMe();
   const { data, isLoading, error, refetch, isFetching } = useEconomySettings();
+  const [tab, setTab] = useState<"overview" | "promos" | "economy">("overview");
   const [filter, setFilter] = useState<string>("all");
 
   const groups = useMemo(() => {
@@ -232,10 +286,7 @@ export function Owner() {
 
   const groupKeys = useMemo(() => ["all", ...Array.from(groups.keys())], [groups]);
 
-  if (meLoading || isLoading) {
-    return <LoadingPanel label="Открытие рубильника экономики…" />;
-  }
-
+  if (meLoading) return <LoadingPanel label="Проверка доступа…" />;
   if (!me?.is_owner) {
     return (
       <div className="space-y-4">
@@ -248,65 +299,73 @@ export function Owner() {
     );
   }
 
-  if (error) return <ErrorPanel message="Не удалось загрузить economy settings" />;
-
-  if (!data?.length) {
-    return (
-      <EmptyPanel
-        title="Пустой рубильник"
-        body="Нет ключей economy_settings. Запусти seed на backend."
-      />
-    );
-  }
-
   const visible =
-    filter === "all" ? data : data.filter((s) => (s.group || "custom") === filter);
+    filter === "all" ? data : data?.filter((s) => (s.group || "custom") === filter);
 
   return (
     <div className="space-y-5">
       <ScreenHeader
         eyebrow="Owner"
-        title="Экономика"
+        title="Кабинет"
         action={
           <StatusPill tone={isFetching ? "live" : "ok"}>
-            {isFetching ? "sync" : `${data.length} keys`}
+            {isFetching ? "sync" : "online"}
           </StatusPill>
         }
       />
 
-      <div className="panel panel-glow p-4">
-        <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
-          Рубильник: ставки майнера, шансы усиления, веса рулетки, daily, комиссия заданий,
-          мин. вывод. Без деплоя.
-        </p>
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {groupKeys.map((g) => (
+      <div className="flex gap-2">
+        {(["overview", "promos", "economy"] as const).map((t) => (
           <button
-            key={g}
+            key={t}
             type="button"
-            onClick={() => setFilter(g)}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
-              filter === g
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-full border py-1.5 text-[11px] font-medium transition ${
+              tab === t
                 ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                 : "border-[var(--line)] text-[var(--text-dim)]"
             }`}
           >
-            {g === "all" ? "Все" : GROUP_RU[g] || g}
+            {t === "overview" ? "Обзор" : t === "promos" ? "Промокоды" : "Экономика"}
           </button>
         ))}
       </div>
 
-      <ul className="space-y-3">
-        {visible.map((item) => (
-          <li key={item.key}>
-            <SettingRow item={item} onSaved={() => refetch()} />
-          </li>
-        ))}
-      </ul>
-
-      <PromoCreatePanel />
+      {tab === "overview" && <OverviewTab />}
+      {tab === "promos" && <PromosTab />}
+      {tab === "economy" && (
+        <>
+          {isLoading && <LoadingPanel label="Загрузка настроек…" />}
+          {error && <ErrorPanel message="Не удалось загрузить economy settings" />}
+          {!isLoading && !error && data && (
+            <>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {groupKeys.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setFilter(g)}
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
+                      filter === g
+                        ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
+                        : "border-[var(--line)] text-[var(--text-dim)]"
+                    }`}
+                  >
+                    {g === "all" ? "Все" : GROUP_RU[g] || g}
+                  </button>
+                ))}
+              </div>
+              <ul className="space-y-3">
+                {visible?.map((item) => (
+                  <li key={item.key}>
+                    <SettingRow item={item} onSaved={() => refetch()} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
 
       <Link to="/" className="btn-ghost inline-flex text-[13px] no-underline">
         ← Контур

@@ -422,3 +422,34 @@ export function usePublishTask() {
     },
   });
 }
+
+export type OwnerStats = {
+  total_users: number;
+  registrations_today: number;
+};
+
+export function useOwnerStats() {
+  return useQuery({
+    queryKey: ["owner", "stats"],
+    queryFn: () => api<OwnerStats>("/api/v1/admin/stats"),
+  });
+}
+
+export type PromoListItem = {
+  id: number;
+  code: string;
+  reward_ton: string;
+  reward_xp: number;
+  reward_focus: number;
+  max_uses: number | null;
+  used_count: number;
+  is_active: boolean;
+  created_at: string;
+};
+
+export function usePromoList() {
+  return useQuery({
+    queryKey: ["owner", "promos"],
+    queryFn: () => api<PromoListItem[]>("/api/v1/promo/list"),
+  });
+}
