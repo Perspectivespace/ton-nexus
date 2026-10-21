@@ -337,6 +337,7 @@ function DeployButton() {
       type="button"
       onClick={run}
       disabled={status === "running"}
+      title={msg || undefined}
       className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] font-medium text-[var(--text-dim)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
     >
       {status === "running" ? "Обновление…" : status === "ok" ? "Готово" : "Обновить"}
