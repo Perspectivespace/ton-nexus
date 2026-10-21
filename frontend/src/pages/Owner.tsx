@@ -47,17 +47,26 @@ function SettingRow({
 }) {
   const update = useEconomyUpdate();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(pretty(item.value));
+  const [draft, setDraft] = useState<string>(() => {
+    if (typeof item.value === "object" && item.value !== null) return pretty(item.value);
+    return String(item.value ?? "");
+  });
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const isObject = typeof item.value === "object" && item.value !== null;
 
   async function save() {
     setLocalError(null);
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(draft);
-    } catch {
-      setLocalError("Невалидный JSON");
-      return;
+    let parsed: unknown = draft;
+    if (isObject) {
+      try {
+        parsed = JSON.parse(draft);
+      } catch {
+        setLocalError("Некорректный формат");
+        return;
+      }
+    } else if (!Number.isNaN(Number(draft)) && draft.trim() !== "") {
+      parsed = Number(draft);
     }
     try {
       await update.mutateAsync({ key: item.key, value: parsed });
@@ -72,21 +81,25 @@ function SettingRow({
     <div className="panel overflow-hidden">
       <button
         type="button"
-        className="flex w-full items-start justify-between gap-3 p-4 text-left"
+        className="flex w-full items-center justify-between gap-3 p-4 text-left"
         onClick={() => {
           setOpen((v) => !v);
-          setDraft(pretty(item.value));
+          setDraft(isObject ? pretty(item.value) : String(item.value ?? ""));
           setLocalError(null);
         }}
       >
         <div className="min-w-0">
           <p className="text-[13px] font-medium leading-snug">{item.label || item.key}</p>
-          <p className="mt-0.5 font-mono text-[10px] text-[var(--text-dim)]">{item.key}</p>
           {item.description && (
-            <p className="mt-1 line-clamp-2 text-[11px] text-[var(--text-dim)]">{item.description}</p>
+            <p className="mt-0.5 line-clamp-1 text-[11px] text-[var(--text-dim)]">{item.description}</p>
           )}
         </div>
-        <StatusPill tone={open ? "live" : "neutral"}>{open ? "edit" : "view"}</StatusPill>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[12px] text-[var(--text)]">
+            {isObject ? "…" : String(item.value)}
+          </span>
+          <StatusPill tone={open ? "live" : "neutral"}>{open ? "edit" : "view"}</StatusPill>
+        </div>
       </button>
       <AnimatePresence>
         {open && (
@@ -97,14 +110,22 @@ function SettingRow({
             className="overflow-hidden border-t border-[var(--line)]"
           >
             <div className="space-y-3 p-4">
-              <textarea
-                className="input-field mono min-h-[140px] resize-y text-[12px] leading-relaxed"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                spellCheck={false}
-              />
+              {isObject ? (
+                <textarea
+                  className="input-field mono min-h-[100px] resize-y text-[12px]"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  spellCheck={false}
+                />
+              ) : (
+                <input
+                  className="input-field mono"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                />
+              )}
               {localError && <p className="text-[12px] text-[var(--danger)]">{localError}</p>}
-              <div className="flex gap-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
                 <button
                   type="button"
                   className="btn-primary flex-1"
@@ -117,16 +138,13 @@ function SettingRow({
                   type="button"
                   className="btn-ghost"
                   onClick={() => {
-                    setDraft(pretty(item.value));
+                    setDraft(isObject ? pretty(item.value) : String(item.value ?? ""));
                     setLocalError(null);
                   }}
                 >
                   Сброс
                 </button>
               </div>
-              <p className="text-[11px] leading-relaxed text-[var(--text-dim)]">
-                Меняется сразу в БД. Новые сессии и броски читают актуальные значения.
-              </p>
             </div>
           </motion.div>
         )}
@@ -314,7 +332,7 @@ export function Owner() {
         }
       />
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
         {(["overview", "promos", "economy"] as const).map((t) => (
           <button
             key={t}
@@ -339,7 +357,7 @@ export function Owner() {
           {error && <ErrorPanel message="Не удалось загрузить economy settings" />}
           {!isLoading && !error && data && (
             <>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
                 {groupKeys.map((g) => (
                   <button
                     key={g}
