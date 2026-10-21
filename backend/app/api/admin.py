@@ -70,3 +70,26 @@ async def my_roles(user: User = Depends(get_current_user)):
         is_ambassador=bool(user.is_ambassador),
         is_owner=is_platform_owner(user),
     )
+
+
+from datetime import datetime, timezone
+from sqlalchemy import func, select
+
+
+@router.get("/stats")
+async def owner_stats(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not is_platform_owner(user):
+        raise HTTPException(status_code=403, detail="owner only")
+
+    total = await db.scalar(select(func.count()).select_from(User))
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = await db.scalar(
+        select(func.count()).select_from(User).where(User.created_at >= today_start)
+    )
+    return {
+        "total_users": total or 0,
+        "registrations_today": today or 0,
+    }

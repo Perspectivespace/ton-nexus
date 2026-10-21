@@ -167,3 +167,45 @@ async def wheel_spin(user: User = Depends(get_current_user), db: AsyncSession = 
         )
     except WheelError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+from sqlalchemy import select
+from app.models.promo import PromoCode
+from app.services.roles import is_platform_owner
+
+
+class PromoListItem(BaseModel):
+    id: int
+    code: str
+    reward_ton: Decimal
+    reward_xp: int
+    reward_focus: int
+    max_uses: int | None
+    used_count: int
+    is_active: bool
+    created_at: datetime
+
+
+@router.get("/promo/list", response_model=list[PromoListItem])
+async def promo_list(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not is_platform_owner(user):
+        raise HTTPException(status_code=403, detail="owner only")
+
+    rows = (await db.scalars(select(PromoCode).order_by(PromoCode.created_at.desc()))).all()
+    return [
+        PromoListItem(
+            id=p.id,
+            code=p.code,
+            reward_ton=p.reward_ton,
+            reward_xp=p.reward_xp,
+            reward_focus=p.reward_focus,
+            max_uses=p.max_uses,
+            used_count=p.used_count,
+            is_active=p.is_active,
+            created_at=p.created_at,
+        )
+        for p in rows
+    ]
