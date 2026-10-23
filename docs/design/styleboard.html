@@ -3,325 +3,352 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TON Nexus — стайлборд «Приборная сталь»</title>
+<title>TON Nexus — стайлборд «Ночной контур» (cyberpunk neon)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Tektur:wdth,wght@75..100,500..800&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <style>
-/* ============ ТОКЕНЫ (источник правды — docs/DESIGN.md) ============ */
+/* ================= ТОКЕНЫ (источник правды — docs/DESIGN.md) ================= */
 :root, [data-theme="dark"] {
-  --bg: #0A0C0F; --bg-sunken: #060709;
-  --surface-1: #111419; --surface-2: #171B21; --surface-3: #1F242B;
-  --line: rgba(214,224,236,.08); --line-strong: rgba(214,224,236,.16);
-  --metal-hi: #A9B4C1; --metal-mid: #59626D; --metal-lo: #2A3038;
-  --text: #E9EDF2; --text-2: #A3ADB9; --text-3: #7A8490;
-  --ion: #4CC3FF; --ion-ink: #031520; --ion-soft: rgba(76,195,255,.12);
-  --brass: #D4AE6A; --brass-soft: rgba(212,174,106,.14);
-  --ok: #43D08A; --warn: #F0B347; --bad: #FF6B6B;
-  --ok-soft: rgba(67,208,138,.12); --warn-soft: rgba(240,179,71,.12); --bad-soft: rgba(255,107,107,.12);
-  --shadow: 0 1px 0 rgba(0,0,0,.6), 0 8px 24px rgba(0,0,0,.35);
-  --brush: repeating-linear-gradient(90deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px);
+  --bg: #06070C; --bg-sunken: #030407;
+  --surface-1: #0C0E16; --surface-2: #11141F; --surface-3: #181C2A;
+  --line: rgba(150,170,255,.10); --line-strong: rgba(150,170,255,.20);
+  --text: #E6EBF5; --text-2: #9AA4BA; --text-3: #6E7891;
+  --neon: #2BF5FF; --neon-core: #D2FDFF; --neon-ink: #00161A; --neon-soft: rgba(43,245,255,.12); --neon-dim: rgba(43,245,255,.35);
+  --amber: #FFB547; --amber-core: #FFE7C2; --amber-soft: rgba(255,181,71,.13);
+  --magenta: #FF2E7E; --magenta-soft: rgba(255,46,126,.13);
+  --ok: #5DFFB0; --ok-soft: rgba(93,255,176,.11);
+  --warn: #FFE066; --warn-soft: rgba(255,224,102,.11);
+  --halo-neon: 0 0 6px rgba(43,245,255,.55), 0 0 18px rgba(43,245,255,.28);
+  --halo-amber: 0 0 6px rgba(255,181,71,.6), 0 0 18px rgba(255,181,71,.3);
+  --halo-magenta: 0 0 6px rgba(255,46,126,.6), 0 0 16px rgba(255,46,126,.3);
+  --scan: repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);
+  --grid: linear-gradient(rgba(120,140,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(120,140,255,.05) 1px, transparent 1px);
+  --glow-drop: drop-shadow(0 0 14px rgba(43,245,255,.22));
 }
 [data-theme="light"] {
-  --bg: #ECEEF1; --bg-sunken: #E2E5E9;
-  --surface-1: #FFFFFF; --surface-2: #F5F6F8; --surface-3: #E8EBEF;
-  --line: rgba(16,22,30,.09); --line-strong: rgba(16,22,30,.18);
-  --metal-hi: #FFFFFF; --metal-mid: #C3C9D0; --metal-lo: #9AA3AD;
-  --text: #0E1116; --text-2: #4A5360; --text-3: #68717D;
-  --ion: #0A84D6; --ion-ink: #FFFFFF; --ion-soft: rgba(10,132,214,.10);
-  --brass: #94702E; --brass-soft: rgba(148,112,46,.12);
-  --ok: #1E9E62; --warn: #B7791F; --bad: #D93B3B;
-  --ok-soft: rgba(30,158,98,.10); --warn-soft: rgba(183,121,31,.12); --bad-soft: rgba(217,59,59,.10);
-  --shadow: 0 1px 0 rgba(16,22,30,.06), 0 6px 18px rgba(16,22,30,.08);
-  --brush: repeating-linear-gradient(90deg, rgba(0,0,0,.018) 0 1px, transparent 1px 3px);
+  --bg: #EEF1F6; --bg-sunken: #E3E7EF;
+  --surface-1: #FFFFFF; --surface-2: #F6F8FB; --surface-3: #E7EBF2;
+  --line: rgba(10,20,50,.10); --line-strong: rgba(10,20,50,.20);
+  --text: #0B0F1A; --text-2: #47506A; --text-3: #646D86;
+  --neon: #007E95; --neon-core: #007E95; --neon-ink: #FFFFFF; --neon-soft: rgba(0,126,149,.10); --neon-dim: rgba(0,126,149,.45);
+  --amber: #A35F00; --amber-core: #A35F00; --amber-soft: rgba(163,95,0,.10);
+  --magenta: #C8105A; --magenta-soft: rgba(200,16,90,.09);
+  --ok: #0E8A55; --ok-soft: rgba(14,138,85,.10);
+  --warn: #8A6A00; --warn-soft: rgba(138,106,0,.10);
+  --halo-neon: none; --halo-amber: none; --halo-magenta: none;
+  --scan: repeating-linear-gradient(0deg, rgba(10,20,50,.025) 0 1px, transparent 1px 4px);
+  --grid: linear-gradient(rgba(10,20,50,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(10,20,50,.045) 1px, transparent 1px);
+  --glow-drop: drop-shadow(0 2px 0 rgba(0,126,149,.18));
 }
 :root {
-  --f-display: "Syne", "IBM Plex Sans", sans-serif;
-  --f-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --f-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 22px;
-  --ease-out: cubic-bezier(.2,.8,.2,1); --ease-snap: cubic-bezier(.3,1.4,.5,1);
+  --f-display: "Tektur", "Onest", sans-serif;
+  --f-sans: "Onest", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  --cut-s: 8px; --cut-m: 14px; --cut-l: 20px;
 }
 * { box-sizing: border-box; margin: 0; }
-body { background: #050608; color: #E9EDF2; font-family: var(--f-sans); -webkit-font-smoothing: antialiased; padding: 40px; }
-.board { width: 1240px; margin: 0 auto 48px; padding: 48px; background: #0A0C0F; border: 1px solid #1c2128; border-radius: 28px; }
-.board h2.sec { font: 700 44px/1 var(--f-display); letter-spacing: -.02em; color: #E9EDF2; }
-.board .sec-ru { font: 500 22px/1.3 var(--f-sans); color: #A3ADB9; margin-top: 10px; }
-.board .sec-no { font: 500 14px var(--f-mono); color: var(--ion); letter-spacing: .12em; margin-bottom: 14px; }
-.cap { font: 500 13px/1.2 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: #7A8490; margin: 36px 0 14px; display: flex; gap: 12px; align-items: center; }
-.cap::after { content: ""; flex: 1; height: 1px; background: repeating-linear-gradient(90deg, #2A3038 0 2px, transparent 2px 6px); }
-.grid { display: grid; gap: 20px; }
+body { background: #020306; color: #E6EBF5; font-family: var(--f-sans); -webkit-font-smoothing: antialiased; padding: 40px; }
 
-/* ===== Материал: металлическая пластина без blur ===== */
-.plate {
-  position: relative; border-radius: var(--r-md);
-  background: linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
-              linear-gradient(180deg, var(--metal-hi), var(--metal-lo) 38%, var(--metal-lo) 70%, var(--metal-mid)) border-box;
-  border: 1px solid transparent; box-shadow: var(--shadow);
-}
-.plate.hero { background: var(--brush) padding-box, linear-gradient(180deg, var(--surface-2), var(--surface-1)) padding-box,
-              linear-gradient(180deg, var(--metal-hi), var(--metal-lo) 38%, var(--metal-lo) 70%, var(--metal-mid)) border-box; }
-.plate.flat { background: var(--surface-1); border: 1px solid var(--line); box-shadow: none; }
-/* скобы-визиры — фирменный мотив, только на главной цифре экрана */
-.brackets::before, .brackets::after { content: ""; position: absolute; width: 12px; height: 12px; border: 1.5px solid var(--ion); opacity: .8; }
-.brackets::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
-.brackets::after { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
-.ticks { height: 10px; background: repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 8px); -webkit-mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+/* ============ ФОРМА: срезанные углы (clip-path) — фирменный силуэт ============ */
+.cut { --c: var(--cut-m); --edge: linear-gradient(135deg, var(--neon-dim), var(--line-strong) 35%, var(--line) 70%, var(--line-strong));
+  --fill: var(--surface-1);
+  position: relative; isolation: isolate; background: var(--edge);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.cut::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--fill);
+  clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
+.cut.s { --c: var(--cut-s); } .cut.l { --c: var(--cut-l); }
+.cut.flat { --edge: var(--line); }
+.cut.hero { --edge: linear-gradient(135deg, var(--neon), var(--neon-dim) 22%, var(--line-strong) 50%, var(--line) 75%, var(--neon-dim));
+  --fill: linear-gradient(180deg, var(--surface-2), var(--surface-1)); }
+.cut.hero::after { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--scan), var(--grid); background-size: auto, 22px 22px, 22px 22px; pointer-events: none;
+  -webkit-mask: linear-gradient(180deg, #000, transparent 85%); }
+.glow { filter: var(--glow-drop); }
+/* HUD-уголки */
+.hud-corners { position: absolute; inset: 8px; pointer-events: none; }
+.hud-corners::before, .hud-corners::after { content: ""; position: absolute; width: 10px; height: 10px; border: 1.5px solid var(--neon); }
+.hud-corners::before { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+.hud-corners::after { left: 0; top: 0; border-right: 0; border-bottom: 0; opacity: 0; }
+.tube { height: 2px; border-radius: 2px; background: var(--neon-core); box-shadow: 0 0 4px var(--neon), 0 0 12px var(--neon-dim); }
+[data-theme="light"] .tube { background: var(--neon); box-shadow: none; }
+.ticks { height: 8px; background: repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 6px), repeating-linear-gradient(90deg, var(--neon-dim) 0 1px, transparent 1px 30px); }
 
-/* ===== Типографика ===== */
-.t-num-xl { font: 600 44px/1 var(--f-mono); font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -.03em; color: var(--text); }
-.t-num-l { font: 600 28px/1.05 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--text); }
+/* ============ ТИПОГРАФИКА ============ */
+.t-num-xl { font: 700 44px/1 var(--f-mono); font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -.04em; color: var(--neon-core); text-shadow: var(--halo-neon); }
+[data-theme="light"] .t-num-xl { color: var(--text); }
+.t-num-l { font: 700 28px/1.05 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.03em; color: var(--text); }
 .t-num-m { font: 500 17px/1.2 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); }
-.t-title { font: 600 24px/1.15 var(--f-sans); letter-spacing: -.015em; color: var(--text); }
+.t-display { font: 800 30px/1 var(--f-display); font-stretch: 75%; letter-spacing: .02em; text-transform: uppercase; color: var(--text); }
+.t-title { font: 700 24px/1.1 var(--f-display); font-stretch: 85%; letter-spacing: .01em; color: var(--text); }
 .t-h { font: 600 17px/1.25 var(--f-sans); color: var(--text); }
-.t-body { font: 400 15px/1.45 var(--f-sans); color: var(--text); }
+.t-body { font: 400 15px/1.5 var(--f-sans); color: var(--text); }
 .t-sec { font: 400 13px/1.4 var(--f-sans); color: var(--text-2); }
-.t-label { font: 500 11px/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
-.t-brand { font: 800 15px/1 var(--f-display); letter-spacing: .14em; color: var(--text); }
-.unit { font: 500 .45em var(--f-mono); color: var(--text-2); letter-spacing: .04em; margin-left: 6px; }
-.dim { color: var(--text-2); } .ion { color: var(--ion); } .brass { color: var(--brass); }
+.t-label { font: 600 11px/1.2 var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+.t-sys { font: 500 11px/1 var(--f-mono); letter-spacing: .06em; color: var(--text-3); }
+.unit { font: 600 .42em var(--f-display); font-stretch: 75%; color: var(--text-2); letter-spacing: .1em; margin-left: 6px; text-shadow: none; }
+.neon { color: var(--neon); text-shadow: var(--halo-neon); } .amber { color: var(--amber); text-shadow: var(--halo-amber); } .mag { color: var(--magenta); text-shadow: var(--halo-magenta); }
+.dim { color: var(--text-2); }
 
-/* ===== Кнопки ===== */
-.btn { height: 48px; padding: 0 20px; border-radius: var(--r-sm); font: 600 15px var(--f-sans); display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; cursor: pointer; }
-.btn-primary { background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 50%) , var(--ion); color: var(--ion-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 0 rgba(0,0,0,.4); }
-.btn-secondary { background: linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(180deg, var(--metal-hi), var(--metal-lo)) border-box; color: var(--text); }
-.btn-danger { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
-.btn-ghost { background: transparent; color: var(--ion); height: 40px; padding: 0 12px; }
-.btn[disabled] { opacity: .38; }
+/* ============ КНОПКИ ============ */
+.btn { --c: 10px; height: 48px; padding: 0 20px; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: 700 15px var(--f-display); font-stretch: 85%; letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; isolation: isolate; }
+.btn-primary { background: var(--neon); color: var(--neon-ink); box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.6); }
+.btn-primary .k { font-family: var(--f-mono); font-weight: 700; letter-spacing: -.02em; text-transform: none; }
+.btn-secondary { background: var(--neon-dim); color: var(--text); }
+.btn-secondary::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--surface-2); clip-path: inherit; }
+.btn-danger { background: var(--magenta); color: var(--magenta); }
+.btn-danger::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: color-mix(in srgb, var(--magenta) 10%, var(--bg)); clip-path: inherit; }
+.btn-ghost { background: transparent; color: var(--neon); height: 40px; padding: 0 10px; font-size: 14px; }
+.btn[disabled] { background: var(--surface-3); color: var(--text-3); box-shadow: none; }
+.btn.pressed { transform: translateY(1px); filter: brightness(.85); }
 .btn-block { width: 100%; }
-.btn.pressed { transform: scale(.98); filter: brightness(.92); }
-.hold { position: relative; overflow: hidden; }
-.hold i { position: absolute; inset: 0; width: 62%; background: rgba(255,255,255,.22); }
-.hold span { position: relative; }
+.hold i { position: absolute; left: 0; top: 0; bottom: 0; width: 62%; z-index: -1; }
+.btn-primary.hold { background: color-mix(in srgb, var(--neon) 55%, var(--bg)); color: var(--neon-ink); }
+.btn-primary.hold i { background: var(--neon); }
+.btn-primary.hold span { color: var(--neon-ink); mix-blend-mode: normal; }
+.btn-danger.hold i { background: color-mix(in srgb, var(--magenta) 32%, transparent); }
 
-/* ===== Поля ===== */
+/* ============ ПОЛЯ ============ */
 .field { display: grid; gap: 6px; }
 .field label { font: 500 13px var(--f-sans); color: var(--text-2); }
-.input { height: 48px; border-radius: var(--r-sm); background: var(--bg-sunken); border: 1px solid var(--line-strong); padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font: 500 16px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); box-shadow: inset 0 1px 2px rgba(0,0,0,.35); }
-.input.focus { border-color: var(--ion); box-shadow: 0 0 0 3px var(--ion-soft); }
-.input.err { border-color: var(--bad); }
-.input .suffix { font: 500 13px var(--f-mono); color: var(--text-3); }
+.input { --c: 8px; height: 48px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font: 500 16px var(--f-mono); color: var(--text);
+  background: var(--line-strong); position: relative; isolation: isolate; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+.input::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--bg-sunken); clip-path: inherit; }
+.input.focus { background: var(--neon); } .input.focus::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; background: var(--neon); box-shadow: 0 0 10px var(--neon); }
+.input.err { background: var(--magenta); }
+.input .suffix { font: 600 12px var(--f-display); font-stretch: 75%; letter-spacing: .12em; color: var(--text-3); }
 .input .ph { color: var(--text-3); }
-.help { font: 400 12px/1.4 var(--f-sans); color: var(--text-3); }
-.help.err { color: var(--bad); }
+.caret { display: inline-block; width: 9px; height: 18px; background: var(--neon); margin-left: 2px; vertical-align: -3px; }
+.help { font: 400 12px/1.4 var(--f-sans); color: var(--text-3); } .help.err { color: var(--magenta); }
 
-/* ===== Вкладки ===== */
-.tabs { display: flex; padding: 3px; border-radius: 12px; background: var(--bg-sunken); border: 1px solid var(--line); }
-.tab { flex: 1; height: 38px; border-radius: 9px; display: grid; place-items: center; font: 500 14px var(--f-sans); color: var(--text-2); }
-.tab.on { background: linear-gradient(var(--surface-3), var(--surface-3)) padding-box, linear-gradient(180deg, var(--metal-hi), var(--metal-lo)) border-box; border: 1px solid transparent; color: var(--text); }
-.seg-underline { display: flex; gap: 20px; border-bottom: 1px solid var(--line); }
-.seg-underline span { padding: 10px 0; font: 500 14px var(--f-sans); color: var(--text-2); }
-.seg-underline span.on { color: var(--text); box-shadow: inset 0 -2px 0 var(--ion); }
+/* ============ ВКЛАДКИ ============ */
+.tabs { display: flex; gap: 4px; }
+.tab { --c: 8px; flex: 1; height: 40px; display: grid; place-items: center; font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); background: var(--surface-1);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.tab.on { color: var(--neon-ink); background: var(--neon); }
+[data-theme="dark"] .tab.on, :root .tab.on { }
+.seg-line { display: flex; gap: 22px; border-bottom: 1px solid var(--line); }
+.seg-line span { padding: 10px 0; font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); position: relative; }
+.seg-line span.on { color: var(--text); }
+.seg-line span.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--neon); box-shadow: 0 0 8px var(--neon); }
 
-/* ===== Пилюли ===== */
-.pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; font: 500 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; }
-.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.pill.ok { color: var(--ok); background: var(--ok-soft); } .pill.warn { color: var(--warn); background: var(--warn-soft); }
-.pill.bad { color: var(--bad); background: var(--bad-soft); } .pill.ion { color: var(--ion); background: var(--ion-soft); }
-.pill.neutral { color: var(--text-2); background: var(--surface-3); } .pill.brass { color: var(--brass); background: var(--brass-soft); }
+/* ============ ПИЛЮЛИ (маркировка) ============ */
+.tag { --c: 5px; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px 0 8px; font: 700 11px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase;
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+.tag::before { content: ""; width: 5px; height: 5px; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.tag.ok { color: var(--ok); background: var(--ok-soft); } .tag.warn { color: var(--warn); background: var(--warn-soft); }
+.tag.bad { color: var(--magenta); background: var(--magenta-soft); } .tag.neon { color: var(--neon); background: var(--neon-soft); }
+.tag.neutral { color: var(--text-2); background: var(--surface-3); } .tag.neutral::before { box-shadow: none; } .tag.amber { color: var(--amber); background: var(--amber-soft); }
 
-/* ===== Строки списка ===== */
-.list { border-radius: var(--r-md); overflow: hidden; }
-.row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 16px; border-top: 1px solid var(--line); }
+/* ============ СПИСКИ ============ */
+.row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 16px; border-top: 1px solid var(--line); position: relative; }
 .row:first-child { border-top: 0; }
-.row .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--surface-3); display: grid; place-items: center; color: var(--text-2); flex: none; }
+.row .ic { --c: 6px; width: 36px; height: 36px; display: grid; place-items: center; color: var(--neon); background: var(--neon-soft); flex: none;
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.row .ic.muted { color: var(--text-2); background: var(--surface-3); }
 .row .main { flex: 1; min-width: 0; }
 .row .ttl { font: 500 15px/1.3 var(--f-sans); color: var(--text); }
 .row .sub { font: 400 13px/1.3 var(--f-sans); color: var(--text-2); margin-top: 2px; }
 .row .val { font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); text-align: right; }
 .chev { color: var(--text-3); }
 
-/* ===== Индикаторы ===== */
-.meter { height: 6px; border-radius: 3px; background: var(--bg-sunken); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
-.meter i { display: block; height: 100%; background: var(--ion); border-radius: 3px; }
-.meter.seg { background: repeating-linear-gradient(90deg, var(--surface-3) 0 10px, transparent 10px 12px); box-shadow: none; }
-.meter.seg i { background: repeating-linear-gradient(90deg, var(--ion) 0 10px, transparent 10px 12px); }
-.stat { padding: 10px 0; text-align: center; border-radius: var(--r-sm); background: var(--bg-sunken); border: 1px solid var(--line); }
-.stat .k { font: 500 11px var(--f-mono); letter-spacing: .06em; color: var(--text-3); text-transform: uppercase; }
-.stat .v { font: 600 20px var(--f-mono); color: var(--text); margin-top: 4px; }
-.stat.focus { border-color: var(--ion); box-shadow: inset 0 0 0 1px var(--ion); }
-.stat.focus .k { color: var(--ion); }
-.stat.block { background: repeating-linear-gradient(135deg, var(--bad-soft) 0 6px, transparent 6px 12px), var(--bg-sunken); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
-.stat.block .v { color: var(--text-3); text-decoration: line-through; }
+/* ============ ИНДИКАТОРЫ ============ */
+.bar { height: 8px; background: repeating-linear-gradient(90deg, var(--surface-3) 0 6px, transparent 6px 8px); position: relative; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: repeating-linear-gradient(90deg, var(--neon) 0 6px, transparent 6px 8px); filter: drop-shadow(0 0 4px var(--neon-dim)); }
+.stat { --c: 7px; padding: 9px 0 8px; text-align: center; background: var(--line); position: relative; isolation: isolate;
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.stat::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--surface-1); clip-path: inherit; }
+.stat .k { font: 700 11px var(--f-display); font-stretch: 75%; letter-spacing: .12em; color: var(--text-3); text-transform: uppercase; }
+.stat .v { font: 700 21px var(--f-mono); color: var(--text); margin-top: 3px; }
+.stat .p { font: 500 11px var(--f-mono); color: var(--text-3); margin-top: 3px; }
+.stat.focus { background: var(--neon); } .stat.focus .k, .stat.focus .p { color: var(--neon); } .stat.focus .v { color: var(--neon-core); text-shadow: var(--halo-neon); }
+.stat.block { background: var(--magenta); }
+.stat.block::before { background: repeating-linear-gradient(135deg, var(--magenta-soft) 0 5px, transparent 5px 10px), var(--surface-1); }
+.stat.block .v { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--magenta); } .stat.block .k, .stat.block .p { color: var(--magenta); }
 
-/* ===== Тост, состояния, скелетон ===== */
-.toast { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--surface-3); border: 1px solid var(--line-strong); box-shadow: 0 12px 30px rgba(0,0,0,.45); }
-.toast .bar { width: 3px; align-self: stretch; border-radius: 2px; background: var(--ok); }
-.state { text-align: center; padding: 28px 20px; display: grid; gap: 10px; justify-items: center; }
-.state .glyph { width: 48px; height: 48px; border-radius: 14px; border: 1px dashed var(--line-strong); display: grid; place-items: center; color: var(--text-3); }
-.sk { background: linear-gradient(90deg, var(--surface-2) 0, var(--surface-3) 40%, var(--surface-2) 80%); background-size: 200% 100%; border-radius: 6px; }
+/* ============ ТОСТ / СОСТОЯНИЯ / СКЕЛЕТОН ============ */
+.toast { display: flex; gap: 12px; align-items: center; padding: 12px 14px; }
+.state { text-align: center; padding: 26px 16px; display: grid; gap: 8px; justify-items: center; }
+.sk { background: linear-gradient(90deg, var(--surface-2), var(--surface-3) 40%, var(--surface-2) 80%); height: 10px; }
 
-/* ===== Шит (bottom sheet) ===== */
-.sheet { border-radius: var(--r-lg) var(--r-lg) 0 0; background: var(--surface-2); border-top: 1px solid var(--metal-mid); padding: 8px 16px 16px; box-shadow: 0 -20px 40px rgba(0,0,0,.5); }
-.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 0 auto 14px; }
-.scrim { position: absolute; inset: 0; background: rgba(4,5,7,.62); }
+/* ============ ШТОРКА ============ */
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px 22px; background: var(--surface-2);
+  clip-path: polygon(0 18px, 18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); }
+.sheet-edge { position: absolute; left: 0; right: 0; height: 19px; pointer-events: none; }
+.grab { width: 40px; height: 3px; background: var(--neon); box-shadow: 0 0 8px var(--neon); margin: 2px auto 14px; }
+.scrim { position: absolute; inset: 0; background: rgba(2,3,6,.72); }
+[data-theme="light"] .scrim { background: rgba(11,15,26,.35); }
 
-/* ===== Телефон ===== */
-.phone { width: 390px; height: 844px; border-radius: 44px; padding: 10px; background: linear-gradient(160deg, #3b424b, #16191e 30%, #0d0f12 70%, #2c3239); box-shadow: 0 30px 60px rgba(0,0,0,.6); flex: none; }
-.screen { position: relative; width: 100%; height: 100%; border-radius: 35px; overflow: hidden; background: var(--bg); color: var(--text); }
-.tgbar { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font: 500 15px var(--f-sans); color: var(--text); border-bottom: 1px solid var(--line); background: var(--bg); }
-.tgbar .back { color: var(--ion); display: flex; align-items: center; gap: 4px; font-size: 15px; }
-.content { padding: 16px; display: grid; gap: 12px; }
-.mainbtn { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px 26px; background: var(--bg); border-top: 1px solid var(--line); }
+/* ============ ТЕЛЕФОН ============ */
+.phone { width: 390px; height: 844px; border-radius: 46px; padding: 9px; background: linear-gradient(150deg, #2a2f3d, #0b0d13 35%, #07080c 70%, #1f2430); box-shadow: 0 30px 70px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.06); flex: none; }
+.screen { position: relative; width: 100%; height: 100%; border-radius: 38px; overflow: hidden; background: var(--bg); color: var(--text); isolation: isolate; }
+.screen::after { content: ""; position: absolute; inset: 0; background: var(--scan); pointer-events: none; z-index: 50; }
+.screen .skyline { position: absolute; left: 0; right: 0; top: 0; height: 300px; z-index: -1;
+  background: radial-gradient(120% 70% at 50% 0%, rgba(43,245,255,.07), transparent 60%), radial-gradient(60% 40% at 90% 10%, rgba(255,46,126,.05), transparent 70%); }
+[data-theme="light"] .screen .skyline { background: radial-gradient(120% 70% at 50% 0%, rgba(0,126,149,.06), transparent 60%); }
+.tgbar { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font: 500 15px var(--f-sans); color: var(--text); border-bottom: 1px solid var(--line); background: var(--bg); position: relative; z-index: 3; }
+.tgbar .back { color: var(--neon); display: flex; align-items: center; gap: 2px; }
+.brand { font: 800 17px var(--f-display); font-stretch: 75%; letter-spacing: .22em; color: var(--text); }
+.brand b { color: var(--neon); text-shadow: var(--halo-neon); font-weight: 800; }
+.content { padding: 14px 16px; display: grid; gap: 12px; position: relative; z-index: 2; }
+.mainbtn { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px 24px; background: var(--bg); border-top: 1px solid var(--line); z-index: 4; }
 .mainbtn .btn { width: 100%; height: 50px; }
-.tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 78px; padding: 8px 8px 22px; display: flex; background: var(--surface-1); border-top: 1px solid var(--line); }
-.tabbar a { flex: 1; display: grid; justify-items: center; gap: 4px; font: 500 11px var(--f-sans); color: var(--text-3); position: relative; }
-.tabbar a.on { color: var(--text); }
-.tabbar a.on::before { content: ""; position: absolute; top: -8px; width: 20px; height: 2px; border-radius: 1px; background: var(--ion); }
-.note { position: absolute; z-index: 5; font: 500 12px/1.35 var(--f-sans); color: #031520; background: #4CC3FF; padding: 6px 9px; border-radius: 8px; max-width: 170px; }
+.tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 76px; padding: 10px 6px 20px; display: flex; background: var(--bg); border-top: 1px solid var(--line); z-index: 4; }
+.tabbar a { flex: 1; display: grid; justify-items: center; gap: 4px; font: 700 11px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); position: relative; }
+.tabbar a.on { color: var(--neon); text-shadow: var(--halo-neon); }
+.tabbar a.on::before { content: ""; position: absolute; top: -10px; width: 26px; height: 2px; background: var(--neon); box-shadow: 0 0 8px var(--neon); }
+.tabbar a.on svg { filter: drop-shadow(0 0 4px var(--neon)); }
+
+/* ============ БОРД ============ */
+.board { width: 1240px; margin: 0 auto 48px; padding: 48px; background: var(--bg); position: relative; isolation: isolate; overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 36px 100%, 0 calc(100% - 36px)); }
+.board::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--scan), var(--grid); background-size: auto, 40px 40px, 40px 40px; -webkit-mask: linear-gradient(180deg, #000, transparent 40%); }
+.sec-no { font: 500 13px var(--f-mono); color: var(--neon); letter-spacing: .08em; margin-bottom: 12px; text-shadow: var(--halo-neon); }
+h2.sec { font: 800 56px/0.95 var(--f-display); font-stretch: 75%; letter-spacing: .01em; text-transform: uppercase; color: var(--text); }
+h2.sec em { font-style: normal; color: var(--neon-core); text-shadow: var(--halo-neon); }
+.sec-ru { font: 400 21px/1.4 var(--f-sans); color: var(--text-2); margin-top: 12px; max-width: 1040px; }
+.cap { display: flex; gap: 12px; align-items: center; margin: 34px 0 14px; font: 700 13px var(--f-display); font-stretch: 75%; letter-spacing: .18em; text-transform: uppercase; color: var(--text-2); }
+.cap::before { content: ""; width: 8px; height: 8px; background: var(--neon); box-shadow: 0 0 8px var(--neon); }
+.cap::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
+.grid { display: grid; gap: 20px; }
 svg { display: block; }
 .ico { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: square; stroke-linejoin: miter; }
+.sys-strip { display: flex; justify-content: space-between; }
 </style>
 </head>
 <body>
 
-<!-- Иконки: одна сетка 24, штрих 1.6, квадратные концы -->
 <svg width="0" height="0" style="position:absolute">
-  <symbol id="i-console" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M7 15l3-4 3 2 4-5"/></symbol>
-  <symbol id="i-reactor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></symbol>
-  <symbol id="i-tasks" viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path d="M8.5 9.5h7M8.5 12.5h7M8.5 15.5h4"/></symbol>
-  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M4 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4z"/><path d="M4 7l11-3v3"/><path d="M15.5 13h2"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6v9h-5v-5H9v5H4z"/></symbol>
+  <symbol id="i-reactor" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-tasks" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8.5 10h7M8.5 13h7M8.5 16h4"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3.5 7h15l2 2v10h-17z"/><path d="M15 13h3"/><path d="M5 7l9-3 2 3"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
-  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V6M6 11l6-6 6 6"/><path d="M5 20h14"/></symbol>
-  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 18V5M6.5 10.5L12 5l5.5 5.5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1.5L21 10v4l-2 2.5-3 1.5-1 3H9l-1-3-3-1.5L3 14v-4l2-2.5L8 6z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
-  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 16.5v1"/></symbol>
-  <symbol id="i-empty" viewBox="0 0 24 24"><path d="M4 9h16v10H4z"/><path d="M4 9l3-4h10l3 4"/><path d="M9 13h6"/></symbol>
-  <symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3L6.3 17.7"/></symbol>
-  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
-  <symbol id="i-gift" viewBox="0 0 24 24"><path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13"/><path d="M12 7c-2-3-5-3-5-1s3 1 5 1c2 0 5 1 5-1s-3-2-5 1"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5M12 16.5v1.5"/></symbol>
+  <symbol id="i-empty" viewBox="0 0 24 24"><path d="M4 8h16v12H4z" stroke-dasharray="3 2"/><path d="M9 13h6"/></symbol>
+  <symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13"/><path d="M12 7L9 4M12 7l3-3"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></symbol>
 </svg>
 
-<!-- ================= 01. КОНЦЕПЦИЯ · ПАЛИТРА · ТИПОГРАФИКА ================= -->
-<section class="board" id="s1">
-  <div class="sec-no">01 / КОНЦЕПЦИЯ</div>
-  <h2 class="sec">Instrument Console × Luxury Metal</h2>
-  <p class="sec-ru">«Приборная сталь»: интерфейс как дорогой хронограф и пульт управления. Тёмный воронёный графит, тонкие титановые кромки и гравированные шкалы. Один сигнальный цвет «ион» для действий и TON, латунь только для редких побед. Цифры — главные герои экрана: моноширинные, точные, живые.</p>
+<!-- ======================= 01 ======================= -->
+<section class="board" id="s1" data-theme="dark">
+  <div class="sec-no">01 // КОНЦЕПЦИЯ · NX-SYS v2</div>
+  <h2 class="sec">Ночной <em>контур</em></h2>
+  <p class="sec-ru">Киберпанк без кича: ночной город из окна диспетчерской. Почти чёрный фон с еле заметной сеткой и строчной развёрткой, неон — только на кромках, цифрах и индикаторах, как вывески и приборы. Обычный текст спокойный и читаемый. Фирменный силуэт — срезанный угол, фирменное поведение — неон, который «зажигается» один раз.</p>
 
-  <div class="cap">Палитра · тёмная (по умолчанию) и светлая (Telegram light)</div>
-  <div class="grid" style="grid-template-columns: 1fr 1fr;">
-    <div data-theme="dark" class="plate" style="padding:20px; background:var(--bg); border-color:#222830">
-      <div class="t-label" style="margin-bottom:12px">Графит · dark</div>
+  <div class="cap">Палитра · у каждого неона одна роль</div>
+  <div class="grid" style="grid-template-columns: 1.15fr 1fr;">
+    <div class="cut flat l" style="padding:22px">
+      <div class="t-label" style="margin-bottom:14px">Ночь · основная тема</div>
       <div id="pal-dark"></div>
     </div>
-    <div data-theme="light" class="plate" style="padding:20px; background:var(--bg)">
-      <div class="t-label" style="margin-bottom:12px">Алюминий · light</div>
+    <div data-theme="light" class="cut flat l" style="padding:22px; --fill: var(--bg)">
+      <div class="t-label" style="margin-bottom:14px">Дневной HUD · светлая Telegram</div>
       <div id="pal-light"></div>
     </div>
   </div>
-
-  <div class="cap">Материал: металл одной CSS-кромкой, без blur</div>
-  <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
-    <div data-theme="dark" style="background:var(--bg);padding:18px;border-radius:18px">
-      <div class="plate flat" style="padding:18px; height:120px"><div class="t-label">Плоская</div><div class="t-sec" style="margin-top:8px">Вторичные блоки, списки. Только линия 8%.</div></div>
-    </div>
-    <div data-theme="dark" style="background:var(--bg);padding:18px;border-radius:18px">
-      <div class="plate" style="padding:18px; height:120px"><div class="t-label">Пластина</div><div class="t-sec" style="margin-top:8px">Кромка: градиент светлый верх → тёмный низ. 1 фон + 1 тень.</div></div>
-    </div>
-    <div data-theme="dark" style="background:var(--bg);padding:18px;border-radius:18px">
-      <div class="plate hero brackets" style="padding:18px 22px; height:120px"><div class="t-label">Герой-панель</div><div class="t-sec" style="margin-top:8px">+ шлифовка (статичный паттерн) и скобы-визиры. Одна на экран.</div></div>
-    </div>
+  <div class="grid" style="grid-template-columns: repeat(4,1fr); margin-top:14px; gap:12px">
+    <div class="cut s flat" style="padding:14px 16px"><div class="t-label neon" style="color:var(--neon)">Циан · действие и TON</div><p class="t-sec" style="margin-top:6px">Главная кнопка, активное, суммы TON, прогресс.</p></div>
+    <div class="cut s flat" style="padding:14px 16px"><div class="t-label amber" style="color:var(--amber)">Натрий · награда</div><p class="t-sec" style="margin-top:6px">Выигрыш, успех усиления, рекорд, «Владелец». Редко.</p></div>
+    <div class="cut s flat" style="padding:14px 16px"><div class="t-label mag" style="color:var(--magenta)">Маджента · опасно</div><p class="t-sec" style="margin-top:6px">Сгорание, отказ, ошибка, запрет. Только смысл «потеря».</p></div>
+    <div class="cut s flat" style="padding:14px 16px"><div class="t-label" style="color:var(--ok)">Мята / лимон · статус</div><p class="t-sec" style="margin-top:6px">«Работает», «внимание». Только в маркерах, без свечения.</p></div>
   </div>
 
-  <div class="cap">Типографика · Syne только для латиницы, Plex для всего русского и цифр</div>
-  <div class="grid" style="grid-template-columns: 1.25fr 1fr; align-items:start" data-theme="dark">
-    <div class="plate flat" style="padding:22px; display:grid; gap:16px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t-num-xl">0.004218<span class="unit">TON</span></span><span class="t-label">Num XL · Mono 44/600</span></div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t-num-l">1.2847<span class="unit">TON</span></span><span class="t-label">Num L · Mono 28/600</span></div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t-title">Майнер работает</span><span class="t-label">Title · Plex Sans 24/600</span></div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t-h">Шанс успеха</span><span class="t-label">Heading · 17/600</span></div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t-body">Соберите до конца цикла</span><span class="t-label">Body · 15/400</span></div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t-sec">Цикл закончится через 7 ч 31 мин</span><span class="t-label">Secondary · 13/400</span></div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="t-label" style="color:var(--text-2)">Накоплено в цикле</span><span class="t-label">Label · Mono 11 caps</span></div>
+  <div class="cap">Шрифты · все с кириллицей</div>
+  <div class="grid" style="grid-template-columns: 1fr 1fr 1fr;">
+    <div class="cut flat" style="padding:22px">
+      <div class="t-sys">DISPLAY // TEKTUR 75–100 wdth</div>
+      <div style="font:800 52px/0.95 var(--f-display); font-stretch:75%; text-transform:uppercase; margin-top:14px">Майнер<br><span class="neon" style="color:var(--neon-core)">онлайн</span></div>
+      <p class="t-sec" style="margin-top:12px">Срезанные углы букв повторяют форму панелей. Узкая ширина — для HUD-меток, обычная — для заголовков.</p>
     </div>
-    <div style="display:grid; gap:16px">
-      <div class="plate flat" style="padding:22px">
-        <div class="t-label" style="margin-bottom:10px">Syne · только бренд и латиница</div>
-        <div style="font:800 46px/1 var(--f-display); letter-spacing:.08em">NEXUS</div>
-        <div style="font:700 18px var(--f-display); letter-spacing:.1em; color:var(--text-2); margin-top:8px">TON · TASK FORGE</div>
-        <p class="t-sec" style="margin-top:12px">В Syne нет кириллицы: сейчас весь русский текст падает в системный шрифт. Русский набираем IBM Plex Sans.</p>
-      </div>
-      <div class="plate flat" style="padding:22px">
-        <div class="t-label" style="margin-bottom:10px">Табличные цифры</div>
-        <div class="t-num-m" style="display:grid; gap:2px"><span>0.011100</span><span>1.284700</span><span>10.000000</span></div>
-        <p class="t-sec" style="margin-top:10px">Ширина цифр одинаковая — значения не «прыгают» при обновлении.</p>
-      </div>
+    <div class="cut flat" style="padding:22px">
+      <div class="t-sys">TEXT // ONEST 400–600</div>
+      <div style="font:600 24px/1.2 var(--f-sans); margin-top:14px">Соберите награду до конца цикла</div>
+      <div class="t-body dim" style="margin-top:8px">Спокойный гротеск, спроектированный под кириллицу. Им набран весь обычный текст — без неона.</div>
+    </div>
+    <div class="cut flat" style="padding:22px">
+      <div class="t-sys">NUMBERS // JETBRAINS MONO</div>
+      <div class="t-num-xl" style="margin-top:14px; font-size:40px">0.004218</div>
+      <div class="t-num-m" style="margin-top:10px; display:grid; gap:2px; color:var(--text-2)"><span>1.284700 TON</span><span>07:31:04</span></div>
+      <p class="t-sec" style="margin-top:10px">Табличные цифры, ноль с чертой. Только цифры светятся.</p>
     </div>
   </div>
+  <div class="cut flat s" style="padding:18px 22px; margin-top:14px; display:grid; grid-template-columns: repeat(7,1fr); gap:10px; align-items:end">
+    <div><div class="t-num-xl" style="font-size:36px">44</div><div class="t-sys" style="margin-top:6px">NUM XL · MONO 700</div></div>
+    <div><div class="t-num-l">28</div><div class="t-sys" style="margin-top:6px">NUM L</div></div>
+    <div><div class="t-display" style="font-size:28px">28</div><div class="t-sys" style="margin-top:6px">DISPLAY · TEKTUR 75</div></div>
+    <div><div class="t-title">Заголовок</div><div class="t-sys" style="margin-top:6px">TITLE · TEKTUR 24</div></div>
+    <div><div class="t-h">Блок 17</div><div class="t-sys" style="margin-top:6px">HEADING · ONEST</div></div>
+    <div><div class="t-body">Текст 15</div><div class="t-sys" style="margin-top:6px">BODY · ONEST</div></div>
+    <div><div class="t-label" style="color:var(--text-2)">Метка 11</div><div class="t-sys" style="margin-top:6px">LABEL · TEKTUR 75</div></div>
+  </div>
 
-  <div class="cap">Сетка · отступы · радиусы · иконки</div>
-  <div class="grid" style="grid-template-columns: 1fr 1fr 1fr;" data-theme="dark">
-    <div class="plate flat" style="padding:20px">
-      <div class="t-label" style="margin-bottom:12px">Шаг 4 · 8 · 12 · 16 · 24 · 32</div>
-      <div style="display:flex; gap:10px; align-items:flex-end">
-        <div style="width:4px;height:4px;background:var(--ion)"></div><div style="width:8px;height:8px;background:var(--ion)"></div><div style="width:12px;height:12px;background:var(--ion)"></div><div style="width:16px;height:16px;background:var(--ion)"></div><div style="width:24px;height:24px;background:var(--ion)"></div><div style="width:32px;height:32px;background:var(--ion)"></div>
-      </div>
-      <p class="t-sec" style="margin-top:12px">Поля экрана 16 · между блоками 12 · внутри панели 16–20 · колонки 2/3/5 с зазором 8.</p>
-    </div>
-    <div class="plate flat" style="padding:20px">
-      <div class="t-label" style="margin-bottom:12px">Радиусы 6 · 10 · 14 · 22</div>
-      <div style="display:flex; gap:12px">
-        <div style="width:44px;height:44px;border:1.5px solid var(--metal-hi);border-radius:6px"></div><div style="width:44px;height:44px;border:1.5px solid var(--metal-hi);border-radius:10px"></div><div style="width:44px;height:44px;border:1.5px solid var(--metal-hi);border-radius:14px"></div><div style="width:44px;height:44px;border:1.5px solid var(--metal-hi);border-radius:22px 22px 0 0"></div>
-      </div>
-      <p class="t-sec" style="margin-top:12px">Чипы · кнопки/поля · панели · шторка сверху.</p>
-    </div>
-    <div class="plate flat" style="padding:20px">
-      <div class="t-label" style="margin-bottom:12px">Иконки · 24, штрих 1.6, без эмодзи</div>
-      <div style="display:flex; gap:14px; color:var(--text-2)">
-        <svg class="ico"><use href="#i-console"/></svg><svg class="ico"><use href="#i-reactor"/></svg><svg class="ico"><use href="#i-tasks"/></svg><svg class="ico"><use href="#i-wallet"/></svg><svg class="ico"><use href="#i-up"/></svg><svg class="ico"><use href="#i-wheel"/></svg><svg class="ico"><use href="#i-gear"/></svg>
-      </div>
-      <p class="t-sec" style="margin-top:12px">Прямые углы, квадратные концы — «гравировка». Цвет только currentColor.</p>
+  <div class="cap">Форма и материал · дёшево по производительности</div>
+  <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap:16px">
+    <div class="cut flat" style="padding:18px; height:150px"><div class="t-label">Плоская</div><p class="t-sec" style="margin-top:8px">Срез 14 px, линия 10%. Списки, вторичное.</p></div>
+    <div class="cut" style="padding:18px; height:150px"><div class="t-label">Панель</div><p class="t-sec" style="margin-top:8px">Кромка: циан в верхнем углу → тень. Без blur.</p></div>
+    <div class="glow"><div class="cut hero" style="padding:18px; height:150px"><span class="hud-corners"></span><div class="t-label neon" style="color:var(--neon)">Герой</div><p class="t-sec" style="margin-top:8px">Неон-кромка, сетка и развёртка, HUD-уголок. Одна на экран.</p></div></div>
+    <div class="cut flat" style="padding:18px; height:150px; display:grid; align-content:space-between">
+      <div class="t-label">Неон-трубка · шкала</div>
+      <div class="tube"></div>
+      <div class="ticks"></div>
+      <div class="sys-strip t-sys"><span>N 55°45′</span><span>СЕКТОР 07</span></div>
     </div>
   </div>
 </section>
 
-<!-- ================= 02. КОМПОНЕНТЫ ================= -->
-<section class="board" id="s2" data-theme="dark" style="background:var(--bg)">
-  <div class="sec-no">02 / КОМПОНЕНТЫ</div>
-  <h2 class="sec">Components</h2>
-  <p class="sec-ru">Один набор деталей на все экраны. Касание не меньше 44 px, основное действие — одно.</p>
+<!-- ======================= 02 ======================= -->
+<section class="board" id="s2" data-theme="dark">
+  <div class="sec-no">02 // КОМПОНЕНТЫ</div>
+  <h2 class="sec">Детали <em>пульта</em></h2>
+  <p class="sec-ru">Один набор на все экраны. Касание от 44 px, главное действие — одно, неон — только там, где смысл.</p>
 
-  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:28px; margin-top:8px">
+  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:30px">
     <div>
       <div class="cap">Кнопки</div>
-      <div style="display:grid; gap:10px">
-        <div style="display:flex; gap:10px"><button class="btn btn-primary" style="flex:1">Собрать 0.0042 TON</button><button class="btn btn-primary pressed" style="flex:1">Нажата</button></div>
-        <div style="display:flex; gap:10px"><button class="btn btn-secondary" style="flex:1">Улучшить майнер</button><button class="btn btn-primary" disabled style="flex:1">Недоступно</button></div>
-        <div style="display:flex; gap:10px"><button class="btn btn-danger hold" style="flex:1"><i></i><span>Удерживайте — отклонить</span></button><button class="btn btn-ghost">Подробнее</button></div>
-      </div>
-      <p class="help" style="margin-top:8px">Primary — только одна на экране (обычно это Telegram MainButton). Опасные денежные действия — удержание 0.8 с.</p>
-
-      <div class="cap">Поля ввода</div>
       <div style="display:grid; gap:12px">
-        <div class="field"><label>Сумма вывода</label><div class="input focus"><span>0.50</span><span class="suffix">TON · МАКС</span></div><span class="help">Доступно 1.2847 TON · комиссия 0</span></div>
+        <div style="display:flex; gap:12px"><span class="glow" style="flex:1"><button class="btn btn-primary btn-block">Собрать <span class="k">0.0042</span></button></span><button class="btn btn-primary pressed" style="flex:1">Нажата</button></div>
+        <div style="display:flex; gap:12px"><button class="btn btn-secondary" style="flex:1">Усилить</button><button class="btn" disabled style="flex:1">Недоступно</button></div>
+        <div style="display:flex; gap:12px; align-items:center"><button class="btn btn-danger hold" style="flex:1"><i></i><span>Держите — отклонить</span></button><button class="btn btn-ghost">Подробнее</button></div>
+      </div>
+      <p class="help" style="margin-top:8px">Primary — сплошной циан с тёмным текстом: читается лучше светящегося контура. Одна на экран (MainButton).</p>
+
+      <div class="cap">Поля</div>
+      <div style="display:grid; gap:12px">
+        <div class="field"><label>Сумма вывода</label><div class="input focus"><span>0.50<span class="caret"></span></span><span class="suffix">TON · МАКС</span></div><span class="help">Доступно 1.2847 TON</span></div>
         <div class="field"><label>Адрес кошелька</label><div class="input err"><span class="ph">UQ… или EQ…</span></div><span class="help err">Адрес должен начинаться с UQ или EQ</span></div>
       </div>
 
       <div class="cap">Вкладки</div>
       <div class="tabs"><span class="tab on">Колесо</span><span class="tab">Чекин</span><span class="tab">Промо</span></div>
-      <div class="seg-underline" style="margin-top:14px"><span class="on">Экономика</span><span>Обзор</span><span>Промокоды</span><span>Деплой</span></div>
+      <div class="seg-line" style="margin-top:14px"><span class="on">Экономика</span><span>Обзор</span><span>Промо</span><span>Деплой</span></div>
 
-      <div class="cap">Статусы</div>
-      <div style="display:flex; flex-wrap:wrap; gap:8px"><span class="pill ok">Работает</span><span class="pill warn">Хранилище полно</span><span class="pill bad">Ошибка</span><span class="pill ion">Бесплатно 1</span><span class="pill neutral">Остановлен</span><span class="pill brass">Рекорд</span></div>
+      <div class="cap">Маркеры статуса</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px"><span class="tag ok">Работает</span><span class="tag warn">Хранилище полно</span><span class="tag bad">Сгорело</span><span class="tag neon">Бесплатно ×1</span><span class="tag neutral">Остановлен</span><span class="tag amber">Рекорд</span></div>
     </div>
 
     <div>
-      <div class="cap">Список (строки вместо карточек)</div>
-      <div class="list plate flat">
+      <div class="cap">Список</div>
+      <div class="cut flat">
         <div class="row"><div class="ic"><svg class="ico"><use href="#i-reactor"/></svg></div><div class="main"><div class="ttl">Майнер</div><div class="sub">Цикл 5 ч 12 мин из 12 ч</div></div><div class="val">0.0042</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
-        <div class="row"><div class="ic"><svg class="ico"><use href="#i-tasks"/></svg></div><div class="main"><div class="ttl">Подписаться на TON Daily</div><div class="sub">37 из 100 мест · ур. 1+</div></div><div class="val ion">+0.01</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
-        <div class="row"><div class="ic"><svg class="ico"><use href="#i-gear"/></svg></div><div class="main"><div class="ttl">Цена попытки усиления</div><div class="sub">Базовая стоимость одной попытки</div></div><div class="val">0.05 TON</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
+        <div class="row"><div class="ic"><svg class="ico"><use href="#i-tasks"/></svg></div><div class="main"><div class="ttl">Подписаться на TON Daily</div><div class="sub">37 из 100 мест · ур. 1+</div></div><div class="val neon">+0.01</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
+        <div class="row"><div class="ic muted"><svg class="ico"><use href="#i-gear"/></svg></div><div class="main"><div class="ttl">Цена попытки усиления</div><div class="sub">Базовая стоимость попытки</div></div><div class="val">0.05 TON</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
       </div>
 
-      <div class="cap">Показания и шкалы</div>
-      <div class="plate hero brackets" style="padding:20px 22px">
-        <div class="t-label" style="color:var(--text-2)">Накоплено в цикле</div>
-        <div class="t-num-xl" style="margin-top:8px">0.004218<span class="unit">TON</span></div>
-        <div class="ticks" style="margin:14px 0 8px"></div>
-        <div class="meter"><i style="width:41%"></i></div>
-        <div style="display:flex;justify-content:space-between;margin-top:8px"><span class="t-sec">41% хранилища</span><span class="t-sec mono" style="font-family:var(--f-mono)">лимит 0.0055</span></div>
-      </div>
+      <div class="cap">Показания</div>
+      <div class="glow"><div class="cut hero" style="padding:18px 20px">
+        <span class="hud-corners"></span>
+        <div class="sys-strip"><span class="t-label" style="color:var(--text-2)">Накоплено в цикле</span><span class="t-sys">RX-01 · 04:21</span></div>
+        <div class="t-num-xl" style="margin-top:10px">0.004218<span class="unit">TON</span></div>
+        <div class="bar" style="margin-top:14px"><i style="width:41%"></i></div>
+        <div class="sys-strip" style="margin-top:8px"><span class="t-sec">41% хранилища</span><span class="t-sec" style="font-family:var(--f-mono)">лимит 0.0055</span></div>
+      </div></div>
       <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:10px">
         <div class="stat"><div class="k">Мощн</div><div class="v">3</div></div>
         <div class="stat focus"><div class="k">Ёмк</div><div class="v">2</div></div>
@@ -329,81 +356,87 @@ svg { display: block; }
         <div class="stat block"><div class="k">Удача</div><div class="v">1</div></div>
         <div class="stat"><div class="k">Стаб</div><div class="v">2</div></div>
       </div>
-      <p class="help" style="margin-top:6px">Фокус — ионная рамка; Запрет — красная штриховка. Видно без подсказки «тап → …».</p>
+      <p class="help" style="margin-top:6px">Фокус — циановая кромка и светящаяся цифра. Запрет — маджента-штриховка и зачёркивание.</p>
 
-      <div class="cap">Тост · состояния · скелетон</div>
-      <div class="toast"><span class="bar"></span><svg class="ico" style="color:var(--ok)"><use href="#i-check"/></svg><div><div class="t-body" style="font-weight:500">Собрано 0.0042 TON</div><div class="t-sec">Баланс 1.2889 TON</div></div></div>
+      <div class="cap">Тост · пусто · ошибка · загрузка</div>
+      <div class="cut s" style="--edge: linear-gradient(90deg, var(--ok) 0 3px, var(--line-strong) 3px)"><div class="toast"><svg class="ico" style="color:var(--ok)"><use href="#i-check"/></svg><div><div class="t-body" style="font-weight:500">Собрано 0.0042 TON</div><div class="t-sec">Баланс 1.2889 TON</div></div></div></div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px">
-        <div class="plate flat state"><div class="glyph"><svg class="ico"><use href="#i-empty"/></svg></div><div class="t-h" style="font-size:15px">Заданий нет</div><div class="t-sec">Загляните позже</div></div>
-        <div class="plate flat state"><div class="glyph" style="color:var(--bad);border-color:var(--bad)"><svg class="ico"><use href="#i-alert"/></svg></div><div class="t-h" style="font-size:15px">Нет связи</div><button class="btn btn-ghost" style="height:32px">Повторить</button></div>
-        <div class="plate flat" style="padding:16px; display:grid; gap:10px"><div class="sk" style="height:10px;width:50%"></div><div class="sk" style="height:26px;width:85%"></div><div class="sk" style="height:6px"></div><div class="sk" style="height:10px;width:70%"></div></div>
+        <div class="cut flat state"><svg class="ico" style="color:var(--text-3); width:30px; height:30px"><use href="#i-empty"/></svg><div class="t-h" style="font-size:15px">Заданий нет</div><div class="t-sec">Загляните позже</div></div>
+        <div class="cut flat state" style="--edge: linear-gradient(135deg, var(--magenta), var(--line) 40%)"><svg class="ico" style="color:var(--magenta); width:30px; height:30px"><use href="#i-alert"/></svg><div class="t-h" style="font-size:15px">Нет связи</div><button class="btn btn-ghost" style="height:30px">Повторить</button></div>
+        <div class="cut flat" style="padding:16px; display:grid; gap:10px; align-content:center"><div class="t-sys">ЗАГРУЗКА ▮▮▮▯▯</div><div class="sk" style="width:55%"></div><div class="sk" style="height:26px; width:85%"></div><div class="sk" style="height:6px"></div></div>
       </div>
     </div>
   </div>
 
-  <div class="cap">Шторка (bottom sheet) вместо длинных экранов и модалок по центру</div>
-  <div style="display:grid; grid-template-columns: 420px 1fr; gap:28px; align-items:start">
-    <div style="position:relative; height:330px; border-radius:22px; overflow:hidden; background:var(--bg); border:1px solid var(--line)">
+  <div class="cap">Шторка · подтверждение денег удержанием</div>
+  <div style="display:grid; grid-template-columns: 430px 1fr; gap:30px; align-items:start">
+    <div style="position:relative; height:340px; overflow:hidden; background:var(--bg); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%)">
+      <div style="position:absolute; inset:0; background: var(--grid); background-size: 22px 22px"></div>
       <div class="scrim"></div>
-      <div class="sheet" style="position:absolute; left:0; right:0; bottom:0">
+      <div class="sheet">
         <div class="grab"></div>
         <div class="t-label">Подтверждение</div>
-        <div class="t-h" style="margin-top:6px">Вывести 0.50 TON?</div>
-        <div class="list plate flat" style="margin-top:12px">
+        <div class="t-title" style="margin-top:6px; font-size:22px">Вывести 0.50 TON?</div>
+        <div class="cut flat s" style="margin-top:12px; --fill: var(--surface-1)">
           <div class="row" style="min-height:44px"><div class="main sub">На адрес</div><div class="val" style="font-size:13px">UQB4…9xK2</div></div>
           <div class="row" style="min-height:44px"><div class="main sub">Останется</div><div class="val" style="font-size:13px">0.7847 TON</div></div>
         </div>
-        <button class="btn btn-primary btn-block hold" style="margin-top:14px"><i></i><span>Удерживайте, чтобы вывести</span></button>
+        <button class="btn btn-primary btn-block hold" style="margin-top:14px"><i></i><span>Держите, чтобы вывести</span></button>
       </div>
     </div>
     <div class="t-body dim" style="display:grid; gap:10px">
-      <p>· Шторка поднимается снизу за 260 мс, закрывается свайпом вниз, нажатием на фон и системной кнопкой «Назад» Telegram.</p>
-      <p>· Внутри — максимум одно действие. Для денег: сводка «что, куда, сколько останется» и удержание кнопки.</p>
-      <p>· Фон затемняется сплошным цветом 62%, без размытия: дёшево для слабых телефонов.</p>
-      <p>· Высота — по содержимому, не больше 85% экрана; длинные формы делим на вкладки внутри шторки.</p>
+      <p>— Верх шторки срезан с двух сторон, ручка — короткая неон-трубка. Поднимается за 260 мс, закрывается свайпом, тапом по фону и BackButton Telegram.</p>
+      <p>— Внутри одно действие. Для денег: сводка «что, куда, сколько останется» и удержание 0.8 с — полоса циана заполняет кнопку.</p>
+      <p>— Фон затемняется сплошным цветом 72% без размытия.</p>
+      <p>— Высота по содержимому, максимум 85% экрана; длинное — вкладками внутри.</p>
     </div>
   </div>
 </section>
 
-<!-- ================= 03. ЭКРАНЫ ================= -->
-<section class="board" id="s3" data-theme="dark" style="background:#0A0C0F">
-  <div class="sec-no">03 / ЭКРАНЫ</div>
-  <h2 class="sec">Key screens · 390 px</h2>
-  <p class="sec-ru">Майнер, усиление и настройка экономики в кабинете владельца — в новой системе.</p>
+<!-- ======================= 03 ======================= -->
+<section class="board" id="s3" data-theme="dark">
+  <div class="sec-no">03 // ЭКРАНЫ · 390 PX</div>
+  <h2 class="sec">Ключевые <em>экраны</em></h2>
+  <p class="sec-ru">Майнер, усиление и настройка экономики в кабинете владельца.</p>
   <div style="display:flex; gap:26px; margin-top:28px; justify-content:center">
 
-    <!-- Майнер -->
-    <div class="phone" id="ph-miner"><div class="screen">
-      <div class="tgbar"><span class="t-brand">NEXUS</span><span class="pill ok">Работает</span></div>
+    <!-- МАЙНЕР -->
+    <div class="phone" id="ph-miner"><div class="screen"><div class="skyline"></div>
+      <div class="tgbar"><span class="brand">TON<b>/</b>NEXUS</span><span class="tag ok">Работает</span></div>
       <div class="content">
-        <div class="plate hero brackets" style="padding:22px 22px 18px">
+        <div class="sys-strip t-sys"><span>RX-01 // РЕАКТОР</span><span>ЦИКЛ 05:12 / 12:00</span></div>
+        <div class="glow"><div class="cut hero l" style="padding:20px 20px 16px">
+          <span class="hud-corners"></span>
           <div class="t-label" style="color:var(--text-2)">Накоплено в цикле</div>
           <div class="t-num-xl" style="margin-top:10px">0.004218<span class="unit">TON</span></div>
-          <div class="t-sec" style="margin-top:6px">≈ 0.0005 TON в час · цикл до 06:12</div>
-          <!-- циферблат -->
-          <div style="position:relative; height:150px; margin:14px 0 4px">
-            <svg viewBox="0 0 300 150" width="100%" height="150">
-              <defs><linearGradient id="arc" x1="0" x2="1"><stop offset="0" stop-color="#4CC3FF" stop-opacity=".35"/><stop offset="1" stop-color="#4CC3FF"/></linearGradient></defs>
-              <g id="dialTicks"></g>
-              <path d="M30 140 A120 120 0 0 1 270 140" fill="none" stroke="#1F242B" stroke-width="8" stroke-linecap="butt"/>
-              <path d="M30 140 A120 120 0 0 1 270 140" fill="none" stroke="url(#arc)" stroke-width="8" stroke-dasharray="377" stroke-dashoffset="222" />
-              <g transform="rotate(-16 150 140)"><line x1="150" y1="48" x2="150" y2="8" stroke="#E9EDF2" stroke-width="2.5"/><path d="M144 6h12l-6 8z" fill="#E9EDF2"/></g>
-              <text x="30" y="148" fill="#7A8490" font-family="IBM Plex Mono" font-size="11" text-anchor="middle">0</text>
-              <text x="270" y="148" fill="#7A8490" font-family="IBM Plex Mono" font-size="11" text-anchor="middle">0.0055</text>
+          <div class="t-sec" style="margin-top:6px">≈ 0.0005 TON в час</div>
+          <!-- кольцевой реактор -->
+          <div style="position:relative; height:178px; margin-top:8px">
+            <svg viewBox="0 0 320 178" width="100%" height="178">
+              <g id="ringTicks"></g>
+              <circle cx="160" cy="92" r="58" fill="none" stroke="#181C2A" stroke-width="10"/>
+              <circle cx="160" cy="92" r="58" fill="none" stroke="#2BF5FF" stroke-width="10" stroke-dasharray="149 365" transform="rotate(-90 160 92)" style="filter: drop-shadow(0 0 6px rgba(43,245,255,.7))" stroke-linecap="butt"/>
+              <circle cx="160" cy="92" r="58" fill="none" stroke="#D2FDFF" stroke-width="2" stroke-dasharray="149 365" transform="rotate(-90 160 92)"/>
+              <circle cx="160" cy="92" r="44" fill="none" stroke="rgba(150,170,255,.14)" stroke-width="1" stroke-dasharray="2 4"/>
+              <text x="160" y="94" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="26" fill="#E6EBF5">41%</text>
+              <text x="160" y="112" text-anchor="middle" font-family="Tektur" font-stretch="75%" font-weight="700" font-size="10" letter-spacing="2" fill="#6E7891">ХРАНИЛИЩЕ</text>
+              <path d="M18 40h40l8 8" fill="none" stroke="rgba(150,170,255,.25)"/><text x="18" y="34" font-family="JetBrains Mono" font-size="11" fill="#6E7891">МОЩН 3</text>
+              <path d="M302 40h-40l-8 8" fill="none" stroke="rgba(150,170,255,.25)"/><text x="302" y="34" text-anchor="end" font-family="JetBrains Mono" font-size="11" fill="#6E7891">УСК 2</text>
+              <path d="M18 150h40l8-8" fill="none" stroke="rgba(150,170,255,.25)"/><text x="18" y="166" font-family="JetBrains Mono" font-size="11" fill="#6E7891">ЁМК 2</text>
+              <path d="M302 150h-40l-8-8" fill="none" stroke="rgba(150,170,255,.25)"/><text x="302" y="166" text-anchor="end" font-family="JetBrains Mono" font-size="11" fill="#6E7891">ЛИМИТ 0.0055</text>
             </svg>
-            <div style="position:absolute; left:0; right:0; bottom:18px; text-align:center"><span class="t-num-m">41%</span><div class="t-label">хранилище</div></div>
           </div>
-        </div>
+        </div></div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
-          <div class="plate flat" style="padding:12px 14px"><div class="t-label">До конца цикла</div><div class="t-num-m" style="margin-top:6px">07:31:04</div></div>
-          <div class="plate flat" style="padding:12px 14px"><div class="t-label">Баланс</div><div class="t-num-m" style="margin-top:6px">1.2847 <span class="dim" style="font-size:12px">TON</span></div></div>
+          <div class="cut flat s" style="padding:12px 14px"><div class="t-label">До конца цикла</div><div class="t-num-m" style="margin-top:6px">07:31:04</div></div>
+          <div class="cut flat s" style="padding:12px 14px"><div class="t-label">Баланс</div><div class="t-num-m" style="margin-top:6px">1.2847 <span class="dim" style="font-size:12px">TON</span></div></div>
         </div>
-        <div class="list plate flat">
+        <div class="cut flat">
           <div class="row" style="min-height:56px"><div class="ic"><svg class="ico"><use href="#i-up"/></svg></div><div class="main"><div class="ttl">Усиление</div><div class="sub">Попытка 0.06 TON · шанс 47%</div></div><svg class="ico chev"><use href="#i-chev"/></svg></div>
-          <div class="row" style="min-height:56px"><div class="ic"><svg class="ico"><use href="#i-wheel"/></svg></div><div class="main"><div class="ttl">Колесо удачи</div><div class="sub">Бесплатный прокрут готов</div></div><span class="pill ion">1</span></div>
+          <div class="row" style="min-height:56px"><div class="ic" style="color:var(--amber); background:var(--amber-soft)"><svg class="ico"><use href="#i-wheel"/></svg></div><div class="main"><div class="ttl">Колесо удачи</div><div class="sub">Бесплатный прокрут готов</div></div><span class="tag amber">×1</span></div>
         </div>
       </div>
-      <div class="mainbtn" style="bottom:78px; border-top:0; background:transparent; padding-bottom:12px"><button class="btn btn-primary">Собрать 0.0042 TON</button></div>
+      <div style="position:absolute; left:16px; right:16px; bottom:88px; z-index:4" class="glow"><button class="btn btn-primary btn-block" style="height:50px">Собрать <span class="k">0.0042 TON</span></button></div>
       <div class="tabbar">
         <a class="on"><svg class="ico"><use href="#i-reactor"/></svg>Майнер</a>
         <a><svg class="ico"><use href="#i-tasks"/></svg>Задания</a>
@@ -412,166 +445,174 @@ svg { display: block; }
       </div>
     </div></div>
 
-    <!-- Усиление -->
-    <div class="phone" id="ph-upgrade"><div class="screen">
-      <div class="tgbar"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span>Усиление</span><span style="width:60px"></span></div>
+    <!-- УСИЛЕНИЕ -->
+    <div class="phone" id="ph-upgrade"><div class="screen"><div class="skyline"></div>
+      <div class="tgbar"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span style="font:700 15px var(--f-display); font-stretch:80%; letter-spacing:.12em; text-transform:uppercase">Усиление</span><span style="width:64px"></span></div>
       <div class="content">
-        <div class="tabs"><span class="tab on">Попытка</span><span class="tab">История</span><span class="tab">Как работает</span></div>
+        <div class="tabs"><span class="tab on">Попытка</span><span class="tab">История</span><span class="tab">Правила</span></div>
         <div>
-          <div class="t-label" style="margin:4px 0 8px">1 · Какой параметр выпадет</div>
+          <div class="sys-strip" style="margin:4px 0 8px"><span class="t-label">01 · Какой параметр выпадет</span><span class="t-sys">ВЕСА</span></div>
           <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px">
-            <div class="stat"><div class="k">Мощн</div><div class="v">3</div><div class="t-label" style="font-size:10px;margin-top:4px">25%</div></div>
-            <div class="stat focus"><div class="k">Ёмк</div><div class="v">2</div><div class="t-label" style="font-size:10px;margin-top:4px;color:var(--ion)">38%</div></div>
-            <div class="stat"><div class="k">Уск</div><div class="v">2</div><div class="t-label" style="font-size:10px;margin-top:4px">20%</div></div>
-            <div class="stat block"><div class="k">Удача</div><div class="v">1</div><div class="t-label" style="font-size:10px;margin-top:4px">0%</div></div>
-            <div class="stat"><div class="k">Стаб</div><div class="v">2</div><div class="t-label" style="font-size:10px;margin-top:4px">17%</div></div>
+            <div class="stat"><div class="k">Мощн</div><div class="v">3</div><div class="p">25%</div></div>
+            <div class="stat focus"><div class="k">Ёмк</div><div class="v">2</div><div class="p">38%</div></div>
+            <div class="stat"><div class="k">Уск</div><div class="v">2</div><div class="p">20%</div></div>
+            <div class="stat block"><div class="k">Удача</div><div class="v">1</div><div class="p">0%</div></div>
+            <div class="stat"><div class="k">Стаб</div><div class="v">2</div><div class="p">17%</div></div>
           </div>
-          <div style="display:flex; gap:8px; margin-top:8px">
-            <span class="pill ion">Фокус · Ёмк</span><span class="pill bad">Запрет · Удача</span>
-          </div>
+          <div style="display:flex; gap:8px; margin-top:8px"><span class="tag neon">Фокус · Ёмк</span><span class="tag bad">Запрет · Удача</span></div>
         </div>
-        <div class="plate hero brackets" style="padding:18px 20px">
-          <div style="display:flex; justify-content:space-between; align-items:baseline">
-            <div class="t-label" style="color:var(--text-2)">2 · Шанс успеха</div><span class="t-sec">ур. 2 → 3</span>
+        <div class="glow"><div class="cut hero" style="padding:16px 18px">
+          <span class="hud-corners"></span>
+          <div class="sys-strip"><span class="t-label" style="color:var(--text-2)">02 · Шанс успеха</span><span class="t-sys">УР 2 → 3</span></div>
+          <div class="t-num-xl" style="margin-top:8px; font-size:52px">47<span class="unit" style="font-size:20px">%</span></div>
+          <div style="position:relative; margin-top:14px; height:40px">
+            <div style="position:absolute; left:0; right:0; top:8px; height:14px; background: linear-gradient(90deg, rgba(43,245,255,.22) 0 47%, rgba(255,46,126,.14) 47% 100%)"></div>
+            <div style="position:absolute; left:0; width:47%; top:8px; height:2px; background:var(--neon); box-shadow:0 0 8px var(--neon)"></div>
+            <div style="position:absolute; left:47%; right:0; top:20px; height:2px; background:var(--magenta); opacity:.7"></div>
+            <div style="position:absolute; left:0; right:0; top:26px" class="ticks"></div>
+            <div style="position:absolute; left:calc(47% - 1px); top:0; width:2px; height:32px; background:#fff; box-shadow:0 0 8px #fff"></div>
           </div>
-          <div class="t-num-xl" style="margin-top:8px">47<span class="unit" style="font-size:20px">%</span></div>
-          <!-- шкала шанса со стрелкой -->
-          <div style="position:relative; margin-top:16px; height:44px">
-            <div style="position:absolute; left:0; right:0; top:12px; height:14px; border-radius:3px; background:linear-gradient(90deg, rgba(67,208,138,.30) 0 47%, rgba(255,107,107,.14) 47% 100%); box-shadow: inset 0 0 0 1px var(--line)"></div>
-            <div style="position:absolute; left:0; right:0; top:28px" class="ticks"></div>
-            <div style="position:absolute; left:47%; top:6px; width:2px; height:26px; background:var(--text); box-shadow:0 0 0 3px rgba(10,12,15,.9)"></div>
-            <div style="position:absolute; left:0; top:0" class="t-label">успех</div>
-            <div style="position:absolute; right:0; top:0" class="t-label">провал</div>
-          </div>
-          <div class="t-sec" style="margin-top:6px">При провале стоимость попытки сгорает полностью.</div>
-        </div>
-        <div class="list plate flat">
+          <div class="sys-strip"><span class="t-sys" style="color:var(--neon)">УСПЕХ</span><span class="t-sys" style="color:var(--magenta)">СГОРАНИЕ</span></div>
+          <div class="t-sec" style="margin-top:8px">При провале стоимость попытки сгорает полностью.</div>
+        </div></div>
+        <div class="cut flat s">
           <div class="row" style="min-height:46px"><div class="main sub">Стоимость попытки</div><div class="val">0.0600 TON</div></div>
           <div class="row" style="min-height:46px"><div class="main sub">Баланс после</div><div class="val">1.2247 TON</div></div>
         </div>
       </div>
-      <div class="mainbtn"><button class="btn btn-primary">Попытка за 0.06 TON</button></div>
+      <div class="mainbtn"><span class="glow" style="display:block"><button class="btn btn-primary">Попытка за <span class="k">0.06 TON</span></button></span></div>
     </div></div>
 
-    <!-- Кабинет: настройка в шторке -->
-    <div class="phone" id="ph-owner"><div class="screen">
-      <div class="tgbar"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span>Кабинет</span><span class="pill brass" style="height:22px">Владелец</span></div>
+    <!-- КАБИНЕТ -->
+    <div class="phone" id="ph-owner"><div class="screen"><div class="skyline"></div>
+      <div class="tgbar"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span style="font:700 15px var(--f-display); font-stretch:80%; letter-spacing:.12em; text-transform:uppercase">Кабинет</span><span class="tag amber">Владелец</span></div>
       <div class="content" style="gap:10px">
-        <div class="seg-underline"><span class="on">Экономика</span><span>Обзор</span><span>Промо</span><span>Деплой</span></div>
-        <div class="t-label" style="margin-top:4px">Майнер · 6</div>
-        <div class="list plate flat">
+        <div class="seg-line"><span class="on">Экономика</span><span>Обзор</span><span>Промо</span><span>Деплой</span></div>
+        <div class="sys-strip"><span class="t-label">Майнер · 6 параметров</span><span class="t-sys">ОБНОВЛЕНО 19:20</span></div>
+        <div class="cut flat">
           <div class="row"><div class="main"><div class="ttl">Цена попытки усиления</div><div class="sub">Базовая стоимость попытки</div></div><div class="val">0.05</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
           <div class="row"><div class="main"><div class="ttl">Шансы статов</div><div class="sub">Какой стат выпадет</div></div><div class="val" style="font-size:13px">25·25·20…</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
           <div class="row"><div class="main"><div class="ttl">Шанс успеха</div><div class="sub">Базовый и минимальный</div></div><div class="val">55%</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
         </div>
       </div>
-      <div class="scrim" style="top:56px"></div>
-      <div class="sheet" style="position:absolute; left:0; right:0; bottom:0; padding-bottom:26px">
+      <div class="scrim" style="top:54px; z-index:5"></div>
+      <div class="sheet" style="z-index:6; padding-bottom:26px">
         <div class="grab"></div>
-        <div class="t-label">Майнер · усиление</div>
-        <div class="t-h" style="margin-top:4px">Шанс успеха усиления</div>
+        <div class="sys-strip"><span class="t-label">Майнер · усиление</span><span class="t-sys">ИЗМЕНЕНО 2 ДНЯ НАЗАД</span></div>
+        <div class="t-title" style="margin-top:6px; font-size:22px">Шанс успеха усиления</div>
         <p class="t-sec" style="margin-top:6px">С какой вероятностью попытка повышает уровень стата. Чем выше уровень, тем ниже шанс, но не меньше минимума.</p>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px">
-          <div class="field"><label>Базовый</label><div class="input focus"><span>55</span><span class="suffix">%</span></div></div>
+          <div class="field"><label>Базовый</label><div class="input focus"><span>55<span class="caret"></span></span><span class="suffix">%</span></div></div>
           <div class="field"><label>Минимум</label><div class="input"><span>15</span><span class="suffix">%</span></div></div>
         </div>
-        <div class="plate flat" style="padding:12px 14px; margin-top:12px; background:var(--bg-sunken)">
+        <div class="cut flat s" style="padding:12px 14px; margin-top:12px; --fill: var(--bg-sunken)">
           <div class="t-label">Предпросмотр</div>
-          <div style="display:flex; justify-content:space-between; margin-top:8px" class="t-sec"><span>ур. 1 → <b style="font-family:var(--f-mono);color:var(--text)">55%</b></span><span>ур. 5 → <b style="font-family:var(--f-mono);color:var(--text)">47%</b></span><span>ур. 20 → <b style="font-family:var(--f-mono);color:var(--text)">15%</b></span></div>
+          <div class="sys-strip t-sec" style="margin-top:8px"><span>ур 1 <b class="neon" style="font-family:var(--f-mono)">55%</b></span><span>ур 5 <b class="neon" style="font-family:var(--f-mono)">47%</b></span><span>ур 20 <b class="neon" style="font-family:var(--f-mono)">15%</b></span></div>
         </div>
         <div style="display:flex; gap:10px; margin-top:14px"><button class="btn btn-secondary" style="flex:1">Отмена</button><button class="btn btn-primary" style="flex:1.4">Сохранить</button></div>
-        <p class="help" style="margin-top:8px; text-align:center">Было 55% / 15% · изменения применятся сразу</p>
+        <p class="help" style="margin-top:8px; text-align:center">Было 55% / 15% · применится сразу</p>
       </div>
     </div></div>
   </div>
 </section>
 
-<!-- ================= 04. ВАУ-МОМЕНТЫ И СВЕТЛАЯ ТЕМА ================= -->
-<section class="board" id="s4" data-theme="dark" style="background:#0A0C0F">
-  <div class="sec-no">04 / ДВИЖЕНИЕ</div>
-  <h2 class="sec">Signature moments</h2>
-  <p class="sec-ru">Четыре фирменных момента. Только transform и opacity, вибрация Telegram, бюджет на каждый.</p>
-  <div class="grid" style="grid-template-columns: 1fr 1fr; margin-top:24px; gap:18px">
-    <div class="plate" style="padding:22px">
-      <div class="t-label ion">A · Живой счётчик</div>
-      <div style="display:flex; gap:0; margin:14px 0; font:600 40px/48px var(--f-mono); align-items:flex-start">
-        <span>0.00421</span><span style="display:inline-block; height:48px; overflow:hidden; position:relative; width:25px; vertical-align:top; box-shadow: inset 0 -1px 0 var(--ion)"><span style="position:absolute; left:0; top:-36px; line-height:48px; opacity:.3">7</span><span style="position:absolute; left:0; top:0; line-height:48px; color:var(--ion)">8</span></span><span class="unit" style="font-size:16px;align-self:end;margin-bottom:6px">TON</span>
+<!-- ======================= 04 ======================= -->
+<section class="board" id="s4" data-theme="dark">
+  <div class="sec-no">04 // ДВИЖЕНИЕ · ДНЕВНОЙ HUD</div>
+  <h2 class="sec">Фирменные <em>моменты</em></h2>
+  <p class="sec-ru">Четыре момента, когда неон оживает. Остальное время интерфейс спокоен. Только transform и opacity, вибрация Telegram, бюджет на каждый.</p>
+  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:18px; margin-top:24px">
+    <div class="cut" style="padding:22px">
+      <div class="t-label neon" style="color:var(--neon)">A · Неон зажигается</div>
+      <div style="display:flex; gap:14px; align-items:flex-end; margin:16px 0">
+        <span class="t-num-xl" style="font-size:34px; opacity:.15; text-shadow:none">0.0042</span>
+        <span class="t-num-xl" style="font-size:34px; opacity:.6; text-shadow:none">0.0042</span>
+        <span class="t-num-xl" style="font-size:34px; opacity:.25; text-shadow:none">0.0042</span>
+        <span class="t-num-xl" style="font-size:34px">0.0042</span>
       </div>
-      <p class="t-sec">Меняются только изменившиеся разряды: цифра «прокатывается» вверх как на одометре (180 мс). Стрелка циферблата плывёт плавно. Когда хранилище заполнено, шкала «защёлкивается» ионной вспышкой и лёгкой вибрацией.</p>
-      <p class="help" style="margin-top:10px">Бюджет: обновление 4 раза в секунду, без перерисовки всего экрана · 1 слой · пауза, если вкладка скрыта · вибрация: impact light, один раз.</p>
+      <div class="t-sys" style="display:flex; gap:40px"><span>0 мс</span><span>60</span><span>120</span><span>380 · горит</span></div>
+      <p class="t-sec" style="margin-top:12px">При первом открытии экрана за сессию главная цифра и кромка героя «зажигаются» как вывеска: 3 вспышки и ровный свет. Лёгкая вибрация в момент «зажглось». Повторно — просто показ.</p>
+      <p class="help" style="margin-top:10px">Бюджет: 380 мс, только opacity, 1 раз на экран за сессию.</p>
     </div>
-    <div class="plate" style="padding:22px">
-      <div class="t-label ion">B · Прогон усиления</div>
-      <div style="display:flex; gap:8px; margin:14px 0; align-items:center">
-        <div class="stat" style="flex:1;opacity:.4"><div class="k">Мощн</div></div><div class="stat focus" style="flex:1.3; transform:scale(1.06)"><div class="k">Ёмк</div><div class="v">2→3</div></div><div class="stat" style="flex:1;opacity:.4"><div class="k">Уск</div></div>
-        <div style="font:600 30px var(--f-mono); margin-left:10px" class="brass">47%</div>
+    <div class="cut" style="padding:22px">
+      <div class="t-label neon" style="color:var(--neon)">B · Расшифровка суммы</div>
+      <div style="font:700 34px var(--f-mono); margin:16px 0; display:flex; gap:0">
+        <span style="color:var(--neon-core); text-shadow:var(--halo-neon)">1.28</span><span style="color:var(--text-3)">#</span><span style="color:var(--neon); opacity:.7">Ж</span><span style="color:var(--text-3)">7</span><span style="color:var(--neon); opacity:.5">%</span>
+        <span class="unit" style="font-size:15px; align-self:center">TON</span><span class="tag ok" style="margin-left:14px; align-self:center">+0.0042</span>
       </div>
-      <p class="t-sec">Два такта. 1) Подсветка бежит по пяти статам и замедляется на выпавшем — на каждом шаге щелчок selection. 2) Стрелка пробегает шкалу шанса и останавливается. Успех: латунный блик проходит по панели, цифра уровня перекатывается, вибрация success. Провал: панель гаснет, короткая дрожь 6 px, вибрация error.</p>
-      <p class="help" style="margin-top:10px">Бюджет: не дольше 2.2 с целиком, можно пропустить тапом · результат известен до анимации (сервер), анимация только показывает его.</p>
+      <p class="t-sec">После «Собрать» дуга хранилища стекает к нулю, а новый баланс «расшифровывается»: разряды перебирают символы и фиксируются слева направо. Вибрация impact medium в начале, success в конце, затем тост.</p>
+      <p class="help" style="margin-top:10px">Бюджет: 600 мс, меняется только текст, 12 кадров/с. Живой счётчик майнера — без расшифровки, тихий одометр 4 раза в секунду.</p>
     </div>
-    <div class="plate" style="padding:22px">
-      <div class="t-label ion">C · Сбор в баланс</div>
-      <div style="display:flex; align-items:center; gap:14px; margin:14px 0">
-        <span class="t-num-l">0.0042</span><svg class="ico ion" style="width:28px;height:28px"><use href="#i-chev"/></svg><span class="t-num-l">1.2889</span><span class="pill ok">+0.0042</span>
+    <div class="cut" style="padding:22px">
+      <div class="t-label amber" style="color:var(--amber)">C · Прогон усиления</div>
+      <div style="display:flex; gap:14px; margin:14px 0; align-items:center">
+        <div style="flex:1; display:grid; gap:6px">
+          <div class="cut s" style="--edge: var(--amber); --fill: color-mix(in srgb, var(--amber) 10%, var(--surface-1)); padding:10px 12px"><div class="sys-strip"><span class="t-label amber" style="color:var(--amber)">Успех</span><span class="t-num-m amber" style="color:var(--amber-core)">ЁМК 2 → 3</span></div></div>
+          <div class="cut s" style="--edge: var(--magenta); --fill: color-mix(in srgb, var(--magenta) 9%, var(--surface-1)); padding:10px 12px; position:relative; overflow:hidden">
+            <div class="sys-strip"><span class="t-label mag" style="color:var(--magenta)">Сгорело</span><span class="t-num-m" style="color:var(--magenta)">−0.06 TON</span></div>
+            <div style="position:absolute; left:30%; right:10%; top:13px; height:5px; background:var(--magenta); opacity:.35; transform:translateX(6px)"></div>
+          </div>
+        </div>
       </div>
-      <p class="t-sec">По «Собрать» дуга хранилища стекает к нулю за 600 мс, сумма отсчитывается вниз, а баланс в плитке — вверх с тем же темпом. Вибрация impact medium в начале и success в конце. Затем тост «Собрано …».</p>
-      <p class="help" style="margin-top:10px">Бюджет: 700 мс · 2 числа + 1 дуга · stroke-dashoffset одной дуги.</p>
+      <p class="t-sec">Такт 1: подсветка сканирует статы и тормозит на выпавшем, щелчок selection на каждом шаге. Такт 2: стрелка пробегает шкалу. Успех — натриевая вывеска «УСПЕХ» зажигается, уровень перекатывается, вибрация success. Провал — 2 кадра глитч-сдвига полосой маджента, панель гаснет, вибрация error.</p>
+      <p class="help" style="margin-top:10px">Бюджет: до 2.2 с, пропуск тапом, результат с сервера заранее. Глитч — только здесь.</p>
     </div>
-    <div class="plate" style="padding:22px">
-      <div class="t-label ion">D · Удержание для денег</div>
-      <button class="btn btn-primary btn-block hold" style="margin:14px 0"><i></i><span>Удерживайте, чтобы вывести</span></button>
-      <p class="t-sec">Вывод, отклонение заявки, массовые правки экономики: кнопку нужно удерживать 0.8 с. Металлическая полоса заполняет кнопку, при старте лёгкая вибрация, по завершении — success. Отпустил раньше — ничего не произошло.</p>
-      <p class="help" style="margin-top:10px">Бюджет: одна полоса (scaleX), 800 мс · заменяет системный confirm() без лишнего окна.</p>
+    <div class="cut" style="padding:22px">
+      <div class="t-label neon" style="color:var(--neon)">D · Удержание = заряд</div>
+      <span class="glow" style="display:block; margin:16px 0"><button class="btn btn-primary btn-block hold"><i></i><span>Держите, чтобы вывести</span></button></span>
+      <p class="t-sec">Деньги: вывод, отклонение заявки, правка экономики. Удерживаете 0.8 с — циан заливает кнопку как зарядка. Старт — лёгкая вибрация, полный заряд — вспышка и success. Отпустили раньше — разряд, ничего не произошло. Заменяет confirm().</p>
+      <p class="help" style="margin-top:10px">Бюджет: одна полоса (scaleX), 800 мс.</p>
     </div>
   </div>
-  <div class="cap">Светлая тема Telegram — тот же экран, токены меняются автоматически</div>
-  <div style="display:flex; gap:26px; justify-content:center">
-    <div class="phone" data-theme="light" style="height:470px; background:linear-gradient(160deg,#d9dde2,#aeb5bd 40%,#e9ecef)"><div class="screen">
-      <div class="tgbar"><span class="t-brand">NEXUS</span><span class="pill ok">Работает</span></div>
+
+  <div class="cap">Светлая тема Telegram → «Дневной HUD»</div>
+  <div style="display:flex; gap:30px; justify-content:center; align-items:center">
+    <div class="phone" data-theme="light" style="height:468px; background:linear-gradient(150deg,#dfe3ea,#aab1bd 40%,#eef0f4)"><div class="screen"><div class="skyline"></div>
+      <div class="tgbar"><span class="brand">TON<b>/</b>NEXUS</span><span class="tag ok">Работает</span></div>
       <div class="content">
-        <div class="plate hero brackets" style="padding:22px">
+        <div class="sys-strip t-sys"><span>RX-01 // РЕАКТОР</span><span>ЦИКЛ 05:12 / 12:00</span></div>
+        <div class="glow"><div class="cut hero l" style="padding:20px">
+          <span class="hud-corners"></span>
           <div class="t-label" style="color:var(--text-2)">Накоплено в цикле</div>
           <div class="t-num-xl" style="margin-top:10px">0.004218<span class="unit">TON</span></div>
-          <div class="ticks" style="margin:14px 0 8px"></div>
-          <div class="meter"><i style="width:41%"></i></div>
-          <div style="display:flex;justify-content:space-between;margin-top:8px"><span class="t-sec">41% хранилища</span><span class="t-sec">до 06:12</span></div>
-        </div>
-        <div class="list plate flat">
+          <div class="bar" style="margin-top:14px"><i style="width:41%; filter:none"></i></div>
+          <div class="sys-strip" style="margin-top:8px"><span class="t-sec">41% хранилища</span><span class="t-sec">до 06:12</span></div>
+        </div></div>
+        <div class="cut flat">
           <div class="row"><div class="ic"><svg class="ico"><use href="#i-up"/></svg></div><div class="main"><div class="ttl">Усиление</div><div class="sub">Попытка 0.06 TON · шанс 47%</div></div><svg class="ico chev"><use href="#i-chev"/></svg></div>
         </div>
-        <button class="btn btn-primary btn-block">Собрать 0.0042 TON</button>
+        <button class="btn btn-primary btn-block">Собрать <span class="k">0.0042 TON</span></button>
       </div>
     </div></div>
-    <div style="width:520px; display:grid; gap:12px; align-content:center" class="t-body dim">
-      <p>· Тему выбирает Telegram (светлая или тёмная). Приложение ставит атрибут темы на корень и меняет только токены — компоненты не трогаем.</p>
-      <p>· Цвет шапки и фона Telegram берём из токена фона, чтобы не было «шва» между шапкой и приложением.</p>
-      <p>· В светлой теме металл — это светлая кромка и мягкая тень; ион темнее (контраст 4.5:1 на белом).</p>
-      <p>· Цветные свечения и тяжёлые тени в светлой теме не используются.</p>
+    <div style="width:540px; display:grid; gap:12px" class="t-body dim">
+      <p><b style="color:#E6EBF5">Рекомендация: следовать теме Telegram.</b> Принудительная ночь на ярком солнце и в светлом Telegram выглядит как «чёрная дыра» и хуже читается.</p>
+      <p>— В «Дневном HUD» остаются форма (срезы), шрифты, HUD-метки и роли цветов. Неон становится «краской»: глубокий циан, тёмный натрий, тёмная маджента, контраст от 4.5:1.</p>
+      <p>— Свечения, развёртка и тени выключаются токенами, компоненты не меняются.</p>
+      <p>— Вспышки и глитч в светлой теме заменяются короткой сменой заливки: смысл тот же, без «свечения на белом».</p>
     </div>
   </div>
 </section>
 
 <script>
-// Палитра: рисуем образцы из токенов текущей темы
-const names = [["--bg","Фон"],["--surface-1","Панель"],["--surface-2","Поднятая"],["--surface-3","Чип"],["--line-strong","Линия"],["--metal-hi","Металл-свет"],["--metal-lo","Металл-тень"],["--text","Текст"],["--text-2","Текст 2"],["--text-3","Текст 3"],["--ion","Ион · действие"],["--brass","Латунь · редкое"],["--ok","Успех"],["--warn","Внимание"],["--bad","Опасно"]];
+const names = [["--bg","Ночь"],["--surface-1","Панель"],["--surface-2","Шторка"],["--surface-3","Чип"],["--line-strong","Линия"],["--text","Текст"],["--text-2","Текст 2"],["--text-3","Метка"],["--neon","Циан"],["--amber","Натрий"],["--magenta","Маджента"],["--ok","Мята"],["--warn","Лимон"],["--neon-soft","Циан 12%"],["--magenta-soft","Мадж. 13%"]];
 for (const id of ["pal-dark","pal-light"]) {
   const host = document.getElementById(id); const cs = getComputedStyle(host);
   host.style.cssText = "display:grid;grid-template-columns:repeat(5,1fr);gap:10px";
   for (const [v,n] of names) {
     const val = cs.getPropertyValue(v).trim();
+    const isNeon = ["--neon","--amber","--magenta"].includes(v) && host.closest("[data-theme=light]") === null;
     const d = document.createElement("div");
-    d.innerHTML = `<div style="height:52px;border-radius:10px;background:${val};box-shadow:inset 0 0 0 1px var(--line-strong)"></div><div style="font:500 12px var(--f-sans);color:var(--text);margin-top:6px">${n}</div><div style="font:500 11px var(--f-mono);color:var(--text-3)">${val.replace(/\s/g,"")}</div>`;
+    d.innerHTML = `<div style="height:48px;background:${val};clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);box-shadow:inset 0 0 0 1px var(--line-strong)${isNeon ? ";filter:drop-shadow(0 0 8px "+val+")" : ""}"></div><div style="font:500 12px var(--f-sans);color:var(--text);margin-top:6px">${n}</div><div style="font:500 10.5px var(--f-mono);color:var(--text-3)">${val.replace(/\s/g,"").replace("rgba","")}</div>`;
     host.appendChild(d);
   }
 }
-// Деления циферблата
-const g = document.getElementById("dialTicks");
-if (g) for (let i = 0; i <= 40; i++) {
-  const a = Math.PI - (i / 40) * Math.PI, r1 = 132, r2 = i % 5 ? 126 : 120;
+const g = document.getElementById("ringTicks");
+if (g) for (let i = 0; i < 60; i++) {
+  const a = (i / 60) * Math.PI * 2 - Math.PI / 2, r1 = 72, r2 = i % 5 ? 68 : 64;
   const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  l.setAttribute("x1", 150 + r1 * Math.cos(a)); l.setAttribute("y1", 140 - r1 * Math.sin(a));
-  l.setAttribute("x2", 150 + r2 * Math.cos(a)); l.setAttribute("y2", 140 - r2 * Math.sin(a));
-  l.setAttribute("stroke", i <= 16 ? "#4CC3FF" : "#3A424C"); l.setAttribute("stroke-width", i % 5 ? 1 : 1.6);
+  l.setAttribute("x1", 160 + r1 * Math.cos(a)); l.setAttribute("y1", 92 + r1 * Math.sin(a));
+  l.setAttribute("x2", 160 + r2 * Math.cos(a)); l.setAttribute("y2", 92 + r2 * Math.sin(a));
+  l.setAttribute("stroke", i < 25 ? "#2BF5FF" : "rgba(150,170,255,.22)"); l.setAttribute("stroke-width", i % 5 ? 1 : 1.8);
   g.appendChild(l);
 }
 </script>
