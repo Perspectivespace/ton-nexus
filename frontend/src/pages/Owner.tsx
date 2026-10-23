@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   useMe,
   useEconomySettings,
@@ -9,7 +9,7 @@ import {
   usePromoList,
   type EconomySetting,
 } from "@/api/hooks";
-import { api } from "@/api/client";
+import { DeployPanel } from "@/components/DeployPanel";
 import {
   ScreenHeader,
   StatusPill,
@@ -302,41 +302,21 @@ function PromosTab() {
   );
 }
 
-function DeployButton() {
-  const [status, setStatus] = useState<"idle" | "running" | "ok" | "err">("idle");
-  const [msg, setMsg] = useState<string | null>(null);
-
-  async function run() {
-    if (!confirm("Обновить Mini App с GitHub и пересобрать?")) return;
-    setStatus("running");
-    setMsg(null);
-    try {
-      const data = await api<{ ok: boolean; stdout: string; stderr: string }>("/api/v1/admin/deploy", { method: "POST" });
-      setStatus(data.ok ? "ok" : "err");
-      setMsg(data.ok ? "Обновлено" : (data.stderr || "Ошибка сборки"));
-    } catch (e) {
-      setStatus("err");
-      setMsg(e instanceof Error ? e.message : "Ошибка");
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={run}
-      disabled={status === "running"}
-      title={msg || undefined}
-      className="rounded-full border border-[var(--line)] px-3 py-1 text-[11px] font-medium text-[var(--text-dim)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
-    >
-      {status === "running" ? "Обновление…" : status === "ok" ? "Готово" : "Обновить"}
-    </button>
-  );
-}
+const TABS = ["overview", "promos", "economy", "deploy"] as const;
+type Tab = (typeof TABS)[number];
+const TAB_RU: Record<Tab, string> = {
+  overview: "Обзор",
+  promos: "Промокоды",
+  economy: "Экономика",
+  deploy: "Деплой",
+};
 
 export function Owner() {
   const { data: me, isLoading: meLoading } = useMe();
-  const { data, isLoading, error, refetch, isFetching } = useEconomySettings();
-  const [tab, setTab] = useState<"overview" | "promos" | "economy">("overview");
+  const isOwner = !!me?.is_owner;
+  const { data, isLoading, error, refetch, isFetching } = useEconomySettings(isOwner);
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(params.get("tab") === "deploy" ? "deploy" : "overview");
   const [filter, setFilter] = useState<string>("all");
 
   const groups = useMemo(() => {
@@ -352,7 +332,15 @@ export function Owner() {
   const groupKeys = useMemo(() => ["all", ...Array.from(groups.keys())], [groups]);
 
   if (meLoading) return <LoadingPanel label="Проверка доступа…" />;
-  if (!me?.is_owner) {
+  if (!isOwner && me?.can_deploy) {
+    return (
+      <div className="space-y-5">
+        <ScreenHeader eyebrow="Deployer" title="Деплой" action={<StatusPill tone="ok">online</StatusPill>} />
+        <DeployPanel />
+      </div>
+    );
+  }
+  if (!isOwner) {
     return (
       <div className="space-y-4">
         <ScreenHeader eyebrow="Кабинет" title="Owner" />
@@ -373,34 +361,32 @@ export function Owner() {
         eyebrow="Owner"
         title="Кабинет"
         action={
-          <div className="flex items-center gap-2">
-            <DeployButton />
-            <StatusPill tone={isFetching ? "live" : "ok"}>
-              {isFetching ? "sync" : "online"}
-            </StatusPill>
-          </div>
+          <StatusPill tone={isFetching ? "live" : "ok"}>
+            {isFetching ? "sync" : "online"}
+          </StatusPill>
         }
       />
 
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-        {(["overview", "promos", "economy"] as const).map((t) => (
+        {TABS.map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-full border py-1.5 text-[11px] font-medium transition ${
+            className={`flex-1 shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
               tab === t
                 ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                 : "border-[var(--line)] text-[var(--text-dim)]"
             }`}
           >
-            {t === "overview" ? "Обзор" : t === "promos" ? "Промокоды" : "Экономика"}
+            {TAB_RU[t]}
           </button>
         ))}
       </div>
 
       {tab === "overview" && <OverviewTab />}
       {tab === "promos" && <PromosTab />}
+      {tab === "deploy" && <DeployPanel />}
       {tab === "economy" && (
         <>
           {isLoading && <LoadingPanel label="Загрузка настроек…" />}

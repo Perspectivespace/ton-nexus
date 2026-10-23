@@ -230,7 +230,7 @@ export function Home() {
         </div>
       </motion.div>
 
-      {(me?.is_owner || me?.is_admin || me?.is_ambassador) && (
+      {(me?.is_owner || me?.is_admin || me?.is_ambassador || me?.can_deploy) && (
         <motion.div variants={item} className="space-y-2">
           <p className="eyebrow">Operations</p>
           <div className="metal-plate-dim overflow-hidden p-0">
@@ -241,7 +241,8 @@ export function Home() {
               <OpsLink to="/inbox" label="Inbox · модерация" />
             )}
             {(me.is_owner || me.is_admin) && <OpsLink to="/withdraws" label="Касса · выводы" />}
-            {me.is_owner && <OpsLink to="/owner" label="Owner · экономика" last />}
+            {me.is_owner && <OpsLink to="/owner" label="Owner · экономика" last={!me.can_deploy} />}
+            {me.can_deploy && <OpsLink to="/owner?tab=deploy" label="Деплой · сервер" last />}
           </div>
         </motion.div>
       )}
