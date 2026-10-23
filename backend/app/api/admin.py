@@ -8,7 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.services.roles import can_assign_admin, is_admin, is_platform_owner
+from app.services.roles import (
+    can_assign_admin,
+    can_assign_deployer,
+    can_deploy,
+    is_admin,
+    is_platform_owner,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -17,6 +23,7 @@ class RoleBody(BaseModel):
     telegram_id: int
     is_admin: bool | None = None
     is_ambassador: bool | None = None
+    is_deployer: bool | None = None
 
 
 class UserRoleOut(BaseModel):
@@ -25,6 +32,8 @@ class UserRoleOut(BaseModel):
     username: str | None
     is_admin: bool
     is_ambassador: bool
+    is_deployer: bool = False
+    can_deploy: bool = False
     is_owner: bool
 
 
@@ -48,6 +57,11 @@ async def set_roles(
             raise HTTPException(status_code=403, detail="admin or owner required")
         target.is_ambassador = body.is_ambassador
 
+    if body.is_deployer is not None:
+        if not can_assign_deployer(user):
+            raise HTTPException(status_code=403, detail="only owner can assign deployers")
+        target.is_deployer = body.is_deployer
+
     await db.commit()
     await db.refresh(target)
     return UserRoleOut(
@@ -56,6 +70,8 @@ async def set_roles(
         username=target.username,
         is_admin=bool(target.is_admin),
         is_ambassador=bool(target.is_ambassador),
+        is_deployer=bool(target.is_deployer),
+        can_deploy=can_deploy(target),
         is_owner=is_platform_owner(target),
     )
 
@@ -68,6 +84,8 @@ async def my_roles(user: User = Depends(get_current_user)):
         username=user.username,
         is_admin=bool(user.is_admin),
         is_ambassador=bool(user.is_ambassador),
+        is_deployer=bool(user.is_deployer),
+        can_deploy=can_deploy(user),
         is_owner=is_platform_owner(user),
     )
 

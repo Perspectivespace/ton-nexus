@@ -32,6 +32,8 @@ class User(Base):
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_ambassador: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Tech permission, orthogonal to owner > admin > ambassador: may update servers.
+    is_deployer: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
