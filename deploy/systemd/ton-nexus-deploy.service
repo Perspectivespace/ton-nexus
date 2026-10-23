@@ -1,0 +1,12 @@
+[Unit]
+Description=TON Nexus deploy runner (processes requests from the Mini App)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/ton-nexus-deploy/runner.sh
+Environment=HOME=/root
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TimeoutStartSec=30min
+Nice=5
