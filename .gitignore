@@ -24,3 +24,6 @@ dist/
 # Deploy
 .vercel
 .docker-data/
+
+# TypeScript build cache
+*.tsbuildinfo

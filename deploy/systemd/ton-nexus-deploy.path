@@ -1,0 +1,9 @@
+[Unit]
+Description=TON Nexus deploy queue watcher
+
+[Path]
+PathExistsGlob=/var/lib/ton-nexus-deploy/requests/*.json
+Unit=ton-nexus-deploy.service
+
+[Install]
+WantedBy=paths.target

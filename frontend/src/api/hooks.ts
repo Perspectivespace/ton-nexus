@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
-import type { MeOut, MinerOut, TaskOut } from "./types";
+import type {
+  DeployJob,
+  DeployOverview,
+  DeployerOut,
+  MeOut,
+  MinerOut,
+  TaskOut,
+} from "./types";
 
 export function useMe() {
   return useQuery({
@@ -208,10 +215,11 @@ export type EconomySetting = {
   label: string | null;
 };
 
-export function useEconomySettings() {
+export function useEconomySettings(enabled = true) {
   return useQuery({
     queryKey: ["economy"],
     queryFn: () => api<EconomySetting[]>("/api/v1/economy/settings"),
+    enabled,
   });
 }
 
@@ -451,5 +459,69 @@ export function usePromoList() {
   return useQuery({
     queryKey: ["owner", "promos"],
     queryFn: () => api<PromoListItem[]>("/api/v1/promo/list"),
+  });
+}
+
+/* ---------- Deploy (owner + deployers) ---------- */
+
+const isLive = (j?: DeployJob | null) => j?.status === "queued" || j?.status === "running";
+
+export function useDeployOverview(enabled = true) {
+  return useQuery({
+    queryKey: ["deploy", "overview"],
+    queryFn: () => api<DeployOverview>("/api/v1/admin/deploy/overview?target=test"),
+    enabled,
+    refetchInterval: (q) => (isLive(q.state.data?.active) ? 3000 : 60000),
+  });
+}
+
+export function useDeployJobs(enabled = true) {
+  return useQuery({
+    queryKey: ["deploy", "jobs"],
+    queryFn: () => api<DeployJob[]>("/api/v1/admin/deploy/jobs?limit=10"),
+    enabled,
+  });
+}
+
+export function useDeployJob(id: string | null | undefined) {
+  return useQuery({
+    queryKey: ["deploy", "job", id],
+    queryFn: () => api<DeployJob>(`/api/v1/admin/deploy/jobs/${id}?lines=120`),
+    enabled: !!id,
+    refetchInterval: (q) => (isLive(q.state.data) || !q.state.data ? 2000 : false),
+  });
+}
+
+export function useDeployCheck() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<DeployOverview>("/api/v1/admin/deploy/overview?target=test&refresh=true"),
+    onSuccess: (data) => qc.setQueryData(["deploy", "overview"], data),
+  });
+}
+
+export function useDeployRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { target: "test" | "prod"; force?: boolean }) =>
+      api<DeployJob>("/api/v1/admin/deploy", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["deploy"] }),
+  });
+}
+
+export function useDeployers(enabled = true) {
+  return useQuery({
+    queryKey: ["deploy", "deployers"],
+    queryFn: () => api<DeployerOut[]>("/api/v1/admin/deploy/deployers"),
+    enabled,
+  });
+}
+
+export function useSetDeployer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { telegram_id: number; is_deployer: boolean }) =>
+      api("/api/v1/admin/roles", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["deploy", "deployers"] }),
   });
 }

@@ -28,6 +28,8 @@ export type MeOut = {
   is_ambassador: boolean;
   is_admin: boolean;
   is_owner: boolean;
+  is_deployer: boolean;
+  can_deploy: boolean;
   miner: MinerOut | null;
 };
 
@@ -44,4 +46,60 @@ export type TaskOut = {
   min_level: number;
   xp_reward: number;
   creator_id: number;
+};
+
+export type DeployStatus = "queued" | "running" | "success" | "failed";
+
+export type DeployCommit = {
+  sha: string;
+  subject: string;
+  author?: string | null;
+  date?: string | null;
+};
+
+export type DeployJob = {
+  id: string;
+  target: string;
+  force: boolean;
+  status: DeployStatus;
+  step?: string | null;
+  steps_done?: string[];
+  error?: string | null;
+  warning?: string | null;
+  requested_by?: number | null;
+  requested_by_name?: string | null;
+  requested_at?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  from_commit?: string | null;
+  to_commit?: string | null;
+  to_subject?: string | null;
+  commits?: DeployCommit[];
+  log_tail?: string;
+};
+
+export type DeployOverview = {
+  target: string;
+  runner_installed: boolean;
+  deployed: {
+    commit: string | null;
+    subject: string | null;
+    deployed_at: string | null;
+    job_id?: string | null;
+    head_matches?: boolean | null;
+  };
+  latest: { commit: string | null; sha: string; subject: string | null; date?: string | null } | null;
+  ahead_by: number | null;
+  pending: DeployCommit[];
+  update_available: boolean | null;
+  github_error: string | null;
+  active: DeployJob | null;
+  last: DeployJob | null;
+  can_manage_deployers: boolean;
+};
+
+export type DeployerOut = {
+  telegram_id: number;
+  username: string | null;
+  first_name: string | null;
 };

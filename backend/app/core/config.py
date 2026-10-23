@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     webapp_url: str = "https://example.com"
     dev_telegram_id: int = 1
 
+    # Deploy from Telegram: API only writes requests into the spool dir,
+    # the root-owned ton-nexus-deploy runner does the actual work.
+    deploy_spool_dir: str = "/var/lib/ton-nexus-deploy"
+    deploy_test_app_dir: str = "/opt/taskbot_test/miniapp"
+    deploy_branch: str = "main"
+    github_repo: str = "Perspectivespace/ton-nexus"
+    github_token: str = ""  # optional, only raises GitHub API rate limit
+
     @field_validator("database_url", mode="before")
     @classmethod
     def _fix_db_url(cls, v: object) -> object:
