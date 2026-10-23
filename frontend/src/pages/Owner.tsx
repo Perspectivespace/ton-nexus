@@ -11,6 +11,7 @@ import {
 } from "@/api/hooks";
 import { DeployPanel } from "@/components/DeployPanel";
 import { SettingEditor } from "@/components/SettingEditor";
+import { SETTINGS, summarize } from "@/lib/settingsMeta";
 import {
   ScreenHeader,
   StatusPill,
@@ -25,25 +26,11 @@ const GROUP_RU: Record<string, string> = {
   tasks: "Задания",
   withdraw: "Вывод",
   growth: "Рост",
-  daily: "Daily",
+  daily: "Ежедневно",
   progression: "Уровни",
   roulette: "Рулетка",
   custom: "Прочее",
 };
-
-function formatValue(v: unknown, depth = 0): string {
-  if (v == null) return "—";
-  if (typeof v !== "object") return String(v);
-  if (Array.isArray(v)) {
-    if (depth > 1 || v.some((x) => typeof x === "object" && x !== null)) return `${v.length} шт.`;
-    return v.map((x) => formatValue(x, depth + 1)).join(", ");
-  }
-  const entries = Object.entries(v as Record<string, unknown>);
-  if (entries.length === 0) return "—";
-  if (depth > 1) return "…";
-  if (entries.length === 1) return formatValue(entries[0][1], depth + 1);
-  return entries.map(([, val]) => formatValue(val, depth + 1)).join(" · ");
-}
 
 function SettingRow({
   item,
@@ -54,6 +41,9 @@ function SettingRow({
 }) {
   const update = useEconomyUpdate();
   const [editing, setEditing] = useState(false);
+  const meta = SETTINGS[item.key];
+  const title = meta?.title || item.label || item.key;
+  const subtitle = meta?.short || item.description;
 
   async function save(value: unknown) {
     await update.mutateAsync({ key: item.key, value });
@@ -66,9 +56,9 @@ function SettingRow({
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-medium leading-snug">{item.label || item.key}</p>
-            {item.description && (
-              <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-dim)]">{item.description}</p>
+            <p className="text-[14px] font-medium leading-snug">{title}</p>
+            {subtitle && (
+              <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-dim)]">{subtitle}</p>
             )}
           </div>
           {!editing && (
@@ -83,13 +73,19 @@ function SettingRow({
         </div>
         {!editing && (
           <p className="mt-3 font-mono text-[15px] leading-relaxed text-[var(--text)]">
-            {formatValue(item.value)}
+            {summarize(item.key, item.value)}
           </p>
         )}
       </div>
       {editing && (
-        <div className="border-t border-[var(--line)] bg-[var(--bg-elev)]/40 p-4">
+        <div className="space-y-4 border-t border-[var(--line)] bg-[var(--bg-elev)]/40 p-4">
+          {meta?.about && (
+            <p className="rounded-xl border border-[var(--line)] bg-black/15 p-3 text-[12px] leading-relaxed text-[var(--text-dim)]">
+              {meta.about}
+            </p>
+          )}
           <SettingEditor
+            settingKey={item.key}
             value={item.value}
             saving={update.isPending}
             onSave={save}
