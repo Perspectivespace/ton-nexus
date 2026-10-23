@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TON Nexus — стайлборд «Ночной контур» (cyberpunk neon)</title>
+<title>TON Nexus — стайлборд «Ночной контур» v2 (глубина и материал)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Tektur:wdth,wght@75..100,500..800&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <style>
-/* ================= ТОКЕНЫ (источник правды — docs/DESIGN.md) ================= */
+/* ================= ТОКЕНЫ v2 (источник правды — docs/DESIGN.md) ================= */
 :root, [data-theme="dark"] {
   --bg: #06070C; --bg-sunken: #030407;
   --surface-1: #0C0E16; --surface-2: #11141F; --surface-3: #181C2A;
@@ -24,7 +24,34 @@
   --halo-magenta: 0 0 6px rgba(255,46,126,.6), 0 0 16px rgba(255,46,126,.3);
   --scan: repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);
   --grid: linear-gradient(rgba(120,140,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(120,140,255,.05) 1px, transparent 1px);
-  --glow-drop: drop-shadow(0 0 14px rgba(43,245,255,.22));
+  --glow-drop: drop-shadow(0 0 14px rgba(43,245,255,.20));
+
+  /* --- v2: материал, глубина, свет --- */
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .2 0 0 0 -.07'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --toplight: linear-gradient(180deg, rgba(200,220,255,.055), rgba(200,220,255,0) 42%);
+  --spec: linear-gradient(90deg, transparent 3%, rgba(225,240,255,.38) 22%, rgba(225,240,255,.08) 62%, transparent 90%) top / 100% 1px no-repeat;
+  /* e1 — панель: дымчатое стекло-металл */
+  --mat-1: var(--toplight), var(--grain), linear-gradient(180deg, rgba(19,23,36,.84), rgba(9,11,18,.92));
+  --edge-1: linear-gradient(180deg, rgba(190,210,255,.26), rgba(150,170,255,.09) 40%, rgba(0,0,0,.75));
+  --bevel-1: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.6), inset 0 -16px 22px -16px rgba(0,0,0,.65);
+  /* e2 — плавающий слой: шторки, тосты, док */
+  --mat-2: linear-gradient(180deg, rgba(210,225,255,.08), rgba(210,225,255,0) 38%), var(--grain), linear-gradient(180deg, rgba(27,32,49,.97), rgba(14,16,26,.98));
+  --edge-2: linear-gradient(180deg, rgba(210,225,255,.40), rgba(150,170,255,.12) 35%, rgba(0,0,0,.8));
+  --bevel-2: inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(0,0,0,.6);
+  /* e0 — утопленное: поля, треки */
+  --mat-0: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0) 30%), linear-gradient(180deg, #05060A, #090B12);
+  --edge-0: linear-gradient(180deg, rgba(0,0,0,.9), rgba(150,170,255,.10) 60%, rgba(190,210,255,.22));
+  --bevel-0: inset 0 2px 6px rgba(0,0,0,.7);
+  /* тени-подложки (без filter) */
+  --plate-1: radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.7), rgba(0,0,0,0));
+  --plate-2: radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.85), rgba(0,0,0,0));
+  /* перелив неона на соседние поверхности */
+  --spill-neon: radial-gradient(50% 50% at 50% 50%, rgba(43,245,255,.34), rgba(43,245,255,0));
+  --spill-amber: radial-gradient(50% 50% at 50% 50%, rgba(255,181,71,.30), rgba(255,181,71,0));
+  --spill-magenta: radial-gradient(50% 50% at 50% 50%, rgba(255,46,126,.28), rgba(255,46,126,0));
+  --btn-primary: linear-gradient(180deg, #B4FCFF 0%, #2BF5FF 40%, #10C3D4 100%);
+  --btn-primary-bevel: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -3px 0 rgba(0,55,65,.38), inset 0 0 0 1px rgba(255,255,255,.12);
+  --screw: radial-gradient(circle at 35% 30%, #6B7489, #202534 62%, #0B0D13);
 }
 [data-theme="light"] {
   --bg: #EEF1F6; --bg-sunken: #E3E7EF;
@@ -37,9 +64,27 @@
   --ok: #0E8A55; --ok-soft: rgba(14,138,85,.10);
   --warn: #8A6A00; --warn-soft: rgba(138,106,0,.10);
   --halo-neon: none; --halo-amber: none; --halo-magenta: none;
-  --scan: repeating-linear-gradient(0deg, rgba(10,20,50,.025) 0 1px, transparent 1px 4px);
+  --scan: repeating-linear-gradient(0deg, rgba(10,20,50,.02) 0 1px, transparent 1px 4px);
   --grid: linear-gradient(rgba(10,20,50,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(10,20,50,.045) 1px, transparent 1px);
-  --glow-drop: drop-shadow(0 2px 0 rgba(0,126,149,.18));
+  --glow-drop: drop-shadow(0 0 0 transparent);
+  --toplight: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,0) 40%);
+  --spec: linear-gradient(90deg, transparent, #fff 30%, transparent) top / 100% 1px no-repeat;
+  --mat-1: var(--toplight), linear-gradient(180deg, #FFFFFF, #F2F4F8);
+  --edge-1: linear-gradient(180deg, rgba(255,255,255,1), rgba(10,20,50,.12) 45%, rgba(10,20,50,.24));
+  --bevel-1: inset 0 -1px 0 rgba(10,20,50,.06);
+  --mat-2: linear-gradient(180deg, #FFFFFF, #F6F8FB);
+  --edge-2: linear-gradient(180deg, #fff, rgba(10,20,50,.16) 40%, rgba(10,20,50,.26));
+  --bevel-2: none;
+  --mat-0: linear-gradient(180deg, #E1E5EE, #EBEEF4);
+  --edge-0: linear-gradient(180deg, rgba(10,20,50,.28), rgba(10,20,50,.10) 60%, #fff);
+  --bevel-0: inset 0 2px 4px rgba(10,20,50,.10);
+  --plate-1: radial-gradient(50% 50% at 50% 50%, rgba(20,30,60,.20), rgba(20,30,60,0));
+  --plate-2: radial-gradient(50% 50% at 50% 50%, rgba(20,30,60,.28), rgba(20,30,60,0));
+  --spill-neon: radial-gradient(50% 50% at 50% 50%, rgba(0,126,149,.16), rgba(0,126,149,0));
+  --spill-amber: none; --spill-magenta: none;
+  --btn-primary: linear-gradient(180deg, #0B9CB7 0%, #007E95 55%, #006B7F 100%);
+  --btn-primary-bevel: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.18);
+  --screw: radial-gradient(circle at 35% 30%, #fff, #C3CAD6 60%, #8C95A6);
 }
 :root {
   --f-display: "Tektur", "Onest", sans-serif;
@@ -49,198 +94,329 @@
 }
 * { box-sizing: border-box; margin: 0; }
 body { background: #020306; color: #E6EBF5; font-family: var(--f-sans); -webkit-font-smoothing: antialiased; padding: 40px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
 
-/* ============ ФОРМА: срезанные углы (clip-path) — фирменный силуэт ============ */
-.cut { --c: var(--cut-m); --edge: linear-gradient(135deg, var(--neon-dim), var(--line-strong) 35%, var(--line) 70%, var(--line-strong));
-  --fill: var(--surface-1);
+/* ============ ФОРМА + МАТЕРИАЛ: срезанный угол, кромка, фаска ============ */
+.cut { --c: var(--cut-m); --edge: var(--edge-1); --fill: var(--mat-1); --bevel: var(--bevel-1);
   position: relative; isolation: isolate; background: var(--edge);
   clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
-.cut::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--fill);
+.cut::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--fill); box-shadow: var(--bevel);
   clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
 .cut.s { --c: var(--cut-s); } .cut.l { --c: var(--cut-l); }
-.cut.flat { --edge: var(--line); }
-.cut.hero { --edge: linear-gradient(135deg, var(--neon), var(--neon-dim) 22%, var(--line-strong) 50%, var(--line) 75%, var(--neon-dim));
-  --fill: linear-gradient(180deg, var(--surface-2), var(--surface-1)); }
+.cut.flat { --edge: linear-gradient(180deg, rgba(170,190,255,.16), rgba(150,170,255,.07) 50%, rgba(0,0,0,.6)); }
+[data-theme="light"] .cut.flat { --edge: var(--edge-1); }
+.cut.e2 { --edge: var(--edge-2); --fill: var(--mat-2); --bevel: var(--bevel-2); }
+.cut.e0 { --edge: var(--edge-0); --fill: var(--mat-0); --bevel: var(--bevel-0); }
+.cut.e0::before { background: var(--fill); }
+.cut.hero { --edge: linear-gradient(160deg, var(--neon) 0%, rgba(43,245,255,.5) 16%, rgba(190,210,255,.18) 42%, rgba(0,0,0,.8) 100%);
+  --fill: radial-gradient(60% 22% at 30% 17%, rgba(43,245,255,.10), transparent 70%), radial-gradient(48% 34% at 50% 66%, rgba(43,245,255,.17), transparent 72%), var(--mat-1); }
+[data-theme="light"] .cut.hero { --edge: linear-gradient(160deg, var(--neon), rgba(10,20,50,.14) 30%, rgba(10,20,50,.26)); --fill: var(--mat-1); }
 .cut.hero::after { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--scan), var(--grid); background-size: auto, 22px 22px, 22px 22px; pointer-events: none;
-  -webkit-mask: linear-gradient(180deg, #000, transparent 85%); }
+  -webkit-mask: linear-gradient(180deg, #000, transparent 70%); }
 .glow { filter: var(--glow-drop); }
-/* HUD-уголки */
+/* Подъём: тень-подложка без filter (радиальный градиент под элементом) */
+.lift { position: relative; isolation: isolate; }
+.lift::after { content: ""; position: absolute; z-index: -1; left: 4%; right: 4%; bottom: -12px; height: 34px; background: var(--plate-1); pointer-events: none; }
+.lift.l2::after { left: -4%; right: -4%; bottom: -22px; height: 60px; background: var(--plate-2); }
+/* Перелив неона: светлое пятно под светящимся элементом */
+.spill { position: relative; isolation: isolate; display: block; }
+.spill::after { content: ""; position: absolute; z-index: -1; left: 6%; right: 6%; bottom: -22px; height: 44px; background: var(--spill-neon); pointer-events: none; }
+/* Микродетали — дозированно */
+.screw { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: linear-gradient(45deg, transparent 44%, rgba(0,0,0,.75) 45% 58%, transparent 59%), var(--screw); box-shadow: 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px rgba(0,0,0,.5); }
+.vent { display: inline-block; width: 22px; height: 7px; background: repeating-linear-gradient(90deg, rgba(0,0,0,.85) 0 2px, rgba(255,255,255,.10) 2px 3px, transparent 3px 5px); vertical-align: 0; }
+[data-theme="light"] .vent { background: repeating-linear-gradient(90deg, rgba(10,20,50,.35) 0 2px, #fff 2px 3px, transparent 3px 5px); }
+.serial { display: inline-flex; gap: 6px; align-items: center; font: 500 11px var(--f-mono); color: var(--text-3); letter-spacing: .06em; }
 .hud-corners { position: absolute; inset: 8px; pointer-events: none; }
-.hud-corners::before, .hud-corners::after { content: ""; position: absolute; width: 10px; height: 10px; border: 1.5px solid var(--neon); }
-.hud-corners::before { right: 0; bottom: 0; border-left: 0; border-top: 0; }
-.hud-corners::after { left: 0; top: 0; border-right: 0; border-bottom: 0; opacity: 0; }
+.hud-corners::before { content: ""; position: absolute; width: 10px; height: 10px; border: 1.5px solid var(--neon); right: 0; bottom: 0; border-left: 0; border-top: 0; }
 .tube { height: 2px; border-radius: 2px; background: var(--neon-core); box-shadow: 0 0 4px var(--neon), 0 0 12px var(--neon-dim); }
 [data-theme="light"] .tube { background: var(--neon); box-shadow: none; }
 .ticks { height: 8px; background: repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 6px), repeating-linear-gradient(90deg, var(--neon-dim) 0 1px, transparent 1px 30px); }
 
-/* ============ ТИПОГРАФИКА ============ */
-.t-num-xl { font: 700 44px/1 var(--f-mono); font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -.04em; color: var(--neon-core); text-shadow: var(--halo-neon); }
+/* ============ ТИПОГРАФИКА (интерлиньяж кратен 4 px) ============ */
+.t-num-xl { font: 700 44px/48px var(--f-mono); font-variant-numeric: tabular-nums slashed-zero; letter-spacing: -.04em; color: var(--neon-core); text-shadow: var(--halo-neon); }
 [data-theme="light"] .t-num-xl { color: var(--text); }
-.t-num-l { font: 700 28px/1.05 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.03em; color: var(--text); }
-.t-num-m { font: 500 17px/1.2 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); }
-.t-display { font: 800 30px/1 var(--f-display); font-stretch: 75%; letter-spacing: .02em; text-transform: uppercase; color: var(--text); }
-.t-title { font: 700 24px/1.1 var(--f-display); font-stretch: 85%; letter-spacing: .01em; color: var(--text); }
-.t-h { font: 600 17px/1.25 var(--f-sans); color: var(--text); }
-.t-body { font: 400 15px/1.5 var(--f-sans); color: var(--text); }
-.t-sec { font: 400 13px/1.4 var(--f-sans); color: var(--text-2); }
-.t-label { font: 600 11px/1.2 var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
-.t-sys { font: 500 11px/1 var(--f-mono); letter-spacing: .06em; color: var(--text-3); }
+.reflect { -webkit-box-reflect: below -10px linear-gradient(transparent 62%, rgba(255,255,255,.16)); }
+[data-theme="light"] .reflect { -webkit-box-reflect: none; }
+.t-num-l { font: 700 28px/32px var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.03em; color: var(--text); }
+.t-num-m { font: 500 17px/24px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); }
+.t-display { font: 800 30px/32px var(--f-display); font-stretch: 75%; letter-spacing: .02em; text-transform: uppercase; color: var(--text); }
+.t-title { font: 700 24px/28px var(--f-display); font-stretch: 85%; letter-spacing: .01em; color: var(--text); }
+.t-h { font: 600 17px/24px var(--f-sans); color: var(--text); }
+.t-body { font: 400 15px/24px var(--f-sans); color: var(--text); }
+.t-sec { font: 400 13px/20px var(--f-sans); color: var(--text-2); }
+.t-label { font: 600 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+.t-sys { font: 500 11px/16px var(--f-mono); letter-spacing: .06em; color: var(--text-3); }
 .unit { font: 600 .42em var(--f-display); font-stretch: 75%; color: var(--text-2); letter-spacing: .1em; margin-left: 6px; text-shadow: none; }
 .neon { color: var(--neon); text-shadow: var(--halo-neon); } .amber { color: var(--amber); text-shadow: var(--halo-amber); } .mag { color: var(--magenta); text-shadow: var(--halo-magenta); }
 .dim { color: var(--text-2); }
 
-/* ============ КНОПКИ ============ */
+/* ============ КНОПКИ (объёмные) ============ */
 .btn { --c: 10px; height: 48px; padding: 0 20px; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   font: 700 15px var(--f-display); font-stretch: 85%; letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
-  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; isolation: isolate; }
-.btn-primary { background: var(--neon); color: var(--neon-ink); box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.6); }
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; isolation: isolate; transition: transform .08s; }
+.btn-primary { background: var(--btn-primary); color: var(--neon-ink); box-shadow: var(--btn-primary-bevel); }
+.btn-primary::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0)); pointer-events: none; }
 .btn-primary .k { font-family: var(--f-mono); font-weight: 700; letter-spacing: -.02em; text-transform: none; }
-.btn-secondary { background: var(--neon-dim); color: var(--text); }
-.btn-secondary::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--surface-2); clip-path: inherit; }
-.btn-danger { background: var(--magenta); color: var(--magenta); }
-.btn-danger::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: color-mix(in srgb, var(--magenta) 10%, var(--bg)); clip-path: inherit; }
+.btn-secondary { background: linear-gradient(180deg, rgba(43,245,255,.55), rgba(43,245,255,.18) 50%, rgba(0,0,0,.6)); color: var(--text); }
+.btn-secondary::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--toplight), linear-gradient(180deg, #161B2A, #0D1019); box-shadow: inset 0 -2px 0 rgba(0,0,0,.5); clip-path: inherit; }
+[data-theme="light"] .btn-secondary { background: var(--edge-1); }
+[data-theme="light"] .btn-secondary::before { background: linear-gradient(180deg, #fff, #EEF1F6); }
+.btn-danger { background: linear-gradient(180deg, rgba(255,46,126,.9), rgba(255,46,126,.35) 55%, rgba(0,0,0,.6)); color: #FF6FA3; }
+.btn-danger::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--toplight), linear-gradient(180deg, #2A0C18, #16070D); clip-path: inherit; }
 .btn-ghost { background: transparent; color: var(--neon); height: 40px; padding: 0 10px; font-size: 14px; }
-.btn[disabled] { background: var(--surface-3); color: var(--text-3); box-shadow: none; }
-.btn.pressed { transform: translateY(1px); filter: brightness(.85); }
+.btn[disabled] { background: linear-gradient(180deg, #1C2130, #141824); color: var(--text-3); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+.btn-primary.pressed { transform: scale(.97) translateY(1px); background: linear-gradient(180deg, #8BF9FF, #24E4F0 50%, #0FB6C6); box-shadow: inset 0 0 18px rgba(255,255,255,.6), inset 0 3px 6px rgba(0,50,60,.35); }
 .btn-block { width: 100%; }
 .hold i { position: absolute; left: 0; top: 0; bottom: 0; width: 62%; z-index: -1; }
-.btn-primary.hold { background: color-mix(in srgb, var(--neon) 55%, var(--bg)); color: var(--neon-ink); }
-.btn-primary.hold i { background: var(--neon); }
-.btn-primary.hold span { color: var(--neon-ink); mix-blend-mode: normal; }
-.btn-danger.hold i { background: color-mix(in srgb, var(--magenta) 32%, transparent); }
+.btn-primary.hold { background: linear-gradient(180deg, #2C8C96, #1A6F78 60%, #135961); color: var(--neon-ink); }
+.btn-primary.hold i { background: var(--btn-primary); box-shadow: 6px 0 14px rgba(210,253,255,.8); }
+.btn-primary.hold span { color: var(--neon-ink); }
+.btn-danger.hold i { background: linear-gradient(180deg, rgba(255,46,126,.45), rgba(255,46,126,.25)); box-shadow: 4px 0 10px rgba(255,46,126,.6); }
 
-/* ============ ПОЛЯ ============ */
-.field { display: grid; gap: 6px; }
-.field label { font: 500 13px var(--f-sans); color: var(--text-2); }
+/* ============ ПОЛЯ (утопленные) ============ */
+.field { display: grid; gap: 8px; }
+.field label { font: 500 13px/16px var(--f-sans); color: var(--text-2); }
 .input { --c: 8px; height: 48px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font: 500 16px var(--f-mono); color: var(--text);
-  background: var(--line-strong); position: relative; isolation: isolate; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
-.input::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--bg-sunken); clip-path: inherit; }
-.input.focus { background: var(--neon); } .input.focus::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; background: var(--neon); box-shadow: 0 0 10px var(--neon); }
-.input.err { background: var(--magenta); }
+  background: var(--edge-0); position: relative; isolation: isolate; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+.input::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--mat-0); box-shadow: var(--bevel-0); clip-path: inherit; }
+.input.focus { background: linear-gradient(180deg, rgba(43,245,255,.5), var(--neon)); }
+.input.focus::before { background: radial-gradient(60% 80% at 50% 100%, rgba(43,245,255,.14), transparent 70%), var(--mat-0); }
+.input.focus::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; background: var(--neon-core); box-shadow: 0 0 10px var(--neon); }
+.input.err { background: linear-gradient(180deg, rgba(255,46,126,.4), var(--magenta)); }
 .input .suffix { font: 600 12px var(--f-display); font-stretch: 75%; letter-spacing: .12em; color: var(--text-3); }
 .input .ph { color: var(--text-3); }
-.caret { display: inline-block; width: 9px; height: 18px; background: var(--neon); margin-left: 2px; vertical-align: -3px; }
-.help { font: 400 12px/1.4 var(--f-sans); color: var(--text-3); } .help.err { color: var(--magenta); }
+.caret { display: inline-block; width: 9px; height: 18px; background: var(--neon); margin-left: 2px; vertical-align: -3px; box-shadow: 0 0 8px var(--neon); }
+.help { font: 400 12px/16px var(--f-sans); color: var(--text-3); } .help.err { color: var(--magenta); }
 
-/* ============ ВКЛАДКИ ============ */
-.tabs { display: flex; gap: 4px; }
-.tab { --c: 8px; flex: 1; height: 40px; display: grid; place-items: center; font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); background: var(--surface-1);
+/* ============ ВКЛАДКИ: утопленный трек + приподнятый активный ============ */
+.tabs { --c: 10px; display: flex; gap: 4px; padding: 4px; position: relative; isolation: isolate; background: var(--edge-0);
   clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
-.tab.on { color: var(--neon-ink); background: var(--neon); }
-[data-theme="dark"] .tab.on, :root .tab.on { }
+.tabs::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--mat-0); box-shadow: var(--bevel-0); clip-path: inherit; }
+.tab { --c: 7px; flex: 1; height: 36px; display: grid; place-items: center; font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; }
+.tab.on { color: var(--neon-ink); background: var(--btn-primary); box-shadow: var(--btn-primary-bevel); }
 .seg-line { display: flex; gap: 22px; border-bottom: 1px solid var(--line); }
 .seg-line span { padding: 10px 0; font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); position: relative; }
 .seg-line span.on { color: var(--text); }
-.seg-line span.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--neon); box-shadow: 0 0 8px var(--neon); }
+.seg-line span.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--neon-core); box-shadow: 0 0 8px var(--neon); }
+.seg-line span.on::before { content: ""; position: absolute; left: -20%; right: -20%; bottom: -12px; height: 22px; background: var(--spill-neon); opacity: .6; }
 
-/* ============ ПИЛЮЛИ (маркировка) ============ */
-.tag { --c: 5px; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px 0 8px; font: 700 11px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase;
-  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+/* ============ МАРКЕРЫ ============ */
+.tag { --c: 5px; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px 0 8px; font: 700 11px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase;
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
 .tag::before { content: ""; width: 5px; height: 5px; background: currentColor; box-shadow: 0 0 6px currentColor; }
 .tag.ok { color: var(--ok); background: var(--ok-soft); } .tag.warn { color: var(--warn); background: var(--warn-soft); }
 .tag.bad { color: var(--magenta); background: var(--magenta-soft); } .tag.neon { color: var(--neon); background: var(--neon-soft); }
 .tag.neutral { color: var(--text-2); background: var(--surface-3); } .tag.neutral::before { box-shadow: none; } .tag.amber { color: var(--amber); background: var(--amber-soft); }
 
 /* ============ СПИСКИ ============ */
-.row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 16px; border-top: 1px solid var(--line); position: relative; }
-.row:first-child { border-top: 0; }
-.row .ic { --c: 6px; width: 36px; height: 36px; display: grid; place-items: center; color: var(--neon); background: var(--neon-soft); flex: none;
+.row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 16px; position: relative; }
+.row + .row::before { content: ""; position: absolute; left: 64px; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, var(--line-strong), var(--line) 60%, transparent); box-shadow: 0 1px 0 rgba(0,0,0,.4); }
+.row.pressed { background: linear-gradient(90deg, rgba(43,245,255,.08), rgba(43,245,255,.02)); box-shadow: inset 2px 0 0 var(--neon); }
+.row .ic { --c: 7px; width: 36px; height: 36px; display: grid; place-items: center; color: var(--neon); flex: none; position: relative;
+  background: linear-gradient(180deg, rgba(43,245,255,.20), rgba(43,245,255,.06)); box-shadow: inset 0 1px 0 rgba(210,253,255,.25), inset 0 -1px 0 rgba(0,0,0,.4);
   clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
-.row .ic.muted { color: var(--text-2); background: var(--surface-3); }
+.row .ic.amb { color: var(--amber); background: linear-gradient(180deg, rgba(255,181,71,.22), rgba(255,181,71,.06)); box-shadow: inset 0 1px 0 rgba(255,231,194,.25); }
+.row .ic.muted { color: var(--text-2); background: linear-gradient(180deg, #20263A, #151927); }
+[data-theme="light"] .row .ic.muted { background: var(--surface-3); }
 .row .main { flex: 1; min-width: 0; }
-.row .ttl { font: 500 15px/1.3 var(--f-sans); color: var(--text); }
-.row .sub { font: 400 13px/1.3 var(--f-sans); color: var(--text-2); margin-top: 2px; }
+.row .ttl { font: 500 15px/20px var(--f-sans); color: var(--text); }
+.row .sub { font: 400 13px/20px var(--f-sans); color: var(--text-2); }
 .row .val { font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); text-align: right; }
 .chev { color: var(--text-3); }
 
 /* ============ ИНДИКАТОРЫ ============ */
-.bar { height: 8px; background: repeating-linear-gradient(90deg, var(--surface-3) 0 6px, transparent 6px 8px); position: relative; }
-.bar i { position: absolute; left: 0; top: 0; bottom: 0; background: repeating-linear-gradient(90deg, var(--neon) 0 6px, transparent 6px 8px); filter: drop-shadow(0 0 4px var(--neon-dim)); }
-.stat { --c: 7px; padding: 9px 0 8px; text-align: center; background: var(--line); position: relative; isolation: isolate;
+.bar { height: 10px; padding: 2px; background: var(--mat-0); box-shadow: var(--bevel-0), 0 1px 0 rgba(255,255,255,.05); position: relative; }
+.bar::before { content: ""; position: absolute; inset: 2px; background: repeating-linear-gradient(90deg, rgba(150,170,255,.10) 0 6px, transparent 6px 8px); }
+.bar i { position: absolute; left: 2px; top: 2px; bottom: 2px; background: repeating-linear-gradient(90deg, var(--neon-core) 0 6px, transparent 6px 8px); filter: drop-shadow(0 0 3px var(--neon)); }
+[data-theme="light"] .bar i { background: repeating-linear-gradient(90deg, var(--neon) 0 6px, transparent 6px 8px); filter: none; }
+.stat { --c: 7px; padding: 8px 0; text-align: center; background: var(--edge-1); position: relative; isolation: isolate;
   clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
-.stat::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--surface-1); clip-path: inherit; }
-.stat .k { font: 700 11px var(--f-display); font-stretch: 75%; letter-spacing: .12em; color: var(--text-3); text-transform: uppercase; }
-.stat .v { font: 700 21px var(--f-mono); color: var(--text); margin-top: 3px; }
-.stat .p { font: 500 11px var(--f-mono); color: var(--text-3); margin-top: 3px; }
-.stat.focus { background: var(--neon); } .stat.focus .k, .stat.focus .p { color: var(--neon); } .stat.focus .v { color: var(--neon-core); text-shadow: var(--halo-neon); }
-.stat.block { background: var(--magenta); }
-.stat.block::before { background: repeating-linear-gradient(135deg, var(--magenta-soft) 0 5px, transparent 5px 10px), var(--surface-1); }
+.stat::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1); box-shadow: var(--bevel-1); clip-path: inherit; }
+.stat .k { font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .12em; color: var(--text-3); text-transform: uppercase; }
+.stat .v { font: 700 21px/28px var(--f-mono); color: var(--text); }
+.stat .p { font: 500 11px/16px var(--f-mono); color: var(--text-3); }
+.stat.focus { background: linear-gradient(180deg, var(--neon-core), var(--neon) 40%, rgba(43,245,255,.5)); }
+.stat.focus::before { background: radial-gradient(80% 60% at 50% 100%, rgba(43,245,255,.30), transparent 70%), var(--mat-1); }
+.stat.focus .k, .stat.focus .p { color: var(--neon); } .stat.focus .v { color: var(--neon-core); text-shadow: var(--halo-neon); }
+.stat.block { background: linear-gradient(180deg, var(--magenta), rgba(255,46,126,.4)); }
+.stat.block::before { background: repeating-linear-gradient(135deg, var(--magenta-soft) 0 5px, transparent 5px 10px), var(--mat-1); }
 .stat.block .v { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--magenta); } .stat.block .k, .stat.block .p { color: var(--magenta); }
 
-/* ============ ТОСТ / СОСТОЯНИЯ / СКЕЛЕТОН ============ */
+/* ============ ТОСТЫ / СОСТОЯНИЯ ============ */
 .toast { display: flex; gap: 12px; align-items: center; padding: 12px 14px; }
-.state { text-align: center; padding: 26px 16px; display: grid; gap: 8px; justify-items: center; }
-.sk { background: linear-gradient(90deg, var(--surface-2), var(--surface-3) 40%, var(--surface-2) 80%); height: 10px; }
+.toast-ok { --edge: linear-gradient(90deg, var(--ok) 0 3px, transparent 3px), var(--edge-2); --fill: radial-gradient(40% 120% at 0% 50%, rgba(93,255,176,.16), transparent 70%), var(--mat-2); }
+.toast-amb { --edge: linear-gradient(90deg, var(--amber) 0 3px, transparent 3px), var(--edge-2); --fill: radial-gradient(40% 120% at 0% 50%, rgba(255,181,71,.18), transparent 70%), var(--mat-2); }
+.toast-bad { --edge: linear-gradient(90deg, var(--magenta) 0 3px, transparent 3px), var(--edge-2); --fill: radial-gradient(40% 120% at 0% 50%, rgba(255,46,126,.16), transparent 70%), var(--mat-2); }
+.toast-info { --edge: linear-gradient(90deg, var(--neon) 0 3px, transparent 3px), var(--edge-2); --fill: radial-gradient(40% 120% at 0% 50%, rgba(43,245,255,.14), transparent 70%), var(--mat-2); }
+.state { text-align: center; padding: 24px 16px; display: grid; gap: 8px; justify-items: center; }
+.sk { background: linear-gradient(90deg, rgba(150,170,255,.06), rgba(150,170,255,.13) 40%, rgba(150,170,255,.06) 80%); height: 10px; }
+[data-theme="light"] .sk { background: linear-gradient(90deg, #E3E7EF, #EEF1F6 40%, #E3E7EF 80%); }
 
-/* ============ ШТОРКА ============ */
-.sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px 22px; background: var(--surface-2);
-  clip-path: polygon(0 18px, 18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); }
-.sheet-edge { position: absolute; left: 0; right: 0; height: 19px; pointer-events: none; }
-.grab { width: 40px; height: 3px; background: var(--neon); box-shadow: 0 0 8px var(--neon); margin: 2px auto 14px; }
+/* ============ ШТОРКА (плавающий слой) ============ */
+.sheet { --c: 18px; position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 24px; background: var(--edge-2); isolation: isolate;
+  clip-path: polygon(0 var(--c), var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, 0 100%); }
+.sheet::before { content: ""; position: absolute; inset: 1px 1px 0; z-index: -1; background: radial-gradient(50% 60px at 50% 0, rgba(43,245,255,.10), transparent), var(--spec), var(--mat-2); clip-path: inherit; }
+.sheet-shade { position: absolute; left: 0; right: 0; height: 80px; background: linear-gradient(0deg, rgba(0,0,0,.65), transparent); pointer-events: none; }
+.grab { width: 40px; height: 3px; background: var(--neon-core); box-shadow: 0 0 8px var(--neon); margin: 0 auto 16px; }
 .scrim { position: absolute; inset: 0; background: rgba(2,3,6,.72); }
 [data-theme="light"] .scrim { background: rgba(11,15,26,.35); }
 
-/* ============ ТЕЛЕФОН ============ */
+/* ============ ТЕЛЕФОН: три слоя глубины ============ */
 .phone { width: 390px; height: 844px; border-radius: 46px; padding: 9px; background: linear-gradient(150deg, #2a2f3d, #0b0d13 35%, #07080c 70%, #1f2430); box-shadow: 0 30px 70px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.06); flex: none; }
+.phone.mini { zoom: .7; }
 .screen { position: relative; width: 100%; height: 100%; border-radius: 38px; overflow: hidden; background: var(--bg); color: var(--text); isolation: isolate; }
-.screen::after { content: ""; position: absolute; inset: 0; background: var(--scan); pointer-events: none; z-index: 50; }
-.screen .skyline { position: absolute; left: 0; right: 0; top: 0; height: 300px; z-index: -1;
-  background: radial-gradient(120% 70% at 50% 0%, rgba(43,245,255,.07), transparent 60%), radial-gradient(60% 40% at 90% 10%, rgba(255,46,126,.05), transparent 70%); }
-[data-theme="light"] .screen .skyline { background: radial-gradient(120% 70% at 50% 0%, rgba(0,126,149,.06), transparent 60%); }
-.tgbar { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font: 500 15px var(--f-sans); color: var(--text); border-bottom: 1px solid var(--line); background: var(--bg); position: relative; z-index: 3; }
+.screen::after { content: ""; position: absolute; inset: 0; background: var(--scan), radial-gradient(130% 90% at 50% 40%, transparent 60%, rgba(0,0,0,.45)); pointer-events: none; z-index: 50; }
+[data-theme="light"] .screen::after { background: var(--scan); }
+/* слой 0 — дальний город: статичная картинка, размыта заранее */
+.city { position: absolute; left: 0; right: 0; top: 54px; height: 380px; z-index: -1; background: var(--city-dark) center top / 100% 100% no-repeat; -webkit-mask: linear-gradient(180deg, #000 55%, transparent); pointer-events: none; }
+[data-theme="light"] .city { background-image: var(--city-light); opacity: .9; }
+.city.full { top: 0; height: 100%; -webkit-mask: linear-gradient(180deg, #000 70%, transparent); }
+.tgbar { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font: 500 15px var(--f-sans); color: var(--text); border-bottom: 1px solid var(--line); background: var(--bg); position: relative; z-index: 6; }
 .tgbar .back { color: var(--neon); display: flex; align-items: center; gap: 2px; }
+.tgbar .ttl { font: 700 15px var(--f-display); font-stretch: 80%; letter-spacing: .12em; text-transform: uppercase; }
+.lockup { display: inline-flex; align-items: center; gap: 8px; }
+.mark { width: 24px; height: 24px; }
 .brand { font: 800 17px var(--f-display); font-stretch: 75%; letter-spacing: .22em; color: var(--text); }
 .brand b { color: var(--neon); text-shadow: var(--halo-neon); font-weight: 800; }
-.content { padding: 14px 16px; display: grid; gap: 12px; position: relative; z-index: 2; }
-.mainbtn { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px 24px; background: var(--bg); border-top: 1px solid var(--line); z-index: 4; }
-.mainbtn .btn { width: 100%; height: 50px; }
-.tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 76px; padding: 10px 6px 20px; display: flex; background: var(--bg); border-top: 1px solid var(--line); z-index: 4; }
-.tabbar a { flex: 1; display: grid; justify-items: center; gap: 4px; font: 700 11px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); position: relative; }
-.tabbar a.on { color: var(--neon); text-shadow: var(--halo-neon); }
-.tabbar a.on::before { content: ""; position: absolute; top: -10px; width: 26px; height: 2px; background: var(--neon); box-shadow: 0 0 8px var(--neon); }
-.tabbar a.on svg { filter: drop-shadow(0 0 4px var(--neon)); }
+.content { padding: 12px 16px; display: grid; gap: 12px; position: relative; z-index: 2; }
+.cta { position: absolute; left: 16px; right: 16px; bottom: 92px; z-index: 4; }
+.cta .btn { height: 52px; }
+.mainbar { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 24px; z-index: 4; background: linear-gradient(180deg, rgba(6,7,12,0), var(--bg) 30%); }
+[data-theme="light"] .mainbar { background: linear-gradient(180deg, rgba(238,241,246,0), var(--bg) 30%); }
+.mainbar .btn { width: 100%; height: 52px; }
+/* слой 2 — плавающий док */
+.dock { position: absolute; left: 10px; right: 10px; bottom: 14px; height: 66px; z-index: 5; }
+.dock > .cut { --c: 12px; height: 100%; display: flex; padding: 0 4px; }
+.dock a { flex: 1; display: grid; justify-items: center; align-content: center; gap: 4px; font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); position: relative; }
+.dock a.on { color: var(--neon); text-shadow: var(--halo-neon); background: radial-gradient(60% 70% at 50% 0%, rgba(43,245,255,.20), transparent 75%); }
+.dock a.on::before { content: ""; position: absolute; top: 0; width: 28px; height: 2px; background: var(--neon-core); box-shadow: 0 0 8px var(--neon), 0 0 16px var(--neon); }
+.dock a.on svg { filter: drop-shadow(0 0 4px var(--neon)); }
+[data-theme="light"] .dock a.on { background: none; }
+
+/* ============ ГЕРОЙ-ОБЪЕКТ: РЕАКТОР ============ */
+.rx { --s: 210px; position: relative; width: var(--s); height: var(--s); margin: 0 auto; }
+.rx > * { position: absolute; }
+.rx svg.house { inset: 0; width: 100%; height: 100%; }
+.rx-ring { inset: 0; display: grid; place-items: center; will-change: transform; }
+.rx-ring.a { animation: spin 40s linear infinite; }
+.rx-ring.b { animation: spin 22s linear infinite reverse; }
+.rx-ring svg { width: 100%; height: 100%; }
+.rx-shell { inset: 27%; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.30), rgba(255,255,255,0) 22%), radial-gradient(circle, rgba(0,0,0,0) 58%, rgba(0,20,30,.85) 72%, rgba(0,0,0,.95));
+  box-shadow: inset 0 0 0 1px rgba(210,253,255,.18), inset 0 -10px 18px rgba(0,0,0,.5), 0 0 0 5px rgba(8,10,16,.9), 0 0 0 6px rgba(150,170,255,.18); }
+.rx-core { inset: 33%; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 9%, #D2FDFF 16%, rgba(43,245,255,.95) 30%, rgba(0,160,190,.75) 50%, rgba(0,70,100,.55) 68%, rgba(0,30,45,0) 74%);
+  box-shadow: 0 0 26px rgba(43,245,255,.55), 0 0 60px rgba(43,245,255,.22); }
+.rx-fil { inset: 31%; border-radius: 50%; background: repeating-conic-gradient(from 8deg, rgba(210,253,255,0) 0 13deg, rgba(210,253,255,.55) 14deg, rgba(210,253,255,0) 15.5deg);
+  -webkit-mask: radial-gradient(circle, transparent 38%, #000 46%, #000 60%, transparent 70%); opacity: .7; }
+.rx-p { width: 3px; height: 3px; border-radius: 50%; background: #D2FDFF; box-shadow: 0 0 6px #2BF5FF; }
+.rx-plate { left: 50%; bottom: -6px; transform: translateX(-50%); --c: 7px; padding: 4px 12px 5px; display: flex; gap: 8px; align-items: baseline; white-space: nowrap; }
+.callout { position: absolute; font: 500 11px/16px var(--f-mono); color: var(--text-3); letter-spacing: .04em; }
+.callout b { color: var(--text); font-weight: 700; }
+.callout::after { content: ""; position: absolute; top: 20px; width: 46px; height: 1px; background: linear-gradient(90deg, rgba(150,170,255,.35), transparent); }
+.callout.r { text-align: right; } .callout.r::after { right: 0; background: linear-gradient(270deg, rgba(150,170,255,.35), transparent); }
+[data-theme="light"] .rx-core { background: radial-gradient(circle, #fff 0 10%, #7FD9E6 24%, #007E95 52%, rgba(0,126,149,0) 72%); box-shadow: none; }
+[data-theme="light"] .rx-shell { background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.8), transparent 24%), radial-gradient(circle, transparent 60%, rgba(10,20,50,.15) 74%); box-shadow: inset 0 0 0 1px rgba(10,20,50,.15), 0 0 0 5px #fff, 0 0 0 6px rgba(10,20,50,.15); }
 
 /* ============ БОРД ============ */
 .board { width: 1240px; margin: 0 auto 48px; padding: 48px; background: var(--bg); position: relative; isolation: isolate; overflow: hidden;
   clip-path: polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 36px 100%, 0 calc(100% - 36px)); }
 .board::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--scan), var(--grid); background-size: auto, 40px 40px, 40px 40px; -webkit-mask: linear-gradient(180deg, #000, transparent 40%); }
+.board::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 420px; z-index: -2; background: radial-gradient(70% 100% at 80% 0%, rgba(43,245,255,.07), transparent 70%), radial-gradient(40% 70% at 10% 0%, rgba(255,181,71,.04), transparent 70%); }
 .sec-no { font: 500 13px var(--f-mono); color: var(--neon); letter-spacing: .08em; margin-bottom: 12px; text-shadow: var(--halo-neon); }
 h2.sec { font: 800 56px/0.95 var(--f-display); font-stretch: 75%; letter-spacing: .01em; text-transform: uppercase; color: var(--text); }
 h2.sec em { font-style: normal; color: var(--neon-core); text-shadow: var(--halo-neon); }
-.sec-ru { font: 400 21px/1.4 var(--f-sans); color: var(--text-2); margin-top: 12px; max-width: 1040px; }
-.cap { display: flex; gap: 12px; align-items: center; margin: 34px 0 14px; font: 700 13px var(--f-display); font-stretch: 75%; letter-spacing: .18em; text-transform: uppercase; color: var(--text-2); }
+.sec-ru { font: 400 21px/1.45 var(--f-sans); color: var(--text-2); margin-top: 12px; max-width: 1040px; }
+.cap { display: flex; gap: 12px; align-items: center; margin: 32px 0 16px; font: 700 13px var(--f-display); font-stretch: 75%; letter-spacing: .18em; text-transform: uppercase; color: var(--text-2); }
 .cap::before { content: ""; width: 8px; height: 8px; background: var(--neon); box-shadow: 0 0 8px var(--neon); }
 .cap::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
 .grid { display: grid; gap: 20px; }
 svg { display: block; }
 .ico { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: square; stroke-linejoin: miter; }
-.sys-strip { display: flex; justify-content: space-between; }
+.sys-strip { display: flex; justify-content: space-between; align-items: center; }
+.phones { display: flex; gap: 24px; margin-top: 28px; justify-content: center; }
+.ph-cap { font: 700 12px var(--f-display); font-stretch: 75%; letter-spacing: .16em; text-transform: uppercase; color: var(--text-2); text-align: center; margin-top: 12px; }
+table.spec { width: 100%; border-collapse: collapse; font: 400 13px/20px var(--f-sans); color: var(--text-2); }
+table.spec td, table.spec th { padding: 8px 10px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+table.spec th { font: 700 11px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); border-top: 0; }
+table.spec td:first-child { color: var(--text); }
+table.spec code { font: 500 12px var(--f-mono); color: var(--neon); }
 </style>
 </head>
 <body>
-
 <svg width="0" height="0" style="position:absolute">
-  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6v9h-5v-5H9v5H4z"/></symbol>
-  <symbol id="i-reactor" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="3"/></symbol>
-  <symbol id="i-tasks" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8.5 10h7M8.5 13h7M8.5 16h4"/></symbol>
-  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3.5 7h15l2 2v10h-17z"/><path d="M15 13h3"/><path d="M5 7l9-3 2 3"/></symbol>
-  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
-  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
-  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 18V5M6.5 10.5L12 5l5.5 5.5"/><path d="M5 20h14"/></symbol>
-  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1.5L21 10v4l-2 2.5-3 1.5-1 3H9l-1-3-3-1.5L3 14v-4l2-2.5L8 6z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <defs>
+    <linearGradient id="lg-mark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D2FDFF"/><stop offset=".45" stop-color="#2BF5FF"/><stop offset="1" stop-color="#0E9FB0"/></linearGradient>
+  </defs>
+  <!-- логотип: «Узел» — срезанная плитка + N из двух опор и диагонали, концы — узлы сети -->
+  <symbol id="logo" viewBox="0 0 48 48"><path d="M3 3h31l11 11v31H14L3 34z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="miter"/><path d="M15.5 33V15l17 18V15" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"/><rect x="13" y="12.5" width="5" height="5" fill="currentColor"/><rect x="30" y="30.5" width="5" height="5" fill="currentColor"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-reactor" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 8.5l3 1.75v3.5L12 15.5l-3-1.75v-3.5z"/></symbol>
+  <symbol id="i-tasks" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8.5 9h7M8.5 12.5h7M8.5 16h4"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7h15l3 3v10H6l-3-3z"/><path d="M15 13.5h3"/><path d="M6 7l8-3 2 3"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><path d="M3 7h18v3H3z"/><path d="M4 10h16v8l-2 2H4z"/><path d="M12 7v13M12 7L9 4M12 7l3-3"/></symbol>
+  <symbol id="i-wheel" viewBox="0 0 24 24"><path d="M8.5 3.5h7l5 5v7l-5 5h-7l-5-5v-7z"/><path d="M12 3.5v6M12 14.5v6M3.5 12h6M14.5 12h6"/><path d="M10.5 10.5h3v3h-3z"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 18V6M7 11l5-5 5 5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M4 13v7h14l2-2v-5"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M4 13v7h14l2-2v-5"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4.5l3 2"/></symbol>
+  <symbol id="i-rules" viewBox="0 0 24 24"><path d="M6 3h12v15l-3 3H6z"/><path d="M9 8h6M9 11.5h6M9 15h3"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><path d="M14.5 3.5h6v6l-3 3h-3l-3-3v-3z"/><path d="M11.5 12.5L4 20v1h3v-2h2v-2h2l2-2"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M9 3h6l2 2v5l-2 2H9l-2-2V5z"/><path d="M4 21v-3l3-3h10l3 3v3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17v-7l3-5h6l3 5v7l2 2H4z"/><path d="M10 21h4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><path d="M8 8h10l2 2v10H8z"/><path d="M4 16V4h10v2"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4h-4"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M9 3h6l1 3 3 1.5L21 10v4l-2 2.5-3 1.5-1 3H9l-1-3-3-1.5L3 14v-4l2-2.5L8 6z"/><path d="M10 10h4v4h-4z"/></symbol>
+  <symbol id="i-offline" viewBox="0 0 24 24"><path d="M4 20h2v-3H4zM9 20h2v-6H9zM14 20h2v-9h-2zM19 20h2V8h-2z"/><path d="M3 3l18 18"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5M12 16.5v1.5"/></symbol>
-  <symbol id="i-empty" viewBox="0 0 24 24"><path d="M4 8h16v12H4z" stroke-dasharray="3 2"/><path d="M9 13h6"/></symbol>
-  <symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17M6 6l12 12M18 6L6 18"/></symbol>
-  <symbol id="i-gift" viewBox="0 0 24 24"><path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13"/><path d="M12 7L9 4M12 7l3-3"/></symbol>
-  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></symbol>
+  <symbol id="i-empty" viewBox="0 0 24 24"><path d="M4 7h13l3 3v10H4z" stroke-dasharray="3 2"/><path d="M9 14h6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
 </svg>
 
 <!-- ======================= 01 ======================= -->
 <section class="board" id="s1" data-theme="dark">
   <div class="sec-no">01 // КОНЦЕПЦИЯ · NX-SYS v2</div>
   <h2 class="sec">Ночной <em>контур</em></h2>
-  <p class="sec-ru">Киберпанк без кича: ночной город из окна диспетчерской. Почти чёрный фон с еле заметной сеткой и строчной развёрткой, неон — только на кромках, цифрах и индикаторах, как вывески и приборы. Обычный текст спокойный и читаемый. Фирменный силуэт — срезанный угол, фирменное поведение — неон, который «зажигается» один раз.</p>
+  <p class="sec-ru">Киберпанк без кича: ночной город за дымчатым стеклом пульта. Три слоя глубины — размытый город, панели из тёмного стекла-металла с фаской и зерном, плавающие шторки и док. Неон — только на кромках, цифрах и индикаторах, и он светит на соседние поверхности. Обычный текст спокойный и читаемый.</p>
+
+  <div class="cap">Глубина · три слоя</div>
+  <div class="grid" style="grid-template-columns: 560px 1fr; gap:28px; align-items:center">
+    <div id="depth" style="position:relative; height:440px; perspective:1600px">
+      <div style="position:absolute; left:60px; top:150px; width:380px; height:250px; transform-style:preserve-3d; transform: rotateX(54deg) rotateZ(-32deg)">
+        <div style="position:absolute; inset:0; background: var(--city-dark) center/cover, #06070C; box-shadow: 0 0 0 1px rgba(150,170,255,.25), 0 30px 60px rgba(0,0,0,.6)"><span class="tag neutral" style="position:absolute; left:calc(100% + 12px); top:0; white-space:nowrap">L0 · город</span></div>
+        <div style="position:absolute; inset:0; transform: translateZ(80px); box-shadow: 0 0 0 1px rgba(43,245,255,.22); background: rgba(43,245,255,.025)">
+          <div class="cut hero" style="position:absolute; left:24px; top:24px; width:230px; height:130px; --c:14px"><div style="padding:14px 16px"><div class="t-label">Накоплено</div><div class="t-num-xl" style="font-size:34px; line-height:44px">0.0042</div><div class="bar" style="margin-top:8px"><i style="width:41%"></i></div></div></div>
+          <div class="cut s" style="position:absolute; left:24px; top:166px; width:110px; height:56px"></div>
+          <div class="cut s" style="position:absolute; left:144px; top:166px; width:110px; height:56px"></div>
+          <span class="tag neon" style="position:absolute; left:calc(100% + 12px); top:0; white-space:nowrap">L1 · панели</span>
+        </div>
+        <div style="position:absolute; inset:0; transform: translateZ(160px); box-shadow: 0 0 0 1px rgba(43,245,255,.35)">
+          <div class="cut e2 s toast toast-ok" style="position:absolute; left:190px; top:22px; width:170px; height:48px"><svg class="ico" style="color:var(--ok)"><use href="#i-check"/></svg><span class="t-sec" style="color:var(--text)">Собрано</span></div>
+          <div style="position:absolute; left:150px; top:180px; width:210px"><button class="btn btn-primary btn-block" style="height:44px">Собрать</button></div>
+          <span class="tag neon" style="position:absolute; left:calc(100% + 12px); top:0; white-space:nowrap">L2 · плавающее</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid; gap:16px">
+      <div class="lift"><div class="cut flat" style="padding:16px 20px"><div class="t-label neon" style="color:var(--neon)">Слой 0 · дальний фон</div><p class="t-sec" style="margin-top:4px">Размытый ночной город и дымка. Статичная картинка, размыта заранее (SVG или WebP до 25 КБ), а не фильтром в браузере. Сверху виньетка и развёртка.</p></div></div>
+      <div class="lift"><div class="cut" style="padding:16px 20px"><div class="t-label neon" style="color:var(--neon)">Слой 1 · панели</div><p class="t-sec" style="margin-top:4px">Дымчатое стекло-металл: полупрозрачная заливка (город чуть просвечивает без blur), зерно, верхний свет, блик по верхней кромке, тёмный низ, тень-подложка.</p></div></div>
+      <div class="lift l2"><div class="cut e2" style="padding:16px 20px"><div class="t-label neon" style="color:var(--neon)">Слой 2 · плавающее</div><p class="t-sec" style="margin-top:4px">Шторки, тосты, док и главная кнопка. Светлее, ярче кромка, большая тень. Активное светится и даёт перелив на поверхность под собой.</p></div></div>
+    </div>
+  </div>
+
+  <div class="cap">Материал · без плоских заливок</div>
+  <div class="grid" style="grid-template-columns: repeat(4,1fr); gap:20px">
+    <div class="lift"><div class="cut e0" style="padding:18px; height:168px"><div class="t-label">e0 · утопленное</div><p class="t-sec" style="margin-top:8px">Поля, треки, шкалы. Тёмный верх, внутренняя тень, светлая нижняя кромка.</p><div class="bar" style="margin-top:16px"><i style="width:55%"></i></div></div></div>
+    <div class="lift"><div class="cut" style="padding:18px; height:168px"><div class="t-label">e1 · панель</div><p class="t-sec" style="margin-top:8px">Стекло-металл 90%, зерно 160 px, верхний свет, блик-линия, фаска снизу.</p><div class="serial" style="margin-top:18px"><span class="vent"></span>SN NX-0412</div></div></div>
+    <div class="lift l2"><div class="cut e2" style="padding:18px; height:168px"><div class="t-label">e2 · плавающее</div><p class="t-sec" style="margin-top:8px">Шторка, тост, док. Кромка ярче, тень глубже.</p></div></div>
+    <div class="lift glow"><div class="cut hero" style="padding:18px; height:168px"><i class="screw" style="left:8px; top:8px"></i><i class="screw" style="right:8px; bottom:8px"></i><div class="t-label neon" style="color:var(--neon); margin-left:6px">Герой · один на экран</div><p class="t-sec" style="margin-top:8px">Неоновая кромка, сетка, перелив света от реактора на панель. Два винта — единственная «железная» деталь.</p></div></div>
+  </div>
 
   <div class="cap">Палитра · у каждого неона одна роль</div>
   <div class="grid" style="grid-template-columns: 1.15fr 1fr;">
@@ -248,210 +424,187 @@ svg { display: block; }
       <div class="t-label" style="margin-bottom:14px">Ночь · основная тема</div>
       <div id="pal-dark"></div>
     </div>
-    <div data-theme="light" class="cut flat l" style="padding:22px; --fill: var(--bg)">
+    <div data-theme="light" class="cut l" style="padding:22px; --fill: var(--bg)">
       <div class="t-label" style="margin-bottom:14px">Дневной HUD · светлая Telegram</div>
       <div id="pal-light"></div>
     </div>
   </div>
-  <div class="grid" style="grid-template-columns: repeat(4,1fr); margin-top:14px; gap:12px">
-    <div class="cut s flat" style="padding:14px 16px"><div class="t-label neon" style="color:var(--neon)">Циан · действие и TON</div><p class="t-sec" style="margin-top:6px">Главная кнопка, активное, суммы TON, прогресс.</p></div>
-    <div class="cut s flat" style="padding:14px 16px"><div class="t-label amber" style="color:var(--amber)">Натрий · награда</div><p class="t-sec" style="margin-top:6px">Выигрыш, успех усиления, рекорд, «Владелец». Редко.</p></div>
-    <div class="cut s flat" style="padding:14px 16px"><div class="t-label mag" style="color:var(--magenta)">Маджента · опасно</div><p class="t-sec" style="margin-top:6px">Сгорание, отказ, ошибка, запрет. Только смысл «потеря».</p></div>
-    <div class="cut s flat" style="padding:14px 16px"><div class="t-label" style="color:var(--ok)">Мята / лимон · статус</div><p class="t-sec" style="margin-top:6px">«Работает», «внимание». Только в маркерах, без свечения.</p></div>
+  <div class="grid" style="grid-template-columns: repeat(4,1fr); margin-top:16px; gap:12px">
+    <div class="cut s flat" style="padding:14px 16px"><div class="t-label neon" style="color:var(--neon)">Циан · действие и TON</div><p class="t-sec" style="margin-top:4px">Главная кнопка, активное, суммы TON, прогресс.</p></div>
+    <div class="cut s flat" style="padding:14px 16px"><div class="t-label amber" style="color:var(--amber)">Натрий · награда</div><p class="t-sec" style="margin-top:4px">Выигрыш, успех усиления, рекорд, «Владелец». Редко.</p></div>
+    <div class="cut s flat" style="padding:14px 16px"><div class="t-label mag" style="color:var(--magenta)">Маджента · опасно</div><p class="t-sec" style="margin-top:4px">Сгорание, отказ, ошибка, запрет. Только смысл «потеря».</p></div>
+    <div class="cut s flat" style="padding:14px 16px"><div class="t-label" style="color:var(--ok)">Мята / лимон · статус</div><p class="t-sec" style="margin-top:4px">«Работает», «внимание». Только в маркерах.</p></div>
   </div>
 
-  <div class="cap">Шрифты · все с кириллицей</div>
+  <div class="cap">Шрифты · все с кириллицей · ритм 4 px</div>
   <div class="grid" style="grid-template-columns: 1fr 1fr 1fr;">
     <div class="cut flat" style="padding:22px">
       <div class="t-sys">DISPLAY // TEKTUR 75–100 wdth</div>
-      <div style="font:800 52px/0.95 var(--f-display); font-stretch:75%; text-transform:uppercase; margin-top:14px">Майнер<br><span class="neon" style="color:var(--neon-core)">онлайн</span></div>
-      <p class="t-sec" style="margin-top:12px">Срезанные углы букв повторяют форму панелей. Узкая ширина — для HUD-меток, обычная — для заголовков.</p>
+      <div style="font:800 52px/52px var(--f-display); font-stretch:75%; text-transform:uppercase; margin-top:16px">Майнер<br><span class="neon" style="color:var(--neon-core)">онлайн</span></div>
+      <p class="t-sec" style="margin-top:12px">Срезанные углы букв повторяют форму панелей. Узкая ширина — для меток, обычная — для заголовков.</p>
     </div>
     <div class="cut flat" style="padding:22px">
       <div class="t-sys">TEXT // ONEST 400–600</div>
-      <div style="font:600 24px/1.2 var(--f-sans); margin-top:14px">Соберите награду до конца цикла</div>
+      <div style="font:600 24px/32px var(--f-sans); margin-top:16px">Соберите награду до конца цикла</div>
       <div class="t-body dim" style="margin-top:8px">Спокойный гротеск, спроектированный под кириллицу. Им набран весь обычный текст — без неона.</div>
     </div>
     <div class="cut flat" style="padding:22px">
       <div class="t-sys">NUMBERS // JETBRAINS MONO</div>
-      <div class="t-num-xl" style="margin-top:14px; font-size:40px">0.004218</div>
-      <div class="t-num-m" style="margin-top:10px; display:grid; gap:2px; color:var(--text-2)"><span>1.284700 TON</span><span>07:31:04</span></div>
-      <p class="t-sec" style="margin-top:10px">Табличные цифры, ноль с чертой. Только цифры светятся.</p>
+      <div class="t-num-xl reflect" style="margin-top:16px; font-size:40px">0.004218</div>
+      <div class="t-num-m" style="margin-top:12px; display:grid; color:var(--text-2)"><span>1.284700 TON</span><span>07:31:04</span></div>
+      <p class="t-sec" style="margin-top:8px">Табличные цифры, ноль с чертой. Главная цифра светится и отражается в панели.</p>
     </div>
   </div>
-  <div class="cut flat s" style="padding:18px 22px; margin-top:14px; display:grid; grid-template-columns: repeat(7,1fr); gap:10px; align-items:end">
-    <div><div class="t-num-xl" style="font-size:36px">44</div><div class="t-sys" style="margin-top:6px">NUM XL · MONO 700</div></div>
-    <div><div class="t-num-l">28</div><div class="t-sys" style="margin-top:6px">NUM L</div></div>
-    <div><div class="t-display" style="font-size:28px">28</div><div class="t-sys" style="margin-top:6px">DISPLAY · TEKTUR 75</div></div>
-    <div><div class="t-title">Заголовок</div><div class="t-sys" style="margin-top:6px">TITLE · TEKTUR 24</div></div>
-    <div><div class="t-h">Блок 17</div><div class="t-sys" style="margin-top:6px">HEADING · ONEST</div></div>
-    <div><div class="t-body">Текст 15</div><div class="t-sys" style="margin-top:6px">BODY · ONEST</div></div>
-    <div><div class="t-label" style="color:var(--text-2)">Метка 11</div><div class="t-sys" style="margin-top:6px">LABEL · TEKTUR 75</div></div>
-  </div>
-
-  <div class="cap">Форма и материал · дёшево по производительности</div>
-  <div class="grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap:16px">
-    <div class="cut flat" style="padding:18px; height:150px"><div class="t-label">Плоская</div><p class="t-sec" style="margin-top:8px">Срез 14 px, линия 10%. Списки, вторичное.</p></div>
-    <div class="cut" style="padding:18px; height:150px"><div class="t-label">Панель</div><p class="t-sec" style="margin-top:8px">Кромка: циан в верхнем углу → тень. Без blur.</p></div>
-    <div class="glow"><div class="cut hero" style="padding:18px; height:150px"><span class="hud-corners"></span><div class="t-label neon" style="color:var(--neon)">Герой</div><p class="t-sec" style="margin-top:8px">Неон-кромка, сетка и развёртка, HUD-уголок. Одна на экран.</p></div></div>
-    <div class="cut flat" style="padding:18px; height:150px; display:grid; align-content:space-between">
-      <div class="t-label">Неон-трубка · шкала</div>
-      <div class="tube"></div>
-      <div class="ticks"></div>
-      <div class="sys-strip t-sys"><span>N 55°45′</span><span>СЕКТОР 07</span></div>
-    </div>
+  <div class="cut flat s" style="padding:18px 22px; margin-top:16px; display:grid; grid-template-columns: repeat(7,1fr) 1.4fr; gap:12px; align-items:end">
+    <div><div class="t-num-xl" style="font-size:36px">44</div><div class="t-sys" style="margin-top:8px">NUM XL 44/48</div></div>
+    <div><div class="t-num-l">28</div><div class="t-sys" style="margin-top:8px">NUM L 28/32</div></div>
+    <div><div class="t-display" style="font-size:28px">28</div><div class="t-sys" style="margin-top:8px">DISPLAY 30/32</div></div>
+    <div><div class="t-title">Заголовок</div><div class="t-sys" style="margin-top:8px">TITLE 24/28</div></div>
+    <div><div class="t-h">Блок 17</div><div class="t-sys" style="margin-top:8px">HEAD 17/24</div></div>
+    <div><div class="t-body">Текст 15</div><div class="t-sys" style="margin-top:8px">BODY 15/24</div></div>
+    <div><div class="t-label" style="color:var(--text-2)">Метка 11</div><div class="t-sys" style="margin-top:8px">LABEL 11/16</div></div>
+    <div><div style="display:flex; gap:6px; align-items:flex-end; height:32px">
+      <i style="width:4px;height:4px;background:var(--neon-dim)"></i><i style="width:8px;height:8px;background:var(--neon-dim)"></i><i style="width:12px;height:12px;background:var(--neon-dim)"></i><i style="width:16px;height:16px;background:var(--neon-dim)"></i><i style="width:24px;height:24px;background:var(--neon-dim)"></i><i style="width:32px;height:32px;background:var(--neon-dim)"></i></div>
+      <div class="t-sys" style="margin-top:8px">ШАГ 4·8·12·16·24·32</div></div>
   </div>
 </section>
-
 <!-- ======================= 02 ======================= -->
 <section class="board" id="s2" data-theme="dark">
   <div class="sec-no">02 // КОМПОНЕНТЫ</div>
   <h2 class="sec">Детали <em>пульта</em></h2>
-  <p class="sec-ru">Один набор на все экраны. Касание от 44 px, главное действие — одно, неон — только там, где смысл.</p>
+  <p class="sec-ru">Один набор на все экраны. У каждой детали есть толщина: блик сверху, тень снизу, утопленное — утоплено, нажатое — вдавлено и подсвечено изнутри.</p>
 
-  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:30px">
+  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:32px">
     <div>
-      <div class="cap">Кнопки</div>
-      <div style="display:grid; gap:12px">
-        <div style="display:flex; gap:12px"><span class="glow" style="flex:1"><button class="btn btn-primary btn-block">Собрать <span class="k">0.0042</span></button></span><button class="btn btn-primary pressed" style="flex:1">Нажата</button></div>
-        <div style="display:flex; gap:12px"><button class="btn btn-secondary" style="flex:1">Усилить</button><button class="btn" disabled style="flex:1">Недоступно</button></div>
+      <div class="cap">Кнопки · обычная / нажата / удержание</div>
+      <div style="display:grid; gap:16px">
+        <div style="display:flex; gap:12px"><span class="spill glow" style="flex:1"><button class="btn btn-primary btn-block">Собрать <span class="k">0.0042</span></button></span><span class="spill" style="flex:1"><button class="btn btn-primary btn-block pressed">Нажата</button></span></div>
+        <div style="display:flex; gap:12px"><span class="lift" style="flex:1; display:block"><button class="btn btn-secondary btn-block">Усилить</button></span><button class="btn" disabled style="flex:1">Недоступно</button></div>
         <div style="display:flex; gap:12px; align-items:center"><button class="btn btn-danger hold" style="flex:1"><i></i><span>Держите — отклонить</span></button><button class="btn btn-ghost">Подробнее</button></div>
       </div>
-      <p class="help" style="margin-top:8px">Primary — сплошной циан с тёмным текстом: читается лучше светящегося контура. Одна на экран (MainButton).</p>
+      <p class="help" style="margin-top:12px">Primary — «светящееся стекло»: градиент от сердцевины к глубокому циану, блик сверху, фаска снизу, перелив света на поверхность под кнопкой. Нажатие — сжатие до 97% и свет изнутри.</p>
 
-      <div class="cap">Поля</div>
-      <div style="display:grid; gap:12px">
+      <div class="cap">Поля · утоплены в корпус</div>
+      <div style="display:grid; gap:16px">
         <div class="field"><label>Сумма вывода</label><div class="input focus"><span>0.50<span class="caret"></span></span><span class="suffix">TON · МАКС</span></div><span class="help">Доступно 1.2847 TON</span></div>
         <div class="field"><label>Адрес кошелька</label><div class="input err"><span class="ph">UQ… или EQ…</span></div><span class="help err">Адрес должен начинаться с UQ или EQ</span></div>
       </div>
 
       <div class="cap">Вкладки</div>
       <div class="tabs"><span class="tab on">Колесо</span><span class="tab">Чекин</span><span class="tab">Промо</span></div>
-      <div class="seg-line" style="margin-top:14px"><span class="on">Экономика</span><span>Обзор</span><span>Промо</span><span>Деплой</span></div>
+      <div class="seg-line" style="margin-top:16px"><span class="on">Экономика</span><span>Обзор</span><span>Промо</span><span>Деплой</span></div>
 
       <div class="cap">Маркеры статуса</div>
       <div style="display:flex; flex-wrap:wrap; gap:8px"><span class="tag ok">Работает</span><span class="tag warn">Хранилище полно</span><span class="tag bad">Сгорело</span><span class="tag neon">Бесплатно ×1</span><span class="tag neutral">Остановлен</span><span class="tag amber">Рекорд</span></div>
     </div>
 
     <div>
-      <div class="cap">Список</div>
-      <div class="cut flat">
+      <div class="cap">Список · строка нажата</div>
+      <div class="lift"><div class="cut">
         <div class="row"><div class="ic"><svg class="ico"><use href="#i-reactor"/></svg></div><div class="main"><div class="ttl">Майнер</div><div class="sub">Цикл 5 ч 12 мин из 12 ч</div></div><div class="val">0.0042</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
-        <div class="row"><div class="ic"><svg class="ico"><use href="#i-tasks"/></svg></div><div class="main"><div class="ttl">Подписаться на TON Daily</div><div class="sub">37 из 100 мест · ур. 1+</div></div><div class="val neon">+0.01</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
+        <div class="row pressed"><div class="ic"><svg class="ico"><use href="#i-tasks"/></svg></div><div class="main"><div class="ttl">Подписаться на TON Daily</div><div class="sub">37 из 100 мест · ур. 1+</div></div><div class="val neon">+0.01</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
         <div class="row"><div class="ic muted"><svg class="ico"><use href="#i-gear"/></svg></div><div class="main"><div class="ttl">Цена попытки усиления</div><div class="sub">Базовая стоимость попытки</div></div><div class="val">0.05 TON</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
-      </div>
+      </div></div>
 
       <div class="cap">Показания</div>
-      <div class="glow"><div class="cut hero" style="padding:18px 20px">
-        <span class="hud-corners"></span>
-        <div class="sys-strip"><span class="t-label" style="color:var(--text-2)">Накоплено в цикле</span><span class="t-sys">RX-01 · 04:21</span></div>
-        <div class="t-num-xl" style="margin-top:10px">0.004218<span class="unit">TON</span></div>
-        <div class="bar" style="margin-top:14px"><i style="width:41%"></i></div>
+      <div class="lift glow"><div class="cut hero" style="padding:18px 20px">
+        <div class="sys-strip"><span class="t-label" style="color:var(--text-2)">Накоплено в цикле</span><span class="serial"><span class="vent"></span>RX-01 · 04:21</span></div>
+        <div class="t-num-xl reflect" style="margin-top:8px">0.004218<span class="unit">TON</span></div>
+        <div class="bar" style="margin-top:16px"><i style="width:41%"></i></div>
         <div class="sys-strip" style="margin-top:8px"><span class="t-sec">41% хранилища</span><span class="t-sec" style="font-family:var(--f-mono)">лимит 0.0055</span></div>
       </div></div>
-      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:10px">
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:16px">
         <div class="stat"><div class="k">Мощн</div><div class="v">3</div></div>
         <div class="stat focus"><div class="k">Ёмк</div><div class="v">2</div></div>
         <div class="stat"><div class="k">Уск</div><div class="v">2</div></div>
         <div class="stat block"><div class="k">Удача</div><div class="v">1</div></div>
         <div class="stat"><div class="k">Стаб</div><div class="v">2</div></div>
       </div>
-      <p class="help" style="margin-top:6px">Фокус — циановая кромка и светящаяся цифра. Запрет — маджента-штриховка и зачёркивание.</p>
+      <p class="help" style="margin-top:8px">Фокус — неоновая кромка и свет снизу ячейки. Запрет — маджента-штриховка и зачёркивание.</p>
 
-      <div class="cap">Тост · пусто · ошибка · загрузка</div>
-      <div class="cut s" style="--edge: linear-gradient(90deg, var(--ok) 0 3px, var(--line-strong) 3px)"><div class="toast"><svg class="ico" style="color:var(--ok)"><use href="#i-check"/></svg><div><div class="t-body" style="font-weight:500">Собрано 0.0042 TON</div><div class="t-sec">Баланс 1.2889 TON</div></div></div></div>
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px">
-        <div class="cut flat state"><svg class="ico" style="color:var(--text-3); width:30px; height:30px"><use href="#i-empty"/></svg><div class="t-h" style="font-size:15px">Заданий нет</div><div class="t-sec">Загляните позже</div></div>
-        <div class="cut flat state" style="--edge: linear-gradient(135deg, var(--magenta), var(--line) 40%)"><svg class="ico" style="color:var(--magenta); width:30px; height:30px"><use href="#i-alert"/></svg><div class="t-h" style="font-size:15px">Нет связи</div><button class="btn btn-ghost" style="height:30px">Повторить</button></div>
-        <div class="cut flat" style="padding:16px; display:grid; gap:10px; align-content:center"><div class="t-sys">ЗАГРУЗКА ▮▮▮▯▯</div><div class="sk" style="width:55%"></div><div class="sk" style="height:26px; width:85%"></div><div class="sk" style="height:6px"></div></div>
+      <div class="cap">Тосты · плавающий слой</div>
+      <div style="display:grid; gap:12px">
+        <div class="lift l2"><div class="cut e2 s toast toast-ok"><svg class="ico" style="color:var(--ok)"><use href="#i-check"/></svg><div><div class="t-body" style="font-weight:500">Собрано 0.0042 TON</div><div class="t-sec">Баланс 1.2889 TON</div></div></div></div>
+        <div class="lift l2"><div class="cut e2 s toast toast-amb"><svg class="ico" style="color:var(--amber)"><use href="#i-gift"/></svg><div><div class="t-body" style="font-weight:500">Выигрыш колеса: <span style="font-family:var(--f-mono); color:var(--amber)">0.25 TON</span></div><div class="t-sec">Зачислено на баланс</div></div></div></div>
       </div>
     </div>
   </div>
 
   <div class="cap">Шторка · подтверждение денег удержанием</div>
-  <div style="display:grid; grid-template-columns: 430px 1fr; gap:30px; align-items:start">
-    <div style="position:relative; height:340px; overflow:hidden; background:var(--bg); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%)">
-      <div style="position:absolute; inset:0; background: var(--grid); background-size: 22px 22px"></div>
+  <div style="display:grid; grid-template-columns: 430px 1fr; gap:32px; align-items:start">
+    <div style="position:relative; height:360px; overflow:hidden; background:var(--bg); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%)">
+      <div class="city" style="top:0"></div>
       <div class="scrim"></div>
-      <div class="sheet">
+      <div class="sheet-shade" style="bottom:280px"></div>
+      <div class="sheet" style="height:290px">
         <div class="grab"></div>
         <div class="t-label">Подтверждение</div>
-        <div class="t-title" style="margin-top:6px; font-size:22px">Вывести 0.50 TON?</div>
-        <div class="cut flat s" style="margin-top:12px; --fill: var(--surface-1)">
+        <div class="t-title" style="margin-top:4px; font-size:22px">Вывести 0.50 TON?</div>
+        <div class="cut e0 s" style="margin-top:12px">
           <div class="row" style="min-height:44px"><div class="main sub">На адрес</div><div class="val" style="font-size:13px">UQB4…9xK2</div></div>
           <div class="row" style="min-height:44px"><div class="main sub">Останется</div><div class="val" style="font-size:13px">0.7847 TON</div></div>
         </div>
-        <button class="btn btn-primary btn-block hold" style="margin-top:14px"><i></i><span>Держите, чтобы вывести</span></button>
+        <span class="spill" style="margin-top:16px"><button class="btn btn-primary btn-block hold"><i></i><span>Держите, чтобы вывести</span></button></span>
       </div>
     </div>
-    <div class="t-body dim" style="display:grid; gap:10px">
-      <p>— Верх шторки срезан с двух сторон, ручка — короткая неон-трубка. Поднимается за 260 мс, закрывается свайпом, тапом по фону и BackButton Telegram.</p>
-      <p>— Внутри одно действие. Для денег: сводка «что, куда, сколько останется» и удержание 0.8 с — полоса циана заполняет кнопку.</p>
-      <p>— Фон затемняется сплошным цветом 72% без размытия.</p>
-      <p>— Высота по содержимому, максимум 85% экрана; длинное — вкладками внутри.</p>
+    <div class="t-body dim" style="display:grid; gap:12px">
+      <p>— Шторка — плавающий слой e2: светлее панели, кромка ярче, сверху мягкая тень на контент и неоновая ручка с отсветом.</p>
+      <p>— Поднимается за 260 мс, закрывается свайпом, тапом по фону и BackButton Telegram.</p>
+      <p>— Внутри одно действие. Для денег: сводка в утопленной плашке и удержание 0.8 с — яркий циан «заряжает» кнопку, на фронте заряда светится кромка.</p>
+      <p>— Фон затемняется сплошным цветом 72%, без размытия.</p>
     </div>
   </div>
 </section>
-
 <!-- ======================= 03 ======================= -->
 <section class="board" id="s3" data-theme="dark">
   <div class="sec-no">03 // ЭКРАНЫ · 390 PX</div>
   <h2 class="sec">Ключевые <em>экраны</em></h2>
-  <p class="sec-ru">Майнер, усиление и настройка экономики в кабинете владельца.</p>
-  <div style="display:flex; gap:26px; margin-top:28px; justify-content:center">
+  <p class="sec-ru">Майнер с реактором-героем, усиление с физическим циферблатом, настройка экономики в кабинете владельца.</p>
+  <div class="phones">
 
     <!-- МАЙНЕР -->
-    <div class="phone" id="ph-miner"><div class="screen"><div class="skyline"></div>
-      <div class="tgbar"><span class="brand">TON<b>/</b>NEXUS</span><span class="tag ok">Работает</span></div>
+    <div class="phone" id="ph-miner"><div class="screen"><div class="city"></div>
+      <div class="tgbar"><span class="lockup"><svg class="mark" style="color:var(--neon)"><use href="#logo"/></svg><span class="brand">TON<b>/</b>NEXUS</span></span><span class="tag ok">Работает</span></div>
       <div class="content">
         <div class="sys-strip t-sys"><span>RX-01 // РЕАКТОР</span><span>ЦИКЛ 05:12 / 12:00</span></div>
-        <div class="glow"><div class="cut hero l" style="padding:20px 20px 16px">
-          <span class="hud-corners"></span>
-          <div class="t-label" style="color:var(--text-2)">Накоплено в цикле</div>
-          <div class="t-num-xl" style="margin-top:10px">0.004218<span class="unit">TON</span></div>
-          <div class="t-sec" style="margin-top:6px">≈ 0.0005 TON в час</div>
-          <!-- кольцевой реактор -->
-          <div style="position:relative; height:178px; margin-top:8px">
-            <svg viewBox="0 0 320 178" width="100%" height="178">
-              <g id="ringTicks"></g>
-              <circle cx="160" cy="92" r="58" fill="none" stroke="#181C2A" stroke-width="10"/>
-              <circle cx="160" cy="92" r="58" fill="none" stroke="#2BF5FF" stroke-width="10" stroke-dasharray="149 365" transform="rotate(-90 160 92)" style="filter: drop-shadow(0 0 6px rgba(43,245,255,.7))" stroke-linecap="butt"/>
-              <circle cx="160" cy="92" r="58" fill="none" stroke="#D2FDFF" stroke-width="2" stroke-dasharray="149 365" transform="rotate(-90 160 92)"/>
-              <circle cx="160" cy="92" r="44" fill="none" stroke="rgba(150,170,255,.14)" stroke-width="1" stroke-dasharray="2 4"/>
-              <text x="160" y="94" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="26" fill="#E6EBF5">41%</text>
-              <text x="160" y="112" text-anchor="middle" font-family="Tektur" font-stretch="75%" font-weight="700" font-size="10" letter-spacing="2" fill="#6E7891">ХРАНИЛИЩЕ</text>
-              <path d="M18 40h40l8 8" fill="none" stroke="rgba(150,170,255,.25)"/><text x="18" y="34" font-family="JetBrains Mono" font-size="11" fill="#6E7891">МОЩН 3</text>
-              <path d="M302 40h-40l-8 8" fill="none" stroke="rgba(150,170,255,.25)"/><text x="302" y="34" text-anchor="end" font-family="JetBrains Mono" font-size="11" fill="#6E7891">УСК 2</text>
-              <path d="M18 150h40l8-8" fill="none" stroke="rgba(150,170,255,.25)"/><text x="18" y="166" font-family="JetBrains Mono" font-size="11" fill="#6E7891">ЁМК 2</text>
-              <path d="M302 150h-40l-8-8" fill="none" stroke="rgba(150,170,255,.25)"/><text x="302" y="166" text-anchor="end" font-family="JetBrains Mono" font-size="11" fill="#6E7891">ЛИМИТ 0.0055</text>
-            </svg>
+        <div class="lift glow"><div class="cut hero l" style="padding:16px 18px 20px">
+          <i class="screw" style="left:8px; top:8px"></i><i class="screw" style="right:8px; bottom:8px"></i>
+          <div class="sys-strip" style="padding-left:6px"><span class="t-label" style="color:var(--text-2)">Накоплено в цикле</span><span class="serial"><span class="vent"></span>SN 0412</span></div>
+          <div class="t-num-xl reflect" style="margin-top:4px; padding-left:6px">0.004218<span class="unit">TON</span></div>
+          <div class="t-sec" style="padding-left:6px; margin-top:4px">≈ 0.0005 TON в час</div>
+          <div style="position:relative; margin-top:8px; height:214px">
+            <div class="callout" style="left:0; top:6px">МОЩН<br><b>3</b></div>
+            <div class="callout r" style="right:0; top:6px">УСК<br><b>2</b></div>
+            <div class="callout" style="left:0; top:150px">ЁМК<br><b>2</b></div>
+            <div class="callout r" style="right:0; top:150px">ЛИМИТ<br><b>0.0055</b></div>
+            <div class="rx" data-rx="41" style="--s:196px"></div>
           </div>
         </div></div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
-          <div class="cut flat s" style="padding:12px 14px"><div class="t-label">До конца цикла</div><div class="t-num-m" style="margin-top:6px">07:31:04</div></div>
-          <div class="cut flat s" style="padding:12px 14px"><div class="t-label">Баланс</div><div class="t-num-m" style="margin-top:6px">1.2847 <span class="dim" style="font-size:12px">TON</span></div></div>
+          <div class="lift"><div class="cut s" style="padding:10px 14px"><div class="t-label">До конца цикла</div><div class="t-num-m">07:31:04</div></div></div>
+          <div class="lift"><div class="cut s" style="padding:10px 14px"><div class="t-label">Баланс</div><div class="t-num-m">1.2847 <span class="dim" style="font-size:12px">TON</span></div></div></div>
         </div>
-        <div class="cut flat">
-          <div class="row" style="min-height:56px"><div class="ic"><svg class="ico"><use href="#i-up"/></svg></div><div class="main"><div class="ttl">Усиление</div><div class="sub">Попытка 0.06 TON · шанс 47%</div></div><svg class="ico chev"><use href="#i-chev"/></svg></div>
-          <div class="row" style="min-height:56px"><div class="ic" style="color:var(--amber); background:var(--amber-soft)"><svg class="ico"><use href="#i-wheel"/></svg></div><div class="main"><div class="ttl">Колесо удачи</div><div class="sub">Бесплатный прокрут готов</div></div><span class="tag amber">×1</span></div>
-        </div>
+        <div class="lift"><div class="cut">
+          <div class="row" style="min-height:56px; padding:8px 14px"><div class="ic"><svg class="ico"><use href="#i-up"/></svg></div><div class="main"><div class="ttl">Усиление</div><div class="sub">Попытка 0.06 TON · шанс 47%</div></div><svg class="ico chev"><use href="#i-chev"/></svg></div>
+          <div class="row" style="min-height:56px; padding:8px 14px"><div class="ic amb"><svg class="ico"><use href="#i-wheel"/></svg></div><div class="main"><div class="ttl">Колесо удачи</div><div class="sub">Бесплатный прокрут готов</div></div><span class="tag amber">×1</span></div>
+        </div></div>
       </div>
-      <div style="position:absolute; left:16px; right:16px; bottom:88px; z-index:4" class="glow"><button class="btn btn-primary btn-block" style="height:50px">Собрать <span class="k">0.0042 TON</span></button></div>
-      <div class="tabbar">
+      <div class="cta"><span class="spill glow"><button class="btn btn-primary btn-block">Собрать <span class="k">0.0042 TON</span></button></span></div>
+      <div class="dock lift l2"><div class="cut e2">
         <a class="on"><svg class="ico"><use href="#i-reactor"/></svg>Майнер</a>
         <a><svg class="ico"><use href="#i-tasks"/></svg>Задания</a>
         <a><svg class="ico"><use href="#i-gift"/></svg>Бонусы</a>
         <a><svg class="ico"><use href="#i-wallet"/></svg>Баланс</a>
-      </div>
+      </div></div>
     </div></div>
 
     <!-- УСИЛЕНИЕ -->
-    <div class="phone" id="ph-upgrade"><div class="screen"><div class="skyline"></div>
-      <div class="tgbar"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span style="font:700 15px var(--f-display); font-stretch:80%; letter-spacing:.12em; text-transform:uppercase">Усиление</span><span style="width:64px"></span></div>
+    <div class="phone" id="ph-upgrade"><div class="screen"><div class="city"></div>
+      <div class="tgbar"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span class="ttl">Усиление</span><span style="width:64px"></span></div>
       <div class="content">
         <div class="tabs"><span class="tab on">Попытка</span><span class="tab">История</span><span class="tab">Правила</span></div>
         <div>
-          <div class="sys-strip" style="margin:4px 0 8px"><span class="t-label">01 · Какой параметр выпадет</span><span class="t-sys">ВЕСА</span></div>
+          <div class="sys-strip" style="margin-bottom:8px"><span class="t-label">01 · Какой параметр выпадет</span><span class="t-sys">ВЕСА</span></div>
           <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px">
             <div class="stat"><div class="k">Мощн</div><div class="v">3</div><div class="p">25%</div></div>
             <div class="stat focus"><div class="k">Ёмк</div><div class="v">2</div><div class="p">38%</div></div>
@@ -459,162 +612,487 @@ svg { display: block; }
             <div class="stat block"><div class="k">Удача</div><div class="v">1</div><div class="p">0%</div></div>
             <div class="stat"><div class="k">Стаб</div><div class="v">2</div><div class="p">17%</div></div>
           </div>
-          <div style="display:flex; gap:8px; margin-top:8px"><span class="tag neon">Фокус · Ёмк</span><span class="tag bad">Запрет · Удача</span></div>
         </div>
-        <div class="glow"><div class="cut hero" style="padding:16px 18px">
-          <span class="hud-corners"></span>
-          <div class="sys-strip"><span class="t-label" style="color:var(--text-2)">02 · Шанс успеха</span><span class="t-sys">УР 2 → 3</span></div>
-          <div class="t-num-xl" style="margin-top:8px; font-size:52px">47<span class="unit" style="font-size:20px">%</span></div>
-          <div style="position:relative; margin-top:14px; height:40px">
-            <div style="position:absolute; left:0; right:0; top:8px; height:14px; background: linear-gradient(90deg, rgba(43,245,255,.22) 0 47%, rgba(255,46,126,.14) 47% 100%)"></div>
-            <div style="position:absolute; left:0; width:47%; top:8px; height:2px; background:var(--neon); box-shadow:0 0 8px var(--neon)"></div>
-            <div style="position:absolute; left:47%; right:0; top:20px; height:2px; background:var(--magenta); opacity:.7"></div>
-            <div style="position:absolute; left:0; right:0; top:26px" class="ticks"></div>
-            <div style="position:absolute; left:calc(47% - 1px); top:0; width:2px; height:32px; background:#fff; box-shadow:0 0 8px #fff"></div>
+        <div class="lift glow"><div class="cut hero" style="padding:14px 16px 16px">
+          <i class="screw" style="left:8px; top:8px"></i><i class="screw" style="right:8px; bottom:8px"></i>
+          <div class="sys-strip" style="padding-left:6px"><span class="t-label" style="color:var(--text-2)">02 · Шанс успеха</span><span class="t-sys">УР 2 → 3</span></div>
+          <div data-gauge="47" style="margin-top:4px"></div>
+          <div class="sys-strip" style="margin-top:4px; align-items:flex-end">
+            <div class="t-num-xl reflect" style="font-size:48px; line-height:48px">47<span class="unit" style="font-size:20px">%</span></div>
+            <div style="text-align:right"><div class="t-sys" style="color:var(--neon)">■ УСПЕХ 47%</div><div class="t-sys" style="color:var(--magenta); margin-top:4px">■ СГОРАНИЕ 53%</div></div>
           </div>
-          <div class="sys-strip"><span class="t-sys" style="color:var(--neon)">УСПЕХ</span><span class="t-sys" style="color:var(--magenta)">СГОРАНИЕ</span></div>
-          <div class="t-sec" style="margin-top:8px">При провале стоимость попытки сгорает полностью.</div>
+          <div class="t-sec" style="margin-top:12px">При провале стоимость попытки сгорает полностью.</div>
         </div></div>
-        <div class="cut flat s">
-          <div class="row" style="min-height:46px"><div class="main sub">Стоимость попытки</div><div class="val">0.0600 TON</div></div>
-          <div class="row" style="min-height:46px"><div class="main sub">Баланс после</div><div class="val">1.2247 TON</div></div>
-        </div>
+        <div class="lift"><div class="cut s">
+          <div class="row" style="min-height:44px"><div class="main sub">Стоимость попытки</div><div class="val">0.0600 TON</div></div>
+          <div class="row" style="min-height:44px"><div class="main sub">Баланс после</div><div class="val">1.2247 TON</div></div>
+          <div class="row" style="min-height:44px"><div class="main sub">Бесплатная попытка</div><div class="val"><span class="tag neutral">Завтра в 09:00</span></div></div>
+        </div></div>
       </div>
-      <div class="mainbtn"><span class="glow" style="display:block"><button class="btn btn-primary">Попытка за <span class="k">0.06 TON</span></button></span></div>
+      <div class="mainbar"><span class="spill glow"><button class="btn btn-primary">Попытка за <span class="k">0.06 TON</span></button></span></div>
     </div></div>
 
     <!-- КАБИНЕТ -->
-    <div class="phone" id="ph-owner"><div class="screen"><div class="skyline"></div>
-      <div class="tgbar"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span style="font:700 15px var(--f-display); font-stretch:80%; letter-spacing:.12em; text-transform:uppercase">Кабинет</span><span class="tag amber">Владелец</span></div>
-      <div class="content" style="gap:10px">
+    <div class="phone" id="ph-owner"><div class="screen"><div class="city"></div>
+      <div class="tgbar"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span class="ttl">Кабинет</span><span class="tag amber">Владелец</span></div>
+      <div class="content" style="gap:12px">
         <div class="seg-line"><span class="on">Экономика</span><span>Обзор</span><span>Промо</span><span>Деплой</span></div>
         <div class="sys-strip"><span class="t-label">Майнер · 6 параметров</span><span class="t-sys">ОБНОВЛЕНО 19:20</span></div>
-        <div class="cut flat">
+        <div class="lift"><div class="cut">
           <div class="row"><div class="main"><div class="ttl">Цена попытки усиления</div><div class="sub">Базовая стоимость попытки</div></div><div class="val">0.05</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
           <div class="row"><div class="main"><div class="ttl">Шансы статов</div><div class="sub">Какой стат выпадет</div></div><div class="val" style="font-size:13px">25·25·20…</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
           <div class="row"><div class="main"><div class="ttl">Шанс успеха</div><div class="sub">Базовый и минимальный</div></div><div class="val">55%</div><svg class="ico chev"><use href="#i-chev"/></svg></div>
-        </div>
+        </div></div>
       </div>
       <div class="scrim" style="top:54px; z-index:5"></div>
-      <div class="sheet" style="z-index:6; padding-bottom:26px">
+      <div class="sheet-shade" style="z-index:5; bottom:452px"></div>
+      <div class="sheet" style="z-index:6; padding-bottom:28px">
         <div class="grab"></div>
         <div class="sys-strip"><span class="t-label">Майнер · усиление</span><span class="t-sys">ИЗМЕНЕНО 2 ДНЯ НАЗАД</span></div>
-        <div class="t-title" style="margin-top:6px; font-size:22px">Шанс успеха усиления</div>
-        <p class="t-sec" style="margin-top:6px">С какой вероятностью попытка повышает уровень стата. Чем выше уровень, тем ниже шанс, но не меньше минимума.</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px">
+        <div class="t-title" style="margin-top:4px; font-size:22px">Шанс успеха усиления</div>
+        <p class="t-sec" style="margin-top:8px">С какой вероятностью попытка повышает уровень стата. Чем выше уровень, тем ниже шанс, но не меньше минимума.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px">
           <div class="field"><label>Базовый</label><div class="input focus"><span>55<span class="caret"></span></span><span class="suffix">%</span></div></div>
           <div class="field"><label>Минимум</label><div class="input"><span>15</span><span class="suffix">%</span></div></div>
         </div>
-        <div class="cut flat s" style="padding:12px 14px; margin-top:12px; --fill: var(--bg-sunken)">
+        <div class="cut e0 s" style="padding:12px 14px; margin-top:12px">
           <div class="t-label">Предпросмотр</div>
           <div class="sys-strip t-sec" style="margin-top:8px"><span>ур 1 <b class="neon" style="font-family:var(--f-mono)">55%</b></span><span>ур 5 <b class="neon" style="font-family:var(--f-mono)">47%</b></span><span>ур 20 <b class="neon" style="font-family:var(--f-mono)">15%</b></span></div>
         </div>
-        <div style="display:flex; gap:10px; margin-top:14px"><button class="btn btn-secondary" style="flex:1">Отмена</button><button class="btn btn-primary" style="flex:1.4">Сохранить</button></div>
-        <p class="help" style="margin-top:8px; text-align:center">Было 55% / 15% · применится сразу</p>
+        <div style="display:flex; gap:12px; margin-top:16px"><span class="lift" style="flex:1; display:block"><button class="btn btn-secondary btn-block">Отмена</button></span><span class="spill" style="flex:1.4"><button class="btn btn-primary btn-block">Сохранить</button></span></div>
+        <p class="help" style="margin-top:12px; text-align:center">Было 55% / 15% · применится сразу</p>
       </div>
     </div></div>
   </div>
 </section>
-
 <!-- ======================= 04 ======================= -->
 <section class="board" id="s4" data-theme="dark">
   <div class="sec-no">04 // ДВИЖЕНИЕ · ДНЕВНОЙ HUD</div>
   <h2 class="sec">Фирменные <em>моменты</em></h2>
   <p class="sec-ru">Четыре момента, когда неон оживает. Остальное время интерфейс спокоен. Только transform и opacity, вибрация Telegram, бюджет на каждый.</p>
-  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:18px; margin-top:24px">
-    <div class="cut" style="padding:22px">
+  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:20px; margin-top:24px">
+    <div class="lift"><div class="cut" style="padding:22px">
       <div class="t-label neon" style="color:var(--neon)">A · Неон зажигается</div>
-      <div style="display:flex; gap:14px; align-items:flex-end; margin:16px 0">
+      <div style="display:flex; gap:16px; align-items:flex-end; margin:16px 0">
         <span class="t-num-xl" style="font-size:34px; opacity:.15; text-shadow:none">0.0042</span>
         <span class="t-num-xl" style="font-size:34px; opacity:.6; text-shadow:none">0.0042</span>
         <span class="t-num-xl" style="font-size:34px; opacity:.25; text-shadow:none">0.0042</span>
-        <span class="t-num-xl" style="font-size:34px">0.0042</span>
+        <span class="t-num-xl reflect" style="font-size:34px">0.0042</span>
       </div>
       <div class="t-sys" style="display:flex; gap:40px"><span>0 мс</span><span>60</span><span>120</span><span>380 · горит</span></div>
-      <p class="t-sec" style="margin-top:12px">При первом открытии экрана за сессию главная цифра и кромка героя «зажигаются» как вывеска: 3 вспышки и ровный свет. Лёгкая вибрация в момент «зажглось». Повторно — просто показ.</p>
-      <p class="help" style="margin-top:10px">Бюджет: 380 мс, только opacity, 1 раз на экран за сессию.</p>
-    </div>
-    <div class="cut" style="padding:22px">
+      <p class="t-sec" style="margin-top:12px">При первом открытии экрана за сессию главная цифра, кромка героя и ядро реактора «зажигаются» как вывеска: 3 вспышки и ровный свет. Перелив на панель появляется вместе со светом. Лёгкая вибрация в момент «зажглось».</p>
+      <p class="help" style="margin-top:8px">Бюджет: 380 мс, только opacity слоёв света, 1 раз на экран за сессию.</p>
+    </div></div>
+    <div class="lift"><div class="cut" style="padding:22px">
       <div class="t-label neon" style="color:var(--neon)">B · Расшифровка суммы</div>
-      <div style="font:700 34px var(--f-mono); margin:16px 0; display:flex; gap:0">
+      <div style="font:700 34px var(--f-mono); margin:16px 0; display:flex">
         <span style="color:var(--neon-core); text-shadow:var(--halo-neon)">1.28</span><span style="color:var(--text-3)">#</span><span style="color:var(--neon); opacity:.7">Ж</span><span style="color:var(--text-3)">7</span><span style="color:var(--neon); opacity:.5">%</span>
-        <span class="unit" style="font-size:15px; align-self:center">TON</span><span class="tag ok" style="margin-left:14px; align-self:center">+0.0042</span>
+        <span class="unit" style="font-size:15px; align-self:center">TON</span><span class="tag ok" style="margin-left:16px; align-self:center">+0.0042</span>
       </div>
-      <p class="t-sec">После «Собрать» дуга хранилища стекает к нулю, а новый баланс «расшифровывается»: разряды перебирают символы и фиксируются слева направо. Вибрация impact medium в начале, success в конце, затем тост.</p>
-      <p class="help" style="margin-top:10px">Бюджет: 600 мс, меняется только текст, 12 кадров/с. Живой счётчик майнера — без расшифровки, тихий одометр 4 раза в секунду.</p>
-    </div>
-    <div class="cut" style="padding:22px">
+      <p class="t-sec">После «Собрать» дуга реактора стекает к нулю, ядро на миг вспыхивает ярче и гаснет до «покоя», а новый баланс «расшифровывается»: разряды перебирают символы и фиксируются слева направо. Вибрация impact medium в начале, success в конце, затем тост.</p>
+      <p class="help" style="margin-top:8px">Бюджет: 600 мс, меняется только текст, 12 кадров/с. Живой счётчик — тихий одометр 4 раза в секунду.</p>
+    </div></div>
+    <div class="lift"><div class="cut" style="padding:22px">
       <div class="t-label amber" style="color:var(--amber)">C · Прогон усиления</div>
-      <div style="display:flex; gap:14px; margin:14px 0; align-items:center">
-        <div style="flex:1; display:grid; gap:6px">
-          <div class="cut s" style="--edge: var(--amber); --fill: color-mix(in srgb, var(--amber) 10%, var(--surface-1)); padding:10px 12px"><div class="sys-strip"><span class="t-label amber" style="color:var(--amber)">Успех</span><span class="t-num-m amber" style="color:var(--amber-core)">ЁМК 2 → 3</span></div></div>
-          <div class="cut s" style="--edge: var(--magenta); --fill: color-mix(in srgb, var(--magenta) 9%, var(--surface-1)); padding:10px 12px; position:relative; overflow:hidden">
-            <div class="sys-strip"><span class="t-label mag" style="color:var(--magenta)">Сгорело</span><span class="t-num-m" style="color:var(--magenta)">−0.06 TON</span></div>
-            <div style="position:absolute; left:30%; right:10%; top:13px; height:5px; background:var(--magenta); opacity:.35; transform:translateX(6px)"></div>
-          </div>
+      <div style="display:grid; gap:8px; margin:16px 0">
+        <div class="cut s" style="--edge: linear-gradient(180deg, var(--amber-core), var(--amber) 40%, rgba(255,181,71,.4)); --fill: radial-gradient(70% 120% at 50% 100%, rgba(255,181,71,.22), transparent 70%), var(--mat-1); padding:10px 12px"><div class="sys-strip"><span class="t-label amber" style="color:var(--amber)">Успех</span><span class="t-num-m amber" style="color:var(--amber-core)">ЁМК 2 → 3</span></div></div>
+        <div class="cut s" style="--edge: linear-gradient(180deg, var(--magenta), rgba(255,46,126,.35)); --fill: radial-gradient(70% 120% at 50% 100%, rgba(255,46,126,.16), transparent 70%), var(--mat-1); padding:10px 12px; overflow:hidden">
+          <div class="sys-strip"><span class="t-label mag" style="color:var(--magenta)">Сгорело</span><span class="t-num-m" style="color:var(--magenta)">−0.06 TON</span></div>
+          <div style="position:absolute; left:30%; right:10%; top:13px; height:5px; background:var(--magenta); opacity:.35; transform:translateX(6px)"></div>
         </div>
       </div>
-      <p class="t-sec">Такт 1: подсветка сканирует статы и тормозит на выпавшем, щелчок selection на каждом шаге. Такт 2: стрелка пробегает шкалу. Успех — натриевая вывеска «УСПЕХ» зажигается, уровень перекатывается, вибрация success. Провал — 2 кадра глитч-сдвига полосой маджента, панель гаснет, вибрация error.</p>
-      <p class="help" style="margin-top:10px">Бюджет: до 2.2 с, пропуск тапом, результат с сервера заранее. Глитч — только здесь.</p>
-    </div>
-    <div class="cut" style="padding:22px">
+      <p class="t-sec">Такт 1: подсветка сканирует статы и тормозит на выпавшем, щелчок selection на каждом шаге. Такт 2: стрелка циферблата пробегает шкалу с инерцией и лёгким перелётом. Успех — натриевая вывеска «УСПЕХ» зажигается и заливает панель тёплым светом, вибрация success. Провал — 2 кадра глитч-сдвига полосой маджента, панель гаснет, вибрация error.</p>
+      <p class="help" style="margin-top:8px">Бюджет: до 2.2 с, пропуск тапом, результат с сервера заранее. Глитч — только здесь.</p>
+    </div></div>
+    <div class="lift"><div class="cut" style="padding:22px">
       <div class="t-label neon" style="color:var(--neon)">D · Удержание = заряд</div>
-      <span class="glow" style="display:block; margin:16px 0"><button class="btn btn-primary btn-block hold"><i></i><span>Держите, чтобы вывести</span></button></span>
-      <p class="t-sec">Деньги: вывод, отклонение заявки, правка экономики. Удерживаете 0.8 с — циан заливает кнопку как зарядка. Старт — лёгкая вибрация, полный заряд — вспышка и success. Отпустили раньше — разряд, ничего не произошло. Заменяет confirm().</p>
-      <p class="help" style="margin-top:10px">Бюджет: одна полоса (scaleX), 800 мс.</p>
-    </div>
+      <span class="spill glow" style="margin:16px 0"><button class="btn btn-primary btn-block hold"><i></i><span>Держите, чтобы вывести</span></button></span>
+      <p class="t-sec" style="margin-top:24px">Деньги: вывод, отклонение заявки, правка экономики. Удерживаете 0.8 с — яркий циан заливает кнопку как зарядка, фронт заряда светится. Старт — лёгкая вибрация, полный заряд — вспышка и success. Отпустили раньше — разряд, ничего не произошло. Заменяет confirm().</p>
+      <p class="help" style="margin-top:8px">Бюджет: одна полоса (scaleX), 800 мс.</p>
+    </div></div>
   </div>
 
   <div class="cap">Светлая тема Telegram → «Дневной HUD»</div>
-  <div style="display:flex; gap:30px; justify-content:center; align-items:center">
-    <div class="phone" data-theme="light" style="height:468px; background:linear-gradient(150deg,#dfe3ea,#aab1bd 40%,#eef0f4)"><div class="screen"><div class="skyline"></div>
-      <div class="tgbar"><span class="brand">TON<b>/</b>NEXUS</span><span class="tag ok">Работает</span></div>
+  <div style="display:flex; gap:32px; justify-content:center; align-items:center">
+    <div class="phone" data-theme="light" style="height:640px; background:linear-gradient(150deg,#dfe3ea,#aab1bd 40%,#eef0f4)"><div class="screen"><div class="city"></div>
+      <div class="tgbar"><span class="lockup"><svg class="mark" style="color:var(--neon)"><use href="#logo"/></svg><span class="brand">TON<b>/</b>NEXUS</span></span><span class="tag ok">Работает</span></div>
       <div class="content">
         <div class="sys-strip t-sys"><span>RX-01 // РЕАКТОР</span><span>ЦИКЛ 05:12 / 12:00</span></div>
-        <div class="glow"><div class="cut hero l" style="padding:20px">
-          <span class="hud-corners"></span>
-          <div class="t-label" style="color:var(--text-2)">Накоплено в цикле</div>
-          <div class="t-num-xl" style="margin-top:10px">0.004218<span class="unit">TON</span></div>
-          <div class="bar" style="margin-top:14px"><i style="width:41%; filter:none"></i></div>
+        <div class="lift"><div class="cut hero l" style="padding:16px 18px 20px">
+          <i class="screw" style="left:8px; top:8px"></i><i class="screw" style="right:8px; bottom:8px"></i>
+          <div class="sys-strip" style="padding-left:6px"><span class="t-label" style="color:var(--text-2)">Накоплено в цикле</span><span class="serial"><span class="vent"></span>SN 0412</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
+            <div style="padding-left:6px"><div class="t-num-xl" style="font-size:36px">0.004218</div><div class="t-sec">≈ 0.0005 TON в час</div></div>
+            <div class="rx" data-rx="41" data-noplate="1" style="--s:118px; margin:0"></div>
+          </div>
+          <div class="bar" style="margin-top:12px"><i style="width:41%"></i></div>
           <div class="sys-strip" style="margin-top:8px"><span class="t-sec">41% хранилища</span><span class="t-sec">до 06:12</span></div>
         </div></div>
-        <div class="cut flat">
+        <div class="lift"><div class="cut">
           <div class="row"><div class="ic"><svg class="ico"><use href="#i-up"/></svg></div><div class="main"><div class="ttl">Усиление</div><div class="sub">Попытка 0.06 TON · шанс 47%</div></div><svg class="ico chev"><use href="#i-chev"/></svg></div>
-        </div>
-        <button class="btn btn-primary btn-block">Собрать <span class="k">0.0042 TON</span></button>
+        </div></div>
       </div>
+      <div class="cta"><span class="spill"><button class="btn btn-primary btn-block">Собрать <span class="k">0.0042 TON</span></button></span></div>
+      <div class="dock lift l2"><div class="cut e2">
+        <a class="on"><svg class="ico"><use href="#i-reactor"/></svg>Майнер</a>
+        <a><svg class="ico"><use href="#i-tasks"/></svg>Задания</a>
+        <a><svg class="ico"><use href="#i-gift"/></svg>Бонусы</a>
+        <a><svg class="ico"><use href="#i-wallet"/></svg>Баланс</a>
+      </div></div>
     </div></div>
     <div style="width:540px; display:grid; gap:12px" class="t-body dim">
       <p><b style="color:#E6EBF5">Рекомендация: следовать теме Telegram.</b> Принудительная ночь на ярком солнце и в светлом Telegram выглядит как «чёрная дыра» и хуже читается.</p>
-      <p>— В «Дневном HUD» остаются форма (срезы), шрифты, HUD-метки и роли цветов. Неон становится «краской»: глубокий циан, тёмный натрий, тёмная маджента, контраст от 4.5:1.</p>
-      <p>— Свечения, развёртка и тени выключаются токенами, компоненты не меняются.</p>
-      <p>— Вспышки и глитч в светлой теме заменяются короткой сменой заливки: смысл тот же, без «свечения на белом».</p>
+      <p>— Глубина сохраняется: город становится дневной дымкой, панели — белый матовый пластик с фаской, тени-подложки серо-синие и мягкие.</p>
+      <p>— Неон становится «краской»: глубокий циан, тёмный натрий, тёмная маджента, контраст от 4.5:1. Свечения, отражения цифр и развёртка выключаются токенами, компоненты не меняются.</p>
+      <p>— Реактор в светлой теме — «стекло на солнце»: ядро без ореола, но с бликом и объёмом.</p>
     </div>
   </div>
 </section>
+<!-- ======================= 05 ======================= -->
+<section class="board" id="s5" data-theme="dark">
+  <div class="sec-no">05 // БРЕНД · ЗАСТАВКА · ЗНАКОМСТВО</div>
+  <h2 class="sec">Узел <em>сети</em></h2>
+  <p class="sec-ru">Знак «Узел»: срезанная плитка — та же форма, что у панелей, — и буква N из неоновых трубок, концы которой — узлы сети TON. Работает от 16 px до аватара бота.</p>
 
+  <div class="grid" style="grid-template-columns: 1.3fr 1fr 1fr; gap:20px; margin-top:24px">
+    <div class="lift glow"><div class="cut hero l" style="height:220px; display:grid; place-items:center">
+      <i class="screw" style="left:10px; top:10px"></i><i class="screw" style="right:10px; bottom:10px"></i>
+      <div class="lockup" style="gap:16px">
+        <svg style="width:72px; height:72px; color:var(--neon-core); filter: drop-shadow(0 0 6px var(--neon)) drop-shadow(0 0 18px rgba(43,245,255,.5))"><use href="#logo"/></svg>
+        <div><div style="font:800 44px/44px var(--f-display); font-stretch:75%; letter-spacing:.18em">TON<span class="neon" style="color:var(--neon); text-shadow:var(--halo-neon)">/</span>NEXUS</div>
+        <div class="t-sys" style="margin-top:8px; letter-spacing:.32em">СЕТЬ · МАЙНИНГ · ЗАДАНИЯ</div></div>
+      </div>
+    </div></div>
+    <div class="lift"><div class="cut" style="height:220px; display:grid; grid-template-columns:1fr 1fr; align-items:center; justify-items:center">
+      <div style="width:112px; height:112px; border-radius:50%; display:grid; place-items:center; background: radial-gradient(circle at 50% 40%, rgba(43,245,255,.22), transparent 60%), radial-gradient(circle at 50% 0, #1a2236, #07090f 70%); box-shadow: inset 0 0 0 1.5px rgba(43,245,255,.45), inset 0 2px 0 rgba(255,255,255,.12), 0 8px 20px rgba(0,0,0,.6)">
+        <svg style="width:58px; height:58px; color:var(--neon-core); filter: drop-shadow(0 0 5px var(--neon))"><use href="#logo"/></svg></div>
+      <div style="display:grid; gap:16px; justify-items:center">
+        <svg style="width:40px; height:40px; color:var(--neon)"><use href="#logo"/></svg>
+        <svg style="width:24px; height:24px; color:var(--neon)"><use href="#logo"/></svg>
+        <svg style="width:16px; height:16px; color:var(--neon)"><use href="#logo"/></svg>
+      </div>
+      <div class="t-sys" style="grid-column:1/-1; margin-top:-24px">АВАТАР БОТА · 40 · 24 · 16 PX</div>
+    </div></div>
+    <div data-theme="light"><div class="cut" style="height:220px; display:grid; place-items:center; --fill: var(--mat-1)">
+      <div style="display:grid; gap:20px; justify-items:center">
+        <span class="lockup" style="gap:12px"><svg style="width:44px;height:44px; color:var(--neon)"><use href="#logo"/></svg><span style="font:800 28px var(--f-display); font-stretch:75%; letter-spacing:.18em; color:var(--text)">TON<b style="color:var(--neon)">/</b>NEXUS</span></span>
+        <div style="position:relative; padding:14px; outline:1px dashed rgba(10,20,50,.3)"><svg style="width:36px;height:36px; color:var(--text); display:block"><use href="#logo"/></svg></div>
+        <div class="t-sys">ОХРАННОЕ ПОЛЕ = ½ ЗНАКА · МИН. 16 PX</div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="cap">Иконки · сетка 24, линия 1.6, срезанные углы, прямые концы</div>
+  <div class="lift"><div class="cut flat" style="padding:20px 24px; display:grid; grid-template-columns:repeat(12,1fr); gap:20px 8px" id="icon-grid"></div></div>
+
+  <div class="cap">Заставка и знакомство · 3 экрана</div>
+  <div class="phones" style="gap:16px">
+    <!-- SPLASH -->
+    <div><div class="phone mini"><div class="screen"><div class="city full"></div>
+      <div style="position:absolute; inset:0; background: radial-gradient(60% 34% at 50% 44%, rgba(43,245,255,.16), transparent 70%), linear-gradient(180deg, rgba(6,7,12,.2), rgba(6,7,12,.75) 70%, var(--bg));"></div>
+      <div style="position:absolute; left:0; right:0; top:250px; display:grid; justify-items:center; gap:24px; z-index:2">
+        <svg style="width:112px; height:112px; color:var(--neon-core); filter: drop-shadow(0 0 8px var(--neon)) drop-shadow(0 0 30px rgba(43,245,255,.55))"><use href="#logo"/></svg>
+        <div style="font:800 40px/40px var(--f-display); font-stretch:75%; letter-spacing:.2em">TON<span style="color:var(--neon); text-shadow:var(--halo-neon)">/</span>NEXUS</div>
+        <div class="t-body dim">Сеть TON · майнинг и задания</div>
+      </div>
+      <div style="position:absolute; left:56px; right:56px; bottom:120px; z-index:2">
+        <div class="cut e0 s" style="height:8px; --c:3px"><div class="tube" style="position:absolute; left:2px; top:3px; width:64%"></div></div>
+        <div class="sys-strip t-sys" style="margin-top:12px"><span>ПОДКЛЮЧЕНИЕ К СЕТИ TON</span><span style="color:var(--neon)">64%</span></div>
+      </div>
+      <div class="t-sys" style="position:absolute; left:0; right:0; bottom:44px; text-align:center; z-index:2">v2.0 · SN NX-0412</div>
+    </div></div><div class="ph-cap">Заставка · до 1.2 с</div></div>
+
+    <!-- ONB 1 -->
+    <div><div class="phone mini"><div class="screen"><div class="city"></div>
+      <div class="tgbar" style="background:transparent; border:0"><span class="lockup"><svg class="mark" style="color:var(--neon)"><use href="#logo"/></svg><span class="brand">TON<b>/</b>NEXUS</span></span><span class="t-sec" style="color:var(--text-2)">Пропустить</span></div>
+      <div style="position:absolute; top:170px; left:0; right:0"><div class="rx" data-rx="68" data-noplate="1" style="--s:250px"></div></div>
+      <div style="position:absolute; left:24px; right:24px; top:490px">
+        <div class="t-label neon" style="color:var(--neon)">01 / 03 · Майнинг</div>
+        <div class="t-title" style="margin-top:8px; font-size:28px; line-height:32px">Реактор работает, пока вы спите</div>
+        <p class="t-body dim" style="margin-top:12px">Каждые 12 часов хранилище наполняется TON. Заходите и собирайте — один тап.</p>
+      </div>
+      <div class="onb-dots" style="position:absolute; left:24px; bottom:120px"><i class="on"></i><i></i><i></i></div>
+      <div style="position:absolute; left:24px; right:24px; bottom:36px"><span class="spill glow"><button class="btn btn-primary btn-block" style="height:52px">Далее</button></span></div>
+    </div></div><div class="ph-cap">Знакомство 1</div></div>
+
+    <!-- ONB 2 -->
+    <div><div class="phone mini"><div class="screen"><div class="city"></div>
+      <div class="tgbar" style="background:transparent; border:0"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span class="t-sec" style="color:var(--text-2)">Пропустить</span></div>
+      <div style="position:absolute; top:190px; left:24px; right:24px"><div class="lift glow"><div class="cut hero" style="padding:16px 14px 12px"><div data-gauge="62"></div>
+        <div class="sys-strip" style="margin-top:4px"><span class="t-num-l neon" style="color:var(--neon-core); text-shadow:var(--halo-neon)">62%</span><span class="t-sys">ЁМК 2 → 3</span></div></div></div></div>
+      <div style="position:absolute; left:24px; right:24px; top:490px">
+        <div class="t-label neon" style="color:var(--neon)">02 / 03 · Усиление</div>
+        <div class="t-title" style="margin-top:8px; font-size:28px; line-height:32px">Усиливайте параметры</div>
+        <p class="t-body dim" style="margin-top:12px">Попытка стоит немного TON. Шанс виден заранее — стрелка не обманывает.</p>
+      </div>
+      <div class="onb-dots" style="position:absolute; left:24px; bottom:120px"><i></i><i class="on"></i><i></i></div>
+      <div style="position:absolute; left:24px; right:24px; bottom:36px"><span class="spill glow"><button class="btn btn-primary btn-block" style="height:52px">Далее</button></span></div>
+    </div></div><div class="ph-cap">Знакомство 2</div></div>
+
+    <!-- ONB 3 -->
+    <div><div class="phone mini"><div class="screen"><div class="city"></div>
+      <div class="tgbar" style="background:transparent; border:0"><span class="back"><svg class="ico" style="width:20px;height:20px"><use href="#i-back"/></svg>Назад</span><span></span></div>
+      <div style="position:absolute; top:170px; left:24px; right:24px; display:grid; gap:16px">
+        <div class="lift"><div class="cut" style="padding:16px 18px"><div class="t-label">Баланс</div><div class="t-num-xl reflect" style="font-size:38px; margin-top:4px">1.2847<span class="unit">TON</span></div></div></div>
+        <span class="spill glow"><button class="btn btn-primary btn-block hold" style="height:52px"><i></i><span>Держите, чтобы вывести</span></button></span>
+        <div class="lift l2" style="margin-top:16px"><div class="cut e2 s toast toast-ok"><svg class="ico" style="color:var(--ok)"><use href="#i-check"/></svg><div><div class="t-body" style="font-weight:500">Заявка на вывод создана</div><div class="t-sec">Обычно до 24 часов</div></div></div></div>
+      </div>
+      <div style="position:absolute; left:24px; right:24px; top:490px">
+        <div class="t-label neon" style="color:var(--neon)">03 / 03 · Вывод</div>
+        <div class="t-title" style="margin-top:8px; font-size:28px; line-height:32px">Выводите в TON</div>
+        <p class="t-body dim" style="margin-top:12px">Деньги подтверждаются удержанием — случайный тап ничего не спишет.</p>
+      </div>
+      <div class="onb-dots" style="position:absolute; left:24px; bottom:120px"><i></i><i></i><i class="on"></i></div>
+      <div style="position:absolute; left:24px; right:24px; bottom:36px"><span class="spill glow"><button class="btn btn-primary btn-block" style="height:52px">Запустить реактор</button></span></div>
+    </div></div><div class="ph-cap">Знакомство 3</div></div>
+  </div>
+</section>
+<!-- ======================= 06 ======================= -->
+<section class="board" id="s6" data-theme="dark">
+  <div class="sec-no">06 // СОСТОЯНИЯ · ОТКЛИК</div>
+  <h2 class="sec">Каждое <em>состояние</em> нарисовано</h2>
+  <p class="sec-ru">Загрузка, пусто, ошибка, уведомления — в том же материале и с тем же светом, без «голых» экранов. Нажатия, вибрация и переходы описаны заранее.</p>
+  <div class="phones" style="gap:16px">
+    <!-- LOADING -->
+    <div><div class="phone mini"><div class="screen"><div class="city"></div>
+      <div class="tgbar"><span class="lockup"><svg class="mark" style="color:var(--neon)"><use href="#logo"/></svg><span class="brand">TON<b>/</b>NEXUS</span></span><span class="t-sys" style="color:var(--neon)">СИНХРОНИЗАЦИЯ ▮▮▮▯▯</span></div>
+      <div class="content">
+        <div class="sk" style="width:60%; height:12px"></div>
+        <div class="lift"><div class="cut" style="padding:18px; height:330px; display:grid; align-content:start; gap:12px">
+          <div class="sk" style="width:40%"></div><div class="sk" style="width:70%; height:36px"></div><div class="sk" style="width:30%"></div>
+          <div style="margin:16px auto 0; width:170px; height:170px; border-radius:50%; background: radial-gradient(circle, rgba(43,245,255,.12), transparent 40%), radial-gradient(circle, transparent 58%, rgba(150,170,255,.10) 59% 63%, transparent 64%), radial-gradient(circle, transparent 72%, rgba(150,170,255,.08) 73% 78%, transparent 79%)"></div>
+        </div></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px"><div class="cut s" style="height:64px; padding:14px"><div class="sk" style="width:60%"></div><div class="sk" style="width:80%; margin-top:10px; height:14px"></div></div><div class="cut s" style="height:64px; padding:14px"><div class="sk" style="width:50%"></div><div class="sk" style="width:70%; margin-top:10px; height:14px"></div></div></div>
+        <div class="cut" style="height:120px; padding:16px; display:grid; gap:14px"><div class="sk" style="width:80%"></div><div class="sk" style="width:55%"></div><div class="sk" style="width:70%"></div></div>
+      </div>
+      <div class="dock lift l2"><div class="cut e2"><a class="on"><svg class="ico"><use href="#i-reactor"/></svg>Майнер</a><a><svg class="ico"><use href="#i-tasks"/></svg>Задания</a><a><svg class="ico"><use href="#i-gift"/></svg>Бонусы</a><a><svg class="ico"><use href="#i-wallet"/></svg>Баланс</a></div></div>
+    </div></div><div class="ph-cap">Загрузка · скелет</div></div>
+
+    <!-- EMPTY -->
+    <div><div class="phone mini"><div class="screen"><div class="city"></div>
+      <div class="tgbar"><span class="ttl" style="margin:0 auto">Задания</span></div>
+      <div class="content">
+        <div class="tabs"><span class="tab on">Доступные</span><span class="tab">Выполнены</span></div>
+        <div class="lift" style="margin-top:40px"><div class="cut" style="padding:32px 20px">
+          <div class="state">
+            <div style="width:88px; height:88px; display:grid; place-items:center; background: radial-gradient(circle, rgba(43,245,255,.14), transparent 70%)"><svg class="ico" style="width:56px; height:56px; color:var(--neon); stroke-width:1.2"><use href="#i-empty"/></svg></div>
+            <div class="t-h" style="margin-top:8px">Пока заданий нет</div>
+            <p class="t-sec" style="max-width:260px">Новые задания появляются каждый день. Мы пришлём уведомление, когда будет что выполнить.</p>
+            <span class="lift" style="margin-top:12px; display:block"><button class="btn btn-secondary"><svg class="ico" style="width:18px;height:18px"><use href="#i-bell"/></svg>Включить уведомления</button></span>
+          </div>
+        </div></div>
+        <div class="t-label" style="margin-top:12px">Пока ждёте</div>
+        <div class="lift"><div class="cut">
+          <div class="row"><div class="ic amb"><svg class="ico"><use href="#i-wheel"/></svg></div><div class="main"><div class="ttl">Колесо удачи</div><div class="sub">Бесплатный прокрут готов</div></div><span class="tag amber">×1</span></div>
+          <div class="row"><div class="ic muted"><svg class="ico"><use href="#i-history"/></svg></div><div class="main"><div class="ttl">Выполнено всего</div><div class="sub">12 заданий</div></div><div class="val">+0.12</div></div>
+        </div></div>
+      </div>
+      <div class="dock lift l2"><div class="cut e2"><a><svg class="ico"><use href="#i-reactor"/></svg>Майнер</a><a class="on"><svg class="ico"><use href="#i-tasks"/></svg>Задания</a><a><svg class="ico"><use href="#i-gift"/></svg>Бонусы</a><a><svg class="ico"><use href="#i-wallet"/></svg>Баланс</a></div></div>
+    </div></div><div class="ph-cap">Пустое состояние</div></div>
+
+    <!-- ERROR -->
+    <div><div class="phone mini"><div class="screen"><div class="city" style="filter:saturate(.4); opacity:.6"></div>
+      <div class="tgbar"><span class="lockup"><svg class="mark" style="color:var(--text-3)"><use href="#logo"/></svg><span class="brand" style="color:var(--text-2)">TON/NEXUS</span></span><span class="tag bad">Нет связи</span></div>
+      <div class="content">
+        <div class="lift" style="margin-top:80px"><div class="cut" style="--edge: linear-gradient(160deg, var(--magenta), rgba(255,46,126,.3) 20%, rgba(190,210,255,.14) 45%, rgba(0,0,0,.8)); --fill: radial-gradient(60% 40% at 50% 30%, rgba(255,46,126,.14), transparent 70%), var(--mat-1); padding:32px 20px">
+          <div class="state">
+            <svg class="ico" style="width:56px; height:56px; color:var(--magenta); stroke-width:1.2; filter: drop-shadow(0 0 6px rgba(255,46,126,.6))"><use href="#i-offline"/></svg>
+            <div class="t-h" style="margin-top:8px">Реактор не отвечает</div>
+            <p class="t-sec" style="max-width:270px">Нет соединения с сервером. Накопление не потеряется — майнер продолжает работать.</p>
+            <div class="t-sys" style="color:var(--magenta)">ОШИБКА 503 · ПОВТОР ЧЕРЕЗ 5 С</div>
+            <span class="spill" style="margin-top:12px"><button class="btn btn-primary"><svg class="ico" style="width:18px;height:18px"><use href="#i-refresh"/></svg>Повторить</button></span>
+          </div>
+        </div></div>
+        <div class="t-label" style="margin-top:12px">Последние данные · 2 мин назад</div>
+        <div class="lift" style="opacity:.6"><div class="cut s">
+          <div class="row" style="min-height:48px"><div class="main sub">Накоплено</div><div class="val">0.0042 TON</div></div>
+          <div class="row" style="min-height:48px"><div class="main sub">Баланс</div><div class="val">1.2847 TON</div></div>
+        </div></div>
+      </div>
+      <div class="dock lift l2"><div class="cut e2"><a class="on"><svg class="ico"><use href="#i-reactor"/></svg>Майнер</a><a><svg class="ico"><use href="#i-tasks"/></svg>Задания</a><a><svg class="ico"><use href="#i-gift"/></svg>Бонусы</a><a><svg class="ico"><use href="#i-wallet"/></svg>Баланс</a></div></div>
+    </div></div><div class="ph-cap">Ошибка сети</div></div>
+
+    <!-- TOASTS -->
+    <div><div class="phone mini"><div class="screen"><div class="city"></div>
+      <div class="tgbar"><span class="ttl" style="margin:0 auto">Уведомления</span></div>
+      <div class="content" style="gap:16px; padding-top:20px">
+        <div class="t-label">Тосты: сверху, по одному, 3 с</div>
+        <div class="lift l2"><div class="cut e2 s toast toast-ok"><svg class="ico" style="color:var(--ok)"><use href="#i-check"/></svg><div><div class="t-body" style="font-weight:500">Собрано 0.0042 TON</div><div class="t-sec">Баланс 1.2889 TON</div></div></div></div>
+        <div class="lift l2"><div class="cut e2 s toast toast-amb"><svg class="ico" style="color:var(--amber)"><use href="#i-gift"/></svg><div><div class="t-body" style="font-weight:500">Награда за задание</div><div class="t-sec"><span style="font-family:var(--f-mono); color:var(--amber)">+0.01 TON</span> зачислено</div></div></div></div>
+        <div class="lift l2"><div class="cut e2 s toast toast-bad"><svg class="ico" style="color:var(--magenta)"><use href="#i-alert"/></svg><div><div class="t-body" style="font-weight:500">Не хватает TON</div><div class="t-sec">Нужно ещё 0.02 TON для попытки</div></div></div></div>
+        <div class="lift l2"><div class="cut e2 s toast toast-info"><svg class="ico" style="color:var(--neon)"><use href="#i-copy"/></svg><div><div class="t-body" style="font-weight:500">Адрес скопирован</div><div class="t-sec">UQB4…9xK2</div></div></div></div>
+        <div class="lift glow" style="margin-top:8px"><div class="cut e2" style="--edge: linear-gradient(160deg, var(--ok), rgba(93,255,176,.3) 20%, rgba(190,210,255,.14) 45%, rgba(0,0,0,.8)); --fill: radial-gradient(60% 50% at 50% 20%, rgba(93,255,176,.14), transparent 70%), var(--mat-2); padding:20px">
+          <div class="state" style="padding:0">
+            <svg class="ico" style="width:44px; height:44px; color:var(--ok); stroke-width:2"><use href="#i-check"/></svg>
+            <div class="t-h">Заявка создана</div>
+            <div class="t-num-m">0.50 TON <span class="dim" style="font-size:12px">→ UQB4…9xK2</span></div>
+            <p class="t-sec">Обычно до 24 часов</p>
+          </div></div></div>
+        <p class="help">Успех — мята, награда — натрий, ошибка — маджента, информация — циан. Тост не закрывает главную кнопку и док.</p>
+      </div>
+    </div></div><div class="ph-cap">Тосты</div></div>
+  </div>
+
+  <div class="cap">Нажатия · обычное → нажато</div>
+  <div class="lift"><div class="cut flat" style="padding:22px; display:grid; grid-template-columns: 1fr 1fr 1fr 1.3fr; gap:20px; align-items:center">
+    <div style="display:grid; gap:12px"><span class="spill"><button class="btn btn-primary btn-block">Собрать</button></span><span class="spill"><button class="btn btn-primary btn-block pressed">Собрать</button></span><div class="t-sys">КНОПКА · 97% + СВЕТ ВНУТРИ</div></div>
+    <div style="display:grid; gap:12px"><span class="lift" style="display:block"><button class="btn btn-secondary btn-block">Усилить</button></span><span class="lift" style="display:block"><button class="btn btn-secondary btn-block pressed">Усилить</button></span><div class="t-sys">ВТОРИЧНАЯ · 97% + ЦИАН-КРОМКА</div></div>
+    <div style="display:grid; gap:12px"><div class="tabs"><span class="tab on">Колесо</span><span class="tab">Чекин</span></div><div class="dock" style="position:relative; left:0; right:0; bottom:0; height:60px"><div class="cut e2"><a class="on"><svg class="ico"><use href="#i-reactor"/></svg>Майнер</a><a><svg class="ico"><use href="#i-tasks"/></svg>Задания</a></div></div><div class="t-sys">ВКЛАДКА И ДОК · АКТИВНОЕ СВЕТИТСЯ</div></div>
+    <div style="display:grid; gap:12px"><div class="cut"><div class="row"><div class="ic"><svg class="ico"><use href="#i-tasks"/></svg></div><div class="main"><div class="ttl">Строка</div><div class="sub">обычная</div></div><svg class="ico chev"><use href="#i-chev"/></svg></div><div class="row pressed"><div class="ic"><svg class="ico"><use href="#i-tasks"/></svg></div><div class="main"><div class="ttl">Строка</div><div class="sub">нажата · подсветка слева</div></div><svg class="ico chev"><use href="#i-chev"/></svg></div></div><div class="t-sys">МИН. ЦЕЛЬ 44×44 · ШАГ СЕТКИ 8</div></div>
+  </div></div>
+
+  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:24px">
+    <div>
+      <div class="cap">Карта вибрации · Telegram HapticFeedback</div>
+      <div class="cut flat" style="padding:4px 20px 8px"><table class="spec">
+        <tr><td>Тап по главной кнопке</td><td>impact · light</td></tr>
+        <tr><td>Вкладка, выбор, шаг прогона</td><td>selectionChanged</td></tr>
+        <tr><td>Собрать</td><td>medium → success</td></tr>
+        <tr><td>Усиление: успех / провал</td><td>success / error</td></tr>
+        <tr><td>Удержание: старт / заряд</td><td>light / success</td></tr>
+        <tr><td>Выигрыш колеса</td><td>heavy → success</td></tr>
+        <tr><td>Ошибка формы</td><td>warning</td></tr>
+        <tr><td>Ошибка сети (тост)</td><td>error</td></tr>
+        <tr><td>Открытие шторки</td><td>impact · soft</td></tr>
+      </table></div>
+    </div>
+    <div>
+      <div class="cap">Переходы · только transform и opacity</div>
+      <div class="cut flat" style="padding:4px 20px 8px"><table class="spec">
+        <tr><td>Вглубь (push)</td><td>новый +24 px справа и проявление, 240 мс; старый −8 px, яркость 60%</td></tr>
+        <tr><td>Назад</td><td>зеркально, 200 мс</td></tr>
+        <tr><td>Вкладки дока</td><td>смена 160 мс со сдвигом 8 px</td></tr>
+        <tr><td>Шторка</td><td>снизу 260 мс, фон 200 мс</td></tr>
+        <tr><td>Тост</td><td>сверху 12 px + проявление, 200 / 160 мс</td></tr>
+        <tr><td>Заставка → майнер</td><td>растворение 240 мс, затем момент A</td></tr>
+        <tr><td>Знакомство</td><td>свайп, фон с параллаксом 0.5</td></tr>
+        <tr><td>Меньше движения</td><td>только проявление 120 мс, кольца стоят</td></tr>
+      </table></div>
+    </div>
+  </div>
+</section>
+<style>
+.onb-dots { display: flex; gap: 6px; }
+.onb-dots i { width: 14px; height: 6px; background: rgba(150,170,255,.22); clip-path: polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100% - 3px)); }
+.onb-dots i.on { width: 32px; background: var(--neon-core); box-shadow: 0 0 8px var(--neon); filter: drop-shadow(0 0 4px var(--neon)); }
+.btn-secondary.pressed { transform: scale(.97) translateY(1px); background: linear-gradient(180deg, var(--neon), rgba(43,245,255,.4)); }
+.btn-secondary.pressed::before { background: radial-gradient(80% 100% at 50% 100%, rgba(43,245,255,.22), transparent 70%), linear-gradient(180deg, #0D1019, #141A28); box-shadow: inset 0 2px 6px rgba(0,0,0,.6); }
+.icon-cell { display: grid; justify-items: center; gap: 8px; font: 500 11px/16px var(--f-sans); color: var(--text-3); }
+.icon-cell .ico { width: 28px; height: 28px; color: var(--text); }
+.icon-cell:nth-child(-n+4) .ico { color: var(--neon); filter: drop-shadow(0 0 3px rgba(43,245,255,.6)); }
+</style>
 <script>
+const SVGNS = "http://www.w3.org/2000/svg";
+/* ---------- палитра ---------- */
 const names = [["--bg","Ночь"],["--surface-1","Панель"],["--surface-2","Шторка"],["--surface-3","Чип"],["--line-strong","Линия"],["--text","Текст"],["--text-2","Текст 2"],["--text-3","Метка"],["--neon","Циан"],["--amber","Натрий"],["--magenta","Маджента"],["--ok","Мята"],["--warn","Лимон"],["--neon-soft","Циан 12%"],["--magenta-soft","Мадж. 13%"]];
 for (const id of ["pal-dark","pal-light"]) {
   const host = document.getElementById(id); const cs = getComputedStyle(host);
   host.style.cssText = "display:grid;grid-template-columns:repeat(5,1fr);gap:10px";
   for (const [v,n] of names) {
     const val = cs.getPropertyValue(v).trim();
-    const isNeon = ["--neon","--amber","--magenta"].includes(v) && host.closest("[data-theme=light]") === null;
+    const dark = host.closest("[data-theme=light]") === null;
+    const isNeon = ["--neon","--amber","--magenta"].includes(v) && dark;
     const d = document.createElement("div");
-    d.innerHTML = `<div style="height:48px;background:${val};clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);box-shadow:inset 0 0 0 1px var(--line-strong)${isNeon ? ";filter:drop-shadow(0 0 8px "+val+")" : ""}"></div><div style="font:500 12px var(--f-sans);color:var(--text);margin-top:6px">${n}</div><div style="font:500 10.5px var(--f-mono);color:var(--text-3)">${val.replace(/\s/g,"").replace("rgba","")}</div>`;
+    d.innerHTML = `<div style="height:48px;background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,0) 40%,rgba(0,0,0,.18)),${val};clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);box-shadow:inset 0 0 0 1px var(--line-strong), inset 0 1px 0 rgba(255,255,255,.12)${isNeon ? ";filter:drop-shadow(0 0 8px "+val+")" : ""}"></div><div style="font:500 12px var(--f-sans);color:var(--text);margin-top:6px">${n}</div><div style="font:500 11px var(--f-mono);color:var(--text-3)">${val.replace(/\s/g,"").replace("rgba","")}</div>`;
     host.appendChild(d);
   }
 }
-const g = document.getElementById("ringTicks");
-if (g) for (let i = 0; i < 60; i++) {
-  const a = (i / 60) * Math.PI * 2 - Math.PI / 2, r1 = 72, r2 = i % 5 ? 68 : 64;
-  const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  l.setAttribute("x1", 160 + r1 * Math.cos(a)); l.setAttribute("y1", 92 + r1 * Math.sin(a));
-  l.setAttribute("x2", 160 + r2 * Math.cos(a)); l.setAttribute("y2", 92 + r2 * Math.sin(a));
-  l.setAttribute("stroke", i < 25 ? "#2BF5FF" : "rgba(150,170,255,.22)"); l.setAttribute("stroke-width", i % 5 ? 1 : 1.8);
-  g.appendChild(l);
+/* ---------- слой 0: ночной город (статичная SVG, размыта заранее) ---------- */
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function city(light, seed){
+  const r = rng(seed), W = 390, H = 360; let far = "", mid = "", win = "", signs = "";
+  for (let x = -10; x < W; ) { const w = 14 + r()*26, top = 120 + r()*110; far += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${H}"/>`; if (r() < .25) far += `<rect x="${(x+w/2-1).toFixed(1)}" y="${(top-18).toFixed(1)}" width="2" height="18"/>`; x += w + 2; }
+  for (let x = -6; x < W; ) { const w = 22 + r()*40, top = 170 + r()*120; mid += `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${H}"/>`;
+    if (!light) for (let wy = top + 8; wy < H - 20; wy += 9) for (let wx = x + 4; wx < x + w - 4; wx += 6) if (r() < .07) win += `<rect x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" width="2.4" height="3.2" fill="${r() < .6 ? "#FFB547" : "#7FF8FF"}" opacity="${(.35 + r()*.4).toFixed(2)}"/>`;
+    x += w + 3; }
+  if (!light) { const cols = ["#2BF5FF","#FF2E7E","#FFB547","#2BF5FF","#FF2E7E"]; for (let i = 0; i < 5; i++) { const x = 30 + r()*330, y = 160 + r()*90, v = r() < .6; signs += `<rect x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${v?3:22}" height="${v?20:3}" fill="${cols[i]}"/>`; } }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice"><defs>
+  <linearGradient id="sk" x1="0" y1="0" x2="0" y2="1">${light ? '<stop offset="0" stop-color="#EEF1F6"/><stop offset=".6" stop-color="#DCE2EB"/><stop offset="1" stop-color="#EEF1F6"/>' : '<stop offset="0" stop-color="#06070C"/><stop offset=".45" stop-color="#0B1124"/><stop offset=".72" stop-color="#121A33"/><stop offset="1" stop-color="#06070C"/>'}</linearGradient>
+  <radialGradient id="hz" cx=".5" cy=".72" r=".6"><stop offset="0" stop-color="${light ? "#fff" : "#1E3A5C"}" stop-opacity="${light ? .6 : .55}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+  <filter id="b3" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3"/></filter><filter id="b1"><feGaussianBlur stdDeviation="1.4"/></filter><filter id="b4" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="3.5"/></filter></defs>
+  <rect width="${W}" height="${H}" fill="url(#sk)"/><rect width="${W}" height="${H}" fill="url(#hz)"/>
+  <g fill="${light ? "#C9D2E0" : "#141E36"}" opacity="${light ? .8 : .75}" filter="url(#b3)">${far}</g>
+  ${light ? "" : `<g filter="url(#b4)" opacity=".75">${signs}</g>`}
+  <g fill="${light ? "#B7C2D3" : "#090D19"}" opacity="${light ? .55 : 1}" filter="url(#b1)">${mid}</g>
+  ${light ? "" : `<g filter="url(#b1)">${win}</g><g opacity=".55">${signs}</g>`}
+  </svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
+document.documentElement.style.setProperty("--city-dark", city(false, 7));
+document.documentElement.style.setProperty("--city-light", city(true, 7));
+
+/* ---------- герой: реактор ---------- */
+let UID = 0;
+function el(tag, attrs, parent){ const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function reactor(host){
+  const pct = +host.dataset.rx / 100, light = !!host.closest("[data-theme=light]"), u = "rx" + (UID++);
+  const svg = el("svg", { viewBox: "0 0 210 210", class: "house" }, host);
+  const defs = el("defs", {}, svg);
+  defs.innerHTML = `<linearGradient id="${u}m" x1="0" y1="0" x2="0" y2="1">${light ? '<stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#C9D0DC"/><stop offset="1" stop-color="#9AA3B4"/>' : '<stop offset="0" stop-color="#4A5268"/><stop offset=".35" stop-color="#1A1F2C"/><stop offset=".7" stop-color="#0B0E15"/><stop offset="1" stop-color="#2C3344"/>'}</linearGradient>
+  <radialGradient id="${u}d" cx=".5" cy=".42" r=".55">${light ? '<stop offset="0" stop-color="#F5F7FA"/><stop offset="1" stop-color="#DCE1EA"/>' : '<stop offset="0" stop-color="#0E1828"/><stop offset=".7" stop-color="#070A12"/><stop offset="1" stop-color="#040509"/>'}</radialGradient>
+  <linearGradient id="${u}c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${light ? "#0B9CB7" : "#D2FDFF"}"/><stop offset="1" stop-color="${light ? "#006B7F" : "#2BF5FF"}"/></linearGradient>
+  <filter id="${u}g" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+  el("circle", { cx:105, cy:105, r:104, fill:"none", stroke: light ? "rgba(10,20,50,.12)" : "rgba(255,255,255,.07)", "stroke-width":1 }, svg);
+  el("circle", { cx:105, cy:105, r:99, fill:`url(#${u}d)`, stroke:`url(#${u}m)`, "stroke-width":8 }, svg);
+  el("circle", { cx:105, cy:105, r:94.5, fill:"none", stroke: light ? "rgba(10,20,50,.15)" : "rgba(0,0,0,.8)", "stroke-width":1 }, svg);
+  for (let i = 0; i < 60; i++) { const a = i/60*Math.PI*2 - Math.PI/2, on = i/60 < pct, r1 = 90, r2 = i % 5 ? 87 : 84;
+    el("line", { x1:105+r1*Math.cos(a), y1:105+r1*Math.sin(a), x2:105+r2*Math.cos(a), y2:105+r2*Math.sin(a), stroke: on ? (light ? "#007E95" : "#2BF5FF") : (light ? "rgba(10,20,50,.2)" : "rgba(150,170,255,.22)"), "stroke-width": i % 5 ? 1 : 1.8 }, svg); }
+  const C = 2*Math.PI*78;
+  el("circle", { cx:105, cy:105, r:78, fill:"none", stroke: light ? "rgba(10,20,50,.08)" : "rgba(150,170,255,.08)", "stroke-width":6 }, svg);
+  el("circle", { cx:105, cy:105, r:78, fill:"none", stroke:`url(#${u}c)`, "stroke-width":6, "stroke-dasharray":`${C*pct} ${C}`, transform:"rotate(-90 105 105)", filter: light ? "" : `url(#${u}g)` }, svg);
+  const ra = document.createElement("div"); ra.className = "rx-ring a"; host.appendChild(ra);
+  const sa = el("svg", { viewBox:"0 0 210 210" }, ra);
+  el("circle", { cx:105, cy:105, r:67, fill:"none", stroke: light ? "rgba(0,107,127,.45)" : "rgba(43,245,255,.45)", "stroke-width":1.4, "stroke-dasharray":"1.5 5" }, sa);
+  for (let k = 0; k < 4; k++) el("rect", { x:103, y:35, width:4, height:6, fill: light ? "#007E95" : "#7FF8FF", transform:`rotate(${k*90+20} 105 105)` }, sa);
+  const rb = document.createElement("div"); rb.className = "rx-ring b"; host.appendChild(rb);
+  const sb = el("svg", { viewBox:"0 0 210 210" }, rb); const C2 = 2*Math.PI*59;
+  el("circle", { cx:105, cy:105, r:59, fill:"none", stroke: light ? "rgba(0,107,127,.6)" : "rgba(43,245,255,.7)", "stroke-width":2.2, "stroke-dasharray":`${C2/6-4} ${C2/6+4}` }, sb);
+  for (const c of ["rx-shell","rx-fil","rx-core"]) { const d = document.createElement("div"); d.className = c; host.appendChild(d); }
+  if (!light) [[38,30],[66,22],[72,64],[28,70],[56,78]].forEach(([x,y]) => { const p = document.createElement("i"); p.className = "rx-p"; p.style.left = x + "%"; p.style.top = y + "%"; host.appendChild(p); });
+  if (!host.dataset.noplate) { const pl = document.createElement("div"); pl.className = "rx-plate cut e2 s"; pl.innerHTML = `<b style="font:700 15px var(--f-mono); color:var(--neon-core); text-shadow:var(--halo-neon)">${host.dataset.rx}%</b><span class="t-label" style="color:var(--text-2)">хранилище</span>`; host.appendChild(pl); }
+}
+document.querySelectorAll("[data-rx]").forEach(reactor);
+
+/* ---------- герой: циферблат шанса ---------- */
+function gauge(host){
+  const pct = +host.dataset.gauge / 100, light = !!host.closest("[data-theme=light]"), u = "g" + (UID++), cx = 160, cy = 165;
+  const P = (r, f) => [cx + r*Math.cos(Math.PI*(1-f)), cy - r*Math.sin(Math.PI*(1-f))];
+  const arc = (r, f0, f1) => { const a = P(r,f0), b = P(r,f1); return `M${a[0].toFixed(2)} ${a[1].toFixed(2)} A${r} ${r} 0 0 1 ${b[0].toFixed(2)} ${b[1].toFixed(2)}`; };
+  const svg = el("svg", { viewBox:"0 0 320 186", style:"width:100%; display:block" }, host);
+  el("defs", {}, svg).innerHTML = `<linearGradient id="${u}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5A6380"/><stop offset=".4" stop-color="#1C2230"/><stop offset="1" stop-color="#0A0C12"/></linearGradient>
+  <linearGradient id="${u}c" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#0E9FB0"/><stop offset=".6" stop-color="#2BF5FF"/><stop offset="1" stop-color="#D2FDFF"/></linearGradient>
+  <radialGradient id="${u}h" cx=".4" cy=".3" r=".7"><stop offset="0" stop-color="#9AA4BA"/><stop offset=".5" stop-color="#2A3142"/><stop offset="1" stop-color="#0B0E15"/></radialGradient>
+  <linearGradient id="${u}gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".10"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  <filter id="${u}g" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="${u}s" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter>`;
+  el("path", { d: arc(143,0,1), fill:"none", stroke:"rgba(255,255,255,.10)", "stroke-width":1 }, svg);
+  el("path", { d: arc(134,0,1), fill:"none", stroke:`url(#${u}m)`, "stroke-width":16 }, svg);
+  el("path", { d: arc(125.5,0,1), fill:"none", stroke:"rgba(0,0,0,.85)", "stroke-width":1 }, svg);
+  el("path", { d: arc(124,0,1) + ` L${cx-124} ${cy} Z`, fill:"rgba(4,6,10,.55)" }, svg);
+  el("path", { d: arc(112,0,1), fill:"none", stroke:"rgba(150,170,255,.08)", "stroke-width":14 }, svg);
+  el("path", { d: arc(112,pct,1), fill:"none", stroke:"rgba(255,46,126,.16)", "stroke-width":14 }, svg);
+  el("path", { d: arc(121,pct+.01,1), fill:"none", stroke:"#FF2E7E", "stroke-width":2, opacity:.85 }, svg);
+  el("path", { d: arc(112,0,pct), fill:"none", stroke:`url(#${u}c)`, "stroke-width":14, filter:`url(#${u}g)` }, svg);
+  for (let i = 0; i <= 50; i++) { const f = i/50, maj = i % 5 === 0, a = P(98,f), b = P(maj ? 90 : 94, f);
+    el("line", { x1:a[0], y1:a[1], x2:b[0], y2:b[1], stroke: f <= pct ? "#7FF8FF" : "rgba(150,170,255,.3)", "stroke-width": maj ? 1.8 : 1 }, svg); }
+  [[0,"0"],[.5,"50"],[1,"100"]].forEach(([f,t]) => { const p = P(78,f); el("text", { x:p[0], y:p[1] + (f === .5 ? 4 : -2), "text-anchor":"middle", fill:"#6E7891", style:"font:500 11px 'JetBrains Mono'" }, svg).textContent = t; });
+  const rot = pct*180 - 90, needle = `${cx-3.2},${cy} ${cx-0.9},${cy-106} ${cx+0.9},${cy-106} ${cx+3.2},${cy} ${cx+2},${cy+16} ${cx-2},${cy+16}`;
+  el("polygon", { points: needle, fill:"#000", opacity:.6, filter:`url(#${u}s)`, transform:`translate(4 5) rotate(${rot} ${cx} ${cy})` }, svg);
+  const n = el("g", { transform:`rotate(${rot} ${cx} ${cy})` }, svg);
+  el("polygon", { points: needle, fill:"#E6EBF5" }, n);
+  el("polygon", { points: `${cx},${cy} ${cx-0.9},${cy-106} ${cx+0.9},${cy-106} ${cx+3.2},${cy}`, fill:"#9AA4BA" }, n);
+  el("line", { x1:cx, y1:cy-60, x2:cx, y2:cy-104, stroke:"#2BF5FF", "stroke-width":1.6, filter:`url(#${u}g)` }, n);
+  el("circle", { cx, cy, r:14, fill:`url(#${u}h)`, stroke:"rgba(0,0,0,.8)", "stroke-width":1 }, svg);
+  el("circle", { cx, cy, r:5, fill:"#0B0E15", stroke:"rgba(255,255,255,.18)", "stroke-width":.8 }, svg);
+  el("line", { x1:cx-3.5, y1:cy+1.5, x2:cx+3.5, y2:cy-1.5, stroke:"rgba(255,255,255,.35)", "stroke-width":1 }, svg);
+  el("path", { d:`M${cx-120} ${cy-20} A124 124 0 0 1 ${cx+90} ${cy-86} Q${cx} ${cy-70} ${cx-120} ${cy-20} Z`, fill:`url(#${u}gl)` }, svg);
+}
+document.querySelectorAll("[data-gauge]").forEach(gauge);
+
+/* ---------- сетка иконок ---------- */
+const icons = [["i-reactor","Майнер"],["i-tasks","Задания"],["i-gift","Бонусы"],["i-wallet","Баланс"],["i-up","Усилить"],["i-wheel","Колесо"],["i-out","Вывод"],["i-in","Пополнить"],["i-history","История"],["i-rules","Правила"],["i-key","Владелец"],["i-user","Профиль"],["i-bell","Уведомл."],["i-copy","Копировать"],["i-refresh","Повторить"],["i-close","Закрыть"],["i-gear","Настройки"],["i-offline","Нет связи"],["i-bolt","Ускорение"],["i-check","Готово"],["i-alert","Внимание"],["i-empty","Пусто"],["i-home","Главная"],["i-back","Назад"]];
+const ig = document.getElementById("icon-grid");
+if (ig) for (const [id, n] of icons) ig.insertAdjacentHTML("beforeend", `<div class="icon-cell"><svg class="ico"><use href="#${id}"/></svg>${n}</div>`);
 </script>
 </body>
 </html>
