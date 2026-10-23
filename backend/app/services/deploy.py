@@ -135,14 +135,10 @@ def log_tail(job_id: str, lines: int = 200) -> str:
     return "\n".join(data.splitlines()[-lines:])
 
 
-def _git_head(app_dir: Path) -> str | None:
-    """Read HEAD sha from .git without running git."""
+def _git_ref(app_dir: Path, ref: str) -> str | None:
+    """Resolve a ref from .git files without running git."""
     git = app_dir / ".git"
     try:
-        head = (git / "HEAD").read_text().strip()
-        if not head.startswith("ref: "):
-            return head or None
-        ref = head[5:]
         ref_file = git / ref
         if ref_file.exists():
             return ref_file.read_text().strip() or None
@@ -154,6 +150,16 @@ def _git_head(app_dir: Path) -> str | None:
     except OSError:
         return None
     return None
+
+
+def _git_head(app_dir: Path) -> str | None:
+    try:
+        head = (app_dir / ".git" / "HEAD").read_text().strip()
+    except OSError:
+        return None
+    if not head.startswith("ref: "):
+        return head or None
+    return _git_ref(app_dir, head[5:])
 
 
 def deployed_info(target: str) -> dict[str, Any]:
@@ -172,6 +178,8 @@ def deployed_info(target: str) -> dict[str, Any]:
 # ---------- GitHub (public API, cached) ----------
 _GH_CACHE: dict[str, tuple[float, Any]] = {}
 _GH_TTL = 120.0
+_GH_FAIL_TTL = 30.0
+_GH_FAIL: dict[str, tuple[float, Exception]] = {}
 _gh_lock = asyncio.Lock()
 
 
@@ -184,13 +192,23 @@ async def _gh_get(path: str, force: bool = False) -> Any:
         hit = _GH_CACHE.get(path)
         if hit and now - hit[0] < (15.0 if force else _GH_TTL):
             return hit[1]
+        failed = _GH_FAIL.get(path)
+        if failed and now - failed[0] < _GH_FAIL_TTL:
+            raise failed[1]
         headers = {"Accept": "application/vnd.github+json", "User-Agent": "ton-nexus-deploy"}
         if settings.github_token:
             headers["Authorization"] = f"Bearer {settings.github_token}"
-        async with httpx.AsyncClient(timeout=6.0) as client:
-            r = await client.get(f"https://api.github.com/repos/{settings.github_repo}{path}", headers=headers)
-            r.raise_for_status()
-            data = r.json()
+        try:
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                r = await client.get(
+                    f"https://api.github.com/repos/{settings.github_repo}{path}", headers=headers
+                )
+                r.raise_for_status()
+                data = r.json()
+        except (httpx.HTTPError, ValueError) as e:
+            _GH_FAIL[path] = (time.monotonic(), e)
+            raise
+        _GH_FAIL.pop(path, None)
         _GH_CACHE[path] = (time.monotonic(), data)
         return data
 
@@ -226,10 +244,22 @@ async def latest_vs_deployed(deployed_commit: str | None, refresh: bool = False)
             "github_error": None,
         }
     except (httpx.HTTPError, ValueError, KeyError) as e:
+        if isinstance(e, httpx.HTTPStatusError):
+            reason = f"GitHub API {e.response.status_code}"
+            if e.response.status_code in (403, 429):
+                reason += " (лимит запросов, попробуйте через пару минут)"
+        else:
+            reason = f"GitHub недоступен: {e.__class__.__name__}"
+        # Fallback: origin/<branch> as of the runner's last `git fetch`.
+        fetched = _git_ref(Path(settings.deploy_test_app_dir), f"refs/remotes/origin/{branch}")
+        latest = {"commit": fetched, "sha": fetched[:7], "subject": None} if fetched else None
+        ahead = None
+        if fetched and deployed_commit:
+            ahead = 0 if fetched == deployed_commit else None
         return {
-            "latest": None,
-            "ahead_by": None,
+            "latest": latest,
+            "ahead_by": ahead,
             "pending": [],
-            "update_available": None,
-            "github_error": str(e)[:200] or e.__class__.__name__,
+            "update_available": (fetched != deployed_commit) if fetched and deployed_commit else None,
+            "github_error": reason,
         }
