@@ -10,6 +10,7 @@ import {
   type EconomySetting,
 } from "@/api/hooks";
 import { DeployPanel } from "@/components/DeployPanel";
+import { SettingEditor } from "@/components/SettingEditor";
 import {
   ScreenHeader,
   StatusPill,
@@ -34,7 +35,7 @@ function formatValue(v: unknown, depth = 0): string {
   if (v == null) return "—";
   if (typeof v !== "object") return String(v);
   if (Array.isArray(v)) {
-    if (depth > 1) return `${v.length} шт.`;
+    if (depth > 1 || v.some((x) => typeof x === "object" && x !== null)) return `${v.length} шт.`;
     return v.map((x) => formatValue(x, depth + 1)).join(", ");
   }
   const entries = Object.entries(v as Record<string, unknown>);
@@ -53,45 +54,11 @@ function SettingRow({
 }) {
   const update = useEconomyUpdate();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  const [err, setErr] = useState<string | null>(null);
 
-  const isComplex = typeof item.value === "object" && item.value !== null && !Array.isArray(item.value);
-
-  function startEdit() {
-    if (isComplex) {
-      const obj = item.value as Record<string, unknown>;
-      const d: Record<string, string> = {};
-      for (const [k, v] of Object.entries(obj)) d[k] = String(v ?? "");
-      setDraft(d);
-    } else {
-      setDraft({ value: String(item.value ?? "") });
-    }
-    setEditing(true);
-    setErr(null);
-  }
-
-  async function save() {
-    setErr(null);
-    let value: unknown;
-    if (isComplex) {
-      value = {};
-      for (const [k, v] of Object.entries(draft)) {
-        const num = Number(v);
-        (value as Record<string, unknown>)[k] = v.trim() !== "" && !Number.isNaN(num) ? num : v;
-      }
-    } else {
-      const v = draft.value ?? "";
-      const num = Number(v);
-      value = v.trim() !== "" && !Number.isNaN(num) ? num : v;
-    }
-    try {
-      await update.mutateAsync({ key: item.key, value });
-      onSaved();
-      setEditing(false);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Ошибка");
-    }
+  async function save(value: unknown) {
+    await update.mutateAsync({ key: item.key, value });
+    onSaved();
+    setEditing(false);
   }
 
   return (
@@ -107,7 +74,7 @@ function SettingRow({
           {!editing && (
             <button
               type="button"
-              onClick={startEdit}
+              onClick={() => setEditing(true)}
               className="shrink-0 rounded-lg border border-[var(--line)] bg-[var(--bg-elev)] px-3 py-1.5 font-mono text-[12px] text-[var(--accent)] transition hover:border-[var(--accent)]"
             >
               Изменить
@@ -121,48 +88,13 @@ function SettingRow({
         )}
       </div>
       {editing && (
-        <div className="space-y-3 border-t border-[var(--line)] bg-[var(--bg-elev)]/40 p-4">
-          {isComplex ? (
-            <div className="space-y-2.5">
-              {Object.keys(draft).map((k) => (
-                <label key={k} className="block">
-                  <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-[var(--text-dim)]">
-                    {k.replace(/_/g, " ")}
-                  </span>
-                  <input
-                    className="input-field mono w-full text-[14px]"
-                    value={draft[k]}
-                    onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
-                  />
-                </label>
-              ))}
-            </div>
-          ) : (
-            <input
-              className="input-field mono w-full text-[14px]"
-              value={draft.value ?? ""}
-              onChange={(e) => setDraft({ value: e.target.value })}
-              autoFocus
-            />
-          )}
-          {err && <p className="text-[12px] text-[var(--danger)]">{err}</p>}
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              className="btn-primary flex-1"
-              onClick={save}
-              disabled={update.isPending}
-            >
-              {update.isPending ? "Сохранение…" : "Применить"}
-            </button>
-            <button
-              type="button"
-              className="btn-ghost px-4"
-              onClick={() => setEditing(false)}
-            >
-              Отмена
-            </button>
-          </div>
+        <div className="border-t border-[var(--line)] bg-[var(--bg-elev)]/40 p-4">
+          <SettingEditor
+            value={item.value}
+            saving={update.isPending}
+            onSave={save}
+            onCancel={() => setEditing(false)}
+          />
         </div>
       )}
     </div>
