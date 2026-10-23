@@ -21,8 +21,15 @@ LIB_DIR="/usr/local/lib/ton-nexus-deploy"
 GROUP="tonnexus-deploy"
 API_SERVICE="ton-nexus-api"
 
-say() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
-die() { printf '\033[1;31mОШИБКА:\033[0m %s\n' "$*" >&2; exit 1; }
+# Без цвета по умолчанию: веб-консоль хостинга показывает ANSI-коды как мусор.
+# Цвет можно включить явно: COLOR=1 (и только в настоящем терминале).
+if [ "${COLOR:-0}" = "1" ] && [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  C_INFO=$(printf '\033[1;36m'); C_ERR=$(printf '\033[1;31m'); C_OFF=$(printf '\033[0m')
+else
+  C_INFO=''; C_ERR=''; C_OFF=''
+fi
+say() { printf '%s==>%s %s\n' "$C_INFO" "$C_OFF" "$*"; }
+die() { printf '%sОШИБКА:%s %s\n' "$C_ERR" "$C_OFF" "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "запусти от root"
 for c in git python3 npm systemctl flock nginx install; do
