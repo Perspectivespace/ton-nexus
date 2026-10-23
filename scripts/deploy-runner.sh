@@ -245,6 +245,8 @@ run_deploy() {
     rm -rf "$FRONTEND/dist.new"
     (cd "$FRONTEND" && timeout 900 npm run build -- --outDir dist.new --emptyOutDir) || { rm -rf "$FRONTEND/dist.new"; fail "сборка фронтенда не удалась (старая версия сайта оставлена)"; return; }
     [ -f "$FRONTEND/dist.new/index.html" ] || { fail "после сборки нет dist.new/index.html"; return; }
+    # runner works with umask 0027; nginx (www-data) must be able to read the site
+    chmod -R u+rwX,go+rX "$FRONTEND/dist.new" || { rm -rf "$FRONTEND/dist.new"; fail "не удалось выставить права на dist.new"; return; }
     rm -rf "$FRONTEND/dist.prev"
     [ -d "$FRONTEND/dist" ] && mv "$FRONTEND/dist" "$FRONTEND/dist.prev"
     mv "$FRONTEND/dist.new" "$FRONTEND/dist"
