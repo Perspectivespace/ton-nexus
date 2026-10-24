@@ -7,7 +7,11 @@ import {
   LoadingPanel,
   ErrorPanel,
   EmptyPanel,
+  Panel,
+  Bar,
+  Tag,
 } from "@/components/ui";
+import { haptic } from "@/lib/haptics";
 
 export function Tasks() {
   const { data: me } = useMe();
@@ -22,15 +26,12 @@ export function Tasks() {
         action={
           <div className="flex items-center gap-2">
             {canCreate && (
-              <Link
-                to="/tasks/new"
-                className="rounded-xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-3 py-1.5 text-[11px] font-medium text-[var(--accent)] no-underline"
-              >
+              <Link to="/tasks/new" className="ui-btn ghost sm" onClick={() => haptic.tap()}>
                 + Создать
               </Link>
             )}
             <StatusPill tone={isFetching ? "live" : "neutral"}>
-              {isFetching ? "sync" : `${data?.length ?? 0} active`}
+              {isFetching ? "синхр." : `${data?.length ?? 0} активных`}
             </StatusPill>
           </div>
         }
@@ -58,33 +59,25 @@ export function Tasks() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
             >
-              <Link to={`/tasks/${t.id}`} className="panel block p-4 no-underline text-inherit">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-[15px] font-medium leading-snug">{t.title}</h2>
-                  <span className="mono shrink-0 rounded-lg bg-[var(--accent-soft)] px-2 py-1 text-xs font-semibold text-[var(--accent)]">
-                    {Number(t.reward).toFixed(4)}
-                  </span>
-                </div>
-                <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-[var(--text-dim)]">
-                  {t.description}
-                </p>
-                <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)]"
-                    style={{ width: `${fillPct}%` }}
-                  />
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[var(--text-dim)]">
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    {slotsLeft} слот{slotsLeft === 1 ? "" : "ов"}
-                  </span>
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    ур. {t.min_level}+
-                  </span>
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    +{t.xp_reward} XP
-                  </span>
-                </div>
+              <Link to={`/tasks/${t.id}`} className="block no-underline text-inherit" onClick={() => haptic.tap()}>
+                <Panel className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="ui-h !text-[15px] !leading-[20px] !font-medium">{t.title}</h2>
+                    <span className="ui-num s-m !font-bold !text-[var(--neon)] shrink-0">
+                      {Number(t.reward).toFixed(4)}
+                      <span className="unit">TON</span>
+                    </span>
+                  </div>
+                  <p className="ui-sec mt-2 line-clamp-2">{t.description}</p>
+                  <Bar value={fillPct / 100} className="mt-3" label="Заполнено слотов" />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Tag tone="neutral" dot={false}>
+                      {slotsLeft} слот{slotsLeft === 1 ? "" : "ов"}
+                    </Tag>
+                    <Tag tone="neutral" dot={false}>ур. {t.min_level}+</Tag>
+                    <Tag tone="amber" dot={false}>+{t.xp_reward} XP</Tag>
+                  </div>
+                </Panel>
               </Link>
             </motion.li>
           );

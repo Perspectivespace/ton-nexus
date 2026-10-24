@@ -2,7 +2,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useMe, useMyWithdrawals } from "@/api/hooks";
 import { api } from "@/api/client";
-import { IconWallet } from "@/components/icons";
+import { IconOut } from "@/components/icons";
+import { Button, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Tag, type Tone } from "@/components/ui";
+
+const W_STATUS: Record<string, { label: string; tone: Tone }> = {
+  pending: { label: "ожидает", tone: "warn" },
+  paid: { label: "выплачено", tone: "ok" },
+  rejected: { label: "отклонено", tone: "danger" },
+};
 
 export function Wallet() {
   const { data: me, refetch } = useMe();
@@ -32,36 +39,27 @@ export function Wallet() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-start justify-between">
-        <div>
-          <p className="eyebrow">Кошелёк</p>
-          <h1 className="text-[26px] font-semibold tracking-tight">Баланс</h1>
-        </div>
-        <div className="rounded-2xl border border-[var(--line)] p-3 text-[var(--text-dim)]">
-          <IconWallet size={22} />
-        </div>
-      </header>
+      <ScreenHeader eyebrow="Кошелёк" title="Баланс" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="panel panel-glow p-5"
-      >
-        <p className="text-[11px] font-medium text-[var(--text-dim)]">Доступно</p>
-        <p className="mono mt-1 text-[32px] font-semibold tracking-tight">
-          {me ? Number(me.balance).toFixed(4) : "—"}
-          <span className="ml-1 text-sm font-normal text-[var(--text-dim)]">TON</span>
-        </p>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <Panel level="hero" see cut="l" lift="l2" className="p-5">
+          <p className="ui-label ui-shade">Доступно</p>
+          <Num
+            value={me ? Number(me.balance).toFixed(4) : "—"}
+            unit="TON"
+            size="xl"
+            glow
+            className="ui-shade mt-2 block !text-[40px] !leading-[48px]"
+          />
+        </Panel>
       </motion.div>
 
-      <div className="panel space-y-4 p-5">
+      <Panel className="space-y-4 p-5">
         <div>
-          <h2 className="text-sm font-semibold">Вывод</h2>
-          <p className="mt-1 text-[12px] leading-relaxed text-[var(--text-dim)]">
-            Средства холдятся до решения владельца. При отказе — возврат на баланс.
-          </p>
+          <h2 className="ui-h">Вывод</h2>
+          <p className="ui-sec mt-1">Средства холдятся до решения владельца. При отказе — возврат на баланс.</p>
         </div>
-        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
+        <label className="block ui-sec">
           Сумма
           <input
             className="input-field mono"
@@ -69,7 +67,7 @@ export function Wallet() {
             onChange={(e) => setAmount(e.target.value)}
           />
         </label>
-        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
+        <label className="block ui-sec">
           Адрес TON
           <input
             className="input-field mono text-[13px]"
@@ -78,26 +76,29 @@ export function Wallet() {
             placeholder="UQ… / EQ…"
           />
         </label>
-        <button type="button" className="btn-primary w-full" disabled={loading} onClick={submit}>
-          Запросить вывод
-        </button>
-        {msg && <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">{msg}</p>}
-      </div>
+        <span className="ui-spill">
+          <Button kind="primary" size="lg" block icon={<IconOut size={20} />} disabled={loading} onClick={submit}>
+            Запросить вывод
+          </Button>
+        </span>
+        {msg && <p className="ui-sec">{msg}</p>}
+      </Panel>
 
       {(mine.data?.length ?? 0) > 0 && (
-        <div className="panel space-y-3 p-4">
-          <p className="eyebrow">Мои заявки</p>
-          <ul className="space-y-2">
-            {(mine.data || []).slice(0, 5).map((w) => (
-              <li
-                key={w.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] px-3 py-2"
-              >
-                <span className="mono text-[13px]">{Number(w.amount).toFixed(4)} TON</span>
-                <span className="text-[11px] text-[var(--text-dim)]">{w.status}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="space-y-2.5">
+          <SectionLabel>Мои заявки</SectionLabel>
+          <List>
+            {(mine.data || []).slice(0, 5).map((w) => {
+              const st = W_STATUS[w.status] ?? { label: w.status, tone: "neutral" as Tone };
+              return (
+                <ListRow
+                  key={w.id}
+                  title={<span className="ui-num s-m">{Number(w.amount).toFixed(4)} TON</span>}
+                  trailing={<Tag tone={st.tone}>{st.label}</Tag>}
+                />
+              );
+            })}
+          </List>
         </div>
       )}
     </div>
