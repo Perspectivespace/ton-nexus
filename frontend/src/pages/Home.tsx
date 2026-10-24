@@ -104,7 +104,7 @@ export function Home() {
 
       {isLoading && <LoadingPanel label="Синхронизация контура…" />}
       {error && (
-        <ErrorPanel message="Нет связи с API. Нужны backend и Telegram initData." />
+        <ErrorPanel message="Нет связи с сервером. Откройте приложение из Telegram." />
       )}
 
       {me && (

@@ -48,7 +48,7 @@ export function TaskCreate() {
         t.status === "active"
           ? "опубликовано"
           : t.status === "pending_approval"
-            ? "на проверке у admin/owner"
+            ? "на проверке у админа или владельца"
             : t.status === "draft"
               ? "черновик"
               : t.status;
@@ -65,7 +65,7 @@ export function TaskCreate() {
     return (
       <div className="space-y-4">
         <ScreenHeader eyebrow="Маркет" title="Новое задание" />
-        <ErrorPanel message="Создание доступно амбассадору, admin и owner." />
+        <ErrorPanel message="Создание доступно амбассадору, админу и владельцу." />
         <Link to="/tasks" className="ui-btn secondary sm no-underline">
           ← Лента
         </Link>
@@ -92,8 +92,8 @@ export function TaskCreate() {
       <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
           {canDirectPublish
-            ? "Admin/owner: можно сразу опубликовать — бюджет (награда × слоты + ~10%) спишется с баланса."
-            : "Амбассадор: задание уйдёт на approve. После одобрения — публикация и hold бюджета."}
+            ? "Админ или владелец: можно сразу опубликовать — бюджет (награда × слоты + ~10%) спишется с баланса."
+            : "Амбассадор: задание уйдёт на одобрение. После одобрения — публикация, бюджет уйдёт в холд."}
         </p>
       </div>
 

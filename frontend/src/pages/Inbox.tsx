@@ -139,7 +139,7 @@ export function Inbox() {
   const canModerate = me?.is_owner || me?.is_admin || me?.is_ambassador;
 
   if (meLoading || subs.isLoading) {
-    return <LoadingPanel label="Открытие inbox модерации…" />;
+    return <LoadingPanel label="Открываем входящие…" />;
   }
 
   if (!canModerate) {
@@ -192,7 +192,7 @@ export function Inbox() {
           </SectionLabel>
 
           {approvals.isError && (
-            <p className="ui-onbg text-[12px]">Очередь публикаций недоступна (нужны права admin или owner).</p>
+            <p className="ui-onbg text-[12px]">Очередь публикаций недоступна (нужны права админа или владельца).</p>
           )}
 
           {!approvals.isError && pendingTasks.length === 0 && (

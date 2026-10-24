@@ -177,7 +177,7 @@ export function TaskDetail() {
               animate={{ opacity: 1, y: 0 }}
               className="rounded-xl border border-[var(--success)]/25 bg-[var(--success)]/5 p-4 text-[13px] leading-relaxed"
             >
-              Заявка ушла модератору. После approve —{" "}
+              Заявка ушла модератору. После одобрения —{" "}
               <span className="mono font-semibold text-[var(--success)]">
                 {Number(t.reward).toFixed(4)} TON
               </span>

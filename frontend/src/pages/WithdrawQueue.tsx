@@ -161,7 +161,7 @@ export function WithdrawQueue() {
     return (
       <div className="space-y-4">
         <ScreenHeader eyebrow="Касса" title="Выводы" />
-        <ErrorPanel message="Очередь только для owner / admin." />
+        <ErrorPanel message="Очередь доступна только владельцу и админам." />
         <Link to="/" className="ui-btn secondary sm no-underline">
           ← Контур
         </Link>

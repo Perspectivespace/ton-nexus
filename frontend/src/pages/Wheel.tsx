@@ -640,11 +640,11 @@ export function Wheel() {
                   ? "Уже получено"
                   : dailyClaim.isPending
                     ? "Начисление…"
-                    : "Забрать daily"}
+                    : "Забрать отметку"}
               </button>
               {dailyClaim.isError && (
                 <ErrorPanel
-                  message={dailyClaim.error instanceof Error ? dailyClaim.error.message : "Ошибка daily"}
+                  message={dailyClaim.error instanceof Error ? dailyClaim.error.message : "Отметка не прошла"}
                 />
               )}
               <AnimatePresence>
