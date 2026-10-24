@@ -138,7 +138,7 @@ export function Miner() {
         ).map(([k, v, tip]) => (
           <div
             key={k}
-            className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-1.5 py-2.5 text-center"
+            className="stat-chip px-1.5 py-2.5"
             title={tip}
           >
             <div className="text-[9px] font-semibold tracking-wider text-[#7a8499]">{k}</div>

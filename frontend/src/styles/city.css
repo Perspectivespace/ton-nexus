@@ -1,0 +1,95 @@
+/*
+ * Фоновый город (DESIGN.md п. 3.10–3.11). Лежит под всем приложением (position: fixed),
+ * контент прокручивается поверх. Полупрозрачные панели показывают его насквозь.
+ * Слои: дальний план → ближний план (параллакс ≤ 6 px) → «искры жизни» → скрим.
+ * Анимации только transform / opacity. Пауза, когда приложение скрыто; на слабых устройствах
+ * без дождя, искр и окон; при «уменьшить движение» слой жизни скрыт полностью.
+ */
+.city {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: var(--city-floor);
+}
+
+/* сцена: картинка 390×700 по ширине колонки, центрирована, снизу растворяется в «полу» */
+.city .c-stage {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(100%, 560px);
+  aspect-ratio: 390 / 700;
+  transform: translateX(-50%);
+  background: url("../assets/city/city-night-back.webp") center top / 100% auto no-repeat;
+}
+.city .c-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 72%, var(--city-floor) 98%),
+    linear-gradient(90deg, var(--city-floor), transparent 6%, transparent 94%, var(--city-floor));
+}
+[data-theme="light"] .city .c-stage { background-image: url("../assets/city/city-day-back.webp"); }
+
+.city .c-front {
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  top: 0;
+  aspect-ratio: 406 / 729;
+  background: url("../assets/city/city-night-front.webp") center top / 100% auto no-repeat;
+  transform: translate3d(var(--px, 0px), var(--py, 0px), 0);
+  will-change: transform;
+}
+[data-theme="light"] .city .c-front { display: none; }
+
+.city .life { position: absolute; inset: 0; }
+
+/* скрим: темнее под шапкой Telegram и под нижним доком */
+.city .c-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim-top), var(--scrim-bottom);
+}
+
+/* ---- искры жизни ---- */
+.life i { position: absolute; display: block; }
+.life .w-off { background: #070A12; opacity: 0; animation: w-off var(--d, 13s) steps(1, end) var(--dl, 0s) infinite; }
+@keyframes w-off { 0%, 91% { opacity: 0 } 92%, 97% { opacity: .92 } 98% { opacity: 0 } 99% { opacity: .92 } }
+.life .s-cut { background: #05070D; opacity: 0; animation: s-cut var(--d, 11s) steps(1, end) var(--dl, 0s) infinite; }
+@keyframes s-cut { 0%, 93% { opacity: 0 } 94% { opacity: .75 } 95% { opacity: .1 } 96% { opacity: .85 } 97%, 100% { opacity: 0 } }
+.life .bcn { width: 1.4%; aspect-ratio: 1; margin: -.7% 0 0 -.7%; border-radius: 50%; background: #FF5468; box-shadow: 0 0 6px 2px rgba(255, 46, 90, .7); animation: bcn 2.4s steps(1, end) var(--dl, 0s) infinite; }
+@keyframes bcn { 0%, 70% { opacity: .15 } 71%, 84% { opacity: 1 } 85% { opacity: .15 } }
+.life .drone { left: 0; top: 9%; width: 100%; height: 6px; animation: drone 46s linear -17s infinite; }
+.life .drone::before { content: ""; position: absolute; left: 0; width: 3px; height: 3px; background: #F2F6FF; box-shadow: 0 0 5px 1px rgba(160, 230, 255, .9), 10px 2px 0 -0.5px #FF5468; }
+@keyframes drone { from { transform: translate3d(-6%, 0, 0) } to { transform: translate3d(106%, -18px, 0) } }
+.life .spark { width: 2px; height: 2px; background: var(--c, #FFB547); box-shadow: 0 0 4px 1px var(--c, #FFB547); opacity: 0; animation: spark var(--d, 4s) ease-out var(--dl, 0s) infinite; }
+@keyframes spark { 0% { opacity: 0; transform: translate3d(0, 0, 0) } 15% { opacity: .95 } 100% { opacity: 0; transform: translate3d(var(--dx, 6px), -46px, 0) } }
+.life .rain {
+  left: 0; top: -20%; width: 100%; height: 140%; opacity: .32;
+  background: repeating-linear-gradient(104deg, transparent 0 22px, rgba(170, 210, 255, .5) 22px 23px, transparent 23px 61px);
+  -webkit-mask: repeating-linear-gradient(180deg, #000 0 26px, transparent 26px 70px);
+  mask: repeating-linear-gradient(180deg, #000 0 26px, transparent 26px 70px);
+  animation: rain .9s linear infinite;
+}
+@keyframes rain { from { transform: translate3d(0, 0, 0) } to { transform: translate3d(-16px, 70px, 0) } }
+
+/* «Дневной HUD»: днём живёт только дрон (и параллакс) */
+[data-theme="light"] .life .w-off,
+[data-theme="light"] .life .s-cut,
+[data-theme="light"] .life .spark,
+[data-theme="light"] .life .rain,
+[data-theme="light"] .life .bcn { display: none; }
+
+html.app-hidden .life i,
+html.app-hidden .life i::before { animation-play-state: paused; }
+html.low-end .life .rain,
+html.low-end .life .spark,
+html.low-end .life .w-off { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .life { display: none; }
+  .city .c-front { transform: none; }
+}

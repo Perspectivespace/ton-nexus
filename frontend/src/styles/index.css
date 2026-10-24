@@ -1,25 +1,30 @@
 @import "tailwindcss";
+@import "./fonts.css";
+@import "./tokens.css";
+@import "./city.css";
 
+/*
+ * Старые имена переменных (экраны v1) теперь ссылаются на токены «Ночного контура».
+ * Экраны не трогаем: они автоматически получают новые цвета и обе темы.
+ * В новых компонентах используйте токены напрямую (text-neon, bg-surface-1 …).
+ */
 :root {
-  --bg-deep: #050710;
-  --bg-mid: #0c0f16;
-  --bg-panel: rgba(18, 22, 32, 0.78);
-  --bg-elevated: #151a26;
-  --line: rgba(255, 255, 255, 0.055);
-  --line-strong: rgba(255, 255, 255, 0.1);
-  --line-metal: rgba(180, 195, 220, 0.14);
-  --text: #e8edf5;
-  --text-dim: #8b93a7;
-  --text-meta: #5e6678;
-  --accent: #7a9fd4;
-  --accent-bright: #9bb8e0;
-  --accent-soft: rgba(122, 159, 212, 0.12);
-  --success: #5cbf8a;
-  --warn: #d4b46a;
-  --danger: #d47a7f;
-  --radius: 16px;
-  --font: "Syne", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --bg-deep: var(--bg);
+  --bg-mid: var(--surface-1);
+  --bg-panel: var(--surface-1);
+  --bg-elevated: var(--surface-2);
+  --bg-elev: var(--surface-2);
+  --line-metal: var(--line-strong);
+  --text-dim: var(--text-2);
+  --text-meta: var(--text-3);
+  --accent: var(--neon);
+  --accent-bright: var(--neon);
+  --accent-soft: var(--neon-soft);
+  --success: var(--ok);
+  --danger: var(--magenta);
+  --radius: 14px;
+  --font: var(--f-sans);
+  --font-mono: var(--f-mono);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --label-size: 10px;
   --label-tracking: 0.2em;
@@ -35,199 +40,180 @@ html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  font-family: var(--font);
-  background: var(--bg-deep);
+  font-family: var(--f-sans);
+  background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-  letter-spacing: -0.011em;
 }
 
 .app-shell {
   min-height: 100%;
   position: relative;
   isolation: isolate;
-  background: var(--bg-deep);
-}
-
-.app-shell::before {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(60, 100, 180, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 20% 80%, rgba(50, 70, 140, 0.05) 0%, transparent 40%),
-    radial-gradient(ellipse at 80% 60%, rgba(80, 60, 140, 0.04) 0%, transparent 35%),
-    linear-gradient(180deg, #060810 0%, #050710 40%, #040508 100%);
-}
-
-.app-shell::after {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.35;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black, transparent 72%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black, transparent 72%);
+  background: var(--city-floor);
 }
 
 .app-shell > * { position: relative; z-index: 1; }
+.app-shell > .city { position: fixed; z-index: 0; }
 .app-stage { position: relative; }
 
 .eyebrow,
 .label-caps {
+  font-family: var(--f-display);
   font-size: var(--label-size);
   font-weight: var(--label-weight);
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-2);
   line-height: 1.2;
 }
 
 .label-meta {
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  color: var(--text-2);
   line-height: 1.4;
 }
 
 .title-display {
+  font-family: var(--f-display);
   font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   line-height: 1.12;
   color: var(--text);
 }
 
 .value-display {
-  font-family: var(--font-mono);
+  font-family: var(--f-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   line-height: 1.1;
   color: var(--text);
 }
 
-/* —— Bolt metal plates —— */
+/*
+ * —— Материал панелей (DESIGN.md п. 3.3–3.4, 3.8) ——
+ * Дымчатое стекло-металл БЕЗ backdrop-filter: полупрозрачная заливка над готовой картинкой города,
+ * зерно, верхний свет, фаска. Город просвечивает — это фирменный приём.
+ */
 .metal-plate,
 .panel {
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(155, 184, 224, 0.04) 0%, transparent 0.5%, transparent 96%, rgba(0, 0, 0, 0.3) 100%),
-    linear-gradient(135deg, rgba(20, 26, 40, 0.85) 0%, rgba(12, 16, 24, 0.9) 50%, rgba(8, 11, 17, 0.92) 100%);
-  border: 1px solid rgba(122, 159, 212, 0.1);
-  border-top: 1px solid rgba(155, 184, 224, 0.18);
+  background: var(--mat-1);
+  border: 1px solid var(--line);
+  border-top-color: var(--line-strong);
   border-radius: var(--radius);
-  box-shadow:
-    0 1px 0 rgba(155, 184, 224, 0.06) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.35) inset,
-    0 1px 0 rgba(0, 0, 0, 0.5),
-    0 4px 24px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--bevel-1), 0 10px 28px -12px rgba(0, 0, 0, 0.55);
 }
 
 .metal-plate-dim {
-  background:
-    linear-gradient(180deg, rgba(155, 184, 224, 0.02) 0%, transparent 0.5%, transparent 96%, rgba(0, 0, 0, 0.2) 100%),
-    linear-gradient(135deg, rgba(14, 18, 28, 0.75) 0%, rgba(10, 13, 20, 0.85) 50%, rgba(6, 8, 14, 0.88) 100%);
-  border: 1px solid rgba(122, 159, 212, 0.06);
-  border-top: 1px solid rgba(155, 184, 224, 0.08);
-  border-radius: 14px;
-  box-shadow:
-    0 1px 0 rgba(155, 184, 224, 0.03) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.25) inset,
-    0 2px 14px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--mat-1);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--bevel-1);
+  opacity: 0.94;
 }
 
+/* герой: одна на экран, циановый перелив сверху-слева, кромка ярче */
 .metal-plate-hero,
 .panel-glow {
   background:
-    linear-gradient(180deg, rgba(155, 184, 224, 0.06) 0%, transparent 0.8%, transparent 95%, rgba(0, 0, 0, 0.35) 100%),
-    linear-gradient(135deg, rgba(22, 29, 44, 0.9) 0%, rgba(16, 21, 33, 0.92) 50%, rgba(10, 14, 22, 0.94) 100%);
-  border: 1px solid rgba(122, 159, 212, 0.14);
-  border-top: 1px solid rgba(155, 184, 224, 0.3);
+    radial-gradient(90% 60% at 18% 0%, var(--neon-soft), transparent 70%),
+    var(--toplight), var(--grain),
+    linear-gradient(180deg, rgba(14, 18, 30, 0.62), rgba(8, 10, 17, 0.84));
+  border: 1px solid var(--line-strong);
+  border-top-color: var(--neon-dim);
   border-radius: var(--radius);
-  box-shadow:
-    0 1px 0 rgba(155, 184, 224, 0.1) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.4) inset,
-    0 0 0 1px rgba(0, 0, 0, 0.3),
-    0 8px 32px rgba(0, 0, 0, 0.55),
-    0 0 80px rgba(122, 159, 212, 0.06);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--bevel-1), 0 14px 36px -14px rgba(0, 0, 0, 0.7);
 }
+[data-theme="light"] .metal-plate-hero,
+[data-theme="light"] .panel-glow {
+  background: radial-gradient(90% 60% at 18% 0%, var(--neon-soft), transparent 70%), var(--mat-1);
+  box-shadow: var(--bevel-1), 0 10px 24px -14px rgba(20, 30, 60, 0.35);
+}
+[data-theme="light"] .metal-plate,
+[data-theme="light"] .panel { box-shadow: var(--bevel-1), 0 8px 20px -14px rgba(20, 30, 60, 0.3); }
 
 .rule {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(155, 184, 224, 0.12), transparent);
+  background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
   border: none;
   margin: 0;
 }
 
-.module-row { transition: background 0.15s ease; }
-.module-row:active { background: rgba(255, 255, 255, 0.04); }
+.module-row { transition: background var(--dur-fast) ease; }
+.module-row:active { background: var(--neon-soft); }
+
+/*
+ * —— Кнопки (DESIGN.md п. 7, 11.1) ——
+ * Срезанные углы (правый верхний и левый нижний), «светящееся стекло» у главной.
+ * Нажатие: сжатие до 97% и сдвиг на 1 px за 80 мс. Свечение не анимируется.
+ */
+.btn-primary,
+.btn-ghost {
+  --cut: var(--cut-btn);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+  transition: transform var(--dur-press) ease-out, opacity var(--dur-press) ease-out;
+}
 
 .btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background:
-    linear-gradient(180deg, rgba(155, 184, 224, 0.16) 0%, rgba(122, 159, 212, 0.08) 50%, rgba(122, 159, 212, 0.04) 100%),
-    linear-gradient(135deg, rgba(24, 32, 50, 0.95) 0%, rgba(18, 24, 38, 0.95) 100%);
-  color: #c8d8f0;
-  border: 1px solid rgba(122, 159, 212, 0.3);
-  border-top: 1px solid rgba(155, 184, 224, 0.42);
-  border-radius: 12px;
-  font-family: var(--font);
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.06em;
+  background: var(--btn-primary);
+  color: var(--neon-ink);
   padding: 13px 18px;
-  cursor: pointer;
-  box-shadow:
-    0 1px 0 rgba(155, 184, 224, 0.18) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.35) inset,
-    0 4px 24px rgba(122, 159, 212, 0.12),
-    0 0 60px rgba(122, 159, 212, 0.07);
-  transition: transform 0.08s ease, opacity 0.08s ease;
+  box-shadow: var(--btn-primary-bevel);
 }
-.btn-primary:active:not(:disabled) { transform: scale(0.985); opacity: 0.9; }
-.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+.btn-primary:active:not(:disabled) { transform: scale(0.97) translateY(1px); }
+.btn-primary:disabled {
+  background: var(--surface-3);
+  color: var(--text-3);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  cursor: not-allowed;
+}
 
 .btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.025);
+  background:
+    linear-gradient(180deg, var(--neon-dim), var(--line)) border-box;
   color: var(--text);
-  border: 1px solid var(--line-metal);
-  border-radius: 12px;
-  font-family: var(--font);
-  font-weight: 500;
-  font-size: 13px;
-  letter-spacing: 0.04em;
   padding: 12px 16px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.15s ease;
+  font-weight: 600;
+  position: relative;
+  isolation: isolate;
 }
-.btn-ghost:active { background: rgba(255, 255, 255, 0.05); }
+/* кромка 1 px: внешний слой — градиент кромки, внутренний — материал */
+.btn-ghost::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  background: var(--toplight), linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  clip-path: inherit;
+}
+.btn-ghost:active { transform: scale(0.97) translateY(1px); }
+.btn-ghost:active::before { background: radial-gradient(80% 100% at 50% 100%, var(--neon-soft), transparent 70%), linear-gradient(180deg, var(--surface-1), var(--surface-2)); }
+
+.btn-primary:focus-visible,
+.btn-ghost:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
 
 .mono {
-  font-family: var(--font-mono);
+  font-family: var(--f-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
@@ -235,7 +221,8 @@ body {
 .stat-chip {
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--mat-1);
+  box-shadow: var(--bevel-1);
   padding: 10px 6px;
   text-align: center;
 }
@@ -243,20 +230,20 @@ body {
 .input-field {
   margin-top: 6px;
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid rgba(122, 159, 212, 0.1);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.12) 100%);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--mat-0);
   padding: 12px 14px;
   color: var(--text);
-  font-family: var(--font-mono);
+  font-family: var(--f-mono);
   font-size: 13px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   outline: none;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3) inset;
+  box-shadow: var(--bevel-0);
 }
 .input-field:focus {
-  border-color: rgba(122, 159, 212, 0.3);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3) inset, 0 0 16px rgba(122, 159, 212, 0.1);
+  border-color: var(--neon-dim);
+  box-shadow: var(--bevel-0), 0 0 0 1px var(--neon-soft);
 }
 
 /* Tabs (bolt) */
@@ -270,7 +257,8 @@ body {
   flex: 1;
   border: none;
   background: transparent;
-  color: var(--text-dim);
+  font-family: var(--f-display);
+  color: var(--text-2);
   border-radius: 10px;
   padding: 10px 8px;
   font-size: 9px;
@@ -281,25 +269,20 @@ body {
   transition: color 0.2s ease;
 }
 .fortune-tab.active {
-  color: #9bb8e0;
-  background: linear-gradient(180deg, rgba(122, 159, 212, 0.14) 0%, rgba(122, 159, 212, 0.04) 100%);
-  border: 1px solid rgba(122, 159, 212, 0.18);
-  border-top: 1px solid rgba(155, 184, 224, 0.28);
-  box-shadow: 0 1px 0 rgba(155, 184, 224, 0.1) inset, 0 2px 10px rgba(122, 159, 212, 0.08);
+  color: var(--neon);
+  background: linear-gradient(180deg, var(--neon-soft), transparent);
+  border: 1px solid var(--line-strong);
+  border-top-color: var(--neon-dim);
+  box-shadow: var(--bevel-1);
 }
 
-/* Wheel aura — continuous living animation */
+/*
+ * Аура колеса. Было: бесконечная анимация filter: blur() — дорого на телефонах.
+ * Стало: размытие статичное, анимируются только transform и opacity; при «уменьшить движение» стоит.
+ */
 @keyframes wheelAura {
-  0%, 100% {
-    opacity: 0.62;
-    transform: scale(0.96) rotate(0deg);
-    filter: blur(13px) saturate(1.1);
-  }
-  50% {
-    opacity: 0.94;
-    transform: scale(1.035) rotate(180deg);
-    filter: blur(18px) saturate(1.45);
-  }
+  0%, 100% { opacity: 0.62; transform: scale(0.96) rotate(0deg); }
+  50% { opacity: 0.94; transform: scale(1.035) rotate(180deg); }
 }
 .wheel-aura {
   background:
@@ -317,9 +300,10 @@ body {
     0 0 48px rgba(105, 216, 190, 0.13),
     0 0 92px rgba(224, 105, 154, 0.1),
     inset 0 0 28px rgba(155, 184, 224, 0.14);
+  filter: blur(15px);
   animation: wheelAura 4.8s ease-in-out infinite;
   pointer-events: none;
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
 }
 .wheel-aura.spinning {
   animation-duration: 1.6s;
@@ -333,6 +317,13 @@ body {
   animation: subtleGlow 3s ease-in-out infinite;
 }
 
+html.app-hidden .wheel-aura,
+html.app-hidden .subtle-glow { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .wheel-aura, .subtle-glow { animation: none; }
+}
+
+/* —— Нижний док: плавающий слой e2, без backdrop-filter —— */
 .nav-dock {
   position: fixed;
   bottom: 0;
@@ -351,17 +342,13 @@ body {
   display: flex;
   gap: 2px;
   padding: 5px;
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
-    rgba(12, 15, 22, 0.88);
-  border: 1px solid var(--line-metal);
-  backdrop-filter: blur(22px) saturate(1.1);
-  -webkit-backdrop-filter: blur(22px) saturate(1.1);
-  box-shadow:
-    0 -12px 40px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: var(--mat-2);
+  border: 1px solid var(--line);
+  border-top-color: var(--line-strong);
+  box-shadow: var(--bevel-2), 0 -12px 40px rgba(0, 0, 0, 0.45);
 }
+[data-theme="light"] .nav-dock-inner { box-shadow: var(--bevel-2), 0 -6px 24px rgba(20, 30, 60, 0.16); }
 
 .nav-item {
   display: flex;
@@ -369,15 +356,16 @@ body {
   align-items: center;
   gap: 5px;
   flex: 1;
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 8px 4px 7px;
+  font-family: var(--f-display);
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-3);
   text-decoration: none;
-  transition: color 0.18s ease, background 0.18s ease;
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
 }
 
 .nav-icon {
@@ -386,34 +374,15 @@ body {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 9px;
+  border-radius: 8px;
   color: inherit;
 }
 
-.nav-item.active[data-tone="steel"] {
-  color: #9bb8e0;
-  background: rgba(122, 159, 212, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(122, 159, 212, 0.16);
+/* активный пункт: циан и перелив снизу (одна роль — действие), разные «тона» v1 больше не нужны */
+.nav-item.active {
+  color: var(--neon);
+  background: radial-gradient(70% 90% at 50% 100%, var(--neon-soft), transparent 75%);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  text-shadow: var(--halo-neon);
 }
-.nav-item.active[data-tone="steel"] .nav-icon { background: rgba(122, 159, 212, 0.14); }
-
-.nav-item.active[data-tone="blue"] {
-  color: #8ec4e8;
-  background: rgba(110, 170, 210, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(110, 170, 210, 0.16);
-}
-.nav-item.active[data-tone="blue"] .nav-icon { background: rgba(110, 170, 210, 0.14); }
-
-.nav-item.active[data-tone="violet"] {
-  color: #b0a8e0;
-  background: rgba(143, 143, 212, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(143, 143, 212, 0.16);
-}
-.nav-item.active[data-tone="violet"] .nav-icon { background: rgba(143, 143, 212, 0.14); }
-
-.nav-item.active[data-tone="mint"] {
-  color: #8ecfb0;
-  background: rgba(111, 191, 154, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(111, 191, 154, 0.16);
-}
-.nav-item.active[data-tone="mint"] .nav-icon { background: rgba(111, 191, 154, 0.14); }
+.nav-item.active .nav-icon { background: var(--neon-soft); }

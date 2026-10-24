@@ -1,11 +1,10 @@
 import WebApp from "@twa-dev/sdk";
 
+/** Цвета шапки и фона Telegram ставит lib/theme.ts по токену --bg текущей темы. */
 export function initTelegram() {
   try {
     WebApp.ready();
     WebApp.expand();
-    WebApp.setHeaderColor("#07090f");
-    WebApp.setBackgroundColor("#07090f");
   } catch {
     // browser outside Telegram
   }
