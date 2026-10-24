@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRef, useState } from "react";
 import {
   useDailyStatus,
   useDailyClaimFull,
@@ -7,404 +6,76 @@ import {
   useWheelSpin,
   usePromoRedeem,
   type SpinOut,
-  type DailyClaim,
-  type PromoRedeemOut,
 } from "@/api/hooks";
 import {
   ScreenHeader,
-  StatusPill,
   LoadingPanel,
   ErrorPanel,
   Readout,
-  Tabs,
+  Panel,
+  Scrim,
+  Num,
+  Tag,
+  Button,
   Field,
+  Sheet,
+  PrizeWheel,
+  useToast,
+  cx,
+  type PrizeWheelHandle,
+  type WheelRole,
 } from "@/components/ui";
-import { IconSpark } from "@/components/icons";
+import { haptic } from "@/lib/haptics";
+import { IconBolt, IconSpark } from "@/components/icons";
 
-const PRIZES = [
-  {
-    id: "success_plus_5",
-    label: "+5% к успеху",
-    short: "+5%",
-    weight: 8,
-    color: "var(--wh-spin)",
-    kind: "spin" as const,
-    use: "Добавляет +5% к шансу успеха следующей попытки усиления майнера. Не гарантирует успех.",
-  },
-  {
-    id: "focus_1",
-    label: "Фокус ×1",
-    short: "Фокус",
-    weight: 15,
-    color: "var(--wh-focus)",
-    kind: "prize" as const,
-    use: "Повышает вес нужного типа на колесе апгрейда (чаще выпадает выбранный стат).",
-  },
-  {
-    id: "block_1",
-    label: "Запрет ×1",
-    short: "Запрет",
-    weight: 12,
-    color: "var(--wh-block)",
-    kind: "prize" as const,
-    use: "Блокирует выпадение одного нежелательного типа апгрейда.",
-  },
-  {
-    id: "xp_small",
-    label: "XP",
-    short: "XP",
-    weight: 25,
-    color: "var(--wh-xp)",
-    kind: "xp" as const,
-    use: "Опыт уровня аккаунта.",
-  },
-  {
-    id: "ton_dust",
-    label: "Пыль TON",
-    short: "TON",
-    weight: 20,
-    color: "var(--wh-ton)",
-    kind: "prize" as const,
-    use: "Небольшая сумма TON на баланс.",
-  },
-  {
-    id: "nothing",
-    label: "Пусто",
-    short: "МИСС",
-    weight: 20,
-    color: "var(--wh-miss)",
-    kind: "miss" as const,
-    use: "Пустой сектор — без награды.",
-  },
-] as const;
-
+/**
+ * Сектора колеса. Порядок — визуальный (цвета чередуются), выпавший сектор ищется по id ответа сервера.
+ * Вес — только для подсказки «Призы и шансы» (как и раньше; сервер крутит по своей конфигурации).
+ */
+const PRIZES: readonly {
+  id: string;
+  title: string;
+  sub?: string;
+  label: string;
+  weight: number;
+  role: WheelRole;
+  use: string;
+}[] = [
+  { id: "success_plus_5", title: "+5%", sub: "успех", label: "+5% к успеху", weight: 8, role: "hot", use: "Добавляет +5% к шансу успеха следующей попытки усиления майнера. Не гарантирует успех." },
+  { id: "xp_small", title: "XP", sub: "опыт", label: "XP", weight: 25, role: "steel", use: "Опыт уровня аккаунта." },
+  { id: "focus_1", title: "Фокус", sub: "×1", label: "Фокус ×1", weight: 15, role: "amber", use: "Повышает вес нужного типа на колесе апгрейда (чаще выпадает выбранный стат)." },
+  { id: "nothing", title: "Пусто", label: "Пусто", weight: 20, role: "void", use: "Пустой сектор — без награды." },
+  { id: "ton_dust", title: "TON", sub: "пыль", label: "Пыль TON", weight: 20, role: "neon", use: "Небольшая сумма TON на баланс." },
+  { id: "block_1", title: "Запрет", sub: "×1", label: "Запрет ×1", weight: 12, role: "magenta", use: "Блокирует выпадение одного нежелательного типа апгрейда." },
+];
 const WEIGHT_SUM = PRIZES.reduce((s, p) => s + p.weight, 0);
-const SEG = 360 / PRIZES.length;
-
-const WHEEL_SIZE = 240;
-const WHEEL_SVG = WHEEL_SIZE + 20;
-const WHEEL_RADIUS = WHEEL_SIZE / 2 - 4;
-const TEXT_RADIUS = WHEEL_RADIUS - 22;
-
-type Tab = "wheel" | "daily" | "promo";
+const MISS = PRIZES.findIndex((p) => p.id === "nothing");
 
 function prizeIndex(itemId: string): number {
   const i = PRIZES.findIndex((p) => p.id === itemId);
-  return i >= 0 ? i : PRIZES.length - 1;
+  return i >= 0 ? i : MISS;
 }
 
-function targetOffset(index: number): number {
-  return 360 - index * SEG;
+function rewardParts(r: SpinOut): string[] {
+  return [
+    Number(r.reward_ton) > 0 && `+${Number(r.reward_ton).toFixed(4)} TON`,
+    r.reward_xp > 0 && `+${r.reward_xp} XP`,
+    r.reward_focus > 0 && `Фокус +${r.reward_focus}`,
+    r.reward_block > 0 && `Запрет +${r.reward_block}`,
+    r.success_boost_bp > 0 && `+${r.success_boost_bp / 100}% к успеху`,
+  ].filter(Boolean) as string[];
 }
 
-function chancePct(weight: number): string {
-  return `${((weight / WEIGHT_SUM) * 100).toFixed(0)}%`;
-}
+const DOT: Record<WheelRole, string> = {
+  hot: "var(--amber-core)",
+  amber: "var(--amber)",
+  neon: "var(--neon)",
+  magenta: "var(--magenta)",
+  steel: "var(--text-2)",
+  void: "var(--line-strong)",
+};
 
-function segmentFill(kind: (typeof PRIZES)[number]["kind"]): string {
-  if (kind === "miss") return "url(#segmentMiss)";
-  if (kind === "spin") return "url(#segmentSpin)";
-  if (kind === "xp") return "url(#segmentXp)";
-  return "url(#segmentPrize)";
-}
-
-function segmentStroke(kind: (typeof PRIZES)[number]["kind"]): string {
-  return `var(--wh-edge-${kind})`;
-}
-
-function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: boolean }) {
-  const cx = WHEEL_SVG / 2;
-  const cy = WHEEL_SVG / 2;
-
-  return (
-    <div className="relative mb-2" style={{ width: WHEEL_SVG, height: WHEEL_SVG }}>
-      <div className={`wheel-aura absolute inset-0 rounded-full${spinning ? " spinning" : ""}`} aria-hidden />
-
-      <svg width={WHEEL_SVG} height={WHEEL_SVG} viewBox={`0 0 ${WHEEL_SVG} ${WHEEL_SVG}`} className="relative z-10">
-        <defs>
-          <radialGradient id="wheelBg" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-wheelBg-1)" }} />
-            <stop offset="70%" style={{ stopColor: "var(--wh-wheelBg-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-wheelBg-3)" }} />
-          </radialGradient>
-          <radialGradient id="wheelCenterGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-wheelCenterGrad-1)" }} />
-            <stop offset="60%" style={{ stopColor: "var(--wh-wheelCenterGrad-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-wheelCenterGrad-3)" }} />
-          </radialGradient>
-          <linearGradient id="rimGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-rimGrad-1)" }} />
-            <stop offset="50%" style={{ stopColor: "var(--wh-rimGrad-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-rimGrad-3)" }} />
-          </linearGradient>
-          <linearGradient id="segmentPrize" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-segmentPrize-1)" }} />
-            <stop offset="40%" style={{ stopColor: "var(--wh-segmentPrize-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-segmentPrize-3)" }} />
-          </linearGradient>
-          <linearGradient id="segmentMiss" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-segmentMiss-1)" }} />
-            <stop offset="45%" style={{ stopColor: "var(--wh-segmentMiss-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-segmentMiss-3)" }} />
-          </linearGradient>
-          <linearGradient id="segmentSpin" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-segmentSpin-1)" }} />
-            <stop offset="45%" style={{ stopColor: "var(--wh-segmentSpin-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-segmentSpin-3)" }} />
-          </linearGradient>
-          <linearGradient id="segmentXp" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-segmentXp-1)" }} />
-            <stop offset="45%" style={{ stopColor: "var(--wh-segmentXp-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-segmentXp-3)" }} />
-          </linearGradient>
-          <radialGradient id="segSheen" cx="32%" cy="28%" r="72%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-segSheen-1)" }} />
-            <stop offset="50%" style={{ stopColor: "var(--wh-segSheen-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-segSheen-3)" }} />
-          </radialGradient>
-          <linearGradient id="nexusTextGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style={{ stopColor: "var(--wh-nexusTextGrad-1)" }} />
-            <stop offset="50%" style={{ stopColor: "var(--wh-nexusTextGrad-2)" }} />
-            <stop offset="100%" style={{ stopColor: "var(--wh-nexusTextGrad-3)" }} />
-          </linearGradient>
-          <filter id="segmentGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.4" result="soft" />
-            <feMerge>
-              <feMergeNode in="soft" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="wheelGlow">
-            <feGaussianBlur stdDeviation="2" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        <circle cx={cx} cy={cy} r={WHEEL_RADIUS + 8} fill="none" stroke="url(#rimGrad)" strokeWidth={3} />
-        <circle cx={cx} cy={cy} r={WHEEL_RADIUS + 8} fill="none" style={{ stroke: "var(--wh-line)" }} strokeWidth={1} />
-
-        {Array.from({ length: 48 }).map((_, i) => {
-          const angle = (i / 48) * 2 * Math.PI - Math.PI / 2;
-          const r1 = WHEEL_RADIUS + 4;
-          const r2 = WHEEL_RADIUS + 7;
-          const isMajor = i % 6 === 0;
-          return (
-            <line
-              key={i}
-              x1={cx + r1 * Math.cos(angle)}
-              y1={cy + r1 * Math.sin(angle)}
-              x2={cx + r2 * Math.cos(angle)}
-              y2={cy + r2 * Math.sin(angle)}
-              style={{ stroke: isMajor ? "var(--wh-tick-major)" : "var(--wh-tick)" }}
-              strokeWidth={isMajor ? 1.5 : 0.8}
-            />
-          );
-        })}
-
-        <motion.g
-          animate={{ rotate: rotation }}
-          transition={
-            spinning
-              ? { duration: 4.8, ease: [0.17, 0.67, 0.12, 0.99] }
-              : { duration: 0 }
-          }
-          style={{
-            transformOrigin: `${cx}px ${cy}px`,
-            transformBox: "view-box",
-          }}
-        >
-          <circle cx={cx} cy={cy} r={WHEEL_RADIUS} fill="url(#wheelBg)" />
-
-          {PRIZES.map((seg, i) => {
-            const startAngle = ((i * SEG - 90 - SEG / 2) * Math.PI) / 180;
-            const endAngle = ((i * SEG - 90 + SEG / 2) * Math.PI) / 180;
-            const mid = ((i * SEG - 90) * Math.PI) / 180;
-            const x1 = cx + WHEEL_RADIUS * Math.cos(startAngle);
-            const y1 = cy + WHEEL_RADIUS * Math.sin(startAngle);
-            const x2 = cx + WHEEL_RADIUS * Math.cos(endAngle);
-            const y2 = cy + WHEEL_RADIUS * Math.sin(endAngle);
-            const path = `M ${cx} ${cy} L ${x1} ${y1} A ${WHEEL_RADIUS} ${WHEEL_RADIUS} 0 0 1 ${x2} ${y2} Z`;
-            const rOuter = WHEEL_RADIUS - 6;
-            const rMid = WHEEL_RADIUS * 0.58;
-            return (
-              <g key={seg.id}>
-                <path
-                  d={path}
-                  fill={segmentFill(seg.kind)}
-                  style={{ stroke: segmentStroke(seg.kind) }}
-                  strokeWidth={1.45}
-                  strokeLinejoin="round"
-                  filter="url(#segmentGlow)"
-                />
-                <path d={path} fill="url(#segSheen)" opacity={0.9} />
-                <path
-                  d={`M ${cx + rOuter * Math.cos(startAngle)} ${cy + rOuter * Math.sin(startAngle)} A ${rOuter} ${rOuter} 0 0 1 ${cx + rOuter * Math.cos(endAngle)} ${cy + rOuter * Math.sin(endAngle)}`}
-                  fill="none"
-                  style={{ stroke: "var(--wh-seg-rim)" }}
-                  strokeWidth={1.25}
-                />
-                <path
-                  d={`M ${cx + rMid * Math.cos(startAngle)} ${cy + rMid * Math.sin(startAngle)} A ${rMid} ${rMid} 0 0 1 ${cx + rMid * Math.cos(endAngle)} ${cy + rMid * Math.sin(endAngle)}`}
-                  fill="none"
-                  style={{ stroke: seg.color }}
-                  strokeOpacity={0.28}
-                  strokeWidth={1.05}
-                />
-                <circle
-                  cx={cx + WHEEL_RADIUS * 0.78 * Math.cos(mid)}
-                  cy={cy + WHEEL_RADIUS * 0.78 * Math.sin(mid)}
-                  r={2.4}
-                  style={{ fill: seg.color }}
-                  fillOpacity={0.4}
-                />
-              </g>
-            );
-          })}
-
-          {PRIZES.map((seg, i) => {
-            const angle = i * SEG;
-            return (
-              <g key={`t-${seg.id}`} transform={`rotate(${angle} ${cx} ${cy})`}>
-                <text
-                  x={cx}
-                  y={cy - TEXT_RADIUS + 6}
-                  textAnchor="middle"
-                  fontSize={11}
-                  fontFamily="var(--f-mono)"
-                  fontWeight={600}
-                  style={{ fill: seg.color, letterSpacing: "0.02em" }}
-                >
-                  {seg.short}
-                </text>
-              </g>
-            );
-          })}
-
-          <circle cx={cx} cy={cy} r={WHEEL_RADIUS * 0.45} fill="none" style={{ stroke: "var(--wh-faint)" }} strokeWidth={1} />
-          <circle cx={cx} cy={cy} r={WHEEL_RADIUS * 0.42} fill="none" style={{ stroke: "var(--wh-faint)" }} strokeWidth={0.5} />
-
-          <circle cx={cx} cy={cy} r={22} fill="url(#wheelCenterGrad)" style={{ stroke: "var(--wh-line)" }} strokeWidth={1} />
-          <circle cx={cx} cy={cy} r={18} fill="none" style={{ stroke: "var(--wh-faint)" }} strokeWidth={0.5} />
-          <text
-            x={cx}
-            y={cy + 4}
-            textAnchor="middle"
-            fill="url(#nexusTextGrad)"
-            fontSize={10}
-            fontFamily="var(--f-display)"
-            fontWeight={700}
-            letterSpacing="0.1em"
-          >
-            NEXUS
-          </text>
-
-          {[0, 90, 180, 270].map((a) => {
-            const rad = (a * Math.PI) / 180;
-            return (
-              <circle
-                key={a}
-                cx={cx + 15 * Math.cos(rad)}
-                cy={cy + 15 * Math.sin(rad)}
-                r={1.5}
-                style={{ fill: "var(--wh-tick)" }}
-              />
-            );
-          })}
-        </motion.g>
-
-        <g transform={`translate(${cx}, 10)`}>
-          <path d="M 0 0 L -7 -6 L 7 -6 Z" style={{ fill: "var(--wh-pointer)" }} />
-          <path d="M 0 0 L -5 -4 L 5 -4 Z" style={{ fill: "var(--wh-pointer-hi)" }} />
-          <circle cx={0} cy={-2} r={2} style={{ fill: "var(--wh-pointer)" }} />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function OddsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-[60] flex items-end justify-center px-4 pb-8 sm:items-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <div className="absolute inset-0 bg-[var(--bg)]/90" />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 8 }}
-            transition={{ type: "spring", stiffness: 280, damping: 24 }}
-            className="metal-plate-hero relative z-10 max-h-[80vh] w-full max-w-[350px] overflow-y-auto p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="eyebrow">Как играть</p>
-                <h2 className="title-display mt-1 text-[20px]">Колесо удачи</h2>
-              </div>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg metal-plate-dim text-[var(--text-dim)]"
-                onClick={onClose}
-              >
-                ×
-              </button>
-            </div>
-            <p className="label-meta mt-3">
-              Указатель сверху. После остановки сектор под ним — ваша награда.
-            </p>
-            <p className="eyebrow mt-5 mb-2">Призы и шансы</p>
-            <div className="overflow-hidden rounded-xl border border-[var(--line)]">
-              <table className="w-full text-left text-[12px]">
-                <thead>
-                  <tr className="border-b border-[var(--line)] bg-[var(--surface-3)]">
-                    <th className="px-3 py-2 text-[9px] uppercase tracking-[0.12em] text-[var(--text-dim)]">Приз</th>
-                    <th className="px-3 py-2 text-[9px] uppercase tracking-[0.12em] text-[var(--text-dim)]">Шанс</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PRIZES.map((p) => (
-                    <tr key={p.id} className="border-b border-[var(--line)] last:border-0">
-                      <td className="px-3 py-2.5">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-[2px]" style={{ background: p.color, opacity: 0.8 }} />
-                          {p.label}
-                        </span>
-                      </td>
-                      <td className="mono px-3 py-2.5 text-[var(--neon)]">{chancePct(p.weight)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="eyebrow mt-5 mb-2">Где применять</p>
-            <ul className="space-y-2">
-              {PRIZES.filter((p) => !["nothing", "ton_dust", "xp_small"].includes(p.id)).map((p) => (
-                <li key={p.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-3)] px-3 py-2.5">
-                  <p className="text-[12px] font-semibold" style={{ color: p.color }}>
-                    {p.label}
-                  </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-dim)]">{p.use}</p>
-                </li>
-              ))}
-            </ul>
-            <button type="button" className="ui-btn primary block mt-5" onClick={onClose}>
-              Понятно
-            </button>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
+type Phase = "idle" | "wait" | "spin" | "done";
 
 export function Wheel() {
   const dailySt = useDailyStatus();
@@ -412,314 +83,233 @@ export function Wheel() {
   const wheelSt = useWheelStatus();
   const spinMut = useWheelSpin();
   const promo = usePromoRedeem();
+  const toast = useToast();
 
-  const [tab, setTab] = useState<Tab>("wheel");
+  const wheel = useRef<PrizeWheelHandle>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [win, setWin] = useState<number | null>(null);
+  const [last, setLast] = useState<SpinOut | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [spinning, setSpinning] = useState(false);
-  const [rotation, setRotation] = useState(0);
-  const [lastSpin, setLastSpin] = useState<SpinOut | null>(null);
-  const [lastDaily, setLastDaily] = useState<DailyClaim | null>(null);
   const [code, setCode] = useState("");
-  const [lastPromo, setLastPromo] = useState<PromoRedeemOut | null>(null);
 
-  async function onDaily() {
-    try {
-      setLastDaily(await dailyClaim.mutateAsync());
-    } catch {
-      /* */
-    }
-  }
+  const busy = phase === "wait" || phase === "spin";
 
   async function onSpin() {
-    if (spinning) return;
-    setLastSpin(null);
-    setSpinning(true);
-    const startRot = rotation;
-
-    let outcome: SpinOut | null = null;
+    if (busy) return;
+    setWin(null);
+    setLast(null);
+    setPhase("wait");
+    let out: SpinOut;
     try {
-      outcome = await spinMut.mutateAsync();
-    } catch {
-      setSpinning(false);
+      // сначала ответ сервера, потом колесо доезжает до выпавшего сектора
+      out = await spinMut.mutateAsync();
+    } catch (e) {
+      setPhase("idle");
+      toast({ kind: "danger", title: "Колесо не ответило", sub: e instanceof Error ? e.message : undefined });
       return;
     }
-
-    const idx = prizeIndex(outcome.item_id);
-    setRotation(startRot + 360 * 6 + targetOffset(idx));
-    await new Promise<void>((r) => setTimeout(r, 4800));
-    setLastSpin(outcome);
-    setSpinning(false);
+    const idx = prizeIndex(out.item_id);
+    setPhase("spin");
+    await wheel.current?.spinTo(idx);
+    setWin(idx);
+    setLast(out);
+    setPhase("done");
+    const p = PRIZES[idx];
+    if (p.id === "nothing" && rewardParts(out).length === 0) {
+      toast({ kind: "info", title: "Пустой сектор", sub: "в этот раз без награды" });
+    } else {
+      haptic.heavy();
+      toast({ kind: "amber", title: `Выигрыш: ${out.label || p.label}`, sub: rewardParts(out).join(" · ") || undefined });
+    }
+    requestAnimationFrame(() => resultRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
 
-  async function onPromo() {
-    setLastPromo(null);
-    try {
-      setLastPromo(await promo.mutateAsync(code));
-      setCode("");
-    } catch {
-      /* */
-    }
+  function onDaily() {
+    dailyClaim.mutate(undefined, {
+      onSuccess: (r) =>
+        r.already_claimed
+          ? toast({ kind: "info", title: "Сегодня уже отмечено", sub: `серия ${r.streak} дн · приходите завтра` })
+          : toast({
+              kind: "ok",
+              title: "Отметка засчитана",
+              sub: [
+                `+${Number(r.reward_ton).toFixed(4)} TON`,
+                r.reward_xp > 0 && `+${r.reward_xp} XP`,
+                r.reward_focus > 0 && `Фокус +${r.reward_focus}`,
+                `серия ${r.streak} дн`,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            }),
+      onError: (e) => toast({ kind: "danger", title: "Отметка не прошла", sub: e.message }),
+    });
+  }
+
+  function onPromo() {
+    promo.mutate(code, {
+      onSuccess: (r) => {
+        setCode("");
+        toast({ kind: "ok", title: "Промокод активирован", sub: r.code });
+      },
+      onError: (e) => toast({ kind: "danger", title: "Код не принят", sub: e.message }),
+    });
   }
 
   if (dailySt.isLoading || wheelSt.isLoading) {
-    return <LoadingPanel label="Загрузка контуров наград…" />;
+    return <LoadingPanel label="Загрузка колеса…" />;
   }
 
   const d = dailySt.data;
   const w = wheelSt.data;
   const left = w?.left_today ?? 0;
-  const maxSpins = w?.free_spins_per_day ?? 1;
-  const won = lastSpin ? PRIZES[prizeIndex(lastSpin.item_id)] : null;
+  const maxSpins = Math.max(w?.free_spins_per_day ?? 1, 1);
+  const won = win != null ? PRIZES[win] : null;
+  const miss = !!last && won?.id === "nothing" && rewardParts(last).length === 0;
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-5"
+      onPointerDown={() => {
+        if (phase === "spin") wheel.current?.skip();
+      }}
+    >
       <ScreenHeader
-        eyebrow="Модуль 02 · Удача"
+        eyebrow="Удача"
         title="Колесо удачи"
         action={
-          <button
-            type="button"
-            onClick={() => setHelpOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full metal-plate-dim text-[14px] font-semibold text-[var(--neon)]"
-            aria-label="Инструкция"
-          >
-            ?
-          </button>
+          <Button kind="secondary" size="sm" onClick={() => setHelpOpen(true)} aria-label="Призы и шансы">
+            Шансы
+          </Button>
         }
       />
 
-      <Tabs
-        label="Разделы удачи"
-        items={[
-          { value: "wheel" as const, label: "Колесо" },
-          { value: "daily" as const, label: "Отметка" },
-          { value: "promo" as const, label: "Промо" },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
+      {/* Герой: колесо (п. 8.3) */}
+      <Panel level="hero" cut="l" lift="l2" className="px-4 pb-0 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="ui-label">Бесплатные вращения</p>
+          <span className="flex items-center gap-2">
+            <span className="pw-pips" aria-hidden>
+              {Array.from({ length: maxSpins }, (_, i) => (
+                <i key={i} className={cx(i < left && "on")} />
+              ))}
+            </span>
+            <Num value={`${left}/${maxSpins}`} size="s" decode={false} />
+          </span>
+        </div>
+        <PrizeWheel ref={wheel} sectors={PRIZES} winIndex={phase === "done" ? win : null} spinning={phase === "spin"} miss={miss} className="my-4" />
+        <Scrim className="relative -mx-4 space-y-3 px-4 pb-4 pt-3">
+          <p className="ui-sec text-center !text-[12px]">
+            {phase === "wait"
+              ? "Связь с колесом…"
+              : phase === "spin"
+                ? "Тап по экрану — сразу к результату"
+                : left > 0
+                  ? "Сектор под указателем — ваша награда"
+                  : "Новое бесплатное вращение — завтра"}
+          </p>
+          <span className="ui-spill block">
+            <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || left <= 0} onClick={onSpin}>
+              {phase === "wait" ? "Связь…" : phase === "spin" ? "Вращение…" : left <= 0 ? "Вращения закончились" : "Крутить колесо"}
+            </Button>
+          </span>
+        </Scrim>
+      </Panel>
 
-      <AnimatePresence mode="wait">
-        {tab === "wheel" && (
-          <motion.div
-            key="wheel"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="flex flex-col items-center"
-          >
-            <div className="mb-5 flex items-center gap-3 rounded-full metal-plate-dim px-4 py-2">
-              <span className="eyebrow">Бесплатные вращения</span>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.max(maxSpins, 1) }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-1.5 w-1.5 rounded-full transition-colors"
-                    style={{
-                      background: i < left ? "var(--neon)" : "var(--line-strong)",
-                    }}
-                  />
-                ))}
-              </div>
-              <span className="mono text-[14px] font-semibold text-[var(--neon)]">{left}</span>
+      {/* Итог вращения: натриевая плашка (награда) или нейтральная (пусто) */}
+      {last && won && phase === "done" && (
+        <div ref={resultRef} className="scroll-mb-28">
+          <Panel className={cx("space-y-3 p-5", !miss && "win-edge")}>
+            <div className="flex items-center justify-between gap-3">
+              <p className="ui-label">{miss ? "Результат" : "Выигрыш"}</p>
+              {miss ? <Tag tone="neutral">пусто</Tag> : <span className="ui-verdict ok ui-ignite">{last.label || won.label}</span>}
             </div>
-
-            <FortuneWheel rotation={rotation} spinning={spinning} />
-
-            <div className="mb-4 flex h-10 items-center justify-center">
-              {spinning && (
-                <span className="subtle-glow text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-dim)]">
-                  Вращение…
-                </span>
-              )}
-              {lastSpin && !spinning && won && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.85, y: 4 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  className="rounded-full metal-plate-hero px-4 py-2"
-                >
-                  <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--neon)]">
-                    Вы выиграли: {won.label}
-                  </span>
-                </motion.div>
-              )}
-            </div>
-
-            <div className="metal-plate-dim mb-4 w-full p-3">
-              <p className="eyebrow mb-2">Призы</p>
-              <div className="grid grid-cols-3 gap-2">
-                {PRIZES.map((p) => (
-                  <div key={p.id} className="flex items-center gap-1.5">
-                    <div
-                      className="h-2 w-2 shrink-0 rounded-[2px]"
-                      style={{ background: p.color, opacity: 0.75 }}
-                    />
-                    <span className="truncate font-mono text-[8px] text-[var(--text-dim)]">{p.short}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="ui-btn primary block"
-              disabled={spinning || spinMut.isPending || left <= 0}
-              onClick={onSpin}
-            >
-              {spinning ? "Вращение…" : left <= 0 ? "Нет свободных спинов" : "Крутить колесо"}
-            </button>
-
-            {spinMut.isError && (
-              <div className="mt-3 w-full">
-                <ErrorPanel
-                  message={spinMut.error instanceof Error ? spinMut.error.message : "Ошибка рулетки"}
-                />
-              </div>
+            {miss ? (
+              <p className="ui-sec">Сектор без награды. Повезёт в следующий раз.</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                  {rewardParts(last).map((t) => (
+                    <span key={t} className="ui-num text-[20px] font-bold leading-7 text-[var(--amber)]">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <p className="ui-sec !text-[12px] !leading-[16px]">{won.use}</p>
+              </>
             )}
+          </Panel>
+        </div>
+      )}
 
-            {lastSpin && !spinning && (
-              <div className="mt-3 flex flex-wrap justify-center gap-2 text-[11px] text-[var(--text-dim)]">
-                {Number(lastSpin.reward_ton) > 0 && (
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    +{Number(lastSpin.reward_ton).toFixed(4)} TON
-                  </span>
-                )}
-                {lastSpin.reward_xp > 0 && (
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    +{lastSpin.reward_xp} XP
-                  </span>
-                )}
-                {lastSpin.reward_focus > 0 && (
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    Фокус +{lastSpin.reward_focus}
-                  </span>
-                )}
-                {lastSpin.reward_block > 0 && (
-                  <span className="rounded-md border border-[var(--line)] px-2 py-0.5">
-                    Запрет +{lastSpin.reward_block}
-                  </span>
-                )}
-                {lastSpin.success_boost_bp > 0 && (
-                  <span className="rounded-md border border-[var(--success)]/30 px-2 py-0.5 text-[var(--success)]">
-                    +{lastSpin.success_boost_bp / 100}% успех
-                  </span>
-                )}
-              </div>
-            )}
-          </motion.div>
-        )}
+      {/* Ежедневная отметка */}
+      <Panel className="space-y-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="ui-h">Ежедневная отметка</p>
+            <p className="ui-sec !text-[12px]">TON, опыт и фокус — раз в сутки</p>
+          </div>
+          <Tag tone={d?.claimed_today ? "ok" : "amber"}>{d?.claimed_today ? "получено" : "доступно"}</Tag>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Readout label="Серия" value={String(d?.streak ?? 0)} unit="дн" />
+          <Readout label="Сегодня" value={d?.claimed_today ? "получено" : "доступно"} />
+        </div>
+        <Button kind="secondary" block icon={<IconBolt size={18} />} disabled={dailyClaim.isPending || !!d?.claimed_today} onClick={onDaily}>
+          {d?.claimed_today ? "Уже получено" : dailyClaim.isPending ? "Начисление…" : "Забрать отметку"}
+        </Button>
+      </Panel>
 
-        {tab === "daily" && (
-          <motion.div
-            key="daily"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            <div className="metal-plate-hero space-y-4 p-5">
-              <div className="flex items-center justify-between">
-                <p className="eyebrow">Ежедневная отметка</p>
-                <StatusPill tone={d?.claimed_today ? "ok" : "neutral"}>
-                  серия {d?.streak ?? 0}
-                </StatusPill>
+      {/* Промокод */}
+      <Panel className="space-y-4 p-5">
+        <div className="min-w-0">
+          <p className="ui-h">Промокод</p>
+          <p className="ui-sec !text-[12px]">Один код — один раз на аккаунт</p>
+        </div>
+        <Field label="Код" error={promo.isError ? (promo.error instanceof Error ? promo.error.message : "Код не принят") : undefined}>
+          <input
+            className="ui-input uppercase tracking-wider"
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value.toUpperCase());
+              if (promo.isError) promo.reset();
+            }}
+            placeholder="NEXUS-START"
+            disabled={promo.isPending}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </Field>
+        <Button kind="secondary" block disabled={promo.isPending || code.trim().length < 3} onClick={onPromo}>
+          {promo.isPending ? "Проверка…" : "Активировать"}
+        </Button>
+      </Panel>
+
+      {dailyClaim.isError && (
+        <ErrorPanel message={dailyClaim.error instanceof Error ? dailyClaim.error.message : "Отметка не прошла"} />
+      )}
+
+      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="Призы и шансы">
+        <p className="ui-sec !text-[13px]">Указатель сверху. После остановки сектор под ним — ваша награда.</p>
+        <div className="mt-4 divide-y divide-[var(--line)]">
+          {PRIZES.map((p) => (
+            <div key={p.id} className="flex gap-3 py-3">
+              <span className="pw-dot mt-[5px]" style={{ background: DOT[p.role] }} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-[15px] font-medium leading-5 text-[var(--text)]">{p.label}</span>
+                  <span className="ui-num text-[15px]">{Math.round((p.weight / WEIGHT_SUM) * 100)}%</span>
+                </div>
+                <p className="ui-sec mt-0.5 !text-[12px] !leading-[16px]">{p.use}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Readout label="Серия" value={String(d?.streak ?? 0)} unit="дн" />
-                <Readout label="Сегодня" value={d?.claimed_today ? "получено" : "доступно"} />
-              </div>
-              <button
-                type="button"
-                className="ui-btn primary block"
-                disabled={dailyClaim.isPending || !!d?.claimed_today}
-                onClick={onDaily}
-              >
-                <IconSpark size={16} />
-                {d?.claimed_today
-                  ? "Уже получено"
-                  : dailyClaim.isPending
-                    ? "Начисление…"
-                    : "Забрать отметку"}
-              </button>
-              {dailyClaim.isError && (
-                <ErrorPanel
-                  message={dailyClaim.error instanceof Error ? dailyClaim.error.message : "Отметка не прошла"}
-                />
-              )}
-              <AnimatePresence>
-                {lastDaily && !lastDaily.already_claimed && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-[var(--success)]/25 bg-[var(--success)]/5 p-3 text-[13px]"
-                  >
-                    +{Number(lastDaily.reward_ton).toFixed(4)} TON
-                    {lastDaily.reward_xp > 0 && ` · +${lastDaily.reward_xp} XP`}
-                    {lastDaily.reward_focus > 0 && ` · Фокус +${lastDaily.reward_focus}`}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
-          </motion.div>
-        )}
-
-        {tab === "promo" && (
-          <motion.div
-            key="promo"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            <div className="metal-plate-hero space-y-4 p-5">
-              <div className="flex items-center justify-between">
-                <p className="eyebrow">Промокод</p>
-                <StatusPill tone={promo.isSuccess ? "ok" : "neutral"}>промокод</StatusPill>
-              </div>
-              <p className="text-[12px] leading-relaxed text-[var(--text-dim)]">
-                Один код — один раз на аккаунт.
-              </p>
-              <Field label="Код">
-                <input
-                  className="ui-input uppercase tracking-wider"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="NEXUS-START"
-                  disabled={promo.isPending}
-                />
-              </Field>
-              <button
-                type="button"
-                className="ui-btn primary block"
-                disabled={promo.isPending || code.trim().length < 3}
-                onClick={onPromo}
-              >
-                {promo.isPending ? "Проверка…" : "Активировать"}
-              </button>
-              {promo.isError && (
-                <ErrorPanel
-                  message={promo.error instanceof Error ? promo.error.message : "Код не принят"}
-                />
-              )}
-              <AnimatePresence>
-                {lastPromo && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-[var(--success)]/25 bg-[var(--success)]/5 p-4"
-                  >
-                    <p className="eyebrow text-[var(--success)]">Активирован</p>
-                    <p className="mono mt-1 text-sm font-semibold">{lastPromo.code}</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <OddsModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+          ))}
+        </div>
+        <Button kind="primary" block className="mt-4" onClick={() => setHelpOpen(false)}>
+          Понятно
+        </Button>
+      </Sheet>
     </div>
   );
 }
