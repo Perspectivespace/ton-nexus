@@ -8,6 +8,7 @@ import {
   LoadingPanel,
   ErrorPanel,
   Readout,
+  Field,
 } from "@/components/ui";
 
 export function TaskCreate() {
@@ -66,7 +67,7 @@ export function TaskCreate() {
       <div className="space-y-4">
         <ScreenHeader eyebrow="Маркет" title="Новое задание" />
         <ErrorPanel message="Создание доступно амбассадору, admin и owner." />
-        <Link to="/tasks" className="btn-ghost inline-flex text-[13px] no-underline">
+        <Link to="/tasks" className="ui-btn secondary sm no-underline">
           ← Лента
         </Link>
       </div>
@@ -89,7 +90,7 @@ export function TaskCreate() {
         }
       />
 
-      <div className="panel panel-glow p-4">
+      <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
           {canDirectPublish
             ? "Admin/owner: можно сразу опубликовать — бюджет (награда × слоты + ~10%) спишется с баланса."
@@ -98,17 +99,16 @@ export function TaskCreate() {
       </div>
 
       {me && (
-        <div className="panel grid grid-cols-2 gap-3 p-4">
+        <div className="ui-cut grid grid-cols-2 gap-3 p-4">
           <Readout label="Ваш баланс" value={Number(me.balance).toFixed(4)} unit="TON" />
           <Readout label="Ориентир бюджета" value={budgetHint} unit="TON" hint="×1.1 комиссия" />
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="panel space-y-4 p-5">
-        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-          Заголовок
+      <form onSubmit={onSubmit} className="ui-cut space-y-4 p-5">
+        <Field label="Заголовок">
           <input
-            className="input-field"
+            className="ui-input sans"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Подпишись на канал / репост"
@@ -116,12 +116,11 @@ export function TaskCreate() {
             required
             disabled={create.isPending}
           />
-        </label>
+        </Field>
 
-        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-          Описание / бриф
+        <Field label="Описание / бриф">
           <textarea
-            className="input-field min-h-[100px] resize-y"
+            className="ui-input"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Что сделать и как подтвердить…"
@@ -129,75 +128,69 @@ export function TaskCreate() {
             required
             disabled={create.isPending}
           />
-        </label>
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Тип
+          <Field label="Тип">
             <select
-              className="input-field"
+              className="ui-input"
               value={taskType}
               onChange={(e) => setTaskType(e.target.value as "manual_proof" | "link")}
               disabled={create.isPending}
             >
-              <option value="manual_proof">Proof вручную</option>
+              <option value="manual_proof">Подтверждение вручную</option>
               <option value="link">Ссылка</option>
             </select>
-          </label>
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Мин. уровень
+          </Field>
+          <Field label="Мин. уровень">
             <input
-              className="input-field mono"
+              className="ui-input"
               value={minLevel}
               onChange={(e) => setMinLevel(e.target.value)}
               disabled={create.isPending}
             />
-          </label>
+          </Field>
         </div>
 
         {taskType === "link" && (
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Target URL
+          <Field label="Ссылка на цель">
             <input
-              className="input-field mono text-[13px]"
+              className="ui-input"
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
               placeholder="https://t.me/…"
               disabled={create.isPending}
             />
-          </label>
+          </Field>
         )}
 
         <div className="grid grid-cols-3 gap-2">
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Награда TON
+          <Field label="Награда, TON">
             <input
-              className="input-field mono"
+              className="ui-input"
               value={reward}
               onChange={(e) => setReward(e.target.value)}
               required
               disabled={create.isPending}
             />
-          </label>
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Слоты
+          </Field>
+          <Field label="Слоты">
             <input
-              className="input-field mono"
+              className="ui-input"
               value={slots}
               onChange={(e) => setSlots(e.target.value)}
               required
               disabled={create.isPending}
             />
-          </label>
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            XP
+          </Field>
+          <Field label="XP" unit="XP">
             <input
-              className="input-field mono"
+              className="ui-input"
               value={xp}
               onChange={(e) => setXp(e.target.value)}
               disabled={create.isPending}
             />
-          </label>
+          </Field>
         </div>
 
         {canDirectPublish && (
@@ -215,7 +208,7 @@ export function TaskCreate() {
 
         <button
           type="submit"
-          className="btn-primary w-full"
+          className="ui-btn primary block"
           disabled={
             create.isPending || title.trim().length < 3 || description.trim().length < 3
           }
@@ -246,7 +239,7 @@ export function TaskCreate() {
         )}
       </form>
 
-      <Link to="/tasks" className="btn-ghost inline-flex text-[13px] no-underline">
+      <Link to="/tasks" className="ui-btn secondary sm no-underline">
         ← Лента
       </Link>
     </div>

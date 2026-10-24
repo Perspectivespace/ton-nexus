@@ -1,18 +1,16 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useMiner, useMinerStart, useMinerClaim } from "@/api/hooks";
-import { IconReactor } from "@/components/icons";
 import {
   ScreenHeader,
   StatusPill,
   LoadingPanel,
   ErrorPanel,
-  Gauge,
   Readout,
   Panel,
   Scrim,
   Num,
-  Bar,
+  Reactor,
   StatTile,
   Button,
 } from "@/components/ui";
@@ -60,21 +58,17 @@ export function Miner() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <Panel level="hero" see cut="l" lift="l2" className="p-5">
           <div className="relative flex flex-col items-center">
-            <span className={`miner-core ${ready ? "is-ready" : running ? "is-running" : ""}`}>
-              <IconReactor size={30} />
-            </span>
-            <p className="ui-label ui-shade mt-4">Накоплено в цикле</p>
+            <Reactor fill={cap > 0 ? accrued / cap : 0} state={ready ? "ready" : running ? "running" : "idle"} />
+            <p className="ui-label ui-shade mt-6">Накоплено в цикле</p>
             <Num value={accrued.toFixed(6)} unit="TON" size="l" glow={running || ready} tone={ready ? "amber" : undefined} className="ui-shade mt-1" />
             {m.cycle_hours != null && (
               <p className="ui-sec ui-shade mt-1">Длительность цикла ~{m.cycle_hours.toFixed(1)} ч</p>
             )}
           </div>
 
-          <Scrim className="relative -mx-5 -mb-5 mt-5 flex items-center gap-5 px-5 pb-5 pt-4">
-            <Gauge value={accrued} max={cap || 1} label="Хранилище" sub={`${accrued.toFixed(4)}`} />
-            <div className="min-w-0 flex-1 space-y-3">
+          <Scrim className="relative -mx-5 -mb-5 mt-5 px-5 pb-5 pt-4">
+            <div className="min-w-0 space-y-2">
               <Readout label="Ёмкость" value={cap.toFixed(6)} unit="TON" />
-              <Bar value={cap > 0 ? accrued / cap : 0} tone={ready ? "amber" : "neon"} label="Заполнение хранилища" />
               <p className="ui-sec !text-[12px] !leading-[16px]">
                 {ready
                   ? "Хранилище заполнено — соберите награду, иначе фарм остановлен."

@@ -8,6 +8,7 @@ import {
   LoadingPanel,
   ErrorPanel,
   Readout,
+  Field,
 } from "@/components/ui";
 
 const TASK_STATUS_RU: Record<string, string> = {
@@ -59,14 +60,14 @@ export function TaskDetail() {
         action={
           <Link
             to="/tasks"
-            className="rounded-xl border border-[var(--line)] px-3 py-2 text-xs text-[var(--text-dim)] no-underline"
+            className="ui-btn secondary sm no-underline"
           >
             ← Лента
           </Link>
         }
       />
 
-      <div className="panel panel-glow space-y-4 p-5">
+      <div className="ui-cut hero space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill tone={t.status === "active" ? "live" : "neutral"}>{TASK_STATUS_RU[t.status] ?? t.status}</StatusPill>
           <StatusPill tone={slotsLeft > 0 ? "ok" : "warn"}>
@@ -91,14 +92,14 @@ export function TaskDetail() {
             href={t.target_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-ghost inline-flex text-[13px]"
+            className="ui-btn secondary sm"
           >
             Открыть ссылку задания ↗
           </a>
         )}
       </div>
 
-      <div className="panel space-y-4 p-5">
+      <div className="ui-cut space-y-4 p-5">
         <div className="flex items-center justify-between">
           <p className="eyebrow">Сдача</p>
           <StatusPill
@@ -128,31 +129,29 @@ export function TaskDetail() {
 
         {(canSubmit || done || submit.isSuccess) && (
           <>
-            <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-              Proof (текст)
+            <Field label="Подтверждение (текст)">
               <textarea
-                className="input-field mt-1 min-h-[88px] resize-y"
+                className="ui-input"
                 value={proofText}
                 disabled={done || submit.isSuccess || submit.isPending}
                 onChange={(e) => setProofText(e.target.value)}
                 placeholder="Скрин / описание выполнения…"
               />
-            </label>
-            <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-              Proof URL
+            </Field>
+            <Field label="Ссылка на подтверждение">
               <input
-                className="input-field mono text-[13px]"
+                className="ui-input"
                 value={proofUrl}
                 disabled={done || submit.isSuccess || submit.isPending}
                 onChange={(e) => setProofUrl(e.target.value)}
                 placeholder="https://…"
               />
-            </label>
+            </Field>
 
             {canSubmit && (
               <button
                 type="button"
-                className="btn-primary w-full"
+                className="ui-btn primary block"
                 disabled={submit.isPending || (!proofText.trim() && !proofUrl.trim())}
                 onClick={onSubmit}
               >
