@@ -72,10 +72,21 @@ class SpinOut(BaseModel):
     free_spins_left_today: int
 
 
+class WheelSectorOut(BaseModel):
+    id: str
+    label: str
+    weight: float
+    chance_pct: float
+
+
 class WheelStatusOut(BaseModel):
     free_spins_per_day: int
     used_today: int
     left_today: int
+    # Сектора и шансы из настроек владельца — для шторки «Шансы» (порядок как в настройках).
+    sectors: list[WheelSectorOut] = []
+    # "settings" — веса владельца; "default" — запасные веса (в настройках все веса 0 или некорректны).
+    weights_source: str = "settings"
 
 
 @router.get("/daily/status", response_model=DailyStatusOut)
