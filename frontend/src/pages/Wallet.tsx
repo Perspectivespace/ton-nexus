@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useMe, useMyWithdrawals } from "@/api/hooks";
 import { api } from "@/api/client";
 import { IconOut } from "@/components/icons";
-import { Button, Field, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Tag, type Tone } from "@/components/ui";
+import { Button, Field, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Tag, useToast, type Tone } from "@/components/ui";
 
 const W_STATUS: Record<string, { label: string; tone: Tone }> = {
   pending: { label: "ожидает", tone: "warn" },
@@ -19,6 +19,7 @@ export function Wallet() {
   const [wallet, setWallet] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   async function submit() {
     setLoading(true);
@@ -29,10 +30,13 @@ export function Wallet() {
         body: JSON.stringify({ amount, wallet_address: wallet }),
       });
       setMsg("Заявка принята. Владелец подтвердит вручную.");
+      toast({ kind: "ok", title: "Заявка на вывод создана", sub: `${amount} TON · подтвердят вручную` });
       refetch();
       mine.refetch();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Ошибка");
+      const m = e instanceof Error ? e.message : "Ошибка";
+      setMsg(m);
+      toast({ kind: "danger", title: "Заявка не создана", sub: m });
     } finally {
       setLoading(false);
     }
