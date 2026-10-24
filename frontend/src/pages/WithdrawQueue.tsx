@@ -83,7 +83,7 @@ function WithdrawCard({
           </p>
           <p className="mt-0.5 text-[11px] text-[var(--text-dim)]">{formatDate(item.created_at)}</p>
         </div>
-        <StatusPill tone="warn">hold</StatusPill>
+        <StatusPill tone="warn">в холде</StatusPill>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -95,7 +95,7 @@ function WithdrawCard({
           <button
             type="button"
             onClick={copyWallet}
-            className="mono mt-1 w-full break-all rounded-xl border border-[var(--line)] bg-white/[0.02] px-3 py-2 text-left text-[12px] text-[var(--text)]"
+            className="mono mt-1 w-full break-all rounded-xl border border-[var(--line)] bg-[var(--surface-3)] px-3 py-2 text-left text-[12px] text-[var(--text)]"
           >
             {item.wallet_address}
             <span className="mt-1 block text-[10px] text-[var(--accent)]">
@@ -178,7 +178,7 @@ export function WithdrawQueue() {
         eyebrow="Касса"
         title="Выводы"
         action={
-          <StatusPill tone={list.length ? "warn" : "ok"}>{list.length} hold</StatusPill>
+          <StatusPill tone={list.length ? "warn" : "ok"}>{list.length} в холде</StatusPill>
         }
       />
 

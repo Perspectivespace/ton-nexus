@@ -16,6 +16,7 @@ import {
   LoadingPanel,
   ErrorPanel,
   Readout,
+  Tabs,
 } from "@/components/ui";
 import { IconSpark } from "@/components/icons";
 
@@ -25,7 +26,7 @@ const PRIZES = [
     label: "+5% к успеху",
     short: "+5%",
     weight: 8,
-    color: "#7ecfb5",
+    color: "var(--wh-spin)",
     kind: "spin" as const,
     use: "Добавляет +5% к шансу успеха следующей попытки усиления майнера. Не гарантирует успех.",
   },
@@ -34,7 +35,7 @@ const PRIZES = [
     label: "Фокус ×1",
     short: "Фокус",
     weight: 15,
-    color: "#b0c8ec",
+    color: "var(--wh-focus)",
     kind: "prize" as const,
     use: "Повышает вес нужного типа на колесе апгрейда (чаще выпадает выбранный стат).",
   },
@@ -43,7 +44,7 @@ const PRIZES = [
     label: "Запрет ×1",
     short: "Запрет",
     weight: 12,
-    color: "#c0b6ee",
+    color: "var(--wh-block)",
     kind: "prize" as const,
     use: "Блокирует выпадение одного нежелательного типа апгрейда.",
   },
@@ -52,7 +53,7 @@ const PRIZES = [
     label: "XP",
     short: "XP",
     weight: 25,
-    color: "#b0c8ec",
+    color: "var(--wh-xp)",
     kind: "xp" as const,
     use: "Опыт уровня аккаунта.",
   },
@@ -61,7 +62,7 @@ const PRIZES = [
     label: "Пыль TON",
     short: "TON",
     weight: 20,
-    color: "#d8e0ec",
+    color: "var(--wh-ton)",
     kind: "prize" as const,
     use: "Небольшая сумма TON на баланс.",
   },
@@ -70,7 +71,7 @@ const PRIZES = [
     label: "Пусто",
     short: "МИСС",
     weight: 20,
-    color: "#d49292",
+    color: "var(--wh-miss)",
     kind: "miss" as const,
     use: "Пустой сектор — без награды.",
   },
@@ -107,10 +108,7 @@ function segmentFill(kind: (typeof PRIZES)[number]["kind"]): string {
 }
 
 function segmentStroke(kind: (typeof PRIZES)[number]["kind"]): string {
-  if (kind === "miss") return "rgba(230,165,188,0.58)";
-  if (kind === "spin") return "rgba(125,225,200,0.58)";
-  if (kind === "xp") return "rgba(180,205,240,0.6)";
-  return "rgba(150,185,235,0.58)";
+  return `var(--wh-edge-${kind})`;
 }
 
 function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: boolean }) {
@@ -124,49 +122,49 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
       <svg width={WHEEL_SVG} height={WHEEL_SVG} viewBox={`0 0 ${WHEEL_SVG} ${WHEEL_SVG}`} className="relative z-10">
         <defs>
           <radialGradient id="wheelBg" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#141e32" />
-            <stop offset="70%" stopColor="#0e1626" />
-            <stop offset="100%" stopColor="#0a101c" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-wheelBg-1)" }} />
+            <stop offset="70%" style={{ stopColor: "var(--wh-wheelBg-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-wheelBg-3)" }} />
           </radialGradient>
           <radialGradient id="wheelCenterGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#1a2236" />
-            <stop offset="60%" stopColor="#0e1422" />
-            <stop offset="100%" stopColor="#080c14" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-wheelCenterGrad-1)" }} />
+            <stop offset="60%" style={{ stopColor: "var(--wh-wheelCenterGrad-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-wheelCenterGrad-3)" }} />
           </radialGradient>
           <linearGradient id="rimGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="rgba(155,184,224,0.3)" />
-            <stop offset="50%" stopColor="rgba(122,159,212,0.08)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0.4)" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-rimGrad-1)" }} />
+            <stop offset="50%" style={{ stopColor: "var(--wh-rimGrad-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-rimGrad-3)" }} />
           </linearGradient>
           <linearGradient id="segmentPrize" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#3d5a8c" />
-            <stop offset="40%" stopColor="#2a4570" />
-            <stop offset="100%" stopColor="#1a3254" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-segmentPrize-1)" }} />
+            <stop offset="40%" style={{ stopColor: "var(--wh-segmentPrize-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-segmentPrize-3)" }} />
           </linearGradient>
           <linearGradient id="segmentMiss" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#524058" />
-            <stop offset="45%" stopColor="#3a3046" />
-            <stop offset="100%" stopColor="#261e32" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-segmentMiss-1)" }} />
+            <stop offset="45%" style={{ stopColor: "var(--wh-segmentMiss-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-segmentMiss-3)" }} />
           </linearGradient>
           <linearGradient id="segmentSpin" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#356864" />
-            <stop offset="45%" stopColor="#254e4c" />
-            <stop offset="100%" stopColor="#183836" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-segmentSpin-1)" }} />
+            <stop offset="45%" style={{ stopColor: "var(--wh-segmentSpin-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-segmentSpin-3)" }} />
           </linearGradient>
           <linearGradient id="segmentXp" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#456288" />
-            <stop offset="45%" stopColor="#304a6e" />
-            <stop offset="100%" stopColor="#1e3450" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-segmentXp-1)" }} />
+            <stop offset="45%" style={{ stopColor: "var(--wh-segmentXp-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-segmentXp-3)" }} />
           </linearGradient>
           <radialGradient id="segSheen" cx="32%" cy="28%" r="72%">
-            <stop offset="0%" stopColor="rgba(230,240,255,0.26)" />
-            <stop offset="50%" stopColor="rgba(155,184,224,0.08)" />
-            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-segSheen-1)" }} />
+            <stop offset="50%" style={{ stopColor: "var(--wh-segSheen-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-segSheen-3)" }} />
           </radialGradient>
           <linearGradient id="nexusTextGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#dce9ff" />
-            <stop offset="50%" stopColor="#9bb8e0" />
-            <stop offset="100%" stopColor="#6681ae" />
+            <stop offset="0%" style={{ stopColor: "var(--wh-nexusTextGrad-1)" }} />
+            <stop offset="50%" style={{ stopColor: "var(--wh-nexusTextGrad-2)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--wh-nexusTextGrad-3)" }} />
           </linearGradient>
           <filter id="segmentGlow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="1.4" result="soft" />
@@ -185,7 +183,7 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
         </defs>
 
         <circle cx={cx} cy={cy} r={WHEEL_RADIUS + 8} fill="none" stroke="url(#rimGrad)" strokeWidth={3} />
-        <circle cx={cx} cy={cy} r={WHEEL_RADIUS + 8} fill="none" stroke="rgba(155,184,224,0.15)" strokeWidth={1} />
+        <circle cx={cx} cy={cy} r={WHEEL_RADIUS + 8} fill="none" style={{ stroke: "var(--wh-line)" }} strokeWidth={1} />
 
         {Array.from({ length: 48 }).map((_, i) => {
           const angle = (i / 48) * 2 * Math.PI - Math.PI / 2;
@@ -199,7 +197,7 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
               y1={cy + r1 * Math.sin(angle)}
               x2={cx + r2 * Math.cos(angle)}
               y2={cy + r2 * Math.sin(angle)}
-              stroke={isMajor ? "rgba(155,184,224,0.4)" : "rgba(122,159,212,0.12)"}
+              style={{ stroke: isMajor ? "var(--wh-tick-major)" : "var(--wh-tick)" }}
               strokeWidth={isMajor ? 1.5 : 0.8}
             />
           );
@@ -235,7 +233,7 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
                 <path
                   d={path}
                   fill={segmentFill(seg.kind)}
-                  stroke={segmentStroke(seg.kind)}
+                  style={{ stroke: segmentStroke(seg.kind) }}
                   strokeWidth={1.45}
                   strokeLinejoin="round"
                   filter="url(#segmentGlow)"
@@ -244,13 +242,13 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
                 <path
                   d={`M ${cx + rOuter * Math.cos(startAngle)} ${cy + rOuter * Math.sin(startAngle)} A ${rOuter} ${rOuter} 0 0 1 ${cx + rOuter * Math.cos(endAngle)} ${cy + rOuter * Math.sin(endAngle)}`}
                   fill="none"
-                  stroke="rgba(235,245,255,0.32)"
+                  style={{ stroke: "var(--wh-seg-rim)" }}
                   strokeWidth={1.25}
                 />
                 <path
                   d={`M ${cx + rMid * Math.cos(startAngle)} ${cy + rMid * Math.sin(startAngle)} A ${rMid} ${rMid} 0 0 1 ${cx + rMid * Math.cos(endAngle)} ${cy + rMid * Math.sin(endAngle)}`}
                   fill="none"
-                  stroke={seg.color}
+                  style={{ stroke: seg.color }}
                   strokeOpacity={0.28}
                   strokeWidth={1.05}
                 />
@@ -258,7 +256,7 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
                   cx={cx + WHEEL_RADIUS * 0.78 * Math.cos(mid)}
                   cy={cy + WHEEL_RADIUS * 0.78 * Math.sin(mid)}
                   r={2.4}
-                  fill={seg.color}
+                  style={{ fill: seg.color }}
                   fillOpacity={0.4}
                 />
               </g>
@@ -273,12 +271,10 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
                   x={cx}
                   y={cy - TEXT_RADIUS + 6}
                   textAnchor="middle"
-                  fill={seg.color}
                   fontSize={11}
-                  fontFamily="'IBM Plex Mono', monospace"
+                  fontFamily="var(--f-mono)"
                   fontWeight={600}
-                  style={{ letterSpacing: "0.02em" }}
-                  filter="url(#wheelGlow)"
+                  style={{ fill: seg.color, letterSpacing: "0.02em" }}
                 >
                   {seg.short}
                 </text>
@@ -286,18 +282,18 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
             );
           })}
 
-          <circle cx={cx} cy={cy} r={WHEEL_RADIUS * 0.45} fill="none" stroke="rgba(122,159,212,0.08)" strokeWidth={1} />
-          <circle cx={cx} cy={cy} r={WHEEL_RADIUS * 0.42} fill="none" stroke="rgba(155,184,224,0.04)" strokeWidth={0.5} />
+          <circle cx={cx} cy={cy} r={WHEEL_RADIUS * 0.45} fill="none" style={{ stroke: "var(--wh-faint)" }} strokeWidth={1} />
+          <circle cx={cx} cy={cy} r={WHEEL_RADIUS * 0.42} fill="none" style={{ stroke: "var(--wh-faint)" }} strokeWidth={0.5} />
 
-          <circle cx={cx} cy={cy} r={22} fill="url(#wheelCenterGrad)" stroke="rgba(155,184,224,0.2)" strokeWidth={1} />
-          <circle cx={cx} cy={cy} r={18} fill="none" stroke="rgba(122,159,212,0.08)" strokeWidth={0.5} />
+          <circle cx={cx} cy={cy} r={22} fill="url(#wheelCenterGrad)" style={{ stroke: "var(--wh-line)" }} strokeWidth={1} />
+          <circle cx={cx} cy={cy} r={18} fill="none" style={{ stroke: "var(--wh-faint)" }} strokeWidth={0.5} />
           <text
             x={cx}
             y={cy + 4}
             textAnchor="middle"
             fill="url(#nexusTextGrad)"
             fontSize={10}
-            fontFamily="Syne, sans-serif"
+            fontFamily="var(--f-display)"
             fontWeight={700}
             letterSpacing="0.1em"
           >
@@ -312,16 +308,16 @@ function FortuneWheel({ rotation, spinning }: { rotation: number; spinning: bool
                 cx={cx + 15 * Math.cos(rad)}
                 cy={cy + 15 * Math.sin(rad)}
                 r={1.5}
-                fill="rgba(155,184,224,0.25)"
+                style={{ fill: "var(--wh-tick)" }}
               />
             );
           })}
         </motion.g>
 
         <g transform={`translate(${cx}, 10)`}>
-          <path d="M 0 0 L -7 -6 L 7 -6 Z" fill="#9bb8e0" filter="url(#wheelGlow)" />
-          <path d="M 0 0 L -5 -4 L 5 -4 Z" fill="rgba(155,184,224,0.5)" />
-          <circle cx={0} cy={-2} r={2} fill="#9bb8e0" />
+          <path d="M 0 0 L -7 -6 L 7 -6 Z" style={{ fill: "var(--wh-pointer)" }} />
+          <path d="M 0 0 L -5 -4 L 5 -4 Z" style={{ fill: "var(--wh-pointer-hi)" }} />
+          <circle cx={0} cy={-2} r={2} style={{ fill: "var(--wh-pointer)" }} />
         </g>
       </svg>
     </div>
@@ -350,7 +346,7 @@ function OddsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="eyebrow">Flight Manual</p>
+                <p className="eyebrow">Как играть</p>
                 <h2 className="title-display mt-1 text-[20px]">Колесо удачи</h2>
               </div>
               <button
@@ -365,24 +361,24 @@ function OddsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
               Указатель сверху. После остановки сектор под ним — ваша награда.
             </p>
             <p className="eyebrow mt-5 mb-2">Призы и шансы</p>
-            <div className="overflow-hidden rounded-xl border border-[rgba(122,159,212,0.12)]">
+            <div className="overflow-hidden rounded-xl border border-[var(--line)]">
               <table className="w-full text-left text-[12px]">
                 <thead>
-                  <tr className="border-b border-[rgba(122,159,212,0.1)] bg-black/25">
+                  <tr className="border-b border-[var(--line)] bg-[var(--surface-3)]">
                     <th className="px-3 py-2 text-[9px] uppercase tracking-[0.12em] text-[var(--text-dim)]">Приз</th>
                     <th className="px-3 py-2 text-[9px] uppercase tracking-[0.12em] text-[var(--text-dim)]">Шанс</th>
                   </tr>
                 </thead>
                 <tbody>
                   {PRIZES.map((p) => (
-                    <tr key={p.id} className="border-b border-[rgba(122,159,212,0.06)] last:border-0">
+                    <tr key={p.id} className="border-b border-[var(--line)] last:border-0">
                       <td className="px-3 py-2.5">
                         <span className="inline-flex items-center gap-2">
                           <span className="h-2 w-2 rounded-[2px]" style={{ background: p.color, opacity: 0.8 }} />
                           {p.label}
                         </span>
                       </td>
-                      <td className="mono px-3 py-2.5 text-[#9bb8e0]">{chancePct(p.weight)}</td>
+                      <td className="mono px-3 py-2.5 text-[var(--neon)]">{chancePct(p.weight)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -391,7 +387,7 @@ function OddsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
             <p className="eyebrow mt-5 mb-2">Где применять</p>
             <ul className="space-y-2">
               {PRIZES.filter((p) => !["nothing", "ton_dust", "xp_small"].includes(p.id)).map((p) => (
-                <li key={p.id} className="rounded-xl border border-[rgba(122,159,212,0.1)] bg-black/25 px-3 py-2.5">
+                <li key={p.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-3)] px-3 py-2.5">
                   <p className="text-[12px] font-semibold" style={{ color: p.color }}>
                     {p.label}
                   </p>
@@ -477,13 +473,13 @@ export function Wheel() {
   return (
     <div className="space-y-4">
       <ScreenHeader
-        eyebrow="Module 02 · Fortune"
+        eyebrow="Модуль 02 · Удача"
         title="Колесо удачи"
         action={
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full metal-plate-dim text-[14px] font-semibold text-[#9bb8e0]"
+            className="flex h-9 w-9 items-center justify-center rounded-full metal-plate-dim text-[14px] font-semibold text-[var(--neon)]"
             aria-label="Инструкция"
           >
             ?
@@ -491,24 +487,16 @@ export function Wheel() {
         }
       />
 
-      <div className="metal-plate-dim fortune-tabs">
-        {(
-          [
-            { key: "wheel" as const, label: "Колесо" },
-            { key: "daily" as const, label: "Чекин" },
-            { key: "promo" as const, label: "Промо" },
-          ] as const
-        ).map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`fortune-tab${tab === t.key ? " active" : ""}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Разделы удачи"
+        items={[
+          { value: "wheel" as const, label: "Колесо" },
+          { value: "daily" as const, label: "Отметка" },
+          { value: "promo" as const, label: "Промо" },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
       <AnimatePresence mode="wait">
         {tab === "wheel" && (
@@ -521,20 +509,19 @@ export function Wheel() {
             className="flex flex-col items-center"
           >
             <div className="mb-5 flex items-center gap-3 rounded-full metal-plate-dim px-4 py-2">
-              <span className="eyebrow">Free Spins</span>
+              <span className="eyebrow">Бесплатные вращения</span>
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.max(maxSpins, 1) }).map((_, i) => (
                   <div
                     key={i}
                     className="h-1.5 w-1.5 rounded-full transition-colors"
                     style={{
-                      background: i < left ? "#9bb8e0" : "rgba(122,159,212,0.15)",
-                      boxShadow: i < left ? "0 0 6px rgba(155,184,224,0.6)" : undefined,
+                      background: i < left ? "var(--neon)" : "var(--line-strong)",
                     }}
                   />
                 ))}
               </div>
-              <span className="mono text-[14px] font-semibold text-[#9bb8e0]">{left}</span>
+              <span className="mono text-[14px] font-semibold text-[var(--neon)]">{left}</span>
             </div>
 
             <FortuneWheel rotation={rotation} spinning={spinning} />
@@ -551,7 +538,7 @@ export function Wheel() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   className="rounded-full metal-plate-hero px-4 py-2"
                 >
-                  <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#9bb8e0]">
+                  <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--neon)]">
                     Вы выиграли: {won.label}
                   </span>
                 </motion.div>
@@ -559,7 +546,7 @@ export function Wheel() {
             </div>
 
             <div className="metal-plate-dim mb-4 w-full p-3">
-              <p className="eyebrow mb-2">Prize Legend</p>
+              <p className="eyebrow mb-2">Призы</p>
               <div className="grid grid-cols-3 gap-2">
                 {PRIZES.map((p) => (
                   <div key={p.id} className="flex items-center gap-1.5">
@@ -632,9 +619,9 @@ export function Wheel() {
           >
             <div className="metal-plate-hero space-y-4 p-5">
               <div className="flex items-center justify-between">
-                <p className="eyebrow">Check-in</p>
+                <p className="eyebrow">Ежедневная отметка</p>
                 <StatusPill tone={d?.claimed_today ? "ok" : "neutral"}>
-                  streak {d?.streak ?? 0}
+                  серия {d?.streak ?? 0}
                 </StatusPill>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -687,7 +674,7 @@ export function Wheel() {
             <div className="metal-plate-hero space-y-4 p-5">
               <div className="flex items-center justify-between">
                 <p className="eyebrow">Промокод</p>
-                <StatusPill tone={promo.isSuccess ? "ok" : "neutral"}>redeem</StatusPill>
+                <StatusPill tone={promo.isSuccess ? "ok" : "neutral"}>промокод</StatusPill>
               </div>
               <p className="text-[12px] leading-relaxed text-[var(--text-dim)]">
                 Один код — один раз на аккаунт.

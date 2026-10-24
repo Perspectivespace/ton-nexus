@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Home } from "@/pages/Home";
@@ -11,6 +12,9 @@ import { Wheel } from "@/pages/Wheel";
 import { Owner } from "@/pages/Owner";
 import { Inbox } from "@/pages/Inbox";
 import { WithdrawQueue } from "@/pages/WithdrawQueue";
+
+// Витрина набора компонентов — только в dev-сборке, в прод не попадает
+const Kit = import.meta.env.DEV ? lazy(() => import("@/pages/Kit")) : null;
 
 export default function App() {
   return (
@@ -28,6 +32,16 @@ export default function App() {
           <Route path="/owner" element={<Owner />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/withdraws" element={<WithdrawQueue />} />
+          {Kit && (
+            <Route
+              path="/kit"
+              element={
+                <Suspense fallback={null}>
+                  <Kit />
+                </Suspense>
+              }
+            />
+          )}
         </Route>
       </Routes>
     </BrowserRouter>

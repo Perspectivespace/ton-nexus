@@ -19,6 +19,15 @@ const TYPE_RU: Record<string, string> = {
   stability: "Стабильность",
 };
 
+/** Короткие подписи плиток (вместо PWR/CAP/ACC/LUC/STB) */
+const TYPE_SHORT: Record<string, string> = {
+  power: "Мощн.",
+  capacity: "Ёмк.",
+  acceleration: "Длит.",
+  luck: "Удача",
+  stability: "Стаб.",
+};
+
 const TYPES = ["power", "capacity", "acceleration", "luck", "stability"] as const;
 
 export function Upgrade() {
@@ -81,7 +90,7 @@ export function Upgrade() {
         <div className="mb-3 flex items-center justify-between">
           <p className="eyebrow">Стойка параметров</p>
           <StatusPill tone={busy ? "live" : "neutral"}>
-            {busy ? "rolling" : "double-wheel"}
+            {busy ? "вращение" : "двойное колесо"}
           </StatusPill>
         </div>
         <div className="grid grid-cols-5 gap-2">
@@ -105,20 +114,13 @@ export function Upgrade() {
                     if (blockType === t) setBlockType(null);
                   }
                 }}
-                className={`stat-chip transition ${
-                  focused
-                    ? "border-[var(--accent)] bg-[var(--accent-soft)]"
-                    : blocked
-                      ? "border-[var(--danger)]/40 bg-[var(--danger)]/10"
-                      : ""
-                }`}
+                title={TYPE_RU[t]}
+                aria-pressed={focused || blocked}
+                className={`ui-stat${focused ? " focus" : blocked ? " blocked" : ""}`}
               >
-                <div className="text-[9px] font-semibold tracking-wider text-[var(--text-dim)]">
-                  {t.slice(0, 3).toUpperCase()}
-                </div>
-                <div className="mono mt-1 text-sm font-semibold">{val}</div>
-                {focused && <div className="mt-1 text-[8px] text-[var(--accent)]">FOCUS</div>}
-                {blocked && <div className="mt-1 text-[8px] text-[var(--danger)]">BLOCK</div>}
+                <span className="k block">{TYPE_SHORT[t]}</span>
+                <span className="v block">{val}</span>
+                <span className="p block">{focused ? "фокус" : blocked ? "запрет" : "\u00a0"}</span>
               </button>
             );
           })}
@@ -144,7 +146,7 @@ export function Upgrade() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">{spinning ? spinLabel : "Прогон усиления"}</p>
             <p className="text-[12px] text-[var(--text-dim)]">
-              1) тип · 2) шанс · провал = 100% burn
+              1) тип · 2) шанс · провал = ставка сгорает
             </p>
           </div>
         </div>
@@ -157,7 +159,7 @@ export function Upgrade() {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="relative h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="relative h-2 overflow-hidden rounded-full bg-[var(--line)]">
                 <motion.div
                   className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
                   animate={{ left: ["-33%", "100%"] }}

@@ -18,7 +18,14 @@ import {
   LoadingPanel,
   ErrorPanel,
   EmptyPanel,
+  Panel,
+  Button,
+  StatTile,
+  List,
+  ListRow,
+  Tabs,
 } from "@/components/ui";
+import { IconBack } from "@/components/icons";
 
 const GROUP_RU: Record<string, string> = {
   miner: "Майнер",
@@ -52,38 +59,28 @@ function SettingRow({
   }
 
   return (
-    <div className="panel overflow-hidden">
+    <Panel className="overflow-hidden">
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-medium leading-snug">{title}</p>
-            {subtitle && (
-              <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-dim)]">{subtitle}</p>
-            )}
+            <p className="ui-h !text-[14px] !leading-[20px]">{title}</p>
+            {subtitle && <p className="ui-sec mt-0.5">{subtitle}</p>}
           </div>
           {!editing && (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="shrink-0 rounded-lg border border-[var(--line)] bg-[var(--bg-elev)] px-3 py-1.5 font-mono text-[12px] text-[var(--accent)] transition hover:border-[var(--accent)]"
-            >
+            <Button kind="secondary" size="sm" className="shrink-0" onClick={() => setEditing(true)}>
               Изменить
-            </button>
+            </Button>
           )}
         </div>
         {!editing && (
-          <p className="mt-3 font-mono text-[15px] leading-relaxed text-[var(--text)]">
+          <p className="ui-num s-m mt-3 block">
             {summarize(item.key, item.value)}
           </p>
         )}
       </div>
       {editing && (
-        <div className="space-y-4 border-t border-[var(--line)] bg-[var(--bg-elev)]/40 p-4">
-          {meta?.about && (
-            <p className="rounded-xl border border-[var(--line)] bg-black/15 p-3 text-[12px] leading-relaxed text-[var(--text-dim)]">
-              {meta.about}
-            </p>
-          )}
+        <div className="space-y-4 border-t border-[var(--line)] p-4">
+          {meta?.about && <p className="ui-sec border-l-2 border-[var(--line-strong)] pl-3">{meta.about}</p>}
           <SettingEditor
             settingKey={item.key}
             value={item.value}
@@ -93,7 +90,7 @@ function SettingRow({
           />
         </div>
       )}
-    </div>
+    </Panel>
   );
 }
 
@@ -124,12 +121,9 @@ function PromoCreatePanel() {
   }
 
   return (
-    <div className="panel space-y-3 p-4">
-      <div className="flex items-center justify-between">
-        <p className="eyebrow">Новый промокод</p>
-        <StatusPill tone="neutral">create</StatusPill>
-      </div>
-      <label className="block text-[11px] font-medium text-[var(--text-dim)]">
+    <Panel className="space-y-3 p-4">
+      <p className="ui-label">Новый промокод</p>
+      <label className="block ui-sec">
         Код
         <input
           className="input-field mono uppercase"
@@ -139,15 +133,15 @@ function PromoCreatePanel() {
         />
       </label>
       <div className="grid grid-cols-3 gap-2">
-        <label className="block text-[11px] text-[var(--text-dim)]">
+        <label className="block ui-sec">
           TON
           <input className="input-field mono" value={ton} onChange={(e) => setTon(e.target.value)} />
         </label>
-        <label className="block text-[11px] text-[var(--text-dim)]">
+        <label className="block ui-sec">
           XP
           <input className="input-field mono" value={xp} onChange={(e) => setXp(e.target.value)} />
         </label>
-        <label className="block text-[11px] text-[var(--text-dim)]">
+        <label className="block ui-sec">
           Фокус
           <input
             className="input-field mono"
@@ -156,8 +150,8 @@ function PromoCreatePanel() {
           />
         </label>
       </div>
-      <label className="block text-[11px] text-[var(--text-dim)]">
-        Max uses (пусто = ∞)
+      <label className="block ui-sec">
+        Лимит активаций (пусто = ∞)
         <input
           className="input-field mono"
           value={maxUses}
@@ -165,16 +159,11 @@ function PromoCreatePanel() {
           placeholder="100"
         />
       </label>
-      <button
-        type="button"
-        className="btn-primary w-full"
-        disabled={create.isPending || code.length < 3}
-        onClick={submit}
-      >
+      <Button kind="primary" block disabled={create.isPending || code.length < 3} onClick={submit}>
         {create.isPending ? "…" : "Создать промокод"}
-      </button>
-      {msg && <p className="text-[12px] text-[var(--text-dim)]">{msg}</p>}
-    </div>
+      </Button>
+      {msg && <p className="ui-sec">{msg}</p>}
+    </Panel>
   );
 }
 
@@ -184,14 +173,8 @@ function OverviewTab() {
   if (error) return <ErrorPanel message="Не удалось загрузить статистику" />;
   return (
     <div className="grid grid-cols-2 gap-3">
-      <div className="panel p-4">
-        <p className="eyebrow">Пользователи</p>
-        <p className="mt-1 font-mono text-2xl font-medium">{data?.total_users ?? 0}</p>
-      </div>
-      <div className="panel p-4">
-        <p className="eyebrow">Сегодня</p>
-        <p className="mt-1 font-mono text-2xl font-medium">{data?.registrations_today ?? 0}</p>
-      </div>
+      <StatTile label="Пользователи" value={data?.total_users ?? 0} className="!h-[88px]" />
+      <StatTile label="Сегодня" value={data?.registrations_today ?? 0} className="!h-[88px]" />
     </div>
   );
 }
@@ -206,26 +189,22 @@ function PromosTab() {
       {!data?.length ? (
         <EmptyPanel title="Нет промокодов" body="Создайте первый код выше." />
       ) : (
-        <ul className="space-y-2">
+        <List>
           {data.map((p) => (
-            <li key={p.id} className="panel flex items-center justify-between p-3">
-              <div>
-                <p className="font-mono text-[13px] font-medium">{p.code}</p>
-                <p className="text-[11px] text-[var(--text-dim)]">
-                  {p.reward_ton} TON · {p.reward_xp} XP · {p.used_count}
-                  {p.max_uses != null ? ` / ${p.max_uses}` : ""}
-                </p>
-              </div>
-              <StatusPill tone={p.is_active ? "ok" : "neutral"}>
-                {p.is_active ? "active" : "off"}
-              </StatusPill>
-            </li>
+            <ListRow
+              key={p.id}
+              title={<span className="ui-num s-m">{p.code}</span>}
+              sub={`${p.reward_ton} TON · ${p.reward_xp} XP · ${p.used_count}${p.max_uses != null ? ` / ${p.max_uses}` : ""}`}
+              trailing={
+                <StatusPill tone={p.is_active ? "ok" : "neutral"}>{p.is_active ? "активен" : "выкл."}</StatusPill>
+              }
+            />
           ))}
-        </ul>
+        </List>
       )}
-      <button type="button" className="btn-ghost text-[12px]" onClick={() => refetch()}>
+      <Button kind="ghost" size="sm" onClick={() => refetch()}>
         Обновить список
-      </button>
+      </Button>
     </div>
   );
 }
@@ -263,7 +242,7 @@ export function Owner() {
   if (!isOwner && me?.can_deploy) {
     return (
       <div className="space-y-5">
-        <ScreenHeader eyebrow="Deployer" title="Деплой" action={<StatusPill tone="ok">online</StatusPill>} />
+        <ScreenHeader eyebrow="Деплой" title="Сервер" action={<StatusPill tone="ok">в сети</StatusPill>} />
         <DeployPanel />
       </div>
     );
@@ -271,10 +250,10 @@ export function Owner() {
   if (!isOwner) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Кабинет" title="Owner" />
+        <ScreenHeader eyebrow="Кабинет" title="Владелец" />
         <ErrorPanel message="Доступ только у владельца (TELEGRAM_OWNER_IDS)." />
-        <Link to="/" className="btn-ghost inline-flex text-[13px] no-underline">
-          ← Контур
+        <Link to="/" className="ui-btn ghost sm self-start">
+          <IconBack size={16} /> Контур
         </Link>
       </div>
     );
@@ -286,31 +265,21 @@ export function Owner() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Owner"
+        eyebrow="Владелец"
         title="Кабинет"
         action={
           <StatusPill tone={isFetching ? "live" : "ok"}>
-            {isFetching ? "sync" : "online"}
+            {isFetching ? "синхр." : "в сети"}
           </StatusPill>
         }
       />
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`flex-1 shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
-              tab === t
-                ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                : "border-[var(--line)] text-[var(--text-dim)]"
-            }`}
-          >
-            {TAB_RU[t]}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Разделы кабинета"
+        items={TABS.map((t) => ({ value: t, label: TAB_RU[t] }))}
+        value={tab}
+        onChange={setTab}
+      />
 
       {tab === "overview" && <OverviewTab />}
       {tab === "promos" && <PromosTab />}
@@ -318,25 +287,16 @@ export function Owner() {
       {tab === "economy" && (
         <>
           {isLoading && <LoadingPanel label="Загрузка настроек…" />}
-          {error && <ErrorPanel message="Не удалось загрузить economy settings" />}
+          {error && <ErrorPanel message="Не удалось загрузить настройки экономики" />}
           {!isLoading && !error && data && (
             <>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-                {groupKeys.map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setFilter(g)}
-                    className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
-                      filter === g
-                        ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                        : "border-[var(--line)] text-[var(--text-dim)]"
-                    }`}
-                  >
-                    {g === "all" ? "Все" : GROUP_RU[g] || g}
-                  </button>
-                ))}
-              </div>
+              <Tabs
+                kind="line"
+                label="Группы настроек"
+                items={groupKeys.map((g) => ({ value: g, label: g === "all" ? "Все" : GROUP_RU[g] || g }))}
+                value={filter}
+                onChange={setFilter}
+              />
               <ul className="space-y-3">
                 {visible?.map((item) => (
                   <li key={item.key}>
@@ -349,8 +309,8 @@ export function Owner() {
         </>
       )}
 
-      <Link to="/" className="btn-ghost inline-flex text-[13px] no-underline">
-        ← Контур
+      <Link to="/" className="ui-btn ghost sm self-start">
+        <IconBack size={16} /> Контур
       </Link>
     </div>
   );
