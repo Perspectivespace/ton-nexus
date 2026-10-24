@@ -20,6 +20,9 @@
   --see-core: radial-gradient(82% 64% at 50% 60%, rgba(6, 8, 14, .66), rgba(6, 8, 14, .36) 62%, rgba(6, 8, 14, 0) 100%);
   --see-fill: linear-gradient(180deg, rgba(12, 15, 25, .48), rgba(8, 10, 17, .7) 30%, rgba(8, 10, 17, .8) 70%, rgba(8, 10, 17, .88));
   --scrim-panel: linear-gradient(180deg, rgba(5, 6, 11, .0), rgba(5, 6, 11, .62) 30%, rgba(5, 6, 11, .8));
+  /* подложка для текста, который лежит прямо на городе (п. 3.8): плотная, без blur */
+  --onbg-plate: rgba(6, 8, 14, .86);
+  --onbg-tick: var(--neon-dim);
 }
 [data-theme="light"] {
   --metal: linear-gradient(180deg, #FFFFFF, #EEF1F6);
@@ -32,6 +35,8 @@
   --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .86), rgba(246, 248, 251, .62) 40%, rgba(246, 248, 251, .62) 62%, rgba(255, 255, 255, .9));
   --scrim-panel: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .7) 40%, rgba(255, 255, 255, .85));
   --see-core: linear-gradient(transparent, transparent);
+  --onbg-plate: rgba(255, 255, 255, .9);
+  --onbg-tick: var(--neon-dim);
 }
 
 /* —— Форма: срезанный угол + кромка 1 px + материал (п. 3.1–3.4) —— */
@@ -70,6 +75,14 @@
 /* скрим внутри панели — под текстом, который лежит поверх «окна в город» */
 .ui-scrim { background: var(--scrim-panel); }
 .ui-shade { text-shadow: var(--text-shade); }
+/* текст прямо на городе: подпись секции, пустая строка, подсказка — только на подложке (п. 3.8) */
+.ui-onbg {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 3px 9px 3px 8px; background: var(--onbg-plate); box-shadow: inset 2px 0 0 var(--onbg-tick);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut-xs)), calc(100% - var(--cut-xs)) 100%, 0 100%);
+  color: var(--text-2); text-shadow: var(--text-shade);
+}
+.ui-label.ui-onbg { color: var(--text-2); }
 
 
 /* —— Типографика —— */
