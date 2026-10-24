@@ -14,7 +14,6 @@ import {
   Readout,
   Panel,
   Scrim,
-  Num,
   Tag,
   Button,
   Field,
@@ -185,20 +184,21 @@ export function Wheel() {
       />
 
       {/* Герой: колесо (п. 8.3) */}
-      <Panel level="hero" cut="l" lift="l2" className="px-4 pb-0 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="ui-label">Бесплатные вращения</p>
-          <span className="flex items-center gap-2">
-            <span className="pw-pips" aria-hidden>
-              {Array.from({ length: maxSpins }, (_, i) => (
-                <i key={i} className={cx(i < left && "on")} />
-              ))}
-            </span>
-            <Num value={`${left}/${maxSpins}`} size="s" decode={false} />
-          </span>
-        </div>
-        <PrizeWheel ref={wheel} sectors={PRIZES} winIndex={phase === "done" ? win : null} spinning={phase === "spin"} miss={miss} className="my-4" />
-        <Scrim className="relative -mx-4 space-y-3 px-4 pb-4 pt-3">
+      <Panel level="hero" cut="l" lift="l2" className="px-5 pb-0 pt-5">
+        <p className="sr-only">
+          Бесплатных вращений сегодня: {left} из {maxSpins}
+        </p>
+        <PrizeWheel
+          ref={wheel}
+          sectors={PRIZES}
+          winIndex={phase === "done" ? win : null}
+          spinning={phase === "spin"}
+          miss={miss}
+          spins={{ left, max: maxSpins }}
+          mode={phase === "wait" ? "Связь" : phase === "spin" ? "Вращение" : phase === "done" ? (miss ? "Пусто" : "Выигрыш") : left > 0 ? "Готов" : "Ждёт"}
+          className="mb-5"
+        />
+        <Scrim className="relative -mx-5 space-y-3 px-5 pb-5 pt-3">
           <p className="ui-sec text-center !text-[12px]">
             {phase === "wait"
               ? "Связь с колесом…"
