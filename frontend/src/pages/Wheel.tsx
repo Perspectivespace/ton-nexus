@@ -30,25 +30,23 @@ import { IconBolt, IconSpark } from "@/components/icons";
 
 /**
  * Сектора колеса. Порядок — визуальный (цвета чередуются), выпавший сектор ищется по id ответа сервера.
- * Вес — только для подсказки «Призы и шансы» (как и раньше; сервер крутит по своей конфигурации).
+ * Шансы не зашиты: приходят с сервера в /wheel/status (веса из настроек владельца).
  */
 const PRIZES: readonly {
   id: string;
   title: string;
   sub?: string;
   label: string;
-  weight: number;
   role: WheelRole;
   use: string;
 }[] = [
-  { id: "success_plus_5", title: "+5%", sub: "успех", label: "+5% к успеху", weight: 8, role: "hot", use: "Добавляет +5% к шансу успеха следующей попытки усиления майнера. Не гарантирует успех." },
-  { id: "xp_small", title: "XP", sub: "опыт", label: "XP", weight: 25, role: "steel", use: "Опыт уровня аккаунта." },
-  { id: "focus_1", title: "Фокус", sub: "×1", label: "Фокус ×1", weight: 15, role: "amber", use: "Повышает вес нужного типа на колесе апгрейда (чаще выпадает выбранный стат)." },
-  { id: "nothing", title: "Пусто", label: "Пусто", weight: 20, role: "void", use: "Пустой сектор — без награды." },
-  { id: "ton_dust", title: "TON", sub: "пыль", label: "Пыль TON", weight: 20, role: "neon", use: "Небольшая сумма TON на баланс." },
-  { id: "block_1", title: "Запрет", sub: "×1", label: "Запрет ×1", weight: 12, role: "magenta", use: "Блокирует выпадение одного нежелательного типа апгрейда." },
+  { id: "success_plus_5", title: "+5%", sub: "успех", label: "+5% к успеху", role: "hot", use: "Добавляет +5% к шансу успеха следующей попытки усиления майнера. Не гарантирует успех." },
+  { id: "xp_small", title: "XP", sub: "опыт", label: "XP", role: "steel", use: "Опыт уровня аккаунта." },
+  { id: "focus_1", title: "Фокус", sub: "×1", label: "Фокус ×1", role: "amber", use: "Повышает вес нужного типа на колесе апгрейда (чаще выпадает выбранный стат)." },
+  { id: "nothing", title: "Пусто", label: "Пусто", role: "void", use: "Пустой сектор — без награды." },
+  { id: "ton_dust", title: "TON", sub: "пыль", label: "Пыль TON", role: "neon", use: "Небольшая сумма TON на баланс." },
+  { id: "block_1", title: "Запрет", sub: "×1", label: "Запрет ×1", role: "magenta", use: "Блокирует выпадение одного нежелательного типа апгрейда." },
 ];
-const WEIGHT_SUM = PRIZES.reduce((s, p) => s + p.weight, 0);
 const MISS = PRIZES.findIndex((p) => p.id === "nothing");
 
 function prizeIndex(itemId: string): number {
@@ -74,6 +72,8 @@ const DOT: Record<WheelRole, string> = {
   steel: "var(--text-2)",
   void: "var(--line-strong)",
 };
+
+const pct = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
 
 type Phase = "idle" | "wait" | "spin" | "done";
 
@@ -166,6 +166,7 @@ export function Wheel() {
   const maxSpins = Math.max(w?.free_spins_per_day ?? 1, 1);
   const won = win != null ? PRIZES[win] : null;
   const miss = !!last && won?.id === "nothing" && rewardParts(last).length === 0;
+  const odds = w?.sectors ? new Map(w.sectors.map((s) => [s.id, s])) : null;
 
   return (
     <div
@@ -292,19 +293,34 @@ export function Wheel() {
 
       <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="Призы и шансы">
         <p className="ui-sec !text-[13px]">Указатель сверху. После остановки сектор под ним — ваша награда.</p>
+        <p className="ui-sec mt-1 !text-[12px] !leading-[16px]">
+          {!odds
+            ? "Шансы покажем после обновления сервера."
+            : w?.weights_source === "default"
+              ? "Сейчас действуют шансы по умолчанию."
+              : "Шансы заданы в настройках игры и пересчитываются сразу после их изменения."}
+        </p>
         <div className="mt-4 divide-y divide-[var(--line)]">
-          {PRIZES.map((p) => (
-            <div key={p.id} className="flex gap-3 py-3">
-              <span className="pw-dot mt-[5px]" style={{ background: DOT[p.role] }} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[15px] font-medium leading-5 text-[var(--text)]">{p.label}</span>
-                  <span className="ui-num text-[15px]">{Math.round((p.weight / WEIGHT_SUM) * 100)}%</span>
+          {PRIZES.map((p) => {
+            const o = odds?.get(p.id);
+            const off = !!odds && (!o || o.chance_pct <= 0);
+            return (
+              <div key={p.id} className={cx("flex gap-3 py-3", off && "opacity-60")}>
+                <span className="pw-dot mt-[5px]" style={{ background: DOT[p.role] }} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-[15px] font-medium leading-5 text-[var(--text)]">{o?.label || p.label}</span>
+                    {off ? (
+                      <Tag tone="neutral">не выпадает</Tag>
+                    ) : (
+                      <span className="ui-num text-[15px]">{o ? `${pct.format(o.chance_pct)}%` : "—"}</span>
+                    )}
+                  </div>
+                  <p className="ui-sec mt-0.5 !text-[12px] !leading-[16px]">{p.use}</p>
                 </div>
-                <p className="ui-sec mt-0.5 !text-[12px] !leading-[16px]">{p.use}</p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <Button kind="primary" block className="mt-4" onClick={() => setHelpOpen(false)}>
           Понятно

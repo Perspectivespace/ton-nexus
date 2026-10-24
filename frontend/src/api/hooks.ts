@@ -126,10 +126,22 @@ export function useDailyClaimFull() {
   });
 }
 
+export type WheelSector = {
+  id: string;
+  label: string;
+  weight: number;
+  /** шанс сектора в процентах, из весов в настройках владельца */
+  chance_pct: number;
+};
+
 export type WheelStatus = {
   free_spins_per_day: number;
   used_today: number;
   left_today: number;
+  /** нет у старого сервера — тогда шансы не показываем */
+  sectors?: WheelSector[];
+  /** "default" — в настройках все веса 0 или некорректны, действуют запасные */
+  weights_source?: "settings" | "default";
 };
 
 export type SpinOut = {
