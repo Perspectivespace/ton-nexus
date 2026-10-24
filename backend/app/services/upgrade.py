@@ -13,8 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.miner import Miner, MinerUpgradeLog
 from app.models.user import User
 from app.services import balance as balance_svc
-from app.services.economy import dec, get_setting
+from app.services.economy import get_setting
 from app.services.miner import UPGRADE_TYPES, MinerBusyError, MinerError, sync_status
+from app.services.upgrade_cost import upgrade_cost
 
 STAT_ATTR = {
     "power": "power",
@@ -57,16 +58,6 @@ def _weighted_choice(weights: dict[str, float]) -> str:
         if r <= upto:
             return key
     return items[-1][0]
-
-
-async def upgrade_cost(session: AsyncSession, miner: Miner) -> Decimal:
-    base = dec((await get_setting(session, "upgrade_base_cost"))["ton"])
-    scale = dec((await get_setting(session, "upgrade_cost_scale"))["per_total_levels"])
-    total_levels = (
-        miner.power + miner.capacity + miner.acceleration + miner.luck + miner.stability
-    )
-    extra = max(0, total_levels - 5)
-    return (base + scale * Decimal(extra)).quantize(Decimal("0.00000001"))
 
 
 async def preview_success_bp(

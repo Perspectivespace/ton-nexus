@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.miner import Miner
 from app.services import balance as balance_svc
 from app.services.economy import dec, get_setting
+from app.services.upgrade_cost import upgrade_cost
 
 UPGRADE_TYPES = ("power", "capacity", "acceleration", "luck", "stability")
 
@@ -61,6 +62,7 @@ class MinerView:
     storage_cap: Decimal
     cycle_hours: float
     accrued_now: Decimal
+    upgrade_cost: Decimal
 
 
 def _utcnow() -> datetime:
@@ -206,6 +208,7 @@ async def get_miner_view(session: AsyncSession, user_id: int) -> MinerView:
         storage_cap=cap,
         cycle_hours=cycle_h,
         accrued_now=accrued,
+        upgrade_cost=await upgrade_cost(session, miner),
     )
 
 
