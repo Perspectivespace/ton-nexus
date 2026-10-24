@@ -78,29 +78,10 @@ body {
   line-height: 1.4;
 }
 
-.title-display {
-  font-family: var(--f-display);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1.12;
-  color: var(--text);
-}
-
 /*
- * —— Материал старых плашек колеса и деплоя (DESIGN.md п. 3.3–3.4, 3.8); остальное — кит .ui-cut ——
- * Дымчатое стекло-металл БЕЗ backdrop-filter: полупрозрачная заливка над готовой картинкой города,
- * зерно, верхний свет, фаска. Город просвечивает — это фирменный приём.
+ * —— Плашка деплоя (DESIGN.md п. 3.3–3.4, 3.8); остальное — кит .ui-cut ——
+ * Дымчатое стекло-металл БЕЗ backdrop-filter: полупрозрачная заливка над картинкой города, фаска.
  */
-.metal-plate {
-  position: relative;
-  background: var(--mat-1);
-  border: 1px solid var(--line);
-  border-top-color: var(--line-strong);
-  border-radius: var(--radius);
-  box-shadow: var(--bevel-1), 0 10px 28px -12px rgba(0, 0, 0, 0.55);
-}
-
 .metal-plate-dim {
   background: var(--mat-1);
   border: 1px solid var(--line);
@@ -108,64 +89,10 @@ body {
   box-shadow: var(--bevel-1);
 }
 
-/* герой: одна на экран, циановый перелив сверху-слева, кромка ярче */
-.metal-plate-hero {
-  background:
-    radial-gradient(90% 60% at 18% 0%, var(--neon-soft), transparent 70%),
-    var(--toplight), var(--grain),
-    linear-gradient(180deg, rgba(14, 18, 30, 0.78), rgba(8, 10, 17, 0.92));
-  border: 1px solid var(--line-strong);
-  border-top-color: var(--neon-dim);
-  border-radius: var(--radius);
-  box-shadow: var(--bevel-1), 0 14px 36px -14px rgba(0, 0, 0, 0.7);
-}
-[data-theme="light"] .metal-plate-hero {
-  background: radial-gradient(90% 60% at 18% 0%, var(--neon-soft), transparent 70%), var(--mat-1);
-  box-shadow: var(--bevel-1), 0 10px 24px -14px rgba(20, 30, 60, 0.35);
-}
-[data-theme="light"] .metal-plate { box-shadow: var(--bevel-1), 0 8px 20px -14px rgba(20, 30, 60, 0.3); }
-
 .mono {
   font-family: var(--f-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-}
-
-/* Tabs (bolt) */
-
-/*
- * Аура колеса. Было: бесконечная анимация filter: blur() — дорого на телефонах.
- * Стало: размытие статичное, анимируются только transform и opacity; при «уменьшить движение» стоит.
- */
-/* Ореол колеса: статичное кольцо без blur и без анимации (правила производительности, п. 13) */
-.wheel-aura {
-  background:
-    conic-gradient(
-      from 0deg,
-      rgba(96, 150, 255, 0.5),
-      rgba(105, 216, 190, 0.4) 22%,
-      rgba(239, 184, 93, 0.45) 42%,
-      rgba(224, 105, 154, 0.4) 62%,
-      rgba(139, 134, 196, 0.5) 82%,
-      rgba(96, 150, 255, 0.5)
-    );
-  -webkit-mask: radial-gradient(circle, transparent 44%, #000 49%, rgba(0,0,0,.35) 56%, transparent 70%);
-  mask: radial-gradient(circle, transparent 44%, #000 49%, rgba(0,0,0,.35) 56%, transparent 70%);
-  opacity: var(--wh-aura, .55);
-  pointer-events: none;
-}
-
-@keyframes subtleGlow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-.subtle-glow {
-  animation: subtleGlow 3s ease-in-out infinite;
-}
-
-html.app-hidden .subtle-glow { animation-play-state: paused; }
-@media (prefers-reduced-motion: reduce) {
-  .subtle-glow { animation: none; }
 }
 
 /* Нижний док — теперь .ui-dock в styles/components.css */
