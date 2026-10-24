@@ -639,7 +639,9 @@
 - Модуль Telegram: тема и цвет шапки, подписка на смену темы, обёртки над MainButton, BackButton и HapticFeedback, учёт «уменьшить движение».
 - Убрать `backdrop-filter` и бесконечную ауру колеса.
 
-**Фаза 1 — базовые компоненты (1–2 PR).**
+**Фаза 1 — базовые компоненты (1–2 PR).** Статус: 1a — в работе (PR «Фаза 1a»), 1b — следующим PR.
+- **1a (сделано):** набор `components/ui/` — Panel (e0/e1/e2/hero, «окно в город» со скримом), Button (4 вида, нажатие, вибро), HoldButton, Tag/Chip/StatTile, List/ListRow, Tabs (blocks/line), Dock, Toast, Sheet, Skeleton/Empty/Error, Num (моно, «расшифровка»), Bar; 24 иконки компонентами (`components/icons.tsx`); стили в `styles/components.css`; витрина `/kit` (только dev). Экраны переведены на токены и русские подписи, «Дневной HUD» включён (`LIGHT_THEME_READY` в `lib/theme.ts`).
+- **1b (осталось):** Field (поля ввода), знак «Печать», фавиконы, заставка и знакомство, герой-объекты Reactor и Gauge; `confirm()` → HoldButton + Sheet и тосты в сценариях (это меняет поведение, поэтому отдельно).
 - `components/ui`: Button (4 вида и удержание), Field, Panel (3 уровня), Tabs (2 вида), Sheet, ListRow, Tag, Readout, Bar, StatCell, Toast, Empty, Error, Skeleton.
 - Набор иконок (24 шт.), знак «Печать» и надпись из `docs/design/brand/` (фавикон и иконка 512 — в `public/`, аватар бота — `app-icon-512`). Плавающий док. Заставка с зажиганием и знакомство.
 - Герой-объекты: Reactor (SVG + CSS, кольца на `transform`) и Gauge (SVG).
