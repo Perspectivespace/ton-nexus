@@ -83,7 +83,7 @@ function WithdrawCard({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[11px] font-mono text-[var(--text-dim)]">
-            req #{item.id} · user #{item.user_id}
+            заявка #{item.id} · пользователь #{item.user_id}
           </p>
           <p className="mt-0.5 text-[11px] text-[var(--text-dim)]">{formatDate(item.created_at)}</p>
         </div>
@@ -91,7 +91,7 @@ function WithdrawCard({
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        <Readout label="Сумма (hold)" value={Number(item.amount).toFixed(4)} unit="TON" />
+        <Readout label="Сумма (в холде)" value={Number(item.amount).toFixed(4)} unit="TON" />
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
             Кошелёк
@@ -114,7 +114,7 @@ function WithdrawCard({
           className="ui-input"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="tx hash / причина отказа"
+          placeholder="хеш транзакции / причина отказа"
           disabled={!!busy}
         />
       </Field>
@@ -126,7 +126,7 @@ function WithdrawCard({
           disabled={!!busy}
           onClick={() => act(true)}
         >
-          {busy === "approve" ? "…" : "Approve · выплатить"}
+          {busy === "approve" ? "…" : "Одобрить · выплачено"}
         </button>
         <button
           type="button"
@@ -134,7 +134,7 @@ function WithdrawCard({
           disabled={!!busy}
           onClick={() => act(false)}
         >
-          {busy === "reject" ? "…" : "Reject · возврат"}
+          {busy === "reject" ? "…" : "Отклонить · возврат"}
         </button>
       </div>
 
@@ -170,7 +170,7 @@ export function WithdrawQueue() {
   }
 
   if (q.isError) {
-    return <ErrorPanel message="Не удалось загрузить pending withdraw" />;
+    return <ErrorPanel message="Не удалось загрузить заявки на вывод" />;
   }
 
   const list = q.data || [];
@@ -187,15 +187,15 @@ export function WithdrawQueue() {
 
       <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
-          Средства уже списаны с баланса (hold). Approve — фиксируете внешнюю выплату. Reject — TON
-          возвращается пользователю.
+          Средства уже списаны с баланса и лежат в холде. «Одобрить» — вы подтверждаете, что выплатили
+          вручную. «Отклонить» — TON возвращается пользователю.
         </p>
       </div>
 
       {list.length === 0 && (
         <EmptyPanel
           title="Очередь пуста"
-          body="Нет заявок в статусе pending. Новые запросы появятся здесь."
+          body="Нет заявок, ждущих решения. Новые появятся здесь."
         />
       )}
 
