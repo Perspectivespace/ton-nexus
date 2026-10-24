@@ -93,7 +93,7 @@
 .ui-sec { font: 400 13px/20px var(--f-sans); color: var(--text-2); }
 
 /* —— Цифры (п. 4, 13 B) —— */
-.ui-num { font-family: var(--f-mono); font-variant-numeric: tabular-nums slashed-zero; color: var(--text); white-space: nowrap; }
+.ui-num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
 .ui-num.s-xl { font-weight: 700; font-size: 44px; line-height: 48px; letter-spacing: -.04em; }
 .ui-num.s-l { font-weight: 700; font-size: 28px; line-height: 32px; letter-spacing: -.03em; }
 .ui-num.s-m { font-weight: 500; font-size: 17px; line-height: 24px; }
@@ -319,78 +319,94 @@ html.app-hidden .ui-sk::after { animation-play-state: paused; }
 a.ui-btn { text-decoration: none; }
 .ui-btn.block { display: flex; }
 
-/* —— Колесо удачи (п. 8.3): плита-восьмигранник, диск по ролям цвета, горящий указатель —— */
+/* —— Колесо удачи (п. 8.3): прибор волнолёта — тонкий хром, шкала курса, стеклянные сектора, игла —— */
 .pw {
-  --pw-m0: #3A4256; --pw-m1: #1A2030; --pw-m2: #0A0D15; --pw-plate: #0B0F18; --pw-edge: rgba(190,210,255,.30); --pw-inner: rgba(0,0,0,.85);
-  --pw-b0: #E6EEFF; --pw-b1: #59627A; --pw-b2: #1B2030; --pw-tick: rgba(4,6,12,.75); --pw-tick-maj: rgba(4,6,12,.95);
-  --pw-h0: #F2F6FF; --pw-h1: #7D879E; --pw-h2: #1A1F2C; --pw-face: #06080E;
-  --pw-hot: #FFE7C2; --pw-amber: #FFB547; --pw-neon: #2BF5FF; --pw-magenta: #FF2E7E; --pw-steel: rgba(170,190,255,.55); --pw-void: rgba(150,170,255,.16);
-  --pw-hot-mid: rgba(255,181,71,.20); --pw-hot-out: rgba(255,190,90,.62);
-  --pw-amber-mid: rgba(255,181,71,.10); --pw-amber-out: rgba(255,181,71,.40);
-  --pw-neon-mid: rgba(43,245,255,.09); --pw-neon-out: rgba(43,245,255,.36);
-  --pw-magenta-mid: rgba(255,46,126,.09); --pw-magenta-out: rgba(255,46,126,.36);
-  --pw-steel-mid: rgba(150,170,255,.06); --pw-steel-out: rgba(150,170,255,.22);
-  --pw-void-mid: rgba(0,0,0,.2); --pw-void-out: rgba(20,24,36,.9);
-  --pw-hot-ink: #FFF3DF; --pw-amber-ink: #FFC56E; --pw-neon-ink: #B8FCFF; --pw-magenta-ink: #FF8DB7; --pw-steel-ink: #DCE3F5; --pw-void-ink: #687089;
-  --pw-sub: rgba(220,228,245,.62); --pw-div: rgba(4,6,12,.9); --pw-win: rgba(255,181,71,.42); --pw-win-edge: #FFE7C2;
-  --pw-ptr: #F2FEFF; --pw-ptr-edge: #2BF5FF; --pw-shine: rgba(220,245,255,.55);
+  --pw-edge: rgba(190,210,255,.28); --pw-inner: rgba(0,0,0,.7);
+  --pw-b0: #EEF3FF; --pw-b1: #6A7390; --pw-b2: #232A3B;
+  --pw-tick: rgba(4,6,12,.62); --pw-tick-maj: rgba(4,6,12,.9); --pw-deg: rgba(4,6,12,.78); --pw-groove: rgba(4,6,12,.35); --pw-ring: rgba(43,245,255,.30);
+  --pw-tab: #1A2030; --pw-plate: rgba(4,6,12,.86);
+  --pw-face: rgba(5,8,14,.84);
+  --pw-hot: #FFE7C2; --pw-amber: #FFB547; --pw-neon: #2BF5FF; --pw-magenta: #FF2E7E; --pw-steel: rgba(180,198,255,.62); --pw-void: rgba(150,170,255,.22);
+  --pw-hot-glass: rgba(255,190,90,.24); --pw-amber-glass: rgba(255,181,71,.13); --pw-neon-glass: rgba(43,245,255,.12);
+  --pw-magenta-glass: rgba(255,46,126,.12); --pw-steel-glass: rgba(150,170,255,.08); --pw-void-glass: rgba(0,0,0,0);
+  --pw-hot-ink: #FFF1DA; --pw-amber-ink: #FFC56E; --pw-neon-ink: #B8FCFF; --pw-magenta-ink: #FF9CC1; --pw-steel-ink: #DCE3F5; --pw-void-ink: #7A839B;
+  --pw-sub: rgba(220,228,245,.55); --pw-div: rgba(170,190,255,.16);
+  --pw-win: rgba(255,181,71,.20); --pw-win-edge: #FFD08A;
+  --pw-ptr: #F2FEFF; --pw-ptr-edge: #2BF5FF; --pw-shine: rgba(230,245,255,.6);
+  --pw-hud: rgba(200,214,245,.48); --pw-hud-v: #DDE6FA;
   position: relative; width: min(100%, 300px); aspect-ratio: 1; margin-inline: auto; contain: layout paint;
 }
 [data-theme="light"] .pw {
-  --pw-m0: #FFFFFF; --pw-m1: #E3E8F1; --pw-m2: #C6CEDC; --pw-plate: #EEF1F6; --pw-edge: rgba(10,20,50,.22); --pw-inner: rgba(10,20,50,.30);
-  --pw-b0: #FFFFFF; --pw-b1: #C9D0DC; --pw-b2: #8E98AA; --pw-tick: rgba(10,20,50,.35); --pw-tick-maj: rgba(10,20,50,.6);
-  --pw-h0: #FFFFFF; --pw-h1: #DCE2EC; --pw-h2: #9AA4B6; --pw-face: #FBFCFE;
-  --pw-hot: #D08A1E; --pw-amber: #A35F00; --pw-neon: #007E95; --pw-magenta: #C8105A; --pw-steel: rgba(10,20,50,.30); --pw-void: rgba(10,20,50,.14);
-  --pw-hot-mid: rgba(255,181,71,.16); --pw-hot-out: rgba(240,161,46,.42);
-  --pw-amber-mid: rgba(163,95,0,.05); --pw-amber-out: rgba(163,95,0,.20);
-  --pw-neon-mid: rgba(0,126,149,.05); --pw-neon-out: rgba(0,126,149,.20);
-  --pw-magenta-mid: rgba(200,16,90,.04); --pw-magenta-out: rgba(200,16,90,.16);
-  --pw-steel-mid: rgba(10,20,50,.02); --pw-steel-out: rgba(10,20,50,.08);
-  --pw-void-mid: rgba(10,20,50,.05); --pw-void-out: rgba(10,20,50,.18);
+  --pw-edge: rgba(10,20,50,.20); --pw-inner: rgba(10,20,50,.14);
+  --pw-b0: #FFFFFF; --pw-b1: #B9C2D2; --pw-b2: #7C879B;
+  --pw-tick: rgba(10,20,50,.35); --pw-tick-maj: rgba(10,20,50,.62); --pw-deg: rgba(10,20,50,.62); --pw-groove: rgba(10,20,50,.18); --pw-ring: rgba(0,126,149,.35);
+  --pw-tab: #E3E8F1; --pw-plate: rgba(236,240,246,.9);
+  --pw-face: rgba(251,252,254,.88);
+  --pw-hot: #C77E12; --pw-amber: #A35F00; --pw-neon: #007E95; --pw-magenta: #C8105A; --pw-steel: rgba(10,20,50,.40); --pw-void: rgba(10,20,50,.18);
+  --pw-hot-glass: rgba(240,161,46,.20); --pw-amber-glass: rgba(163,95,0,.09); --pw-neon-glass: rgba(0,126,149,.08);
+  --pw-magenta-glass: rgba(200,16,90,.07); --pw-steel-glass: rgba(10,20,50,.04); --pw-void-glass: rgba(10,20,50,.06);
   --pw-hot-ink: #7A4300; --pw-amber-ink: #8A5000; --pw-neon-ink: #006A7E; --pw-magenta-ink: #B00E50; --pw-steel-ink: #1B2333; --pw-void-ink: #5A6378;
-  --pw-sub: rgba(27,35,51,.62); --pw-div: rgba(255,255,255,.95); --pw-win: rgba(255,181,71,.34); --pw-win-edge: #A35F00;
+  --pw-sub: rgba(27,35,51,.58); --pw-div: rgba(10,20,50,.12);
+  --pw-win: rgba(255,181,71,.24); --pw-win-edge: #A35F00;
   --pw-ptr: #007E95; --pw-ptr-edge: #007E95; --pw-shine: rgba(255,255,255,.9);
+  --pw-hud: rgba(27,35,51,.52); --pw-hud-v: #1B2333;
 }
 .pw-l, .pw-disc, .pw-shine { position: absolute; inset: 0; width: 100%; height: 100%; }
 .pw-l { overflow: visible; }
 .pw-disc { transform-origin: 50% 50%; }
 .pw.is-spinning .pw-disc { will-change: transform; }
-.pw-t1 { font: 700 15px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
-.pw-t2 { font: 500 9.5px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; fill: var(--pw-sub); }
+.pw-tk { stroke: var(--pw-tick); }
+.pw-tk.maj { stroke: var(--pw-tick-maj); }
+.pw-deg { font: 500 6.5px/1 var(--f-mono); letter-spacing: .04em; fill: var(--pw-deg); }
+.pw-ring { stroke: var(--pw-ring); }
+.pw-t1 { font: 600 10.5px/1 var(--f-display); letter-spacing: .22em; text-transform: uppercase; }
+.pw-t2 { font: 500 6.8px/1 var(--f-mono); letter-spacing: .26em; text-transform: uppercase; fill: var(--pw-sub); }
+/* широкая разрядка добавляет хвост справа — сдвигаем на полшага, чтобы подпись стояла по центру сектора */
+.pw-t1 { transform: translateX(.11em); transform-box: fill-box; }
+.pw-t2 { transform: translateX(.13em); transform-box: fill-box; }
 .pw-div { stroke: var(--pw-div); }
 .pw-sec, .pw-txt { transition: opacity .32s var(--ease-out, ease-out); }
 .pw-sec.dim, .pw-txt.dim { opacity: .38; }
-.pw-sec.win > path:first-child { fill: var(--pw-face); }
 .pw-txt.win .pw-t1 { fill: var(--pw-hot-ink) !important; }
-.pw-win { fill: var(--pw-win); stroke: var(--pw-win-edge); stroke-width: 2.5; stroke-linejoin: round; }
-.pw.is-miss .pw-win { fill: rgba(150,170,255,.10); stroke: var(--pw-steel); filter: none; }
+.pw-win { fill: var(--pw-win); stroke: var(--pw-win-edge); stroke-width: 1.2; stroke-linejoin: round; }
+.pw.is-miss .pw-win { fill: rgba(150,170,255,.08); stroke: var(--pw-steel); }
 .pw.is-miss .pw-txt.win .pw-t1 { fill: var(--pw-steel-ink) !important; }
+.pw-groove { stroke: var(--pw-groove); }
+.pw-tab { fill: var(--pw-tab); stroke: var(--pw-edge); }
 .pw-ptr { fill: var(--pw-ptr); stroke: var(--pw-ptr-edge); stroke-width: 1.5; stroke-linejoin: round; }
+/* на выигрыше кристалл загорается натрием — статичная смена цвета */
+.pw.is-won:not(.is-miss) { --pw-ptr: #FFF3DE; --pw-ptr-edge: #FFB547; }
+[data-theme="light"] .pw.is-won:not(.is-miss) { --pw-ptr: #C77E12; --pw-ptr-edge: #A35F00; }
 .pw-flap { transform-box: view-box; }
-.pw-hub { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; display: grid; place-items: center; pointer-events: none; }
-/* блик по ободу: конический луч, маска-кольцо, только transform; 16 с на оборот */
+.pw-hub { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; display: grid; place-items: center; pointer-events: none; }
+/* табло по углам: моно, мелко, разрядка; значение чуть ярче подписи */
+.pw-hud { position: absolute; display: flex; flex-direction: column; gap: 3px; pointer-events: none; font-family: var(--f-mono); text-transform: uppercase; contain: layout paint; }
+.pw-hud i { font: 500 8px/1 var(--f-mono); font-style: normal; letter-spacing: .2em; color: var(--pw-hud); }
+.pw-hud b { font: 500 12px/1 var(--f-mono); letter-spacing: .1em; color: var(--pw-hud-v); font-variant-numeric: tabular-nums; }
+.pw-hud.tl { left: 0; top: 0; }
+.pw-hud.tr { right: 0; top: 0; align-items: flex-end; }
+.pw-hud.bl { left: 0; bottom: 0; flex-direction: column-reverse; }
+.pw-hud.br { right: 0; bottom: 0; align-items: flex-end; flex-direction: column-reverse; }
+.pw.is-won:not(.is-miss) .pw-hud.tr b { color: var(--amber); }
+.pw.is-spinning .pw-hud.br b { color: var(--neon); }
+/* блик по ободу: конический луч, маска — тонкое кольцо по хрому; только transform; 16 с на оборот */
 .pw-shine {
   border-radius: 50%; pointer-events: none;
-  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, var(--pw-shine) 340deg, transparent 360deg);
-  -webkit-mask: radial-gradient(closest-side, transparent 87.6%, #000 88.4%, #000 94.6%, transparent 95.4%);
-  mask: radial-gradient(closest-side, transparent 87.6%, #000 88.4%, #000 94.6%, transparent 95.4%);
-  opacity: .55; animation: pw-shine 16s linear infinite;
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, var(--pw-shine) 345deg, transparent 360deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 83.6%, #000 84.4%, #000 94.6%, transparent 95.4%);
+  mask: radial-gradient(closest-side, transparent 83.6%, #000 84.4%, #000 94.6%, transparent 95.4%);
+  opacity: .7; animation: pw-shine 16s linear infinite;
 }
-[data-theme="light"] .pw-shine { opacity: .8; }
+[data-theme="light"] .pw-shine { opacity: .9; }
 @keyframes pw-shine { to { transform: rotate(360deg); } }
 .pw.is-spinning .pw-shine { animation-play-state: paused; opacity: 0; }
 html.app-hidden .pw-shine { animation-play-state: paused; }
-[data-theme="light"] .pw-tube, [data-theme="light"] .pw-ptr, [data-theme="light"] .pw-win { filter: none; }
+[data-theme="light"] .pw-tube, [data-theme="light"] .pw-ptr { filter: none; }
 @media (prefers-reduced-motion: reduce) { .pw-shine { animation: none; } .pw-sec, .pw-txt { transition: none; } }
 
 /* плашка выигрыша колеса: натриевая кромка (п. 2.1 — награда) */
 .ui-cut.win-edge { --edge: linear-gradient(180deg, var(--amber), rgba(255,181,71,.35) 40%, rgba(0,0,0,.7)); }
 [data-theme="light"] .ui-cut.win-edge { --edge: linear-gradient(180deg, var(--amber), rgba(163,95,0,.3)); }
-.pw-pips { display: inline-flex; gap: 4px; }
-.pw-pips i { width: 14px; height: 6px; background: rgba(150,170,255,.16); clip-path: polygon(2px 0, 100% 0, calc(100% - 2px) 100%, 0 100%); }
-.pw-pips i.on { background: var(--neon); }
-[data-theme="light"] .pw-pips i { background: rgba(10,20,50,.12); }
-[data-theme="light"] .pw-pips i.on { background: var(--neon); }
 .pw-dot { width: 10px; height: 10px; flex: none; clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px); }
 
 button.ui-stat { border: 0; font: inherit; color: inherit; cursor: pointer; display: block; width: 100%; -webkit-tap-highlight-color: transparent; }
@@ -416,7 +432,7 @@ button.ui-stat:focus-visible { outline: 2px solid var(--neon); outline-offset: 2
 .ui-field.err::after { background: linear-gradient(90deg, transparent, var(--magenta), transparent); }
 .ui-input {
   flex: 1; min-width: 0; width: 100%; align-self: stretch; margin: 0; border: 0; border-radius: 0; outline: none; background: transparent; appearance: none; -webkit-appearance: none;
-  padding: 12px 14px; color: var(--text); caret-color: var(--neon); font: 500 16px/24px var(--f-mono); font-variant-numeric: tabular-nums slashed-zero;
+  padding: 12px 14px; color: var(--text); caret-color: var(--neon); font: 500 16px/24px var(--f-mono); font-variant-numeric: tabular-nums;
 }
 .ui-input::placeholder { color: var(--text-3); opacity: 1; }
 .ui-input:disabled { opacity: .55; cursor: not-allowed; }
