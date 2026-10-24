@@ -260,7 +260,7 @@ export function Owner() {
       <div className="space-y-4">
         <ScreenHeader eyebrow="Кабинет" title="Владелец" />
         <ErrorPanel message="Доступ только у владельца (TELEGRAM_OWNER_IDS)." />
-        <Link to="/" className="ui-btn ghost sm self-start">
+        <Link to="/" className="ui-btn secondary sm self-start no-underline">
           <IconBack size={16} /> Контур
         </Link>
       </div>
@@ -317,7 +317,7 @@ export function Owner() {
         </>
       )}
 
-      <Link to="/" className="ui-btn ghost sm self-start">
+      <Link to="/" className="ui-btn secondary sm self-start no-underline">
         <IconBack size={16} /> Контур
       </Link>
     </div>
