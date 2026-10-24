@@ -22,6 +22,7 @@ import {
   ListRow,
   Button,
   SectionLabel,
+  useToast,
 } from "@/components/ui";
 
 const modules = [
@@ -78,6 +79,7 @@ const item: Variants = {
 export function Home() {
   const { data: me, isLoading, error, isFetching } = useMe();
   const daily = useDailyClaim();
+  const toast = useToast();
 
   return (
     <motion.div
@@ -151,7 +153,26 @@ export function Home() {
           block
           className="!h-[60px] !justify-between !px-4 text-left"
           disabled={daily.isPending}
-          onClick={() => daily.mutate()}
+          onClick={() =>
+            daily.mutate(undefined, {
+              onSuccess: (r) =>
+                r.already_claimed
+                  ? toast({ kind: "info", title: "Сегодня уже отмечено", sub: `серия ${r.streak} дн · приходите завтра` })
+                  : toast({
+                      kind: "ok",
+                      title: "Отметка засчитана",
+                      sub: [
+                        `+${Number(r.reward_ton).toFixed(4)} TON`,
+                        r.reward_xp > 0 && `+${r.reward_xp} XP`,
+                        r.reward_focus > 0 && `Фокус +${r.reward_focus}`,
+                        `серия ${r.streak} дн`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · "),
+                    }),
+              onError: (e) => toast({ kind: "danger", title: "Отметка не прошла", sub: e.message }),
+            })
+          }
         >
           <span className="flex items-center gap-3">
             <IconBolt size={22} />
