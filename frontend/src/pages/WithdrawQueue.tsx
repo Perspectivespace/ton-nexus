@@ -14,6 +14,7 @@ import {
   ErrorPanel,
   EmptyPanel,
   Readout,
+  Field,
 } from "@/components/ui";
 
 function formatDate(iso: string) {
@@ -105,16 +106,15 @@ function WithdrawCard({
         </div>
       </div>
 
-      <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-        Заметка
+      <Field label="Заметка">
         <input
-          className="input-field"
+          className="ui-input"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="tx hash / причина отказа"
           disabled={!!busy}
         />
-      </label>
+      </Field>
 
       <div className="flex gap-2">
         <button

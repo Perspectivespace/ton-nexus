@@ -24,6 +24,7 @@ import {
   List,
   ListRow,
   Tabs,
+  Field,
 } from "@/components/ui";
 import { IconBack } from "@/components/icons";
 
@@ -123,42 +124,39 @@ function PromoCreatePanel() {
   return (
     <Panel className="space-y-3 p-4">
       <p className="ui-label">Новый промокод</p>
-      <label className="block ui-sec">
-        Код
+      <Field label="Код">
         <input
-          className="input-field mono uppercase"
+          className="ui-input uppercase"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="WELCOME"
         />
-      </label>
+      </Field>
       <div className="grid grid-cols-3 gap-2">
-        <label className="block ui-sec">
-          TON
-          <input className="input-field mono" value={ton} onChange={(e) => setTon(e.target.value)} />
-        </label>
-        <label className="block ui-sec">
-          XP
-          <input className="input-field mono" value={xp} onChange={(e) => setXp(e.target.value)} />
-        </label>
-        <label className="block ui-sec">
-          Фокус
+        <Field label="TON" unit="TON">
           <input
-            className="input-field mono"
+ className="ui-input" value={ton} onChange={(e) => setTon(e.target.value)} />
+        </Field>
+        <Field label="XP" unit="XP">
+          <input
+ className="ui-input" value={xp} onChange={(e) => setXp(e.target.value)} />
+        </Field>
+        <Field label="Фокус">
+          <input
+            className="ui-input"
             value={focus}
             onChange={(e) => setFocus(e.target.value)}
           />
-        </label>
+        </Field>
       </div>
-      <label className="block ui-sec">
-        Лимит активаций (пусто = ∞)
+      <Field label="Лимит активаций (пусто = ∞)">
         <input
-          className="input-field mono"
+          className="ui-input"
           value={maxUses}
           onChange={(e) => setMaxUses(e.target.value)}
           placeholder="100"
         />
-      </label>
+      </Field>
       <Button kind="primary" block disabled={create.isPending || code.length < 3} onClick={submit}>
         {create.isPending ? "…" : "Создать промокод"}
       </Button>

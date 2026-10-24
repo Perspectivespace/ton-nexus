@@ -8,6 +8,7 @@ import {
   LoadingPanel,
   ErrorPanel,
   Readout,
+  Field,
 } from "@/components/ui";
 
 const TASK_STATUS_RU: Record<string, string> = {
@@ -128,26 +129,24 @@ export function TaskDetail() {
 
         {(canSubmit || done || submit.isSuccess) && (
           <>
-            <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-              Proof (текст)
+            <Field label="Подтверждение (текст)">
               <textarea
-                className="input-field mt-1 min-h-[88px] resize-y"
+                className="ui-input"
                 value={proofText}
                 disabled={done || submit.isSuccess || submit.isPending}
                 onChange={(e) => setProofText(e.target.value)}
                 placeholder="Скрин / описание выполнения…"
               />
-            </label>
-            <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-              Proof URL
+            </Field>
+            <Field label="Ссылка на подтверждение">
               <input
-                className="input-field mono text-[13px]"
+                className="ui-input"
                 value={proofUrl}
                 disabled={done || submit.isSuccess || submit.isPending}
                 onChange={(e) => setProofUrl(e.target.value)}
                 placeholder="https://…"
               />
-            </label>
+            </Field>
 
             {canSubmit && (
               <button

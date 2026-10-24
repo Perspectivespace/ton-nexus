@@ -2,6 +2,7 @@
 export { Panel, Scrim, SectionLabel, type PanelLevel } from "./Panel";
 export { Button, type ButtonKind, type ButtonProps } from "./Button";
 export { HoldButton } from "./HoldButton";
+export { Field } from "./Field";
 export { Tag, Chip, StatTile, type Tone } from "./Tag";
 export { List, ListRow } from "./List";
 export { Tabs, type TabItem } from "./Tabs";

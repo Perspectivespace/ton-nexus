@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Field as UiField } from "@/components/ui/Field";
 import {
   HIDDEN_KEYS,
   SETTINGS,
@@ -45,30 +46,17 @@ function Field({
   const hint = [m.hint, extraHint].filter(Boolean).join(" · ");
   const numeric = m.kind !== "text";
   return (
-    <label className="block min-w-0">
-      <span className={capsCls}>{m.label}</span>
-      <span className="relative block">
-        <input
-          className={`input-field mono w-full text-[14px] ${m.unit ? "pr-14" : ""} ${
-            m.readOnly ? "cursor-default opacity-60" : ""
-          } ${err ? "border-[var(--danger)]" : ""}`}
-          inputMode={numeric ? (m.kind === "int" ? "numeric" : "decimal") : undefined}
-          readOnly={m.readOnly}
-          value={ctx.draft[k] ?? ""}
-          onChange={(e) => ctx.set(k, e.target.value)}
-        />
-        {m.unit && (
-          <span className="pointer-events-none absolute right-3 top-1/2 mt-[3px] -translate-y-1/2 font-mono text-[11px] text-[var(--text-dim)]">
-            {m.unit}
-          </span>
-        )}
-      </span>
-      {err ? (
-        <span className="mt-1 block text-[11px] text-[var(--danger)]">{err}</span>
-      ) : (
-        hint && <span className="mt-1 block text-[11px] leading-snug text-[var(--text-dim)]">{hint}</span>
-      )}
-    </label>
+    <UiField label={m.label} unit={m.unit || undefined} error={err || undefined} hint={hint || undefined}>
+      <input
+        className="ui-input"
+        inputMode={numeric ? (m.kind === "int" ? "numeric" : "decimal") : undefined}
+        readOnly={m.readOnly}
+        aria-readonly={m.readOnly || undefined}
+        style={m.readOnly ? { opacity: 0.6, cursor: "default" } : undefined}
+        value={ctx.draft[k] ?? ""}
+        onChange={(e) => ctx.set(k, e.target.value)}
+      />
+    </UiField>
   );
 }
 

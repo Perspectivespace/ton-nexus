@@ -17,6 +17,7 @@ import {
   ErrorPanel,
   Readout,
   Tabs,
+  Field,
 } from "@/components/ui";
 import { IconSpark } from "@/components/icons";
 
@@ -679,16 +680,15 @@ export function Wheel() {
               <p className="text-[12px] leading-relaxed text-[var(--text-dim)]">
                 Один код — один раз на аккаунт.
               </p>
-              <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-                Код
+              <Field label="Код">
                 <input
-                  className="input-field mono uppercase tracking-wider"
+                  className="ui-input uppercase tracking-wider"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   placeholder="NEXUS-START"
                   disabled={promo.isPending}
                 />
-              </label>
+              </Field>
               <button
                 type="button"
                 className="btn-primary w-full"

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useMe, useMyWithdrawals } from "@/api/hooks";
 import { api } from "@/api/client";
 import { IconOut } from "@/components/icons";
-import { Button, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Tag, type Tone } from "@/components/ui";
+import { Button, Field, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Tag, type Tone } from "@/components/ui";
 
 const W_STATUS: Record<string, { label: string; tone: Tone }> = {
   pending: { label: "ожидает", tone: "warn" },
@@ -60,23 +60,21 @@ export function Wallet() {
           <h2 className="ui-h">Вывод</h2>
           <p className="ui-sec mt-1">Средства холдятся до решения владельца. При отказе — возврат на баланс.</p>
         </div>
-        <label className="block ui-sec">
-          Сумма
+        <Field label="Сумма" unit="TON">
           <input
-            className="input-field mono"
+            className="ui-input"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-        </label>
-        <label className="block ui-sec">
-          Адрес TON
+        </Field>
+        <Field label="Адрес TON">
           <input
-            className="input-field mono text-[13px]"
+            className="ui-input"
             value={wallet}
             onChange={(e) => setWallet(e.target.value)}
             placeholder="UQ… / EQ…"
           />
-        </label>
+        </Field>
         <span className="ui-spill">
           <Button kind="primary" size="lg" block icon={<IconOut size={20} />} disabled={loading} onClick={submit}>
             Запросить вывод

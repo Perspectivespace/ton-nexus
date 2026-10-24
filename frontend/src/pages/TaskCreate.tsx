@@ -8,6 +8,7 @@ import {
   LoadingPanel,
   ErrorPanel,
   Readout,
+  Field,
 } from "@/components/ui";
 
 export function TaskCreate() {
@@ -105,10 +106,9 @@ export function TaskCreate() {
       )}
 
       <form onSubmit={onSubmit} className="panel space-y-4 p-5">
-        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-          Заголовок
+        <Field label="Заголовок">
           <input
-            className="input-field"
+            className="ui-input sans"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Подпишись на канал / репост"
@@ -116,12 +116,11 @@ export function TaskCreate() {
             required
             disabled={create.isPending}
           />
-        </label>
+        </Field>
 
-        <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-          Описание / бриф
+        <Field label="Описание / бриф">
           <textarea
-            className="input-field min-h-[100px] resize-y"
+            className="ui-input"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Что сделать и как подтвердить…"
@@ -129,75 +128,69 @@ export function TaskCreate() {
             required
             disabled={create.isPending}
           />
-        </label>
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Тип
+          <Field label="Тип">
             <select
-              className="input-field"
+              className="ui-input"
               value={taskType}
               onChange={(e) => setTaskType(e.target.value as "manual_proof" | "link")}
               disabled={create.isPending}
             >
-              <option value="manual_proof">Proof вручную</option>
+              <option value="manual_proof">Подтверждение вручную</option>
               <option value="link">Ссылка</option>
             </select>
-          </label>
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Мин. уровень
+          </Field>
+          <Field label="Мин. уровень">
             <input
-              className="input-field mono"
+              className="ui-input"
               value={minLevel}
               onChange={(e) => setMinLevel(e.target.value)}
               disabled={create.isPending}
             />
-          </label>
+          </Field>
         </div>
 
         {taskType === "link" && (
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Target URL
+          <Field label="Ссылка на цель">
             <input
-              className="input-field mono text-[13px]"
+              className="ui-input"
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
               placeholder="https://t.me/…"
               disabled={create.isPending}
             />
-          </label>
+          </Field>
         )}
 
         <div className="grid grid-cols-3 gap-2">
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Награда TON
+          <Field label="Награда" unit="TON">
             <input
-              className="input-field mono"
+              className="ui-input"
               value={reward}
               onChange={(e) => setReward(e.target.value)}
               required
               disabled={create.isPending}
             />
-          </label>
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            Слоты
+          </Field>
+          <Field label="Слоты">
             <input
-              className="input-field mono"
+              className="ui-input"
               value={slots}
               onChange={(e) => setSlots(e.target.value)}
               required
               disabled={create.isPending}
             />
-          </label>
-          <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-            XP
+          </Field>
+          <Field label="XP" unit="XP">
             <input
-              className="input-field mono"
+              className="ui-input"
               value={xp}
               onChange={(e) => setXp(e.target.value)}
               disabled={create.isPending}
             />
-          </label>
+          </Field>
         </div>
 
         {canDirectPublish && (

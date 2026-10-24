@@ -16,6 +16,7 @@ import {
   LoadingPanel,
   ErrorPanel,
   EmptyPanel,
+  Field,
 } from "@/components/ui";
 
 function SubmissionCard({
@@ -85,16 +86,15 @@ function SubmissionCard({
         <p className="text-[12px] text-[var(--text-dim)]">Proof не приложен</p>
       )}
 
-      <label className="block text-[11px] font-medium text-[var(--text-dim)]">
-        Заметка модератора
+      <Field label="Заметка модератора">
         <input
-          className="input-field"
+          className="ui-input sans"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="опционально"
           disabled={!!busy}
         />
-      </label>
+      </Field>
 
       <div className="flex gap-2">
         <button

@@ -9,7 +9,7 @@ import {
   useSetDeployer,
 } from "@/api/hooks";
 import type { DeployJob, DeployStatus } from "@/api/types";
-import { EmptyPanel, ErrorPanel, LoadingPanel, StatusPill } from "@/components/ui";
+import { EmptyPanel, ErrorPanel, Field, LoadingPanel, StatusPill } from "@/components/ui";
 
 const STEPS: { key: string; label: string }[] = [
   { key: "fetch", label: "GitHub" },
@@ -212,13 +212,16 @@ function DeployersCard() {
         </ul>
       )}
       <div className="flex gap-2">
-        <input
-          className="input-field mono flex-1"
-          inputMode="numeric"
-          placeholder="Telegram ID"
-          value={tgId}
-          onChange={(e) => setTgId(e.target.value.replace(/\D/g, ""))}
-        />
+        <Field className="flex-1">
+          <input
+            className="ui-input"
+            inputMode="numeric"
+            placeholder="Telegram ID"
+            aria-label="Telegram ID"
+            value={tgId}
+            onChange={(e) => setTgId(e.target.value.replace(/\D/g, ""))}
+          />
+        </Field>
         <button
           type="button"
           className="btn-primary px-4"

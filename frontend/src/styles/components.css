@@ -355,3 +355,35 @@ a.ui-btn { text-decoration: none; }
 button.ui-stat { border: 0; font: inherit; color: inherit; cursor: pointer; display: block; width: 100%; -webkit-tap-highlight-color: transparent; }
 button.ui-stat:disabled { cursor: default; opacity: .6; }
 button.ui-stat:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
+
+/* —— Поля ввода (п. 7): e0, один срезанный угол (справа снизу), Mono 16, фокус — циан —— */
+.ui-fieldset { display: block; min-width: 0; }
+.ui-flabel { display: block; margin-bottom: 6px; font: 400 13px/18px var(--f-sans); color: var(--text-2); }
+.ui-field {
+  --c: var(--cut-s); position: relative; isolation: isolate; display: flex; align-items: center; min-height: 48px; background: var(--edge-0);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%);
+}
+.ui-field::before {
+  content: ""; position: absolute; inset: 1px; z-index: -1; pointer-events: none; background: var(--mat-0); box-shadow: var(--bevel-0);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--c) + .5px), calc(100% - var(--c) + .5px) 100%, 0 100%);
+}
+.ui-field::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--neon), transparent); opacity: 0; transition: opacity var(--dur-fast) ease-out; pointer-events: none; }
+.ui-field:focus-within { background: linear-gradient(180deg, var(--neon-dim), var(--neon)); }
+.ui-field:focus-within::before { background: radial-gradient(60% 80% at 50% 100%, var(--neon-soft), transparent 70%), var(--mat-0); }
+.ui-field:focus-within::after { opacity: 1; }
+.ui-field.err { background: linear-gradient(180deg, var(--magenta), rgba(255, 46, 126, .35)); }
+.ui-field.err::after { background: linear-gradient(90deg, transparent, var(--magenta), transparent); }
+.ui-input {
+  flex: 1; min-width: 0; width: 100%; align-self: stretch; margin: 0; border: 0; border-radius: 0; outline: none; background: transparent; appearance: none; -webkit-appearance: none;
+  padding: 12px 14px; color: var(--text); caret-color: var(--neon); font: 500 16px/24px var(--f-mono); font-variant-numeric: tabular-nums slashed-zero;
+}
+.ui-input::placeholder { color: var(--text-3); opacity: 1; }
+.ui-input:disabled { opacity: .55; cursor: not-allowed; }
+.ui-input.sans, textarea.ui-input, select.ui-input { font: 400 15px/22px var(--f-sans); }
+textarea.ui-input { min-height: 104px; resize: vertical; }
+select.ui-input { padding-right: 36px; cursor: pointer; background: no-repeat right 12px center / 14px url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237D879E' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>"); }
+select.ui-input option { background: var(--surface-2); color: var(--text); }
+.ui-field .unit { flex: none; padding-right: 14px; font: 600 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+.ui-fhint { display: block; margin-top: 6px; font: 400 12px/16px var(--f-sans); color: var(--text-3); }
+.ui-fhint.err { color: var(--magenta); }
+input[type="checkbox"] { accent-color: var(--neon); }

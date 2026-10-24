@@ -228,24 +228,6 @@ body {
   text-align: center;
 }
 
-.input-field {
-  margin-top: 6px;
-  width: 100%;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--mat-0);
-  padding: 12px 14px;
-  color: var(--text);
-  font-family: var(--f-mono);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  outline: none;
-  box-shadow: var(--bevel-0);
-}
-.input-field:focus {
-  border-color: var(--neon-dim);
-  box-shadow: var(--bevel-0), 0 0 0 1px var(--neon-soft);
-}
 
 /* Tabs (bolt) */
 
