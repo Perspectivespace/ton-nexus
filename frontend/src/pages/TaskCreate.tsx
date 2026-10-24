@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { useMe, useCreateTask } from "@/api/hooks";
 import {
   ScreenHeader,
@@ -26,7 +25,6 @@ export function TaskCreate() {
   const [targetUrl, setTargetUrl] = useState("");
   const [taskType, setTaskType] = useState<"manual_proof" | "link">("manual_proof");
   const [publish, setPublish] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
   const toast = useToast();
 
   const canCreate = me?.is_owner || me?.is_admin || me?.is_ambassador;
@@ -34,7 +32,6 @@ export function TaskCreate() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setResult(null);
     try {
       const t = await create.mutateAsync({
         title: title.trim(),
@@ -55,7 +52,6 @@ export function TaskCreate() {
             : t.status === "draft"
               ? "черновик"
               : t.status;
-      setResult(`#${t.id} · ${statusHint}`);
       toast({ kind: "ok", title: "Задание создано", sub: `#${t.id} · ${statusHint}` });
       setTimeout(() => nav(t.status === "active" ? `/tasks/${t.id}` : "/inbox"), 1200);
     } catch (e) {
@@ -222,24 +218,9 @@ export function TaskCreate() {
               ? "Создать и опубликовать"
               : canDirectPublish
                 ? "Создать черновик"
-                : "Отправить на approve"}
+                : "Отправить на одобрение"}
         </button>
 
-        {create.isError && (
-          <ErrorPanel
-            message={create.error instanceof Error ? create.error.message : "Ошибка создания"}
-          />
-        )}
-
-        {result && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-[var(--success)]/25 bg-[var(--success)]/5 p-3 text-[13px]"
-          >
-            Задание {result}
-          </motion.div>
-        )}
       </form>
 
       <Link to="/tasks" className="ui-btn secondary sm no-underline">

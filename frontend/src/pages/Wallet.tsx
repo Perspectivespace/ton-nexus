@@ -17,26 +17,21 @@ export function Wallet() {
   const mine = useMyWithdrawals();
   const [amount, setAmount] = useState("0.2");
   const [wallet, setWallet] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const toast = useToast();
 
   async function submit() {
     setLoading(true);
-    setMsg(null);
     try {
       await api("/api/v1/withdraw", {
         method: "POST",
         body: JSON.stringify({ amount, wallet_address: wallet }),
       });
-      setMsg("Заявка принята. Владелец подтвердит вручную.");
       toast({ kind: "ok", title: "Заявка на вывод создана", sub: `${amount} TON · подтвердят вручную` });
       refetch();
       mine.refetch();
     } catch (e) {
-      const m = e instanceof Error ? e.message : "Ошибка";
-      setMsg(m);
-      toast({ kind: "danger", title: "Заявка не создана", sub: m });
+      toast({ kind: "danger", title: "Заявка не создана", sub: e instanceof Error ? e.message : "Ошибка" });
     } finally {
       setLoading(false);
     }
@@ -84,7 +79,6 @@ export function Wallet() {
             Запросить вывод
           </Button>
         </span>
-        {msg && <p className="ui-sec">{msg}</p>}
       </Panel>
 
       {(mine.data?.length ?? 0) > 0 && (
