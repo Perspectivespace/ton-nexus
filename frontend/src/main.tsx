@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import "./styles/index.css";
 import { initTelegram } from "./lib/telegram";
+import { initTheme } from "./lib/theme";
 
 initTelegram();
+initTheme();
 
 const queryClient = new QueryClient({
   defaultOptions: {
