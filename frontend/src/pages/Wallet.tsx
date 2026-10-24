@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useMe, useMyWithdrawals } from "@/api/hooks";
 import { api } from "@/api/client";
 import { IconOut } from "@/components/icons";
-import { Button, Field, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Tag, useToast, type Tone } from "@/components/ui";
+import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Sheet, Tag, useToast, type Tone } from "@/components/ui";
 
 const W_STATUS: Record<string, { label: string; tone: Tone }> = {
   pending: { label: "ожидает", tone: "warn" },
@@ -17,26 +17,25 @@ export function Wallet() {
   const mine = useMyWithdrawals();
   const [amount, setAmount] = useState("0.2");
   const [wallet, setWallet] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ask, setAsk] = useState(false);
   const toast = useToast();
 
+  const ready = amount.trim() !== "" && wallet.trim() !== "";
+
   async function submit() {
+    setAsk(false);
     setLoading(true);
-    setMsg(null);
     try {
       await api("/api/v1/withdraw", {
         method: "POST",
         body: JSON.stringify({ amount, wallet_address: wallet }),
       });
-      setMsg("Заявка принята. Владелец подтвердит вручную.");
       toast({ kind: "ok", title: "Заявка на вывод создана", sub: `${amount} TON · подтвердят вручную` });
       refetch();
       mine.refetch();
     } catch (e) {
-      const m = e instanceof Error ? e.message : "Ошибка";
-      setMsg(m);
-      toast({ kind: "danger", title: "Заявка не создана", sub: m });
+      toast({ kind: "danger", title: "Заявка не создана", sub: e instanceof Error ? e.message : "Ошибка" });
     } finally {
       setLoading(false);
     }
@@ -80,11 +79,10 @@ export function Wallet() {
           />
         </Field>
         <span className="ui-spill">
-          <Button kind="primary" size="lg" block icon={<IconOut size={20} />} disabled={loading} onClick={submit}>
+          <Button kind="primary" size="lg" block icon={<IconOut size={20} />} disabled={loading || !ready} onClick={() => setAsk(true)}>
             Запросить вывод
           </Button>
         </span>
-        {msg && <p className="ui-sec">{msg}</p>}
       </Panel>
 
       {(mine.data?.length ?? 0) > 0 && (
@@ -104,6 +102,24 @@ export function Wallet() {
           </List>
         </div>
       )}
+
+      <Sheet open={ask} onClose={() => setAsk(false)} title="Вывод TON">
+        <p className="ui-label">Сумма</p>
+        <Num value={amount.trim()} unit="TON" size="l" className="mt-1 block" />
+        <p className="ui-label mt-4">На адрес</p>
+        <p className="mono mt-1 break-all text-[13px] leading-snug text-[var(--text)]">{wallet.trim()}</p>
+        <p className="ui-sec mt-4">
+          Сумма сразу уйдёт в холд. Владелец выплатит вручную; при отказе TON вернётся на баланс.
+        </p>
+        <div className="mt-5 grid gap-2">
+          <HoldButton block disabled={loading} onConfirm={submit}>
+            Удерживайте — вывести
+          </HoldButton>
+          <Button kind="ghost" block onClick={() => setAsk(false)}>
+            Отмена
+          </Button>
+        </div>
+      </Sheet>
     </div>
   );
 }

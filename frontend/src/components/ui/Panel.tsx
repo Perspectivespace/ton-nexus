@@ -53,11 +53,11 @@ export function Scrim({ className, children, ...rest }: HTMLAttributes<HTMLDivEl
   );
 }
 
-/** Заголовок секции: Tektur 11 капсом + необязательное действие справа */
+/** Заголовок секции: Tektur 11 капсом на подложке (лежит прямо на городе, п. 3.8) + необязательное действие справа */
 export function SectionLabel({ children, action, className }: { children: ReactNode; action?: ReactNode; className?: string }) {
   return (
     <div className={cx("flex items-center justify-between gap-3", className)}>
-      <p className="ui-label">{children}</p>
+      <p className="ui-label ui-onbg">{children}</p>
       {action}
     </div>
   );

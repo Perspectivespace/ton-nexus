@@ -60,9 +60,9 @@ function SettingRow({
     try {
       await update.mutateAsync({ key: item.key, value });
     } catch (e) {
-      // текст ошибки по-прежнему показывает и сам редактор
+      // ошибку сервера показывает только тост; редактор остаётся открытым с введёнными значениями
       toast({ kind: "danger", title: "Настройка не сохранена", sub: e instanceof Error ? e.message : "Ошибка" });
-      throw e;
+      return;
     }
     onSaved();
     setEditing(false);
@@ -260,7 +260,7 @@ export function Owner() {
       <div className="space-y-4">
         <ScreenHeader eyebrow="Кабинет" title="Владелец" />
         <ErrorPanel message="Доступ только у владельца (TELEGRAM_OWNER_IDS)." />
-        <Link to="/" className="ui-btn ghost sm self-start">
+        <Link to="/" className="ui-btn secondary sm self-start no-underline">
           <IconBack size={16} /> Контур
         </Link>
       </div>
@@ -317,7 +317,7 @@ export function Owner() {
         </>
       )}
 
-      <Link to="/" className="ui-btn ghost sm self-start">
+      <Link to="/" className="ui-btn secondary sm self-start no-underline">
         <IconBack size={16} /> Контур
       </Link>
     </div>

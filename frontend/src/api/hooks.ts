@@ -56,7 +56,7 @@ export function useTasks() {
 export function useDailyClaim() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api("/api/v1/daily/claim", { method: "POST" }),
+    mutationFn: () => api<DailyClaim>("/api/v1/daily/claim", { method: "POST" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me"] });
       qc.invalidateQueries({ queryKey: ["daily"] });
