@@ -76,7 +76,7 @@ function ReadOnlyValue({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="col-span-2">
       <span className={capsCls}>{label}</span>
-      <p className="rounded-xl border border-[var(--line)] bg-black/15 p-3 font-mono text-[12px] text-[var(--text-dim)]">
+      <p className="rounded-xl border border-[var(--line)] bg-[var(--surface-3)] p-3 font-mono text-[12px] text-[var(--text-dim)]">
         {Array.isArray(value) ? value.map((x) => (isLeaf(x) ? String(x) : "…")).join(", ") : "…"}
         <span className="mt-1 block text-[11px]">Только просмотр</span>
       </p>
@@ -122,7 +122,7 @@ function Group({ ctx, value, path }: { ctx: Ctx; value: Obj; path: Path }) {
         }
         if (isObj(v) && path.length < 2) {
           return (
-            <fieldset key={k} className="col-span-2 rounded-xl border border-[var(--line)] bg-black/10 px-3 pb-3 pt-1">
+            <fieldset key={k} className="col-span-2 rounded-xl border border-[var(--line)] bg-[var(--surface-3)] px-3 pb-3 pt-1">
               <legend className="px-1 font-mono text-[11px] uppercase tracking-wide text-[var(--accent)]">
                 {m.label}
               </legend>
@@ -158,7 +158,7 @@ function Rows({
           ([k]) => !HIDDEN_KEYS.has(k) && k !== titleKey,
         );
         return (
-          <div key={i} className="rounded-xl border border-[var(--line)] bg-black/15 p-3">
+          <div key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface-3)] p-3">
             <p className="mb-2 truncate font-mono text-[12px] text-[var(--accent)]">{title}</p>
             <div className="grid grid-cols-2 gap-2">
               {fields.map(([k, v]) => {

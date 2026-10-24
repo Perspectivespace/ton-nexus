@@ -157,7 +157,7 @@ export function Upgrade() {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="relative h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="relative h-2 overflow-hidden rounded-full bg-[var(--line)]">
                 <motion.div
                   className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
                   animate={{ left: ["-33%", "100%"] }}

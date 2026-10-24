@@ -95,7 +95,7 @@ function WithdrawCard({
           <button
             type="button"
             onClick={copyWallet}
-            className="mono mt-1 w-full break-all rounded-xl border border-[var(--line)] bg-white/[0.02] px-3 py-2 text-left text-[12px] text-[var(--text)]"
+            className="mono mt-1 w-full break-all rounded-xl border border-[var(--line)] bg-[var(--surface-3)] px-3 py-2 text-left text-[12px] text-[var(--text)]"
           >
             {item.wallet_address}
             <span className="mt-1 block text-[10px] text-[var(--accent)]">

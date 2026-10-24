@@ -98,7 +98,7 @@ function LogTail({ text }: { text?: string }) {
   return (
     <pre
       ref={ref}
-      className="mono max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--line)] bg-black/40 p-3 text-[10px] leading-relaxed text-[var(--text-dim)]"
+      className="mono max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--line)] bg-[var(--surface-3)] p-3 text-[10px] leading-relaxed text-[var(--text-dim)]"
     >
       {text?.trim() || "Лог пока пуст…"}
     </pre>
