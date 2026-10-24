@@ -1,12 +1,12 @@
 import { motion, type Variants } from "framer-motion";
-import { useMe, useDailyClaim } from "@/api/hooks";
+import { Link } from "react-router-dom";
+import { useMe, useMiner, useDailyClaim } from "@/api/hooks";
+import { haptic } from "@/lib/haptics";
 import {
   IconBolt,
   IconChevron,
   IconReactor,
   IconUp,
-  IconTasks,
-  IconWallet,
   IconWheel,
 } from "@/components/icons";
 import {
@@ -15,6 +15,7 @@ import {
   LoadingPanel,
   ErrorPanel,
   Panel,
+  Scrim,
   Num,
   Bar,
   Chip,
@@ -25,36 +26,17 @@ import {
   useToast,
 } from "@/components/ui";
 
-const modules = [
-  {
-    to: "/miner",
-    idx: "01",
-    title: "Майнер",
-    channel: "Реактор",
-    Icon: IconReactor,
-  },
-  {
-    to: "/wheel",
-    idx: "02",
-    title: "Рулетка",
-    channel: "Удача",
-    Icon: IconWheel,
-  },
-  {
-    to: "/tasks",
-    idx: "03",
-    title: "Задания",
-    channel: "Рынок",
-    Icon: IconTasks,
-  },
-  {
-    to: "/wallet",
-    idx: "04",
-    title: "Баланс",
-    channel: "Касса",
-    Icon: IconWallet,
-  },
+/** Нижний док уже ведёт на Майнер, Задания и Баланс — здесь только то, чего в доке нет */
+const more = [
+  { to: "/wheel", title: "Колесо удачи", sub: "Вращение, отметка, промокоды", Icon: IconWheel },
+  { to: "/upgrade", title: "Усиление", sub: "Прокачка параметров реактора", Icon: IconUp },
 ] as const;
+
+const MINER_RU: Record<string, string> = {
+  idle: "остановлен — запустите цикл",
+  running: "цикл активен",
+  ready: "хранилище полное — соберите",
+};
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -78,6 +60,7 @@ const item: Variants = {
 
 export function Home() {
   const { data: me, isLoading, error, isFetching } = useMe();
+  const { data: miner } = useMiner();
   const daily = useDailyClaim();
   const toast = useToast();
 
@@ -104,7 +87,7 @@ export function Home() {
 
       {isLoading && <LoadingPanel label="Синхронизация контура…" />}
       {error && (
-        <ErrorPanel message="Нет связи с API. Нужны backend и Telegram initData." />
+        <ErrorPanel message="Нет связи с сервером. Откройте приложение из Telegram." />
       )}
 
       {me && (
@@ -142,6 +125,26 @@ export function Home() {
               {me.is_owner && <StatusPill tone="live">владелец</StatusPill>}
               {me.is_admin && !me.is_owner && <StatusPill tone="neutral">админ</StatusPill>}
             </div>
+
+            {miner && (() => {
+              const cap = Number(miner.storage_cap ?? 0);
+              const acc = Number(miner.accrued_now ?? miner.pending_reward ?? 0);
+              const pct = cap > 0 ? Math.min(100, Math.round((acc / cap) * 100)) : 0;
+              const ready = miner.status === "ready";
+              return (
+                <Scrim className="relative -mx-5 -mb-5 mt-5 px-5 pb-4 pt-3">
+                  <Link to="/miner" className="home-rx no-underline" onClick={() => haptic.tap()}>
+                    <IconReactor size={20} />
+                    <span className="min-w-0 flex-1">
+                      <span className="ui-label block">Реактор</span>
+                      <span className="ui-sec block truncate !text-[13px]">{MINER_RU[miner.status] || miner.status}</span>
+                    </span>
+                    <span className={ready ? "ui-num tone-amber text-[15px] font-bold" : "ui-num text-[15px] font-bold"}>{pct}%</span>
+                    <IconChevron size={18} />
+                  </Link>
+                </Scrim>
+              );
+            })()}
           </Panel>
         </motion.section>
       )}
@@ -188,20 +191,11 @@ export function Home() {
       </motion.div>
 
       <motion.div variants={item} className="space-y-2.5">
-        <SectionLabel>Модули</SectionLabel>
+        <SectionLabel>Ещё</SectionLabel>
         <List>
-          {modules.map((m) => {
+          {more.map((m) => {
             const Icon = m.Icon;
-            return (
-              <ListRow
-                key={m.to}
-                to={m.to}
-                icon={<Icon size={20} />}
-                title={m.title}
-                sub={m.channel}
-                value={<span className="ui-sys">{m.idx}</span>}
-              />
-            );
+            return <ListRow key={m.to} to={m.to} icon={<Icon size={20} />} title={m.title} sub={m.sub} />;
           })}
         </List>
       </motion.div>

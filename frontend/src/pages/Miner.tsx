@@ -1,6 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useMiner, useMinerStart, useMinerClaim } from "@/api/hooks";
+import { useMe, useMiner, useMinerStart, useMinerClaim } from "@/api/hooks";
 import {
   ScreenHeader,
   StatusPill,
@@ -14,7 +15,11 @@ import {
   StatTile,
   Button,
   useToast,
+  useIgniteOnce,
+  useLiveAccrued,
+  cx,
 } from "@/components/ui";
+import { prefersReducedMotion } from "@/components/ui/press";
 import { haptic } from "@/lib/haptics";
 
 const statusTone = {
@@ -30,19 +35,77 @@ const statusLabel: Record<string, string> = {
 };
 
 export function Miner() {
-  const { data: m, isLoading, error } = useMiner();
+  const { data: m, isLoading, error, dataUpdatedAt } = useMiner();
+  const { data: me } = useMe();
   const start = useMinerStart();
   const claim = useMinerClaim();
   const toast = useToast();
+
+  const accrued = Number(m?.accrued_now ?? m?.pending_reward ?? 0);
+  const cap = Number(m?.storage_cap ?? m?.estimated_reward ?? 0);
+  const running = m?.status === "running";
+  const ready = m?.status === "ready";
+
+  // Живой счётчик: 4 раза в секунду, без расшифровки (п. 13 B)
+  const live = useLiveAccrued({
+    accrued,
+    cap,
+    running,
+    startedAt: m?.session_started_at,
+    endsAt: m?.session_ends_at,
+    fetchedAt: dataUpdatedAt,
+  });
+  // Момент A: неон зажигается один раз за сессию, если реактор горит
+  const ignite = useIgniteOnce("miner", running || ready);
+
+  // Момент B: после «Собрать» дуга стекает 600 мс и держится на нуле, пока не придут свежие данные
+  const [claimAt, setClaimAt] = useState<number | null>(null);
+  const [gain, setGain] = useState<string | null>(null);
+  const updatedRef = useRef(dataUpdatedAt);
+  updatedRef.current = dataUpdatedAt;
+  useEffect(() => {
+    if (claimAt == null) return;
+    const wait = Math.max(0, claimAt + 600 - Date.now());
+    const id = window.setTimeout(() => {
+      if (updatedRef.current > claimAt || Date.now() - claimAt > 3000) setClaimAt(null);
+    }, wait);
+    const hard = window.setTimeout(() => setClaimAt(null), 3000);
+    return () => {
+      window.clearTimeout(id);
+      window.clearTimeout(hard);
+    };
+  }, [claimAt, dataUpdatedAt]);
+  useEffect(() => {
+    if (!gain) return;
+    const id = window.setTimeout(() => setGain(null), 1800);
+    return () => window.clearTimeout(id);
+  }, [gain]);
+
+  function onClaim() {
+    claim.mutate(undefined, {
+      onSuccess: (r) => {
+        const sum = `+${Number(r.claimed).toFixed(6)}`;
+        const reduce = prefersReducedMotion();
+        setClaimAt(Date.now());
+        setGain(sum);
+        window.setTimeout(
+          () => {
+            haptic.success();
+            toast({ kind: "ok", title: "Собрано", sub: `${sum} TON` });
+          },
+          reduce ? 0 : 600,
+        );
+      },
+      onError: (e) => toast({ kind: "danger", title: "Сбор не прошёл", sub: e.message }),
+    });
+  }
 
   if (isLoading) return <LoadingPanel label="Синхронизация реактора…" />;
   if (error) return <ErrorPanel message="Не удалось загрузить майнер" />;
   if (!m) return null;
 
-  const accrued = Number(m.accrued_now ?? m.pending_reward);
-  const cap = Number(m.storage_cap ?? m.estimated_reward ?? 0);
-  const running = m.status === "running";
-  const ready = m.status === "ready";
+  const draining = claimAt != null;
+  const shown = draining ? 0 : live;
 
   return (
     <div className="space-y-5">
@@ -60,9 +123,22 @@ export function Miner() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <Panel level="hero" see cut="l" lift="l2" className="p-5">
           <div className="relative flex flex-col items-center">
-            <Reactor fill={cap > 0 ? accrued / cap : 0} state={ready ? "ready" : running ? "running" : "idle"} />
+            <Reactor
+              fill={cap > 0 ? shown / cap : 0}
+              state={ready ? "ready" : running ? "running" : "idle"}
+              draining={draining}
+              ignite={ignite}
+            />
             <p className="ui-label ui-shade mt-6">Накоплено в цикле</p>
-            <Num value={accrued.toFixed(6)} unit="TON" size="l" glow={running || ready} tone={ready ? "amber" : undefined} className="ui-shade mt-1" />
+            <Num
+              value={shown.toFixed(6)}
+              unit="TON"
+              size="l"
+              decode={false}
+              glow={running || ready}
+              tone={ready ? "amber" : undefined}
+              className={cx("ui-shade mt-1", ignite && "ui-ignite")}
+            />
             {m.cycle_hours != null && (
               <p className="ui-sec ui-shade mt-1">Длительность цикла ~{m.cycle_hours.toFixed(1)} ч</p>
             )}
@@ -70,7 +146,18 @@ export function Miner() {
 
           <Scrim className="relative -mx-5 -mb-5 mt-5 px-5 pb-5 pt-4">
             <div className="min-w-0 space-y-2">
-              <Readout label="Ёмкость" value={cap.toFixed(6)} unit="TON" />
+              <div className="grid grid-cols-2 gap-3">
+                <Readout label="Ёмкость" value={cap.toFixed(6)} unit="TON" />
+                <div className="relative min-w-0">
+                  <p className="ui-label">Баланс</p>
+                  <Num value={me ? Number(me.balance).toFixed(4) : "—"} unit="TON" size="m" className="mt-1 block truncate !text-[19px] !font-bold" />
+                  {gain && (
+                    <span className="ui-gain" aria-live="polite">
+                      {gain}
+                    </span>
+                  )}
+                </div>
+              </div>
               <p className="ui-sec !text-[12px] !leading-[16px]">
                 {ready
                   ? "Хранилище заполнено — соберите награду, иначе фарм остановлен."
@@ -120,12 +207,7 @@ export function Miner() {
               haptics="collect"
               className={ready ? "amber" : undefined}
               disabled={claim.isPending}
-              onClick={() =>
-                claim.mutate(undefined, {
-                  onSuccess: (r) => toast({ kind: "ok", title: "Собрано", sub: `+${Number(r.claimed).toFixed(6)} TON` }),
-                  onError: (e) => toast({ kind: "danger", title: "Сбор не прошёл", sub: e.message }),
-                })
-              }
+              onClick={onClaim}
             >
               {claim.isPending ? "Сбор…" : ready ? "Собрать · хранилище полное" : "Собрать"}
             </Button>

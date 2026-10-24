@@ -417,6 +417,20 @@ input[type="checkbox"] { accent-color: var(--neon); }
 .rx.is-running .rx-ring.b { animation: rx-spin 22s linear infinite reverse; }
 @keyframes rx-spin { to { transform: rotate(360deg); } }
 html.app-hidden .rx-ring { animation-play-state: paused !important; }
+/* Момент B: дуга стекает (только stroke-dashoffset), ядро один раз приглушается (opacity) */
+.rx.is-draining .rx-arc { transition: stroke-dashoffset .6s var(--ease-out); }
+.rx.is-draining .rx-core { animation: rx-drain .6s ease-out; }
+@keyframes rx-drain { 0% { opacity: 1; } 45% { opacity: .45; } 100% { opacity: 1; } }
+/* Момент A: неон зажигается — три неровные вспышки прозрачности, 380 мс, один раз за сессию */
+.ui-ignite, .rx.is-ignite .rx-core, .rx.is-ignite .rx-arc { animation: ui-ignite .38s both; }
+@keyframes ui-ignite {
+  0% { opacity: 0; animation-timing-function: steps(1, end); }
+  22% { opacity: .6; animation-timing-function: steps(1, end); }
+  44% { opacity: .25; animation-timing-function: steps(1, end); }
+  62% { opacity: 1; }
+  100% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .ui-ignite, .rx .rx-core, .rx .rx-arc { animation: none !important; transition: none !important; } }
 @media (prefers-reduced-motion: reduce) { .rx .rx-ring { animation: none !important; will-change: auto; } }
 .rx-shell { inset: 27%; border-radius: 50%;
   background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.30), rgba(255,255,255,0) 22%), radial-gradient(circle, rgba(0,0,0,0) 58%, rgba(0,20,30,.85) 72%, rgba(0,0,0,.95));
@@ -525,3 +539,36 @@ html.app-hidden .rx-ring { animation-play-state: paused !important; }
 .onb-dots button { width: 12px; height: 6px; padding: 0; border: 0; background: var(--text-3); opacity: .45; clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%); transition: opacity .2s, width .2s; }
 .onb-dots button.on { width: 28px; opacity: 1; background: var(--neon); }
 @media (prefers-reduced-motion: reduce) { .onb-track, .onb-dots button { transition: none; } }
+
+/* Момент B: маркер «+0.0042» у баланса — всплывает и гаснет (transform + opacity) */
+.ui-gain { position: absolute; right: 0; top: -2px; font: 700 12px/16px var(--f-mono); color: var(--neon-core); pointer-events: none;
+  animation: ui-gain 1.8s var(--ease-out) both; }
+[data-theme="light"] .ui-gain { color: var(--neon); }
+@keyframes ui-gain { 0% { opacity: 0; transform: translate3d(0, 6px, 0); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translate3d(0, -8px, 0); } }
+@media (prefers-reduced-motion: reduce) { .ui-gain { animation: ui-gain-r 1.8s both; } }
+@keyframes ui-gain-r { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Момент C — прогон усиления (п. 13 C) */
+.ui-stat.scan { background: linear-gradient(180deg, var(--neon-core), var(--neon) 40%, rgba(43,245,255,.5)); }
+button.ui-stat.scan:disabled { opacity: 1; }
+.ui-stat.scan .v { color: var(--neon-core); }
+[data-theme="light"] .ui-stat.scan .v { color: var(--neon); }
+.dial.is-run .dl-needle { transition: transform .8s cubic-bezier(.3, 1.45, .5, 1); }
+.ui-verdict { display: inline-block; padding: 3px 10px; font: 700 12px/16px var(--f-display); font-stretch: 75%; letter-spacing: .12em; text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut-xs)), calc(100% - var(--cut-xs)) 100%, 0 100%); }
+.ui-verdict.ok { background: var(--amber); color: #1A0F00; }
+.ui-verdict.burn { background: var(--magenta-soft); color: var(--magenta); box-shadow: inset 2px 0 0 var(--magenta); }
+.ui-roll { display: inline-block; animation: ui-roll .32s var(--ease-out) both; }
+@keyframes ui-roll { from { opacity: 0; transform: translate3d(0, 60%, 0); } to { opacity: 1; transform: none; } }
+/* Провал: два кадра глитч-сдвига полосой маджента, панель на миг гаснет до 40 % (только transform и opacity) */
+.ui-burn { position: relative; animation: ui-burn-dim .7s ease-out both; }
+.ui-burn::after { content: ""; position: absolute; left: 0; right: 0; top: 38%; height: 14%; background: var(--magenta); opacity: 0; pointer-events: none;
+  animation: ui-burn-bar .16s steps(1, end) both; }
+@keyframes ui-burn-dim { 0% { transform: translate3d(-4px, 0, 0); } 10% { transform: translate3d(3px, 0, 0); } 20% { transform: none; opacity: .4; } 100% { opacity: 1; } }
+@keyframes ui-burn-bar { 0% { opacity: .55; transform: translate3d(-6px, 0, 0); } 50% { opacity: .35; transform: translate3d(5px, -8px, 0); } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ui-roll, .ui-burn, .ui-burn::after { animation: none !important; } .dial.is-run .dl-needle { transition: none; } }
+
+/* Главная: строка реактора внизу героя (вход в майнер без дубля дока) */
+.home-rx { display: flex; align-items: center; gap: 12px; min-height: 44px; color: var(--text); }
+.home-rx > svg:first-child { color: var(--neon); flex: none; }
+.home-rx > svg:last-child { color: var(--text-3); flex: none; }

@@ -186,7 +186,7 @@ function DeployersCard() {
     <div className="ui-cut space-y-3 p-4">
       <div className="flex items-center justify-between">
         <p className="eyebrow">Деплойеры</p>
-        <StatusPill tone="neutral">только owner</StatusPill>
+        <StatusPill tone="neutral">только владелец</StatusPill>
       </div>
       <p className="text-[11px] leading-snug text-[var(--text-dim)]">
         Могут обновлять сервер. Доступа к экономике, кассе и модерации не получают.
