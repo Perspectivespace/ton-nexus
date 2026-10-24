@@ -1029,7 +1029,7 @@ html.low-end .life .rain, html.low-end .life .spark, html.low-end .life .w-off {
 <section class="board" id="s7" data-theme="dark">
   <div class="sec-no">07 // АТМОСФЕРА · ГОРОД · ИСКРЫ ЖИЗНИ</div>
   <h2 class="sec">Город <em>живёт</em></h2>
-  <p class="sec-ru">Город — не обои, а сцена: дальняя дымка, средние башни с окнами и вывесками, ближние конструкции с монорельсом и дождём. Всё нарисовано заранее и весит 65 КБ. Поверх — несколько «искр жизни»: окно гаснет, вывеска моргает, дрон пролетает. Подвигайте курсор над телефоном — ближний слой сдвинется (параллакс).</p>
+  <p class="sec-ru">Город — не обои, а сцена: дальняя дымка, средние башни с окнами и вывесками, ближние конструкции с монорельсом и дождём. Всё нарисовано заранее и весит 66 КБ. Поверх — несколько «искр жизни»: окно гаснет, вывеска моргает, дрон пролетает. Подвигайте курсор над телефоном — ближний слой сдвинется (параллакс).</p>
   <div style="display:grid; grid-template-columns: auto 1fr; gap:40px; margin-top:28px; align-items:start">
     <div><div class="phone" id="ph-life" data-tilt><div class="screen"><div class="city"></div>
       <div class="tgbar"><span class="lockup"><img class="mk" src="brand/mark.svg" alt=""><img class="wm" src="brand/wordmark.svg" alt="TON NEXUS"></span><span class="tag ok">Работает</span></div>
@@ -1043,7 +1043,7 @@ html.low-end .life .rain, html.low-end .life .spark, html.low-end .life .w-off {
       <div class="cap" style="margin-top:0">Слои города · сверху вниз</div>
       <div class="grid" style="grid-template-columns: repeat(4, 1fr); gap:14px">
         <div><div class="cut s" style="height:250px; background: url(assets/city-night-back.webp) center top/100% auto no-repeat, #04050A; --fill: none"></div><div class="ph-cap">1 · Дальний + средний<br>city-night-back.webp · 20.1 КБ</div></div>
-        <div><div class="cut s" style="height:250px; background: url(assets/city-night-front.webp) center top/100% auto no-repeat, repeating-conic-gradient(#0d1019 0 25%, #131826 0 50%) 0 0/16px 16px; --fill: none"></div><div class="ph-cap">2 · Ближний (прозрачный)<br>city-night-front.webp · 40.6 КБ</div></div>
+        <div><div class="cut s" style="height:250px; background: url(assets/city-night-front.webp) center top/100% auto no-repeat, repeating-conic-gradient(#0d1019 0 25%, #131826 0 50%) 0 0/16px 16px; --fill: none"></div><div class="ph-cap">2 · Ближний (прозрачный)<br>city-night-front.webp · 41.9 КБ</div></div>
         <div><div class="cut s" style="height:250px; position:relative; overflow:hidden; background:#04050A; --fill:none"><div class="city only-life" style="z-index:0; background:#04050A"></div></div><div class="ph-cap">3 · Жизнь + скрим<br>DOM-элементы · 0 КБ картинок</div></div>
         <div data-theme="light"><div class="cut s" style="height:250px; background: url(assets/city-day-back.webp) center top/100% auto no-repeat, #EEF1F6; --fill: none"></div><div class="ph-cap">Дневной HUD · один слой<br>city-day-back.webp · 4.5 КБ</div></div>
       </div>
@@ -1250,7 +1250,7 @@ for (const id of ["pal-dark","pal-light"]) {
 }
 /* ---------- слой 0: город (готовые WebP) + «искры жизни» ---------- */
 /* Якоря жизни взяты из генератора города (gen/life.json), координаты — в пикселях картинки 390×700. */
-const LIFE = {"win":[[66.0,430.5],[77.0,430.5],[55.0,438.5],[38.5,446.5],[71.5,446.5],[71.5,454.5],[44.0,462.5],[128.2,423.9],[89.7,463.9],[106.2,463.9],[164.3,379.7],[169.8,387.7],[169.8,395.7],[180.8,411.7],[208.3,411.7],[245.0,412.7],[261.5,460.7],[272.5,460.7],[191,224],[202,224],[218.5,288],[191,296],[218.5,296],[191,312],[213,320],[202,328],[180,352],[202,352],[202,368],[218.5,368],[202,448],[213,456],[207.5,464],[59,304],[59,336],[59,392],[48,448]],"signs":[[48,284,26,154],[181,235,42,28],[265,465,74,23]],"bcn":[[273,79],[126,137]],"bcnL":[[273,79],[126,137]]};
+const LIFE = {"win":[[66.0,430.5],[77.0,430.5],[55.0,438.5],[38.5,446.5],[71.5,446.5],[71.5,454.5],[44.0,462.5],[128.2,423.9],[89.7,463.9],[106.2,463.9],[164.3,379.7],[169.8,387.7],[169.8,395.7],[180.8,411.7],[208.3,411.7],[245.0,412.7],[261.5,460.7],[272.5,460.7],[191,224],[202,224],[218.5,288],[191,296],[218.5,296],[191,312],[213,320],[202,328],[180,352],[202,352],[202,368],[218.5,368],[202,448],[213,456],[207.5,464],[59,304],[59,336],[59,392],[48,448]],"signs":[[48,284,26,154],[181,235,42,28],[246,464,104,23]],"bcn":[[273,79],[126,137]],"bcnL":[[273,79],[126,137]]};
 const pc = (v, of) => (v / of * 100).toFixed(2) + "%";
 function lifeLayer(city){
   const light = !!city.closest("[data-theme=light]");
