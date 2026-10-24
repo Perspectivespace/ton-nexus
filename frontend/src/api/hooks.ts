@@ -20,7 +20,7 @@ export function useMiner(opts?: { fresh?: boolean }) {
   return useQuery({
     queryKey: ["miner"],
     queryFn: () => api<MinerOut>("/api/v1/miner"),
-    // fresh — перезапросить при открытии экрана (цена прогона могла измениться в настройках экономики)
+    // fresh — перезапросить при открытии экрана (цена попытки могла измениться в настройках экономики)
     ...(opts?.fresh ? { refetchOnMount: "always" as const } : {}),
   });
 }
@@ -236,7 +236,7 @@ export function useEconomyUpdate() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["economy"] });
-      qc.invalidateQueries({ queryKey: ["miner"] }); // цена прогона зависит от настроек
+      qc.invalidateQueries({ queryKey: ["miner"] }); // цена попытки зависит от настроек
     },
   });
 }
