@@ -81,7 +81,7 @@ export function Upgrade() {
         <div className="mb-3 flex items-center justify-between">
           <p className="eyebrow">Стойка параметров</p>
           <StatusPill tone={busy ? "live" : "neutral"}>
-            {busy ? "rolling" : "double-wheel"}
+            {busy ? "вращение" : "двойное колесо"}
           </StatusPill>
         </div>
         <div className="grid grid-cols-5 gap-2">

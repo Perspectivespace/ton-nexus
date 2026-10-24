@@ -60,7 +60,7 @@ function SubmissionCard({
           </p>
           <p className="mt-0.5 text-[12px] text-[var(--text-dim)]">user #{item.user_id}</p>
         </div>
-        <StatusPill tone="live">pending</StatusPill>
+        <StatusPill tone="live">на проверке</StatusPill>
       </div>
 
       {item.proof_text && (
@@ -103,7 +103,7 @@ function SubmissionCard({
           disabled={!!busy}
           onClick={() => act(true)}
         >
-          {busy === "approve" ? "…" : "Approve"}
+          {busy === "approve" ? "…" : "Одобрить"}
         </button>
         <button
           type="button"
@@ -111,7 +111,7 @@ function SubmissionCard({
           disabled={!!busy}
           onClick={() => act(false)}
         >
-          {busy === "reject" ? "…" : "Reject"}
+          {busy === "reject" ? "…" : "Отклонить"}
         </button>
       </div>
 
@@ -140,7 +140,7 @@ export function Inbox() {
   if (!canModerate) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Модерация" title="Inbox" />
+        <ScreenHeader eyebrow="Модерация" title="Входящие" />
         <ErrorPanel message="Inbox для амбассадоров, админов и владельца." />
         <Link to="/" className="btn-ghost inline-flex text-[13px] no-underline">
           ← Контур
@@ -161,7 +161,7 @@ export function Inbox() {
     <div className="space-y-5">
       <ScreenHeader
         eyebrow="Модерация"
-        title="Inbox"
+        title="Входящие"
         action={
           <StatusPill tone={list.length ? "live" : "ok"}>{list.length} сдач</StatusPill>
         }
@@ -179,7 +179,7 @@ export function Inbox() {
           <div className="flex items-center justify-between">
             <p className="eyebrow">Публикации заданий</p>
             <StatusPill tone={pendingTasks.length ? "warn" : "neutral"}>
-              {pendingTasks.length} на approve
+              {pendingTasks.length} на одобрение
             </StatusPill>
           </div>
 
@@ -205,7 +205,7 @@ export function Inbox() {
                     {Number(t.reward).toFixed(4)} TON · {t.total_slots} слотов
                   </p>
                 </div>
-                <StatusPill tone="warn">pending</StatusPill>
+                <StatusPill tone="warn">ждёт</StatusPill>
               </div>
               <div className="flex gap-2">
                 <button
@@ -234,7 +234,7 @@ export function Inbox() {
         <div className="flex items-center justify-between">
           <p className="eyebrow">Сдачи proof</p>
           <StatusPill tone={subs.isFetching ? "live" : "neutral"}>
-            {subs.isFetching ? "sync" : `${list.length}`}
+            {subs.isFetching ? "синхр." : `${list.length}`}
           </StatusPill>
         </div>
 

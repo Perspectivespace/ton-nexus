@@ -10,6 +10,16 @@ import {
   Readout,
 } from "@/components/ui";
 
+const TASK_STATUS_RU: Record<string, string> = {
+  active: "активно",
+  draft: "черновик",
+  pending_approval: "на одобрении",
+  paused: "пауза",
+  rejected: "отклонено",
+  completed: "завершено",
+  closed: "закрыто",
+};
+
 export function TaskDetail() {
   const { id } = useParams();
   const taskId = Number(id) || 0;
@@ -58,7 +68,7 @@ export function TaskDetail() {
 
       <div className="panel panel-glow space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <StatusPill tone={t.status === "active" ? "live" : "neutral"}>{t.status}</StatusPill>
+          <StatusPill tone={t.status === "active" ? "live" : "neutral"}>{TASK_STATUS_RU[t.status] ?? t.status}</StatusPill>
           <StatusPill tone={slotsLeft > 0 ? "ok" : "warn"}>
             {t.filled_slots}/{t.total_slots} слотов
           </StatusPill>

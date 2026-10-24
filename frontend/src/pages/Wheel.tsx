@@ -477,7 +477,7 @@ export function Wheel() {
   return (
     <div className="space-y-4">
       <ScreenHeader
-        eyebrow="Module 02 · Fortune"
+        eyebrow="Модуль 02 · Удача"
         title="Колесо удачи"
         action={
           <button
@@ -632,9 +632,9 @@ export function Wheel() {
           >
             <div className="metal-plate-hero space-y-4 p-5">
               <div className="flex items-center justify-between">
-                <p className="eyebrow">Check-in</p>
+                <p className="eyebrow">Ежедневная отметка</p>
                 <StatusPill tone={d?.claimed_today ? "ok" : "neutral"}>
-                  streak {d?.streak ?? 0}
+                  серия {d?.streak ?? 0}
                 </StatusPill>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -687,7 +687,7 @@ export function Wheel() {
             <div className="metal-plate-hero space-y-4 p-5">
               <div className="flex items-center justify-between">
                 <p className="eyebrow">Промокод</p>
-                <StatusPill tone={promo.isSuccess ? "ok" : "neutral"}>redeem</StatusPill>
+                <StatusPill tone={promo.isSuccess ? "ok" : "neutral"}>промокод</StatusPill>
               </div>
               <p className="text-[12px] leading-relaxed text-[var(--text-dim)]">
                 Один код — один раз на аккаунт.

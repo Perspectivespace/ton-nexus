@@ -19,7 +19,7 @@ const STEPS: { key: string; label: string }[] = [
   { key: "npm_ci", label: "npm" },
   { key: "build", label: "Сборка" },
   { key: "restart", label: "API" },
-  { key: "health", label: "Health" },
+  { key: "health", label: "Проверка" },
   { key: "nginx", label: "nginx" },
 ];
 

@@ -84,7 +84,7 @@ export function TaskCreate() {
         title="Новое задание"
         action={
           <StatusPill tone={me?.is_ambassador && !canDirectPublish ? "warn" : "live"}>
-            {canDirectPublish ? "direct" : "на approve"}
+            {canDirectPublish ? "сразу в ленту" : "на одобрение"}
           </StatusPill>
         }
       />
