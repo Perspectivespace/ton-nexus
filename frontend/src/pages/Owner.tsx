@@ -60,9 +60,9 @@ function SettingRow({
     try {
       await update.mutateAsync({ key: item.key, value });
     } catch (e) {
-      // текст ошибки по-прежнему показывает и сам редактор
+      // ошибку сервера показывает только тост; редактор остаётся открытым с введёнными значениями
       toast({ kind: "danger", title: "Настройка не сохранена", sub: e instanceof Error ? e.message : "Ошибка" });
-      throw e;
+      return;
     }
     onSaved();
     setEditing(false);
