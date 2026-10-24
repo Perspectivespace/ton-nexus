@@ -9,6 +9,7 @@ import {
   ErrorPanel,
   Readout,
   Field,
+  useToast,
 } from "@/components/ui";
 
 export function TaskCreate() {
@@ -26,6 +27,7 @@ export function TaskCreate() {
   const [taskType, setTaskType] = useState<"manual_proof" | "link">("manual_proof");
   const [publish, setPublish] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const toast = useToast();
 
   const canCreate = me?.is_owner || me?.is_admin || me?.is_ambassador;
   const canDirectPublish = me?.is_owner || me?.is_admin;
@@ -54,9 +56,10 @@ export function TaskCreate() {
               ? "черновик"
               : t.status;
       setResult(`#${t.id} · ${statusHint}`);
+      toast({ kind: "ok", title: "Задание создано", sub: `#${t.id} · ${statusHint}` });
       setTimeout(() => nav(t.status === "active" ? `/tasks/${t.id}` : "/inbox"), 1200);
-    } catch {
-      /* */
+    } catch (e) {
+      toast({ kind: "danger", title: "Задание не создано", sub: e instanceof Error ? e.message : "Ошибка" });
     }
   }
 

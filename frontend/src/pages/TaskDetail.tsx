@@ -9,6 +9,7 @@ import {
   ErrorPanel,
   Readout,
   Field,
+  useToast,
 } from "@/components/ui";
 
 const TASK_STATUS_RU: Record<string, string> = {
@@ -30,6 +31,7 @@ export function TaskDetail() {
   const [proofText, setProofText] = useState("");
   const [proofUrl, setProofUrl] = useState("");
   const [done, setDone] = useState(false);
+  const toast = useToast();
 
   async function onSubmit() {
     try {
@@ -38,8 +40,9 @@ export function TaskDetail() {
         proof_url: proofUrl.trim() || null,
       });
       setDone(true);
-    } catch {
-      /* */
+      toast({ kind: "ok", title: "Сдано на проверку", sub: "награда придёт после одобрения" });
+    } catch (e) {
+      toast({ kind: "danger", title: "Не удалось сдать", sub: e instanceof Error ? e.message : "Ошибка" });
     }
   }
 

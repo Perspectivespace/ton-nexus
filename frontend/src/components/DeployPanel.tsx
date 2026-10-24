@@ -9,7 +9,7 @@ import {
   useSetDeployer,
 } from "@/api/hooks";
 import type { DeployJob, DeployStatus } from "@/api/types";
-import { EmptyPanel, ErrorPanel, Field, LoadingPanel, StatusPill } from "@/components/ui";
+import { Button, EmptyPanel, ErrorPanel, Field, HoldButton, LoadingPanel, Sheet, StatusPill, useToast } from "@/components/ui";
 
 const STEPS: { key: string; label: string }[] = [
   { key: "fetch", label: "GitHub" },
@@ -162,16 +162,23 @@ function DeployersCard() {
   const setRole = useSetDeployer();
   const [tgId, setTgId] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  // Кого снимаем — пока открыта шторка подтверждения (раньше был системный confirm()).
+  const [revoke, setRevoke] = useState<{ telegram_id: number; name: string } | null>(null);
+  const toast = useToast();
 
   async function change(telegram_id: number, is_deployer: boolean) {
     setMsg(null);
     try {
       await setRole.mutateAsync({ telegram_id, is_deployer });
       if (is_deployer) setTgId("");
-      setMsg(is_deployer ? "Деплойер добавлен" : "Доступ снят");
+      const done = is_deployer ? "Деплойер добавлен" : "Доступ снят";
+      setMsg(done);
+      toast({ kind: "ok", title: done, sub: String(telegram_id) });
     } catch (e) {
       const m = e instanceof Error ? e.message : "Ошибка";
-      setMsg(m === "user not found" ? "Пользователь ещё не открывал Mini App" : m);
+      const text = m === "user not found" ? "Пользователь ещё не открывал Mini App" : m;
+      setMsg(text);
+      toast({ kind: "danger", title: is_deployer ? "Не удалось добавить" : "Не удалось снять доступ", sub: text });
     }
   }
 
@@ -201,9 +208,7 @@ function DeployersCard() {
                 type="button"
                 className="ui-btn danger sm"
                 disabled={setRole.isPending}
-                onClick={() => {
-                  if (confirm("Снять право деплоя?")) change(d.telegram_id, false);
-                }}
+                onClick={() => setRevoke({ telegram_id: d.telegram_id, name: d.username ? `@${d.username}` : d.first_name || String(d.telegram_id) })}
               >
                 Снять
               </button>
@@ -232,6 +237,28 @@ function DeployersCard() {
         </button>
       </div>
       {msg && <p className="text-[12px] text-[var(--text-dim)]">{msg}</p>}
+      <Sheet open={!!revoke} onClose={() => setRevoke(null)} title="Снять право деплоя?">
+        <p className="text-[14px] leading-snug text-[var(--text-2)]">
+          {revoke?.name} больше не сможет обновлять сервер. Вернуть доступ можно в любой момент — добавить по Telegram ID.
+        </p>
+        <div className="mt-5 grid gap-2">
+          <HoldButton
+            kind="danger"
+            block
+            disabled={setRole.isPending}
+            onConfirm={() => {
+              const r = revoke;
+              setRevoke(null);
+              if (r) change(r.telegram_id, false);
+            }}
+          >
+            Удерживайте — снять доступ
+          </HoldButton>
+          <Button kind="ghost" block onClick={() => setRevoke(null)}>
+            Отмена
+          </Button>
+        </div>
+      </Sheet>
     </div>
   );
 }
@@ -244,6 +271,9 @@ export function DeployPanel() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [force, setForce] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // Шторка подтверждения деплоя (раньше был системный confirm()).
+  const [ask, setAsk] = useState(false);
+  const toast = useToast();
 
   const activeId = data?.active?.id ?? null;
   const shownId = activeId ?? openId;
@@ -261,18 +291,23 @@ export function DeployPanel() {
   if (isLoading) return <LoadingPanel label="Проверка сервера…" />;
   if (error || !data) return <ErrorPanel message="Не удалось получить статус деплоя" />;
 
+  const askText = force
+    ? "Полный деплой теста: переустановить зависимости, миграции и пересобрать всё?"
+    : "Обновить тестовый сервер до последней версии из GitHub?";
+
+  // Тот же запрос, что и раньше; подтверждение теперь — удержание в шторке.
   async function run() {
+    setAsk(false);
     setMsg(null);
-    const text = force
-      ? "Полный деплой теста: переустановить зависимости, миграции и пересобрать всё?"
-      : "Обновить тестовый сервер до последней версии из GitHub?";
-    if (!confirm(text)) return;
     try {
       const job = await request.mutateAsync({ target: "test", force });
       setOpenId(job.id);
       setForce(false);
+      toast({ kind: "ok", title: "Деплой запущен", sub: force ? "полный · тест" : "тест" });
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Ошибка");
+      const m = e instanceof Error ? e.message : "Ошибка";
+      setMsg(m);
+      toast({ kind: "danger", title: "Деплой не запустился", sub: m });
     }
   }
 
@@ -343,7 +378,7 @@ export function DeployPanel() {
           </p>
         )}
 
-        <button type="button" className="ui-btn primary block" disabled={busy || !data.runner_installed} onClick={run}>
+        <button type="button" className="ui-btn primary block" disabled={busy || !data.runner_installed} onClick={() => setAsk(true)}>
           {data.active
             ? "Деплой идёт…"
             : request.isPending
@@ -373,6 +408,23 @@ export function DeployPanel() {
       </div>
 
       {shownId && <JobCard id={shownId} onClose={activeId ? undefined : () => setOpenId(null)} />}
+
+      <Sheet open={ask} onClose={() => setAsk(false)} title={force ? "Полный деплой теста" : "Обновить тестовый сервер"}>
+        <p className="text-[14px] leading-snug text-[var(--text-2)]">{askText}</p>
+        {data.latest && (
+          <p className="mono mt-3 text-[12px] text-[var(--text-3)]">
+            → {short(data.latest.commit)} {data.latest.subject ?? ""}
+          </p>
+        )}
+        <div className="mt-5 grid gap-2">
+          <HoldButton block disabled={busy || !data.runner_installed} onConfirm={run}>
+            {force ? "Удерживайте — полный деплой" : "Удерживайте — обновить"}
+          </HoldButton>
+          <Button kind="ghost" block onClick={() => setAsk(false)}>
+            Отмена
+          </Button>
+        </div>
+      </Sheet>
 
       <div className="space-y-2">
         <p className="eyebrow">История</p>

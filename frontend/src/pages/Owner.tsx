@@ -25,6 +25,7 @@ import {
   ListRow,
   Tabs,
   Field,
+  useToast,
 } from "@/components/ui";
 import { IconBack } from "@/components/icons";
 
@@ -53,10 +54,19 @@ function SettingRow({
   const title = meta?.title || item.label || item.key;
   const subtitle = meta?.short || item.description;
 
+  const toast = useToast();
+
   async function save(value: unknown) {
-    await update.mutateAsync({ key: item.key, value });
+    try {
+      await update.mutateAsync({ key: item.key, value });
+    } catch (e) {
+      // текст ошибки по-прежнему показывает и сам редактор
+      toast({ kind: "danger", title: "Настройка не сохранена", sub: e instanceof Error ? e.message : "Ошибка" });
+      throw e;
+    }
     onSaved();
     setEditing(false);
+    toast({ kind: "ok", title: "Настройка сохранена", sub: title });
   }
 
   return (
