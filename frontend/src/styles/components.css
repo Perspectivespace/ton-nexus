@@ -1,12 +1,13 @@
 /*
+ * Срез: clip-path polygon(0 0, 100%-c 0, 100% c, 100% 100%, c 100%, 0 100%-c) — пишется в каждом правиле,
+ * потому что var(--c) в переменной на :root вычислился бы там, а не на элементе.
+ *
  * Набор компонентов «Ночного контура» (фаза 1). Источник правды — docs/DESIGN.md п. 3, 6, 7, 10–12
  * и docs/design/styleboard.html. Классы с префиксом ui-, чтобы не пересекаться со старыми экранами.
  * Правила: без backdrop-filter, свечение не анимируется, движение — только transform и opacity,
  * «уменьшить движение» учитывается в конце файла.
  */
 :root {
-  --chamfer: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c)));
-  --chamfer-in: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px));
   /* тёмный металл кнопок и плиток — отдельными токенами, чтобы светлая тема меняла их в одном месте */
   --metal: linear-gradient(180deg, #161B2A, #0D1019);
   --metal-off: linear-gradient(180deg, #1C2130, #141824);
@@ -15,7 +16,7 @@
   --tile-muted: linear-gradient(180deg, #20263A, #151927);
   --sheet-scrim: rgba(2, 3, 6, .72);
   --text-shade: 0 1px 2px rgba(0, 0, 0, .9);
-  --see-fill: linear-gradient(180deg, rgba(12, 15, 25, .60), rgba(8, 10, 17, .18) 38%, rgba(8, 10, 17, .2) 62%, rgba(8, 10, 17, .62));
+  --see-fill: linear-gradient(180deg, rgba(12, 15, 25, .66), rgba(8, 10, 17, .34) 38%, rgba(8, 10, 17, .38) 62%, rgba(8, 10, 17, .7));
   --scrim-panel: linear-gradient(180deg, rgba(5, 6, 11, .0), rgba(5, 6, 11, .55) 40%, rgba(5, 6, 11, .7));
 }
 [data-theme="light"] {
@@ -33,11 +34,11 @@
 /* —— Форма: срезанный угол + кромка 1 px + материал (п. 3.1–3.4) —— */
 .ui-cut {
   --c: var(--cut-m); --edge: var(--edge-1); --fill: var(--mat-1); --bevel: var(--bevel-1);
-  position: relative; isolation: isolate; background: var(--edge); clip-path: var(--chamfer);
+  position: relative; isolation: isolate; background: var(--edge); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c)));
 }
 .ui-cut::before {
   content: ""; position: absolute; inset: 1px; z-index: -1; pointer-events: none;
-  background: var(--spec), var(--fill); box-shadow: var(--bevel); clip-path: var(--chamfer-in);
+  background: var(--spec), var(--fill); box-shadow: var(--bevel); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px));
 }
 .ui-cut.c-s { --c: var(--cut-s); } .ui-cut.c-l { --c: var(--cut-l); } .ui-cut.c-btn { --c: var(--cut-btn); }
 .ui-cut.e2 { --edge: var(--edge-2); --fill: var(--mat-2); --bevel: var(--bevel-2); }
@@ -61,7 +62,7 @@
 .ui-lift { position: relative; isolation: isolate; }
 .ui-lift::after { content: ""; position: absolute; z-index: -1; left: 4%; right: 4%; bottom: -12px; height: 34px; background: var(--plate-1); pointer-events: none; }
 .ui-lift.l2::after { left: -4%; right: -4%; bottom: -22px; height: 60px; background: var(--plate-2); }
-.ui-spill { position: relative; isolation: isolate; }
+.ui-spill { position: relative; isolation: isolate; display: block; }
 .ui-spill::after { content: ""; position: absolute; z-index: -1; left: 6%; right: 6%; bottom: -22px; height: 44px; background: var(--spill-neon); pointer-events: none; }
 
 /* скрим внутри панели — под текстом, который лежит поверх «окна в город» */
@@ -103,7 +104,7 @@
 .ui-btn {
   --c: var(--cut-btn); height: 48px; padding: 0 20px; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   font: 700 15px var(--f-display); font-stretch: 85%; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; cursor: pointer;
-  clip-path: var(--chamfer); position: relative; isolation: isolate; transition: transform var(--dur-press) ease-out; user-select: none; -webkit-user-select: none;
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; isolation: isolate; transition: transform var(--dur-press) ease-out; user-select: none; -webkit-user-select: none;
 }
 .ui-btn.lg { height: 52px; }
 .ui-btn.sm { height: 36px; padding: 0 14px; font-size: 13px; --c: var(--cut-s); }
@@ -113,7 +114,7 @@
 .ui-btn.primary { background: var(--btn-primary); color: var(--neon-ink); box-shadow: var(--btn-primary-bevel); }
 .ui-btn.primary::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0)); pointer-events: none; }
 .ui-btn.secondary { background: linear-gradient(180deg, rgba(43,245,255,.55), rgba(43,245,255,.18) 50%, rgba(0,0,0,.6)); color: var(--text); }
-.ui-btn.secondary::before, .ui-btn.danger::before { content: ""; position: absolute; inset: 1px; z-index: -1; clip-path: var(--chamfer-in); }
+.ui-btn.secondary::before, .ui-btn.danger::before { content: ""; position: absolute; inset: 1px; z-index: -1; clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
 .ui-btn.secondary::before { background: var(--spec), var(--toplight), var(--metal); box-shadow: inset 0 -2px 0 rgba(0,0,0,.5); }
 .ui-btn.danger { background: linear-gradient(180deg, rgba(255,46,126,.9), rgba(255,46,126,.35) 55%, rgba(0,0,0,.6)); color: var(--danger-text); }
 .ui-btn.danger::before { background: var(--toplight), var(--danger-fill); }
@@ -155,15 +156,15 @@
 [data-theme="light"] .ui-tag::before { box-shadow: none; }
 
 /* чип — счётчик или токен: тёмный металл, значение моно */
-.ui-chip { --c: var(--cut-xs); display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; background: var(--edge-1); position: relative; isolation: isolate; clip-path: var(--chamfer);
+.ui-chip { --c: var(--cut-xs); display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; background: var(--edge-1); position: relative; isolation: isolate; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c)));
   font: 600 11px var(--f-display); font-stretch: 80%; letter-spacing: .12em; text-transform: uppercase; color: var(--text-2); }
-.ui-chip::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1); clip-path: var(--chamfer-in); }
+.ui-chip::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
 .ui-chip b { font: 600 13px var(--f-mono); letter-spacing: 0; text-transform: none; color: var(--text); }
 .ui-chip svg { color: var(--neon); }
 
 /* —— Stat-ячейка —— */
-.ui-stat { --c: 7px; padding: 8px 2px; text-align: center; background: var(--edge-1); position: relative; isolation: isolate; clip-path: var(--chamfer); min-width: 0; }
-.ui-stat::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1); box-shadow: var(--bevel-1); clip-path: var(--chamfer-in); }
+.ui-stat { --c: 7px; padding: 8px 2px; text-align: center; background: var(--edge-1); position: relative; isolation: isolate; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); min-width: 0; }
+.ui-stat::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1); box-shadow: var(--bevel-1); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
 .ui-stat .k { font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .08em; color: var(--text-3); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-stat .v { font: 700 21px/28px var(--f-mono); color: var(--text); font-variant-numeric: tabular-nums; }
 .ui-stat .p { font: 500 11px/16px var(--f-mono); color: var(--text-3); }
@@ -184,7 +185,7 @@
 .ui-row.noicon + .ui-row.noicon::before { left: 16px; }
 .ui-row[data-pressed] { background: linear-gradient(90deg, var(--neon-soft), transparent); box-shadow: inset 2px 0 0 var(--neon); }
 .ui-row .ic { --c: 7px; width: 36px; height: 36px; display: grid; place-items: center; color: var(--neon); flex: none; position: relative;
-  background: linear-gradient(180deg, rgba(43,245,255,.20), rgba(43,245,255,.06)); box-shadow: inset 0 1px 0 rgba(210,253,255,.25), inset 0 -1px 0 rgba(0,0,0,.4); clip-path: var(--chamfer); }
+  background: linear-gradient(180deg, rgba(43,245,255,.20), rgba(43,245,255,.06)); box-shadow: inset 0 1px 0 rgba(210,253,255,.25), inset 0 -1px 0 rgba(0,0,0,.4); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
 .ui-row .ic.amber { color: var(--amber); background: linear-gradient(180deg, rgba(255,181,71,.22), rgba(255,181,71,.06)); box-shadow: inset 0 1px 0 rgba(255,231,194,.25); }
 .ui-row .ic.magenta { color: var(--magenta); background: linear-gradient(180deg, rgba(255,46,126,.22), rgba(255,46,126,.06)); }
 .ui-row .ic.muted { color: var(--text-2); background: var(--tile-muted); }
@@ -200,10 +201,10 @@
 .ui-row .chev { color: var(--text-3); flex: none; }
 
 /* —— Вкладки (п. 7) —— */
-.ui-tabs { --c: 10px; display: flex; gap: 4px; padding: 4px; position: relative; isolation: isolate; background: var(--edge-0); clip-path: var(--chamfer); }
-.ui-tabs::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--mat-0); box-shadow: var(--bevel-0); clip-path: var(--chamfer-in); }
+.ui-tabs { --c: 10px; display: flex; gap: 4px; padding: 4px; position: relative; isolation: isolate; background: var(--edge-0); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.ui-tabs::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--mat-0); box-shadow: var(--bevel-0); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
 .ui-tab { --c: 7px; flex: 1; min-width: 0; height: 36px; padding: 0 6px; display: grid; place-items: center; border: 0; background: none; cursor: pointer; white-space: nowrap;
-  font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); clip-path: var(--chamfer); position: relative; }
+  font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; }
 .ui-tab[aria-selected="true"] { color: var(--neon-ink); background: var(--btn-primary); box-shadow: var(--btn-primary-bevel); }
 .ui-tab:focus-visible, .ui-segline button:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
 .ui-segline { display: flex; gap: 20px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
@@ -295,3 +296,22 @@ html.app-hidden .ui-sk::after { animation-play-state: paused; }
 
 .ui-gauge-arc { transition: stroke-dashoffset .8s var(--ease-out); }
 @media (prefers-reduced-motion: reduce) { .ui-gauge-arc { transition: none; } }
+
+/* —— Майнер: ядро реактора (статичный ореол, без пульсации) —— */
+.miner-core { --c: var(--cut-m); width: 64px; height: 64px; display: grid; place-items: center; color: var(--text-2);
+  background: var(--edge-1); position: relative; isolation: isolate; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.miner-core::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
+.miner-core.is-running { color: var(--neon); background: linear-gradient(160deg, var(--neon), rgba(43,245,255,.25) 50%, rgba(0,0,0,.6)); }
+.miner-core.is-running::before { background: radial-gradient(60% 60% at 50% 50%, var(--neon-soft), transparent 75%), var(--mat-1); }
+.miner-core.is-running svg { filter: drop-shadow(0 0 6px var(--neon)); }
+.miner-core.is-ready { color: var(--amber); background: linear-gradient(160deg, var(--amber), rgba(255,181,71,.25) 50%, rgba(0,0,0,.6)); }
+.miner-core.is-ready::before { background: radial-gradient(60% 60% at 50% 50%, var(--amber-soft), transparent 75%), var(--mat-1); }
+[data-theme="light"] .miner-core.is-running svg { filter: none; }
+
+/* янтарная главная кнопка — «Собрать», когда хранилище полное (награда) */
+.ui-btn.primary.amber { background: linear-gradient(180deg, var(--amber-core), var(--amber) 55%, #C9821C); color: #1A1000;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -2px 0 rgba(90,50,0,.35); }
+.ui-spill.amber::after { background: var(--spill-amber); }
+[data-theme="light"] .ui-btn.primary.amber { background: linear-gradient(180deg, #FFC867, #F0A12E); }
+a.ui-btn { text-decoration: none; }
+.ui-btn.block { display: flex; }

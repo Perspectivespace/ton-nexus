@@ -57,6 +57,7 @@ body {
 
 .app-shell > * { position: relative; z-index: 1; }
 .app-shell > .city { position: fixed; z-index: 0; }
+.app-shell > .ui-dock { position: fixed; z-index: 20; }
 .app-stage { position: relative; }
 
 .eyebrow,
