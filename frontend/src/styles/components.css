@@ -319,39 +319,80 @@ html.app-hidden .ui-sk::after { animation-play-state: paused; }
 a.ui-btn { text-decoration: none; }
 .ui-btn.block { display: flex; }
 
-/* —— Колесо удачи: цвета SVG через переменные, чтобы «Дневной HUD» перекрашивал объект —— */
-:root {
-  --wh-spin: #7ecfb5; --wh-focus: #b0c8ec; --wh-block: #c0b6ee; --wh-xp: #b0c8ec; --wh-ton: #d8e0ec; --wh-miss: #e6a0a0;
-  --wh-wheelBg-1: #141e32; --wh-wheelBg-2: #0e1626; --wh-wheelBg-3: #0a101c;
-  --wh-wheelCenterGrad-1: #1a2236; --wh-wheelCenterGrad-2: #0e1422; --wh-wheelCenterGrad-3: #080c14;
-  --wh-rimGrad-1: rgba(155,184,224,.3); --wh-rimGrad-2: rgba(122,159,212,.08); --wh-rimGrad-3: rgba(0,0,0,.4);
-  --wh-segmentPrize-1: #3d5a8c; --wh-segmentPrize-2: #2a4570; --wh-segmentPrize-3: #1a3254;
-  --wh-segmentMiss-1: #524058; --wh-segmentMiss-2: #3a3046; --wh-segmentMiss-3: #261e32;
-  --wh-segmentSpin-1: #356864; --wh-segmentSpin-2: #254e4c; --wh-segmentSpin-3: #183836;
-  --wh-segmentXp-1: #456288; --wh-segmentXp-2: #304a6e; --wh-segmentXp-3: #1e3450;
-  --wh-segSheen-1: rgba(230,240,255,.26); --wh-segSheen-2: rgba(155,184,224,.08); --wh-segSheen-3: rgba(0,0,0,0);
-  --wh-nexusTextGrad-1: #dce9ff; --wh-nexusTextGrad-2: var(--neon); --wh-nexusTextGrad-3: #6681ae;
-  --wh-edge-miss: rgba(230,165,188,.58); --wh-edge-spin: rgba(125,225,200,.58); --wh-edge-xp: rgba(180,205,240,.6); --wh-edge-prize: rgba(150,185,235,.58);
-  --wh-line: rgba(155,184,224,.18); --wh-tick: rgba(122,159,212,.2); --wh-tick-major: rgba(155,184,224,.45); --wh-faint: rgba(122,159,212,.08);
-  --wh-seg-rim: rgba(235,245,255,.32); --wh-pointer: var(--neon); --wh-pointer-hi: rgba(255,255,255,.55);
-  --wh-aura: .55;
+/* —— Колесо удачи (п. 8.3): плита-восьмигранник, диск по ролям цвета, горящий указатель —— */
+.pw {
+  --pw-m0: #3A4256; --pw-m1: #1A2030; --pw-m2: #0A0D15; --pw-plate: #0B0F18; --pw-edge: rgba(190,210,255,.30); --pw-inner: rgba(0,0,0,.85);
+  --pw-b0: #E6EEFF; --pw-b1: #59627A; --pw-b2: #1B2030; --pw-tick: rgba(4,6,12,.75); --pw-tick-maj: rgba(4,6,12,.95);
+  --pw-h0: #F2F6FF; --pw-h1: #7D879E; --pw-h2: #1A1F2C; --pw-face: #06080E;
+  --pw-hot: #FFE7C2; --pw-amber: #FFB547; --pw-neon: #2BF5FF; --pw-magenta: #FF2E7E; --pw-steel: rgba(170,190,255,.55); --pw-void: rgba(150,170,255,.16);
+  --pw-hot-mid: rgba(255,181,71,.20); --pw-hot-out: rgba(255,190,90,.62);
+  --pw-amber-mid: rgba(255,181,71,.10); --pw-amber-out: rgba(255,181,71,.40);
+  --pw-neon-mid: rgba(43,245,255,.09); --pw-neon-out: rgba(43,245,255,.36);
+  --pw-magenta-mid: rgba(255,46,126,.09); --pw-magenta-out: rgba(255,46,126,.36);
+  --pw-steel-mid: rgba(150,170,255,.06); --pw-steel-out: rgba(150,170,255,.22);
+  --pw-void-mid: rgba(0,0,0,.2); --pw-void-out: rgba(20,24,36,.9);
+  --pw-hot-ink: #FFF3DF; --pw-amber-ink: #FFC56E; --pw-neon-ink: #B8FCFF; --pw-magenta-ink: #FF8DB7; --pw-steel-ink: #DCE3F5; --pw-void-ink: #687089;
+  --pw-sub: rgba(220,228,245,.62); --pw-div: rgba(4,6,12,.9); --pw-win: rgba(255,181,71,.42); --pw-win-edge: #FFE7C2;
+  --pw-ptr: #F2FEFF; --pw-ptr-edge: #2BF5FF; --pw-shine: rgba(220,245,255,.55);
+  position: relative; width: min(100%, 300px); aspect-ratio: 1; margin-inline: auto; contain: layout paint;
 }
-[data-theme="light"] {
-  --wh-spin: #146b57; --wh-focus: #24508a; --wh-block: #4b3fa0; --wh-xp: #24508a; --wh-ton: #2c3646; --wh-miss: #9a3434;
-  --wh-wheelBg-1: #ffffff; --wh-wheelBg-2: #eef2f7; --wh-wheelBg-3: #dfe6ef;
-  --wh-wheelCenterGrad-1: #ffffff; --wh-wheelCenterGrad-2: #eef2f7; --wh-wheelCenterGrad-3: #d9e1ec;
-  --wh-rimGrad-1: rgba(20,40,70,.25); --wh-rimGrad-2: rgba(20,40,70,.1); --wh-rimGrad-3: rgba(20,40,70,.35);
-  --wh-segmentPrize-1: #e3ecf8; --wh-segmentPrize-2: #d2dff1; --wh-segmentPrize-3: #c0d1ea;
-  --wh-segmentMiss-1: #f6e4e6; --wh-segmentMiss-2: #edd3d7; --wh-segmentMiss-3: #e2c1c7;
-  --wh-segmentSpin-1: #dcf2ec; --wh-segmentSpin-2: #c8e9e0; --wh-segmentSpin-3: #b3ddd2;
-  --wh-segmentXp-1: #e4ebf5; --wh-segmentXp-2: #d3deee; --wh-segmentXp-3: #c1d0e5;
-  --wh-segSheen-1: rgba(255,255,255,.6); --wh-segSheen-2: rgba(255,255,255,.12); --wh-segSheen-3: rgba(255,255,255,0);
-  --wh-nexusTextGrad-1: #0d6f86; --wh-nexusTextGrad-2: #0b5a6e; --wh-nexusTextGrad-3: #08485a;
-  --wh-edge-miss: rgba(154,52,52,.4); --wh-edge-spin: rgba(20,107,87,.4); --wh-edge-xp: rgba(36,80,138,.35); --wh-edge-prize: rgba(36,80,138,.4);
-  --wh-line: rgba(20,40,70,.2); --wh-tick: rgba(20,40,70,.22); --wh-tick-major: rgba(20,40,70,.5); --wh-faint: rgba(20,40,70,.08);
-  --wh-seg-rim: rgba(255,255,255,.85); --wh-pointer-hi: rgba(255,255,255,.7);
-  --wh-aura: .28;
+[data-theme="light"] .pw {
+  --pw-m0: #FFFFFF; --pw-m1: #E3E8F1; --pw-m2: #C6CEDC; --pw-plate: #EEF1F6; --pw-edge: rgba(10,20,50,.22); --pw-inner: rgba(10,20,50,.30);
+  --pw-b0: #FFFFFF; --pw-b1: #C9D0DC; --pw-b2: #8E98AA; --pw-tick: rgba(10,20,50,.35); --pw-tick-maj: rgba(10,20,50,.6);
+  --pw-h0: #FFFFFF; --pw-h1: #DCE2EC; --pw-h2: #9AA4B6; --pw-face: #FBFCFE;
+  --pw-hot: #D08A1E; --pw-amber: #A35F00; --pw-neon: #007E95; --pw-magenta: #C8105A; --pw-steel: rgba(10,20,50,.30); --pw-void: rgba(10,20,50,.14);
+  --pw-hot-mid: rgba(255,181,71,.16); --pw-hot-out: rgba(240,161,46,.42);
+  --pw-amber-mid: rgba(163,95,0,.05); --pw-amber-out: rgba(163,95,0,.20);
+  --pw-neon-mid: rgba(0,126,149,.05); --pw-neon-out: rgba(0,126,149,.20);
+  --pw-magenta-mid: rgba(200,16,90,.04); --pw-magenta-out: rgba(200,16,90,.16);
+  --pw-steel-mid: rgba(10,20,50,.02); --pw-steel-out: rgba(10,20,50,.08);
+  --pw-void-mid: rgba(10,20,50,.05); --pw-void-out: rgba(10,20,50,.18);
+  --pw-hot-ink: #7A4300; --pw-amber-ink: #8A5000; --pw-neon-ink: #006A7E; --pw-magenta-ink: #B00E50; --pw-steel-ink: #1B2333; --pw-void-ink: #5A6378;
+  --pw-sub: rgba(27,35,51,.62); --pw-div: rgba(255,255,255,.95); --pw-win: rgba(255,181,71,.34); --pw-win-edge: #A35F00;
+  --pw-ptr: #007E95; --pw-ptr-edge: #007E95; --pw-shine: rgba(255,255,255,.9);
 }
+.pw-l, .pw-disc, .pw-shine { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pw-l { overflow: visible; }
+.pw-disc { transform-origin: 50% 50%; }
+.pw.is-spinning .pw-disc { will-change: transform; }
+.pw-t1 { font: 700 15px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; }
+.pw-t2 { font: 500 9.5px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; fill: var(--pw-sub); }
+.pw-div { stroke: var(--pw-div); }
+.pw-sec, .pw-txt { transition: opacity .32s var(--ease-out, ease-out); }
+.pw-sec.dim, .pw-txt.dim { opacity: .38; }
+.pw-sec.win > path:first-child { fill: var(--pw-face); }
+.pw-txt.win .pw-t1 { fill: var(--pw-hot-ink) !important; }
+.pw-win { fill: var(--pw-win); stroke: var(--pw-win-edge); stroke-width: 2.5; stroke-linejoin: round; }
+.pw.is-miss .pw-win { fill: rgba(150,170,255,.10); stroke: var(--pw-steel); filter: none; }
+.pw.is-miss .pw-txt.win .pw-t1 { fill: var(--pw-steel-ink) !important; }
+.pw-ptr { fill: var(--pw-ptr); stroke: var(--pw-ptr-edge); stroke-width: 1.5; stroke-linejoin: round; }
+.pw-flap { transform-box: view-box; }
+.pw-hub { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; display: grid; place-items: center; pointer-events: none; }
+/* блик по ободу: конический луч, маска-кольцо, только transform; 16 с на оборот */
+.pw-shine {
+  border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, var(--pw-shine) 340deg, transparent 360deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 87.6%, #000 88.4%, #000 94.6%, transparent 95.4%);
+  mask: radial-gradient(closest-side, transparent 87.6%, #000 88.4%, #000 94.6%, transparent 95.4%);
+  opacity: .55; animation: pw-shine 16s linear infinite;
+}
+[data-theme="light"] .pw-shine { opacity: .8; }
+@keyframes pw-shine { to { transform: rotate(360deg); } }
+.pw.is-spinning .pw-shine { animation-play-state: paused; opacity: 0; }
+html.app-hidden .pw-shine { animation-play-state: paused; }
+[data-theme="light"] .pw-tube, [data-theme="light"] .pw-ptr, [data-theme="light"] .pw-win { filter: none; }
+@media (prefers-reduced-motion: reduce) { .pw-shine { animation: none; } .pw-sec, .pw-txt { transition: none; } }
+
+/* плашка выигрыша колеса: натриевая кромка (п. 2.1 — награда) */
+.ui-cut.win-edge { --edge: linear-gradient(180deg, var(--amber), rgba(255,181,71,.35) 40%, rgba(0,0,0,.7)); }
+[data-theme="light"] .ui-cut.win-edge { --edge: linear-gradient(180deg, var(--amber), rgba(163,95,0,.3)); }
+.pw-pips { display: inline-flex; gap: 4px; }
+.pw-pips i { width: 14px; height: 6px; background: rgba(150,170,255,.16); clip-path: polygon(2px 0, 100% 0, calc(100% - 2px) 100%, 0 100%); }
+.pw-pips i.on { background: var(--neon); }
+[data-theme="light"] .pw-pips i { background: rgba(10,20,50,.12); }
+[data-theme="light"] .pw-pips i.on { background: var(--neon); }
+.pw-dot { width: 10px; height: 10px; flex: none; clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px); }
+
 button.ui-stat { border: 0; font: inherit; color: inherit; cursor: pointer; display: block; width: 100%; -webkit-tap-highlight-color: transparent; }
 button.ui-stat:disabled { cursor: default; opacity: .6; }
 button.ui-stat:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
