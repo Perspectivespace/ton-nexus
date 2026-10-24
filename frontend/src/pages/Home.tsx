@@ -1,19 +1,27 @@
 import { motion, type Variants } from "framer-motion";
-import { Link } from "react-router-dom";
 import { useMe, useDailyClaim } from "@/api/hooks";
 import {
-  IconSpark,
-  IconArrow,
+  IconBolt,
+  IconChevron,
   IconReactor,
-  IconLevel,
+  IconUp,
   IconTasks,
   IconWallet,
+  IconWheel,
 } from "@/components/icons";
 import {
   ScreenHeader,
   StatusPill,
   LoadingPanel,
   ErrorPanel,
+  Panel,
+  Num,
+  Bar,
+  Chip,
+  List,
+  ListRow,
+  Button,
+  SectionLabel,
 } from "@/components/ui";
 
 const modules = [
@@ -23,15 +31,13 @@ const modules = [
     title: "Майнер",
     channel: "Реактор",
     Icon: IconReactor,
-    tone: "#7a9fd4",
   },
   {
     to: "/wheel",
     idx: "02",
     title: "Рулетка",
     channel: "Удача",
-    Icon: IconSpark,
-    tone: "#6eb8c9",
+    Icon: IconWheel,
   },
   {
     to: "/tasks",
@@ -39,7 +45,6 @@ const modules = [
     title: "Задания",
     channel: "Рынок",
     Icon: IconTasks,
-    tone: "#8f8fd4",
   },
   {
     to: "/wallet",
@@ -47,7 +52,6 @@ const modules = [
     title: "Баланс",
     channel: "Касса",
     Icon: IconWallet,
-    tone: "#6fbf9a",
   },
 ] as const;
 
@@ -89,7 +93,7 @@ export function Home() {
           action={
             me ? (
               <StatusPill tone={isFetching ? "live" : "ok"}>
-                {isFetching ? "sync" : "online"}
+                {isFetching ? "синхр." : "в сети"}
               </StatusPill>
             ) : undefined
           }
@@ -102,173 +106,101 @@ export function Home() {
       )}
 
       {me && (
-        <motion.section
-          variants={item}
-          className="metal-plate-hero p-5"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <p className="eyebrow">Liquid balance</p>
-              <hr className="rule mt-2 mb-3" />
-              <p className="value-display text-[34px]">
-                {Number(me.balance).toFixed(4)}
-                <span className="ml-2 text-[11px] font-medium tracking-[0.16em] text-[var(--text-dim)]">
-                  TON
-                </span>
-              </p>
-            </div>
-            <div className="shrink-0 rounded-[12px] border border-[var(--line-metal)] bg-black/30 px-3 py-2.5 text-right">
-              <div className="flex items-center justify-end gap-1.5">
-                <IconLevel size={11} className="text-[var(--text-dim)]" />
-                <span className="eyebrow">level</span>
+        <motion.section variants={item}>
+          <Panel level="hero" see cut="l" lift="l2" className="p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="ui-label ui-shade">Баланс</p>
+                <Num value={Number(me.balance).toFixed(4)} unit="TON" size="xl" glow className="ui-shade mt-2 block !text-[36px] !leading-[44px]" />
               </div>
-              <p className="value-display mt-1 text-[22px]">{me.level}</p>
-              <p className="mono mt-0.5 text-[10px] text-[var(--text-dim)]">{me.xp} XP</p>
+              <Panel level="e0" cut="s" lift={false} className="shrink-0 px-3 py-2.5 text-right">
+                <div className="flex items-center justify-end gap-1.5 text-[var(--text-3)]">
+                  <IconUp size={12} />
+                  <span className="ui-label">Уровень</span>
+                </div>
+                <Num value={me.level} size="l" className="mt-1 block !text-[24px] !leading-[28px]" />
+                <p className="ui-sys mt-0.5">{me.xp} XP</p>
+              </Panel>
             </div>
-          </div>
 
-          <div className="mt-5">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="eyebrow">Progress</span>
-              <span className="mono text-[10px] text-[var(--text-dim)]">{me.xp} XP</span>
+            <div className="mt-5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="ui-label ui-shade">Прогресс уровня</span>
+                <span className="ui-sys ui-shade">{me.xp % 100} / 100 XP</span>
+              </div>
+              <Bar value={(me.xp % 100) / 100} label="Прогресс уровня" />
             </div>
-            <div className="relative h-1.5 overflow-hidden rounded-full bg-white/5">
-              <motion.div
-                className="absolute inset-y-0 left-0 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, (me.xp % 100))}%` }}
-                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  background: "linear-gradient(90deg, var(--accent), #7dd3fc)",
-                  boxShadow: "0 0 12px color-mix(in srgb, var(--accent) 60%, transparent)",
-                }}
-              />
-            </div>
-          </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <TokenChip label="Focus" value={me.focus_tokens} />
-            <TokenChip label="Block" value={me.block_tokens} />
-            {me.success_boost_bp > 0 && (
-              <StatusPill tone="ok">+{(me.success_boost_bp / 100).toFixed(0)}% boost</StatusPill>
-            )}
-            {me.is_owner && <StatusPill tone="live">owner</StatusPill>}
-            {me.is_admin && !me.is_owner && <StatusPill tone="neutral">admin</StatusPill>}
-          </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Chip label="Фокус" value={me.focus_tokens} />
+              <Chip label="Запрет" value={me.block_tokens} />
+              {me.success_boost_bp > 0 && (
+                <StatusPill tone="ok">+{(me.success_boost_bp / 100).toFixed(0)}% к удаче</StatusPill>
+              )}
+              {me.is_owner && <StatusPill tone="live">владелец</StatusPill>}
+              {me.is_admin && !me.is_owner && <StatusPill tone="neutral">админ</StatusPill>}
+            </div>
+          </Panel>
         </motion.section>
       )}
 
-      <motion.button
-        variants={item}
-        type="button"
-        whileTap={{ scale: 0.985 }}
-        className="btn-primary w-full justify-between px-4 py-3.5 text-left"
-        disabled={daily.isPending}
-        onClick={() => daily.mutate()}
-      >
-        <span className="flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/15">
-            <IconSpark size={16} />
-          </span>
-          <span>
-            <span className="block text-[13px] font-semibold tracking-[0.04em]">
-              {daily.isPending ? "Начисление…" : "Daily check-in"}
-            </span>
-            <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.16em] opacity-70">
-              Серия · награда · XP
+      <motion.div variants={item} className="ui-spill">
+        <Button
+          kind="primary"
+          size="lg"
+          block
+          className="!h-[60px] !justify-between !px-4 text-left"
+          disabled={daily.isPending}
+          onClick={() => daily.mutate()}
+        >
+          <span className="flex items-center gap-3">
+            <IconBolt size={22} />
+            <span>
+              <span className="block text-[15px] leading-[20px]">
+                {daily.isPending ? "Начисление…" : "Ежедневная отметка"}
+              </span>
+              <span className="block text-[11px] leading-[16px] tracking-[0.14em] opacity-70">Серия · награда · XP</span>
             </span>
           </span>
-        </span>
-        <IconArrow size={15} />
-      </motion.button>
+          <IconChevron size={20} />
+        </Button>
+      </motion.div>
 
-      <motion.div variants={item}>
-        <p className="eyebrow mb-2.5">Modules</p>
-        <div className="metal-plate overflow-hidden p-0">
-          {modules.map((m, i) => {
+      <motion.div variants={item} className="space-y-2.5">
+        <SectionLabel>Модули</SectionLabel>
+        <List>
+          {modules.map((m) => {
             const Icon = m.Icon;
-            const last = i === modules.length - 1;
             return (
-              <motion.div
+              <ListRow
                 key={m.to}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.45 + i * 0.06, ease: [0.22, 1, 0.36, 1] as const }}
-              >
-                <Link
-                  to={m.to}
-                  className={`module-row group flex items-center gap-3.5 px-4 py-3.5 no-underline transition-colors active:bg-white/[0.04] ${
-                    last ? "" : "border-b border-[var(--line)]"
-                  }`}
-                  style={{ ["--row-tone" as string]: m.tone }}
-                >
-                  <span className="mono w-6 shrink-0 text-[11px] text-[var(--text-meta)]">{m.idx}</span>
-                  <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[var(--line-metal)]"
-                    style={{
-                      background: `color-mix(in srgb, ${m.tone} 12%, transparent)`,
-                      color: m.tone,
-                    }}
-                  >
-                    <Icon size={18} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold tracking-tight text-[var(--text)]">
-                      {m.title}
-                    </span>
-                    <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
-                      {m.channel}
-                    </span>
-                  </span>
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)] text-[var(--text-dim)] transition-colors group-active:border-[var(--line-metal)] group-active:text-[var(--text)]">
-                    <IconArrow size={13} />
-                  </span>
-                </Link>
-              </motion.div>
+                to={m.to}
+                icon={<Icon size={20} />}
+                title={m.title}
+                sub={m.channel}
+                value={<span className="ui-sys">{m.idx}</span>}
+              />
             );
           })}
-        </div>
+        </List>
       </motion.div>
 
       {(me?.is_owner || me?.is_admin || me?.is_ambassador || me?.can_deploy) && (
-        <motion.div variants={item} className="space-y-2">
-          <p className="eyebrow">Operations</p>
-          <div className="metal-plate-dim overflow-hidden p-0">
+        <motion.div variants={item} className="space-y-2.5">
+          <SectionLabel>Операции</SectionLabel>
+          <List>
             {(me.is_owner || me.is_admin || me.is_ambassador) && (
-              <OpsLink to="/tasks/new" label="Создать задание" />
+              <ListRow to="/tasks/new" title="Создать задание" />
             )}
             {(me.is_owner || me.is_admin || me.is_ambassador) && (
-              <OpsLink to="/inbox" label="Inbox · модерация" />
+              <ListRow to="/inbox" title="Модерация · входящие" />
             )}
-            {(me.is_owner || me.is_admin) && <OpsLink to="/withdraws" label="Касса · выводы" />}
-            {me.is_owner && <OpsLink to="/owner" label="Owner · экономика" last={!me.can_deploy} />}
-            {me.can_deploy && <OpsLink to="/owner?tab=deploy" label="Деплой · сервер" last />}
-          </div>
+            {(me.is_owner || me.is_admin) && <ListRow to="/withdraws" title="Касса · выводы" />}
+            {me.is_owner && <ListRow to="/owner" title="Владелец · экономика" />}
+            {me.can_deploy && <ListRow to="/owner?tab=deploy" title="Деплой · сервер" />}
+          </List>
         </motion.div>
       )}
     </motion.div>
-  );
-}
-
-function TokenChip({ label, value }: { label: string; value: number }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line-metal)] bg-black/25 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
-      <span className="h-1 w-1 rounded-full bg-[var(--accent)]" />
-      {label} {value}
-    </span>
-  );
-}
-
-function OpsLink({ to, label, last }: { to: string; label: string; last?: boolean }) {
-  return (
-    <Link
-      to={to}
-      className={`flex items-center justify-between px-4 py-3.5 text-[13px] tracking-wide text-[var(--text)] no-underline transition-colors active:bg-white/[0.03] ${
-        last ? "" : "border-b border-[var(--line)]"
-      }`}
-    >
-      <span className="font-medium">{label}</span>
-      <IconArrow size={14} className="text-[var(--text-dim)]" />
-    </Link>
   );
 }
