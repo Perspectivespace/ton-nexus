@@ -467,3 +467,50 @@ html.app-hidden .rx-ring { animation-play-state: paused !important; }
 [data-theme="light"] .dial .dl-ok, [data-theme="light"] .dial .dl-tip { filter: none; }
 [data-theme="light"] .dial .dl-shadow { opacity: .18; }
 [data-theme="light"] .dial .dl-glass { display: none; }
+
+/* ── Заставка «зажигание знака» (DESIGN.md п. 10, лист 11): 0,9 с один раз за запуск, только opacity/transform ── */
+.splash { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: var(--bg); transition: opacity .24s var(--ease-out); }
+.splash.is-leaving { opacity: 0; pointer-events: none; }
+.splash-spill { position: absolute; left: 50%; top: calc(50% - 34px); width: 360px; height: 360px; margin: -180px 0 0 -180px; background: radial-gradient(closest-side, rgba(43,245,255,.30) 30%, rgba(43,245,255,.10) 62%, transparent); opacity: 0; animation: sp-spill .9s ease-out forwards; pointer-events: none; }
+.splash-mark { position: relative; width: 128px; height: 128px; }
+.splash-mark img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.splash-mark .sp-lit { opacity: 0; animation: sp-lit .9s steps(1, end) forwards; }
+.splash-mark .sp-sweep { position: absolute; inset: 0; overflow: hidden; clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); }
+.splash-mark .sp-sweep::before { content: ""; position: absolute; top: -20%; bottom: -20%; left: 0; width: 34%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.38), transparent); transform: translate3d(-120%, 0, 0) skewX(-14deg); animation: sp-sweep .9s cubic-bezier(.3,.6,.2,1) forwards; }
+.splash-wm { position: relative; width: 160px; height: 22px; opacity: 0; transform: translate3d(0, 8px, 0); animation: sp-wm .9s ease-out forwards; }
+.splash-wm img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.splash-tag { position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%); white-space: nowrap; font: 500 13px/1 var(--f-sans); color: var(--text-2); }
+.splash .b-light { display: none; }
+[data-theme="light"] .splash .b-dark { display: none; }
+[data-theme="light"] .splash .b-light { display: block; }
+[data-theme="light"] .splash-spill { display: none; }
+[data-theme="light"] .splash-mark .sp-lit { animation: sp-fade .9s ease-out forwards; }
+/* 120–380 мс: 0 → 60% → 25% → 100% ступеньками, как вывеска */
+@keyframes sp-lit { 0%, 13% { opacity: 0 } 14% { opacity: .6 } 26% { opacity: .25 } 42%, 100% { opacity: 1 } }
+@keyframes sp-spill { 0%, 42% { opacity: 0 } 60%, 100% { opacity: 1 } }
+@keyframes sp-sweep { 0%, 66% { transform: translate3d(-120%, 0, 0) skewX(-14deg) } 88%, 100% { transform: translate3d(420%, 0, 0) skewX(-14deg) } }
+@keyframes sp-wm { 0%, 70% { opacity: 0; transform: translate3d(0, 8px, 0) } 100% { opacity: 1; transform: none } }
+@keyframes sp-fade { 0%, 13% { opacity: .35 } 42%, 100% { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) {
+  .splash-spill, .splash-mark .sp-lit, .splash-wm, [data-theme="light"] .splash-mark .sp-lit { animation: none; opacity: 1; transform: none; }
+  .splash-mark .sp-sweep { display: none; }
+  .splash { transition: none; }
+}
+
+/* ── Знакомство при первом запуске (DESIGN.md п. 10): 3 экрана, свайп, иллюстрации неподвижны ── */
+.onb { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; background: radial-gradient(80% 50% at 50% 30%, rgba(43,245,255,.07), transparent 70%), var(--bg); touch-action: pan-y; padding: calc(env(safe-area-inset-top, 0px) + 12px) 0 calc(env(safe-area-inset-bottom, 0px) + 20px); }
+[data-theme="light"] .onb { background: radial-gradient(80% 50% at 50% 30%, var(--neon-soft), transparent 70%), var(--bg); }
+.onb-top { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; max-width: 32rem; width: 100%; margin: 0 auto; }
+.onb-step { font: 600 12px/1 var(--f-mono, "JetBrains Mono"), monospace; letter-spacing: .08em; color: var(--text-3); }
+.onb-view { flex: 1; overflow: hidden; max-width: 32rem; width: 100%; margin: 0 auto; }
+.onb-track { display: flex; height: 100%; transition: transform .32s var(--ease-out); }
+.onb-slide { flex: 0 0 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 0 28px; text-align: center; }
+.onb-art { min-height: 210px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.onb-art .rx * { animation: none !important; }
+.onb-title { margin: 0; font: 700 24px/1.15 var(--f-display, "Tektur"), sans-serif; color: var(--text); text-wrap: balance; }
+.onb-text { margin: 0; max-width: 300px; font: 400 15px/1.45 var(--f-sans); color: var(--text-2); text-wrap: pretty; }
+.onb-foot { display: grid; gap: 18px; padding: 0 16px; max-width: 32rem; width: 100%; margin: 0 auto; }
+.onb-dots { display: flex; justify-content: center; gap: 8px; }
+.onb-dots button { width: 12px; height: 6px; padding: 0; border: 0; background: var(--text-3); opacity: .45; clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%); transition: opacity .2s, width .2s; }
+.onb-dots button.on { width: 28px; opacity: 1; background: var(--neon); }
+@media (prefers-reduced-motion: reduce) { .onb-track, .onb-dots button { transition: none; } }
