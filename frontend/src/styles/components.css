@@ -315,3 +315,37 @@ html.app-hidden .ui-sk::after { animation-play-state: paused; }
 [data-theme="light"] .ui-btn.primary.amber { background: linear-gradient(180deg, #FFC867, #F0A12E); }
 a.ui-btn { text-decoration: none; }
 .ui-btn.block { display: flex; }
+
+/* —— Колесо удачи: цвета SVG через переменные, чтобы «Дневной HUD» перекрашивал объект —— */
+:root {
+  --wh-spin: #7ecfb5; --wh-focus: #b0c8ec; --wh-block: #c0b6ee; --wh-xp: #b0c8ec; --wh-ton: #d8e0ec; --wh-miss: #e6a0a0;
+  --wh-wheelBg-1: #141e32; --wh-wheelBg-2: #0e1626; --wh-wheelBg-3: #0a101c;
+  --wh-wheelCenterGrad-1: #1a2236; --wh-wheelCenterGrad-2: #0e1422; --wh-wheelCenterGrad-3: #080c14;
+  --wh-rimGrad-1: rgba(155,184,224,.3); --wh-rimGrad-2: rgba(122,159,212,.08); --wh-rimGrad-3: rgba(0,0,0,.4);
+  --wh-segmentPrize-1: #3d5a8c; --wh-segmentPrize-2: #2a4570; --wh-segmentPrize-3: #1a3254;
+  --wh-segmentMiss-1: #524058; --wh-segmentMiss-2: #3a3046; --wh-segmentMiss-3: #261e32;
+  --wh-segmentSpin-1: #356864; --wh-segmentSpin-2: #254e4c; --wh-segmentSpin-3: #183836;
+  --wh-segmentXp-1: #456288; --wh-segmentXp-2: #304a6e; --wh-segmentXp-3: #1e3450;
+  --wh-segSheen-1: rgba(230,240,255,.26); --wh-segSheen-2: rgba(155,184,224,.08); --wh-segSheen-3: rgba(0,0,0,0);
+  --wh-nexusTextGrad-1: #dce9ff; --wh-nexusTextGrad-2: var(--neon); --wh-nexusTextGrad-3: #6681ae;
+  --wh-edge-miss: rgba(230,165,188,.58); --wh-edge-spin: rgba(125,225,200,.58); --wh-edge-xp: rgba(180,205,240,.6); --wh-edge-prize: rgba(150,185,235,.58);
+  --wh-line: rgba(155,184,224,.18); --wh-tick: rgba(122,159,212,.2); --wh-tick-major: rgba(155,184,224,.45); --wh-faint: rgba(122,159,212,.08);
+  --wh-seg-rim: rgba(235,245,255,.32); --wh-pointer: var(--neon); --wh-pointer-hi: rgba(255,255,255,.55);
+  --wh-aura: .55;
+}
+[data-theme="light"] {
+  --wh-spin: #146b57; --wh-focus: #24508a; --wh-block: #4b3fa0; --wh-xp: #24508a; --wh-ton: #2c3646; --wh-miss: #9a3434;
+  --wh-wheelBg-1: #ffffff; --wh-wheelBg-2: #eef2f7; --wh-wheelBg-3: #dfe6ef;
+  --wh-wheelCenterGrad-1: #ffffff; --wh-wheelCenterGrad-2: #eef2f7; --wh-wheelCenterGrad-3: #d9e1ec;
+  --wh-rimGrad-1: rgba(20,40,70,.25); --wh-rimGrad-2: rgba(20,40,70,.1); --wh-rimGrad-3: rgba(20,40,70,.35);
+  --wh-segmentPrize-1: #e3ecf8; --wh-segmentPrize-2: #d2dff1; --wh-segmentPrize-3: #c0d1ea;
+  --wh-segmentMiss-1: #f6e4e6; --wh-segmentMiss-2: #edd3d7; --wh-segmentMiss-3: #e2c1c7;
+  --wh-segmentSpin-1: #dcf2ec; --wh-segmentSpin-2: #c8e9e0; --wh-segmentSpin-3: #b3ddd2;
+  --wh-segmentXp-1: #e4ebf5; --wh-segmentXp-2: #d3deee; --wh-segmentXp-3: #c1d0e5;
+  --wh-segSheen-1: rgba(255,255,255,.6); --wh-segSheen-2: rgba(255,255,255,.12); --wh-segSheen-3: rgba(255,255,255,0);
+  --wh-nexusTextGrad-1: #0d6f86; --wh-nexusTextGrad-2: #0b5a6e; --wh-nexusTextGrad-3: #08485a;
+  --wh-edge-miss: rgba(154,52,52,.4); --wh-edge-spin: rgba(20,107,87,.4); --wh-edge-xp: rgba(36,80,138,.35); --wh-edge-prize: rgba(36,80,138,.4);
+  --wh-line: rgba(20,40,70,.2); --wh-tick: rgba(20,40,70,.22); --wh-tick-major: rgba(20,40,70,.5); --wh-faint: rgba(20,40,70,.08);
+  --wh-seg-rim: rgba(255,255,255,.85); --wh-pointer-hi: rgba(255,255,255,.7);
+  --wh-aura: .28;
+}

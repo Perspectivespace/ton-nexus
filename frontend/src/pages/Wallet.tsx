@@ -9,6 +9,7 @@ const W_STATUS: Record<string, { label: string; tone: Tone }> = {
   pending: { label: "ожидает", tone: "warn" },
   paid: { label: "выплачено", tone: "ok" },
   rejected: { label: "отклонено", tone: "danger" },
+  approved: { label: "одобрено", tone: "ok" },
 };
 
 export function Wallet() {

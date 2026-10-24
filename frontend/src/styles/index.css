@@ -249,66 +249,27 @@ body {
 }
 
 /* Tabs (bolt) */
-.fortune-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 14px;
-}
-.fortune-tab {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-family: var(--f-display);
-  color: var(--text-2);
-  border-radius: 10px;
-  padding: 10px 8px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-.fortune-tab.active {
-  color: var(--neon);
-  background: linear-gradient(180deg, var(--neon-soft), transparent);
-  border: 1px solid var(--line-strong);
-  border-top-color: var(--neon-dim);
-  box-shadow: var(--bevel-1);
-}
 
 /*
  * Аура колеса. Было: бесконечная анимация filter: blur() — дорого на телефонах.
  * Стало: размытие статичное, анимируются только transform и opacity; при «уменьшить движение» стоит.
  */
-@keyframes wheelAura {
-  0%, 100% { opacity: 0.62; transform: scale(0.96) rotate(0deg); }
-  50% { opacity: 0.94; transform: scale(1.035) rotate(180deg); }
-}
+/* Ореол колеса: статичное кольцо без blur и без анимации (правила производительности, п. 13) */
 .wheel-aura {
   background:
     conic-gradient(
       from 0deg,
-      rgba(96, 150, 255, 0.34),
-      rgba(105, 216, 190, 0.23) 22%,
-      rgba(239, 184, 93, 0.28) 42%,
-      rgba(224, 105, 154, 0.24) 62%,
-      rgba(139, 134, 196, 0.32) 82%,
-      rgba(96, 150, 255, 0.34)
+      rgba(96, 150, 255, 0.5),
+      rgba(105, 216, 190, 0.4) 22%,
+      rgba(239, 184, 93, 0.45) 42%,
+      rgba(224, 105, 154, 0.4) 62%,
+      rgba(139, 134, 196, 0.5) 82%,
+      rgba(96, 150, 255, 0.5)
     );
-  box-shadow:
-    0 0 22px rgba(96, 150, 255, 0.24),
-    0 0 48px rgba(105, 216, 190, 0.13),
-    0 0 92px rgba(224, 105, 154, 0.1),
-    inset 0 0 28px rgba(155, 184, 224, 0.14);
-  filter: blur(15px);
-  animation: wheelAura 4.8s ease-in-out infinite;
+  -webkit-mask: radial-gradient(circle, transparent 44%, #000 49%, rgba(0,0,0,.35) 56%, transparent 70%);
+  mask: radial-gradient(circle, transparent 44%, #000 49%, rgba(0,0,0,.35) 56%, transparent 70%);
+  opacity: var(--wh-aura, .55);
   pointer-events: none;
-  will-change: transform, opacity;
-}
-.wheel-aura.spinning {
-  animation-duration: 1.6s;
 }
 
 @keyframes subtleGlow {
@@ -319,10 +280,9 @@ body {
   animation: subtleGlow 3s ease-in-out infinite;
 }
 
-html.app-hidden .wheel-aura,
 html.app-hidden .subtle-glow { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
-  .wheel-aura, .subtle-glow { animation: none; }
+  .subtle-glow { animation: none; }
 }
 
 /* Нижний док — теперь .ui-dock в styles/components.css */
