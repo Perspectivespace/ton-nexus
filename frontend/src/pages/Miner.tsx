@@ -13,6 +13,7 @@ import {
   Reactor,
   StatTile,
   Button,
+  useToast,
 } from "@/components/ui";
 import { haptic } from "@/lib/haptics";
 
@@ -32,6 +33,7 @@ export function Miner() {
   const { data: m, isLoading, error } = useMiner();
   const start = useMinerStart();
   const claim = useMinerClaim();
+  const toast = useToast();
 
   if (isLoading) return <LoadingPanel label="Синхронизация реактора…" />;
   if (error) return <ErrorPanel message="Не удалось загрузить майнер" />;
@@ -99,7 +101,12 @@ export function Miner() {
       <div className="flex flex-col gap-2.5">
         {m.status === "idle" && (
           <span className="ui-spill">
-            <Button kind="primary" size="lg" block disabled={start.isPending} onClick={() => start.mutate()}>
+            <Button kind="primary" size="lg" block disabled={start.isPending} onClick={() =>
+                start.mutate(undefined, {
+                  onSuccess: () => toast({ kind: "ok", title: "Цикл запущен", sub: "реактор копит TON в хранилище" }),
+                  onError: (e) => toast({ kind: "danger", title: "Цикл не запустился", sub: e.message }),
+                })
+              }>
               {start.isPending ? "Запуск…" : "Запуск цикла"}
             </Button>
           </span>
@@ -113,7 +120,12 @@ export function Miner() {
               haptics="collect"
               className={ready ? "amber" : undefined}
               disabled={claim.isPending}
-              onClick={() => claim.mutate()}
+              onClick={() =>
+                claim.mutate(undefined, {
+                  onSuccess: (r) => toast({ kind: "ok", title: "Собрано", sub: `+${Number(r.claimed).toFixed(6)} TON` }),
+                  onError: (e) => toast({ kind: "danger", title: "Сбор не прошёл", sub: e.message }),
+                })
+              }
             >
               {claim.isPending ? "Сбор…" : ready ? "Собрать · хранилище полное" : "Собрать"}
             </Button>

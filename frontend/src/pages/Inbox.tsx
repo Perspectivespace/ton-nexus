@@ -17,6 +17,7 @@ import {
   ErrorPanel,
   EmptyPanel,
   Field,
+  useToast,
 } from "@/components/ui";
 
 function SubmissionCard({
@@ -29,6 +30,7 @@ function SubmissionCard({
   const review = useReviewSubmission();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+  const toast = useToast();
 
   async function act(approve: boolean) {
     setBusy(approve ? "approve" : "reject");
@@ -38,9 +40,10 @@ function SubmissionCard({
         approve,
         note: note.trim() || null,
       });
+      toast({ kind: approve ? "ok" : "info", title: approve ? "Сдача одобрена" : "Сдача отклонена", sub: `#${item.id}` });
       onDone();
-    } catch {
-      /* */
+    } catch (e) {
+      toast({ kind: "danger", title: "Решение не сохранено", sub: e instanceof Error ? e.message : "Ошибка" });
     } finally {
       setBusy(null);
     }
@@ -130,6 +133,7 @@ export function Inbox() {
   const approvals = usePendingTaskApprovals();
   const approveTask = useApproveTask();
   const rejectTask = useRejectTask();
+  const toast = useToast();
 
   const canModerate = me?.is_owner || me?.is_admin || me?.is_ambassador;
 
@@ -212,7 +216,12 @@ export function Inbox() {
                   type="button"
                   className="ui-btn primary flex-1"
                   disabled={approveTask.isPending}
-                  onClick={() => approveTask.mutate(t.id)}
+                  onClick={() =>
+                    approveTask.mutate(t.id, {
+                      onSuccess: () => toast({ kind: "ok", title: "Задание опубликовано", sub: `#${t.id}` }),
+                      onError: (e) => toast({ kind: "danger", title: "Не удалось одобрить", sub: e.message }),
+                    })
+                  }
                 >
                   Одобрить
                 </button>
@@ -220,7 +229,12 @@ export function Inbox() {
                   type="button"
                   className="ui-btn danger flex-1"
                   disabled={rejectTask.isPending}
-                  onClick={() => rejectTask.mutate(t.id)}
+                  onClick={() =>
+                    rejectTask.mutate(t.id, {
+                      onSuccess: () => toast({ kind: "info", title: "Задание отклонено", sub: `#${t.id}` }),
+                      onError: (e) => toast({ kind: "danger", title: "Не удалось отклонить", sub: e.message }),
+                    })
+                  }
                 >
                   Отклонить
                 </button>
