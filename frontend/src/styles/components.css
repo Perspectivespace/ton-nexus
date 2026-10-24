@@ -349,3 +349,6 @@ a.ui-btn { text-decoration: none; }
   --wh-seg-rim: rgba(255,255,255,.85); --wh-pointer-hi: rgba(255,255,255,.7);
   --wh-aura: .28;
 }
+button.ui-stat { border: 0; font: inherit; color: inherit; cursor: pointer; display: block; width: 100%; -webkit-tap-highlight-color: transparent; }
+button.ui-stat:disabled { cursor: default; opacity: .6; }
+button.ui-stat:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
