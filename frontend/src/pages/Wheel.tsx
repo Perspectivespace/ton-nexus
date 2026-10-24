@@ -339,7 +339,7 @@ function OddsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
-          <div className="absolute inset-0 bg-[#02030a]/75 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-[var(--bg)]/90" />
           <motion.div
             initial={{ opacity: 0, scale: 0.94, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
