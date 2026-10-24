@@ -547,3 +547,22 @@ html.app-hidden .rx-ring { animation-play-state: paused !important; }
 @keyframes ui-gain { 0% { opacity: 0; transform: translate3d(0, 6px, 0); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translate3d(0, -8px, 0); } }
 @media (prefers-reduced-motion: reduce) { .ui-gain { animation: ui-gain-r 1.8s both; } }
 @keyframes ui-gain-r { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Момент C — прогон усиления (п. 13 C) */
+.ui-stat.scan { background: linear-gradient(180deg, var(--neon-core), var(--neon) 40%, rgba(43,245,255,.5)); }
+.ui-stat.scan .v { color: var(--neon-core); }
+[data-theme="light"] .ui-stat.scan .v { color: var(--neon); }
+.dial.is-run .dl-needle { transition: transform .8s cubic-bezier(.3, 1.45, .5, 1); }
+.ui-verdict { display: inline-block; padding: 3px 10px; font: 700 12px/16px var(--f-display); font-stretch: 75%; letter-spacing: .12em; text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut-xs)), calc(100% - var(--cut-xs)) 100%, 0 100%); }
+.ui-verdict.ok { background: var(--amber); color: #1A0F00; }
+.ui-verdict.burn { background: var(--magenta-soft); color: var(--magenta); box-shadow: inset 2px 0 0 var(--magenta); }
+.ui-roll { display: inline-block; animation: ui-roll .32s var(--ease-out) both; }
+@keyframes ui-roll { from { opacity: 0; transform: translate3d(0, 60%, 0); } to { opacity: 1; transform: none; } }
+/* Провал: два кадра глитч-сдвига полосой маджента, панель на миг гаснет до 40 % (только transform и opacity) */
+.ui-burn { position: relative; animation: ui-burn-dim .7s ease-out both; }
+.ui-burn::after { content: ""; position: absolute; left: 0; right: 0; top: 38%; height: 14%; background: var(--magenta); opacity: 0; pointer-events: none;
+  animation: ui-burn-bar .16s steps(1, end) both; }
+@keyframes ui-burn-dim { 0% { transform: translate3d(-4px, 0, 0); } 10% { transform: translate3d(3px, 0, 0); } 20% { transform: none; opacity: .4; } 100% { opacity: 1; } }
+@keyframes ui-burn-bar { 0% { opacity: .55; transform: translate3d(-6px, 0, 0); } 50% { opacity: .35; transform: translate3d(5px, -8px, 0); } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ui-roll, .ui-burn, .ui-burn::after { animation: none !important; } .dial.is-run .dl-needle { transition: none; } }
