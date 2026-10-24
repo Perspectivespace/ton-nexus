@@ -566,3 +566,8 @@ html.app-hidden .rx-ring { animation-play-state: paused !important; }
 @keyframes ui-burn-dim { 0% { transform: translate3d(-4px, 0, 0); } 10% { transform: translate3d(3px, 0, 0); } 20% { transform: none; opacity: .4; } 100% { opacity: 1; } }
 @keyframes ui-burn-bar { 0% { opacity: .55; transform: translate3d(-6px, 0, 0); } 50% { opacity: .35; transform: translate3d(5px, -8px, 0); } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ui-roll, .ui-burn, .ui-burn::after { animation: none !important; } .dial.is-run .dl-needle { transition: none; } }
+
+/* Главная: строка реактора внизу героя (вход в майнер без дубля дока) */
+.home-rx { display: flex; align-items: center; gap: 12px; min-height: 44px; color: var(--text); }
+.home-rx > svg:first-child { color: var(--neon); flex: none; }
+.home-rx > svg:last-child { color: var(--text-3); flex: none; }
