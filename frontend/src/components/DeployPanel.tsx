@@ -143,11 +143,11 @@ function JobCard({ id, onClose }: { id: string; onClose?: () => void }) {
         </p>
       )}
       <div className="flex gap-2">
-        <button type="button" className="btn-ghost text-[12px]" onClick={() => setShowLog((v) => !v)}>
+        <button type="button" className="ui-btn ghost sm" onClick={() => setShowLog((v) => !v)}>
           {showLog ? "Скрыть лог" : "Показать лог"}
         </button>
         {onClose && !live && (
-          <button type="button" className="btn-ghost text-[12px]" onClick={onClose}>
+          <button type="button" className="ui-btn ghost sm" onClick={onClose}>
             Закрыть
           </button>
         )}
@@ -176,7 +176,7 @@ function DeployersCard() {
   }
 
   return (
-    <div className="panel space-y-3 p-4">
+    <div className="ui-cut space-y-3 p-4">
       <div className="flex items-center justify-between">
         <p className="eyebrow">Деплойеры</p>
         <StatusPill tone="neutral">только owner</StatusPill>
@@ -199,7 +199,7 @@ function DeployersCard() {
               </div>
               <button
                 type="button"
-                className="btn-ghost text-[11px] text-[var(--danger)]"
+                className="ui-btn danger sm"
                 disabled={setRole.isPending}
                 onClick={() => {
                   if (confirm("Снять право деплоя?")) change(d.telegram_id, false);
@@ -224,7 +224,7 @@ function DeployersCard() {
         </Field>
         <button
           type="button"
-          className="btn-primary px-4"
+          className="ui-btn primary"
           disabled={setRole.isPending || tgId.length < 5}
           onClick={() => change(Number(tgId), true)}
         >
@@ -282,7 +282,7 @@ export function DeployPanel() {
   return (
     <div className="space-y-4">
       {!data.runner_installed && (
-        <div className="panel border-[var(--warn)]/40 p-4">
+        <div className="ui-cut p-4">
           <p className="eyebrow text-[var(--warn)]">Runner не установлен</p>
           <p className="mt-1 text-[12px] leading-snug text-[var(--text-dim)]">
             Один раз выполните на сервере команду установки из docs/DEPLOY_TELEGRAM.md — после
@@ -343,7 +343,7 @@ export function DeployPanel() {
           </p>
         )}
 
-        <button type="button" className="btn-primary w-full" disabled={busy || !data.runner_installed} onClick={run}>
+        <button type="button" className="ui-btn primary block" disabled={busy || !data.runner_installed} onClick={run}>
           {data.active
             ? "Деплой идёт…"
             : request.isPending
@@ -359,14 +359,14 @@ export function DeployPanel() {
           </label>
           <button
             type="button"
-            className="btn-ghost text-[11px]"
+            className="ui-btn ghost sm"
             disabled={check.isPending}
             onClick={() => check.mutate()}
           >
             {check.isPending ? "Проверяю…" : "Проверить GitHub"}
           </button>
         </div>
-        <button type="button" disabled className="btn-ghost w-full text-[12px] opacity-50">
+        <button type="button" disabled className="ui-btn secondary block">
           Прод — скоро
         </button>
         {msg && <p className="text-[12px] text-[var(--danger)]">{msg}</p>}
@@ -381,7 +381,7 @@ export function DeployPanel() {
           <EmptyPanel title="Деплоев ещё не было" body="Первый запуск появится здесь." />
         )}
         {jobs.data && jobs.data.length > 0 && (
-          <ul className="panel divide-y divide-[var(--line)] overflow-hidden p-0">
+          <ul className="ui-cut divide-y divide-[var(--line)] overflow-hidden p-0">
             {jobs.data.map((j) => (
               <li key={j.id}>
                 <button

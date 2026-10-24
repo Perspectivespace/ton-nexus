@@ -52,7 +52,7 @@ function SubmissionCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      className="panel space-y-3 p-4"
+      className="ui-cut space-y-3 p-4"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -76,7 +76,7 @@ function SubmissionCard({
           href={item.proof_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-ghost inline-flex text-[12px]"
+          className="ui-btn secondary sm"
         >
           Открыть proof URL ↗
         </a>
@@ -99,7 +99,7 @@ function SubmissionCard({
       <div className="flex gap-2">
         <button
           type="button"
-          className="btn-primary flex-1"
+          className="ui-btn primary flex-1"
           disabled={!!busy}
           onClick={() => act(true)}
         >
@@ -107,7 +107,7 @@ function SubmissionCard({
         </button>
         <button
           type="button"
-          className="btn-ghost flex-1 border-[var(--danger)]/40 text-[var(--danger)]"
+          className="ui-btn danger flex-1"
           disabled={!!busy}
           onClick={() => act(false)}
         >
@@ -142,7 +142,7 @@ export function Inbox() {
       <div className="space-y-4">
         <ScreenHeader eyebrow="Модерация" title="Входящие" />
         <ErrorPanel message="Inbox для амбассадоров, админов и владельца." />
-        <Link to="/" className="btn-ghost inline-flex text-[13px] no-underline">
+        <Link to="/" className="ui-btn secondary sm no-underline">
           ← Контур
         </Link>
       </div>
@@ -167,7 +167,7 @@ export function Inbox() {
         }
       />
 
-      <div className="panel panel-glow p-4">
+      <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
           Approve начисляет TON и XP исполнителю. Reject — без выплаты. Слоты задания обновляются
           автоматически.
@@ -194,7 +194,7 @@ export function Inbox() {
           )}
 
           {pendingTasks.map((t) => (
-            <div key={t.id} className="panel space-y-3 p-4">
+            <div key={t.id} className="ui-cut space-y-3 p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[14px] font-medium">{t.title}</p>
@@ -210,7 +210,7 @@ export function Inbox() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="btn-primary flex-1"
+                  className="ui-btn primary flex-1"
                   disabled={approveTask.isPending}
                   onClick={() => approveTask.mutate(t.id)}
                 >
@@ -218,7 +218,7 @@ export function Inbox() {
                 </button>
                 <button
                   type="button"
-                  className="btn-ghost flex-1 border-[var(--danger)]/40 text-[var(--danger)]"
+                  className="ui-btn danger flex-1"
                   disabled={rejectTask.isPending}
                   onClick={() => rejectTask.mutate(t.id)}
                 >
@@ -252,7 +252,7 @@ export function Inbox() {
         </AnimatePresence>
       </section>
 
-      <Link to="/tasks" className="btn-ghost inline-flex text-[13px] no-underline">
+      <Link to="/tasks" className="ui-btn secondary sm no-underline">
         ← Лента заданий
       </Link>
     </div>

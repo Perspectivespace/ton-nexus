@@ -276,10 +276,10 @@ export function SettingEditor({
       )}
       {err && <p className="text-[12px] text-[var(--danger)]">{err}</p>}
       <div className="flex gap-2 pt-1">
-        <button type="button" className="btn-primary flex-1" onClick={save} disabled={saving}>
+        <button type="button" className="ui-btn primary flex-1" onClick={save} disabled={saving}>
           {saving ? "Сохранение…" : "Применить"}
         </button>
-        <button type="button" className="btn-ghost px-4" onClick={onCancel}>
+        <button type="button" className="ui-btn secondary" onClick={onCancel}>
           Отмена
         </button>
       </div>

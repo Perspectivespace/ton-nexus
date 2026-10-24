@@ -67,7 +67,7 @@ export function TaskCreate() {
       <div className="space-y-4">
         <ScreenHeader eyebrow="Маркет" title="Новое задание" />
         <ErrorPanel message="Создание доступно амбассадору, admin и owner." />
-        <Link to="/tasks" className="btn-ghost inline-flex text-[13px] no-underline">
+        <Link to="/tasks" className="ui-btn secondary sm no-underline">
           ← Лента
         </Link>
       </div>
@@ -90,7 +90,7 @@ export function TaskCreate() {
         }
       />
 
-      <div className="panel panel-glow p-4">
+      <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
           {canDirectPublish
             ? "Admin/owner: можно сразу опубликовать — бюджет (награда × слоты + ~10%) спишется с баланса."
@@ -99,13 +99,13 @@ export function TaskCreate() {
       </div>
 
       {me && (
-        <div className="panel grid grid-cols-2 gap-3 p-4">
+        <div className="ui-cut grid grid-cols-2 gap-3 p-4">
           <Readout label="Ваш баланс" value={Number(me.balance).toFixed(4)} unit="TON" />
           <Readout label="Ориентир бюджета" value={budgetHint} unit="TON" hint="×1.1 комиссия" />
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="panel space-y-4 p-5">
+      <form onSubmit={onSubmit} className="ui-cut space-y-4 p-5">
         <Field label="Заголовок">
           <input
             className="ui-input sans"
@@ -165,7 +165,7 @@ export function TaskCreate() {
         )}
 
         <div className="grid grid-cols-3 gap-2">
-          <Field label="Награда" unit="TON">
+          <Field label="Награда, TON">
             <input
               className="ui-input"
               value={reward}
@@ -208,7 +208,7 @@ export function TaskCreate() {
 
         <button
           type="submit"
-          className="btn-primary w-full"
+          className="ui-btn primary block"
           disabled={
             create.isPending || title.trim().length < 3 || description.trim().length < 3
           }
@@ -239,7 +239,7 @@ export function TaskCreate() {
         )}
       </form>
 
-      <Link to="/tasks" className="btn-ghost inline-flex text-[13px] no-underline">
+      <Link to="/tasks" className="ui-btn secondary sm no-underline">
         ← Лента
       </Link>
     </div>

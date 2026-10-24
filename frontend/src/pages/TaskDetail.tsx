@@ -60,14 +60,14 @@ export function TaskDetail() {
         action={
           <Link
             to="/tasks"
-            className="rounded-xl border border-[var(--line)] px-3 py-2 text-xs text-[var(--text-dim)] no-underline"
+            className="ui-btn secondary sm no-underline"
           >
             ← Лента
           </Link>
         }
       />
 
-      <div className="panel panel-glow space-y-4 p-5">
+      <div className="ui-cut hero space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill tone={t.status === "active" ? "live" : "neutral"}>{TASK_STATUS_RU[t.status] ?? t.status}</StatusPill>
           <StatusPill tone={slotsLeft > 0 ? "ok" : "warn"}>
@@ -92,14 +92,14 @@ export function TaskDetail() {
             href={t.target_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-ghost inline-flex text-[13px]"
+            className="ui-btn secondary sm"
           >
             Открыть ссылку задания ↗
           </a>
         )}
       </div>
 
-      <div className="panel space-y-4 p-5">
+      <div className="ui-cut space-y-4 p-5">
         <div className="flex items-center justify-between">
           <p className="eyebrow">Сдача</p>
           <StatusPill
@@ -151,7 +151,7 @@ export function TaskDetail() {
             {canSubmit && (
               <button
                 type="button"
-                className="btn-primary w-full"
+                className="ui-btn primary block"
                 disabled={submit.isPending || (!proofText.trim() && !proofUrl.trim())}
                 onClick={onSubmit}
               >

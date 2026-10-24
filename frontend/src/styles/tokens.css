@@ -19,7 +19,6 @@
   --halo-magenta: 0 0 6px rgba(255,46,126,.6), 0 0 16px rgba(255,46,126,.3);
   --scan: repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px);
   --grid: linear-gradient(rgba(120,140,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(120,140,255,.05) 1px, transparent 1px);
-  --glow-drop: drop-shadow(0 0 14px rgba(43,245,255,.20));
 
   /* материал, глубина, свет */
   --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .2 0 0 0 -.07'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
@@ -47,7 +46,6 @@
   --spill-magenta: radial-gradient(50% 50% at 50% 50%, rgba(255,46,126,.28), rgba(255,46,126,0));
   --btn-primary: linear-gradient(180deg, #B4FCFF 0%, #2BF5FF 40%, #10C3D4 100%);
   --btn-primary-bevel: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -3px 0 rgba(0,55,65,.38), inset 0 0 0 1px rgba(255,255,255,.12);
-  --screw: radial-gradient(circle at 35% 30%, #6B7489, #202534 62%, #0B0D13);
 }
 [data-theme="light"] {
   --bg: #EEF1F6; --bg-sunken: #E3E7EF;
@@ -62,7 +60,6 @@
   --halo-neon: none; --halo-amber: none; --halo-magenta: none;
   --scan: repeating-linear-gradient(0deg, rgba(10,20,50,.02) 0 1px, transparent 1px 4px);
   --grid: linear-gradient(rgba(10,20,50,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(10,20,50,.045) 1px, transparent 1px);
-  --glow-drop: drop-shadow(0 0 0 transparent);
   --toplight: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,0) 40%);
   --spec: linear-gradient(90deg, transparent, #fff 30%, transparent) top / 100% 1px no-repeat;
   --mat-1: var(--toplight), linear-gradient(180deg, #FFFFFF, #F2F4F8);
@@ -80,7 +77,6 @@
   --spill-amber: none; --spill-magenta: none;
   --btn-primary: linear-gradient(180deg, #0B9CB7 0%, #007E95 55%, #006B7F 100%);
   --btn-primary-bevel: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.18);
-  --screw: radial-gradient(circle at 35% 30%, #fff, #C3CAD6 60%, #8C95A6);
 }
 :root {
   --f-display: "Tektur", "Onest", sans-serif;

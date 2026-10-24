@@ -396,7 +396,7 @@ function OddsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
                 </li>
               ))}
             </ul>
-            <button type="button" className="btn-primary mt-5 w-full" onClick={onClose}>
+            <button type="button" className="ui-btn primary block mt-5" onClick={onClose}>
               Понятно
             </button>
           </motion.div>
@@ -563,7 +563,7 @@ export function Wheel() {
 
             <button
               type="button"
-              className="btn-primary w-full"
+              className="ui-btn primary block"
               disabled={spinning || spinMut.isPending || left <= 0}
               onClick={onSpin}
             >
@@ -631,7 +631,7 @@ export function Wheel() {
               </div>
               <button
                 type="button"
-                className="btn-primary w-full"
+                className="ui-btn primary block"
                 disabled={dailyClaim.isPending || !!d?.claimed_today}
                 onClick={onDaily}
               >
@@ -691,7 +691,7 @@ export function Wheel() {
               </Field>
               <button
                 type="button"
-                className="btn-primary w-full"
+                className="ui-btn primary block"
                 disabled={promo.isPending || code.trim().length < 3}
                 onClick={onPromo}
               >
