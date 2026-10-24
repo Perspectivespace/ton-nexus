@@ -11,6 +11,10 @@ type Props = {
   size?: number;
   /** табличка «41% ХРАНИЛИЩЕ» под реактором */
   plate?: boolean;
+  /** момент B: дуга стекает к нулю за 600 мс, ядро один раз приглушается */
+  draining?: boolean;
+  /** момент A: ядро и дуга «зажигаются» (380 мс) */
+  ignite?: boolean;
   className?: string;
 };
 
@@ -27,13 +31,13 @@ const C2 = 2 * Math.PI * 59;
  * Полное хранилище — янтарь, кольца стоят. Остановлен — ядро на 30 %, дуга серая.
  * Цвета — переменные темы (--rx-*), светлая тема: светлый металл, без ореола и частиц.
  */
-export function Reactor({ fill, state, size = 204, plate = true, className }: Props) {
+export function Reactor({ fill, state, size = 204, plate = true, draining, ignite, className }: Props) {
   const u = useId().replace(/:/g, "");
   const pct = Math.max(0, Math.min(1, Number.isFinite(fill) ? fill : 0));
   const pctLabel = Math.round(pct * 100);
   return (
     <div
-      className={cx("rx", `is-${state}`, className)}
+      className={cx("rx", `is-${state}`, draining && "is-draining", ignite && "is-ignite", className)}
       style={{ width: size, height: size }}
       role="img"
       aria-label={`Реактор: ${state === "running" ? "работает" : state === "ready" ? "хранилище полное" : "остановлен"}, хранилище ${pctLabel}%`}
@@ -83,7 +87,7 @@ export function Reactor({ fill, state, size = 204, plate = true, className }: Pr
           );
         })}
         <circle cx="105" cy="105" r="78" fill="none" strokeWidth="6" style={{ stroke: "var(--rx-track)" }} />
-        {pct > 0 && (
+        {(pct > 0 || draining) && (
           <circle
             className="rx-arc"
             cx="105"
@@ -92,7 +96,7 @@ export function Reactor({ fill, state, size = 204, plate = true, className }: Pr
             fill="none"
             strokeWidth="6"
             stroke={`url(#${u}c)`}
-            strokeDasharray={`${C1 * pct} ${C1}`}
+            style={{ strokeDasharray: `${C1} ${C1}`, strokeDashoffset: C1 * (1 - pct) }}
             transform="rotate(-90 105 105)"
             filter={`url(#${u}g)`}
           />
