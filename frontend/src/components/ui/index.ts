@@ -15,3 +15,4 @@ export { cx, usePressed } from "./press";
 export { Reactor, type ReactorState } from "./Reactor";
 export { DialGauge } from "./DialGauge";
 export { useIgniteOnce, useLiveAccrued } from "./moments";
+export { PrizeWheel, type PrizeWheelHandle, type WheelSector, type WheelRole } from "./PrizeWheel";
