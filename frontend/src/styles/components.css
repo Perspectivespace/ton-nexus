@@ -332,7 +332,7 @@ a.ui-btn { text-decoration: none; }
   --pw-steel-mid: rgba(150,170,255,.06); --pw-steel-out: rgba(150,170,255,.22);
   --pw-void-mid: rgba(0,0,0,.2); --pw-void-out: rgba(20,24,36,.9);
   --pw-hot-ink: #FFF3DF; --pw-amber-ink: #FFC56E; --pw-neon-ink: #B8FCFF; --pw-magenta-ink: #FF8DB7; --pw-steel-ink: #DCE3F5; --pw-void-ink: #687089;
-  --pw-sub: rgba(220,228,245,.62); --pw-div: rgba(4,6,12,.9); --pw-win: rgba(255,214,150,.30); --pw-win-edge: #FFE7C2;
+  --pw-sub: rgba(220,228,245,.62); --pw-div: rgba(4,6,12,.9); --pw-win: rgba(255,181,71,.42); --pw-win-edge: #FFE7C2;
   --pw-ptr: #F2FEFF; --pw-ptr-edge: #2BF5FF; --pw-shine: rgba(220,245,255,.55);
   position: relative; width: min(100%, 300px); aspect-ratio: 1; margin-inline: auto; contain: layout paint;
 }
@@ -360,8 +360,11 @@ a.ui-btn { text-decoration: none; }
 .pw-div { stroke: var(--pw-div); }
 .pw-sec, .pw-txt { transition: opacity .32s var(--ease-out, ease-out); }
 .pw-sec.dim, .pw-txt.dim { opacity: .38; }
+.pw-sec.win > path:first-child { fill: var(--pw-face); }
 .pw-txt.win .pw-t1 { fill: var(--pw-hot-ink) !important; }
 .pw-win { fill: var(--pw-win); stroke: var(--pw-win-edge); stroke-width: 2.5; stroke-linejoin: round; }
+.pw.is-miss .pw-win { fill: rgba(150,170,255,.10); stroke: var(--pw-steel); filter: none; }
+.pw.is-miss .pw-txt.win .pw-t1 { fill: var(--pw-steel-ink) !important; }
 .pw-ptr { fill: var(--pw-ptr); stroke: var(--pw-ptr-edge); stroke-width: 1.5; stroke-linejoin: round; }
 .pw-flap { transform-box: view-box; }
 .pw-hub { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; display: grid; place-items: center; pointer-events: none; }

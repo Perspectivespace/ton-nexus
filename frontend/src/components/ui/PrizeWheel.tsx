@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useId, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 import { BrandMark } from "@/components/Brand";
 import { haptic } from "@/lib/haptics";
 import { cx, prefersReducedMotion } from "./press";
@@ -19,6 +19,8 @@ type Props = {
   /** горящий сектор-выигрыш (после остановки) */
   winIndex?: number | null;
   spinning?: boolean;
+  /** выпал пустой сектор — подсветка нейтральная, без натрия */
+  miss?: boolean;
   className?: string;
 };
 
@@ -66,7 +68,7 @@ const ease = (p: number) => 1 - Math.pow(1 - p, 4);
  * указатель-«язычок» отскакивает на рисках. Тап — сразу к концу, «уменьшить движение» — результат без вращения.
  * Простой «жизни» — блик, медленно идущий по ободу (transform), на паузе при скрытом приложении и во время вращения.
  */
-export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWheel({ sectors, winIndex = null, spinning, className }, ref) {
+export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWheel({ sectors, winIndex = null, spinning, miss, className }, ref) {
   const u = useId().replace(/:/g, "");
   const n = sectors.length;
   const seg = 360 / n;
@@ -75,6 +77,8 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
   const angle = useRef(0);
   const skipFlag = useRef(false);
   const raf = useRef(0);
+  // угол покоя: по нему подписи нижней половины разворачиваются «головой вверх»
+  const [rest, setRest] = useState(0);
 
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
@@ -101,6 +105,7 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
         if (opts?.instant || prefersReducedMotion()) {
           angle.current = to;
           paint(to);
+          setRest(to % 360);
           return Promise.resolve();
         }
         return new Promise<void>((done) => {
@@ -118,7 +123,10 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
             const past = (((a + seg / 2) % seg) + seg) % seg; // градусов после последней риски
             paint(a, p < 1 ? -14 * Math.exp(-past / 5) : 0);
             if (p < 1) raf.current = requestAnimationFrame(step);
-            else done();
+            else {
+              setRest(to % 360);
+              done();
+            }
           };
           raf.current = requestAnimationFrame(step);
         });
@@ -130,7 +138,7 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
   const won = winIndex != null && winIndex >= 0;
 
   return (
-    <div className={cx("pw", spinning && "is-spinning", won && "is-won", className)}>
+    <div className={cx("pw", spinning && "is-spinning", won && "is-won", won && miss && "is-miss", className)}>
       {/* 1. плита-восьмигранник, обод с рисками, заклёпки */}
       <svg className="pw-l" viewBox="0 0 320 320" aria-hidden>
         <defs>
@@ -195,7 +203,7 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
             const a0 = i * seg - seg / 2;
             const a1 = i * seg + seg / 2;
             return (
-              <g key={s.id} className={cx("pw-sec", won && i !== winIndex && "dim")}>
+              <g key={s.id} className={cx("pw-sec", won && (i === winIndex ? "win" : "dim"))}>
                 <path d={wedge(R_IN, R, a0, a1)} fill={`url(#${u}${s.role})`} />
                 <path d={arc(R - 5, a0 + 1.6, a1 - 1.6)} fill="none" strokeWidth="3" strokeLinecap="butt" className="pw-tube" filter={`url(#${u}g)`} style={{ stroke: `var(--pw-${s.role})` }} />
                 {s.role === "hot" && (
@@ -212,18 +220,26 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
             const [x1, y1] = pt(R, i * seg - seg / 2);
             return <line key={i} x1={x0} y1={y0} x2={x1} y2={y1} strokeWidth="2" className="pw-div" />;
           })}
-          {sectors.map((s, i) => (
-            <g key={`t${s.id}`} transform={`rotate(${i * seg} ${C} ${C})`} className={cx("pw-txt", won && (i === winIndex ? "win" : "dim"))}>
-              <text x={C} y={C - 92} textAnchor="middle" className="pw-t1" style={{ fill: `var(--pw-${s.role}-ink)` }}>
-                {s.title}
-              </text>
-              {s.sub && (
-                <text x={C} y={C - 74} textAnchor="middle" className="pw-t2">
-                  {s.sub}
-                </text>
-              )}
-            </g>
-          ))}
+          {sectors.map((s, i) => {
+            // в нижней половине (в покое) подпись разворачивается, заголовок остаётся сверху
+            const at = (i * seg + rest) % 360;
+            const flip = at > 90 && at < 270;
+            const r1 = s.sub ? 95 : 86;
+            return (
+              <g key={`t${s.id}`} transform={`rotate(${i * seg} ${C} ${C})`} className={cx("pw-txt", won && (i === winIndex ? "win" : "dim"))}>
+                <g transform={flip ? `rotate(180 ${C} ${C - 86})` : undefined}>
+                  <text x={C} y={flip ? C - 172 + (s.sub ? 80 : r1) : C - r1} textAnchor="middle" dominantBaseline="central" className="pw-t1" style={{ fill: `var(--pw-${s.role}-ink)` }}>
+                    {s.title}
+                  </text>
+                  {s.sub && (
+                    <text x={C} y={flip ? C - 172 + 98 : C - 77} textAnchor="middle" dominantBaseline="central" className="pw-t2">
+                      {s.sub}
+                    </text>
+                  )}
+                </g>
+              </g>
+            );
+          })}
           <circle cx={C} cy={C} r={R} fill="none" strokeWidth="1.5" style={{ stroke: "var(--pw-inner)" }} />
         </svg>
       </div>
