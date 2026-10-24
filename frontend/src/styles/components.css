@@ -300,17 +300,6 @@ html.app-hidden .ui-sk::after { animation-play-state: paused; }
 .ui-gauge-arc { transition: stroke-dashoffset .8s var(--ease-out); }
 @media (prefers-reduced-motion: reduce) { .ui-gauge-arc { transition: none; } }
 
-/* —— Майнер: ядро реактора (статичный ореол, без пульсации) —— */
-.miner-core { --c: var(--cut-m); width: 64px; height: 64px; display: grid; place-items: center; color: var(--text-2);
-  background: var(--edge-1); position: relative; isolation: isolate; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
-.miner-core::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
-.miner-core.is-running { color: var(--neon); background: linear-gradient(160deg, var(--neon), rgba(43,245,255,.25) 50%, rgba(0,0,0,.6)); }
-.miner-core.is-running::before { background: radial-gradient(60% 60% at 50% 50%, var(--neon-soft), transparent 75%), var(--mat-1); }
-.miner-core.is-running svg { filter: drop-shadow(0 0 6px var(--neon)); }
-.miner-core.is-ready { color: var(--amber); background: linear-gradient(160deg, var(--amber), rgba(255,181,71,.25) 50%, rgba(0,0,0,.6)); }
-.miner-core.is-ready::before { background: radial-gradient(60% 60% at 50% 50%, var(--amber-soft), transparent 75%), var(--mat-1); }
-[data-theme="light"] .miner-core.is-running svg { filter: none; }
-
 /* янтарная главная кнопка — «Собрать», когда хранилище полное (награда) */
 .ui-btn.primary.amber { background: linear-gradient(180deg, var(--amber-core), var(--amber) 55%, #C9821C); color: #1A1000;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -2px 0 rgba(90,50,0,.35); }
@@ -394,3 +383,67 @@ input[type="checkbox"] { accent-color: var(--neon); }
 .brand-pair > .b-light { display: none; }
 [data-theme="light"] .brand-pair > .b-dark { display: none; }
 [data-theme="light"] .brand-pair > .b-light { display: block; }
+
+/* —— Герой-объект: реактор (п. 8.1) —— */
+.rx {
+  --rx-m0: #4A5268; --rx-m1: #1A1F2C; --rx-m2: #0B0E15; --rx-m3: #2C3344;
+  --rx-d0: #0E1828; --rx-d1: #070A12; --rx-d2: #040509;
+  --rx-outer: rgba(255,255,255,.07); --rx-inner: rgba(0,0,0,.8);
+  --rx-tick: rgba(150,170,255,.22); --rx-tick-on: #2BF5FF; --rx-track: rgba(150,170,255,.08);
+  --rx-arc0: #D2FDFF; --rx-arc1: #2BF5FF;
+  --rx-ringA: rgba(43,245,255,.45); --rx-ringB: rgba(43,245,255,.7); --rx-pip: #7FF8FF;
+  position: relative; margin: 0 auto; flex: none;
+}
+.rx.is-ready { --rx-tick-on: #FFB547; --rx-arc0: #FFE7C2; --rx-arc1: #FFB547; --rx-ringA: rgba(255,181,71,.45); --rx-ringB: rgba(255,181,71,.7); --rx-pip: #FFD58F; }
+.rx.is-idle { --rx-tick-on: rgba(150,170,255,.5); --rx-arc0: #8C95AB; --rx-arc1: #5A6378; --rx-ringA: rgba(150,170,255,.25); --rx-ringB: rgba(150,170,255,.32); --rx-pip: #6E7891; }
+.rx > * { position: absolute; }
+.rx-house { inset: 0; width: 100%; height: 100%; }
+.rx-ring { inset: 0; display: grid; place-items: center; }
+.rx-ring svg { width: 100%; height: 100%; }
+/* вращение — только transform, только пока идёт цикл и вкладка видна */
+.rx.is-running .rx-ring { will-change: transform; }
+.rx.is-running .rx-ring.a { animation: rx-spin 40s linear infinite; }
+.rx.is-running .rx-ring.b { animation: rx-spin 22s linear infinite reverse; }
+@keyframes rx-spin { to { transform: rotate(360deg); } }
+html.app-hidden .rx-ring { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .rx .rx-ring { animation: none !important; will-change: auto; } }
+.rx-shell { inset: 27%; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.30), rgba(255,255,255,0) 22%), radial-gradient(circle, rgba(0,0,0,0) 58%, rgba(0,20,30,.85) 72%, rgba(0,0,0,.95));
+  box-shadow: inset 0 0 0 1px rgba(210,253,255,.18), inset 0 -10px 18px rgba(0,0,0,.5), 0 0 0 5px rgba(8,10,16,.9), 0 0 0 6px rgba(150,170,255,.18); }
+.rx-core { inset: 33%; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 9%, #D2FDFF 16%, rgba(43,245,255,.95) 30%, rgba(0,160,190,.75) 50%, rgba(0,70,100,.55) 68%, rgba(0,30,45,0) 74%);
+  box-shadow: 0 0 26px rgba(43,245,255,.55), 0 0 60px rgba(43,245,255,.22); }
+.rx.is-ready .rx-core { background: radial-gradient(circle, #fff 0 9%, #FFF3D9 16%, rgba(255,200,110,.95) 30%, rgba(220,140,30,.75) 50%, rgba(110,60,0,.55) 68%, rgba(45,25,0,0) 74%);
+  box-shadow: 0 0 26px rgba(255,181,71,.5), 0 0 60px rgba(255,181,71,.2); }
+.rx.is-idle .rx-core { opacity: .3; box-shadow: none; }
+.rx-fil { inset: 31%; border-radius: 50%; opacity: .7;
+  background: repeating-conic-gradient(from 8deg, rgba(210,253,255,0) 0 13deg, rgba(210,253,255,.55) 14deg, rgba(210,253,255,0) 15.5deg);
+  -webkit-mask: radial-gradient(circle, transparent 38%, #000 46%, #000 60%, transparent 70%); mask: radial-gradient(circle, transparent 38%, #000 46%, #000 60%, transparent 70%); }
+.rx.is-idle .rx-fil { opacity: .2; }
+.rx-p { width: 3px; height: 3px; border-radius: 50%; background: #D2FDFF; box-shadow: 0 0 6px #2BF5FF; }
+.rx.is-ready .rx-p { background: #FFE7C2; box-shadow: 0 0 6px #FFB547; }
+.rx.is-idle .rx-p { display: none; }
+.rx-plate { --c: 7px; left: 50%; bottom: -6px; transform: translateX(-50%); padding: 4px 12px 5px; display: flex; gap: 8px; align-items: baseline; white-space: nowrap;
+  background: var(--mat-2); box-shadow: inset 0 0 0 1px var(--line);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.rx-plate b { font: 700 15px/20px var(--f-mono); color: var(--neon-core); text-shadow: var(--halo-neon); font-variant-numeric: tabular-nums; }
+.rx.is-ready .rx-plate b { color: var(--amber-core); text-shadow: var(--halo-amber, none); }
+.rx.is-idle .rx-plate b { color: var(--text-2); text-shadow: none; }
+.rx-plate span { font: 600 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-2); }
+[data-theme="light"] .rx {
+  --rx-m0: #FFFFFF; --rx-m1: #C9D0DC; --rx-m2: #9AA3B4; --rx-m3: #C9D0DC;
+  --rx-d0: #F5F7FA; --rx-d1: #E6EAF0; --rx-d2: #DCE1EA;
+  --rx-outer: rgba(10,20,50,.12); --rx-inner: rgba(10,20,50,.15);
+  --rx-tick: rgba(10,20,50,.2); --rx-tick-on: #007E95; --rx-track: rgba(10,20,50,.08);
+  --rx-arc0: #0B9CB7; --rx-arc1: #006B7F; --rx-ringA: rgba(0,107,127,.45); --rx-ringB: rgba(0,107,127,.6); --rx-pip: #007E95;
+}
+[data-theme="light"] .rx.is-ready { --rx-tick-on: #A35F00; --rx-arc0: #D08A1E; --rx-arc1: #A35F00; --rx-ringA: rgba(163,95,0,.45); --rx-ringB: rgba(163,95,0,.6); --rx-pip: #A35F00; }
+[data-theme="light"] .rx.is-idle { --rx-tick-on: rgba(10,20,50,.35); --rx-arc0: #9AA3B4; --rx-arc1: #7A8396; --rx-ringA: rgba(10,20,50,.25); --rx-ringB: rgba(10,20,50,.3); --rx-pip: #7A8396; }
+[data-theme="light"] .rx-arc { filter: none; }
+[data-theme="light"] .rx-core { background: radial-gradient(circle, #fff 0 10%, #7FD9E6 24%, #007E95 52%, rgba(0,126,149,0) 72%); box-shadow: none; }
+[data-theme="light"] .rx.is-ready .rx-core { background: radial-gradient(circle, #fff 0 10%, #F2C77E 24%, #A35F00 52%, rgba(163,95,0,0) 72%); box-shadow: none; }
+[data-theme="light"] .rx-shell { background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.8), transparent 24%), radial-gradient(circle, transparent 60%, rgba(10,20,50,.15) 74%); box-shadow: inset 0 0 0 1px rgba(10,20,50,.15), 0 0 0 5px #fff, 0 0 0 6px rgba(10,20,50,.15); }
+[data-theme="light"] .rx-fil { opacity: .35; }
+[data-theme="light"] .rx-p { display: none; }
+[data-theme="light"] .rx-plate b { color: var(--neon); text-shadow: none; }
+[data-theme="light"] .rx.is-ready .rx-plate b { color: var(--amber); }

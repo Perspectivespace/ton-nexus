@@ -12,3 +12,4 @@ export { Sheet } from "./Sheet";
 export { SyncLine, Skeleton, SkeletonCard, EmptyState, ErrorState } from "./States";
 export { Num, Bar, useDecode } from "./Num";
 export { cx, usePressed } from "./press";
+export { Reactor, type ReactorState } from "./Reactor";
