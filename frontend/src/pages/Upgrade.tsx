@@ -39,31 +39,18 @@ const TYPE_SHORT: Record<string, string> = {
 
 const TYPES = ["power", "capacity", "acceleration", "luck", "stability"] as const;
 
-/** Последняя известная цена прогона и сумма уровней, при которой она была (цена зависит только от суммы уровней) */
-const COST_KEY = "upgrade:last-cost";
-type CostMemo = { cost: string; total: number };
-function readCost(): CostMemo | null {
-  try {
-    const v = JSON.parse(localStorage.getItem(COST_KEY) || "null");
-    return v && typeof v.cost === "string" && typeof v.total === "number" ? v : null;
-  } catch {
-    return null;
-  }
-}
-
 type Phase = "idle" | "wait" | "scan" | "needle" | "done";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function Upgrade() {
   const { data: me } = useMe();
-  const { data: m, isLoading, error } = useMiner();
+  const { data: m, isLoading, error } = useMiner({ fresh: true });
   const upgrade = useMinerUpgrade();
   const [focusOn, setFocusOn] = useState<string | null>(null);
   const [blockType, setBlockType] = useState<string | null>(null);
   const [last, setLast] = useState<UpgradeOut | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [scanAt, setScanAt] = useState<string | null>(null);
-  const [costMemo, setCostMemo] = useState<CostMemo | null>(readCost);
   const skip = useRef(false);
   const resultRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -76,6 +63,11 @@ export function Upgrade() {
   }, [phase]);
   const alive = useRef(true);
   useEffect(() => {
+    try {
+      localStorage.removeItem("upgrade:last-cost"); // запомненная цена из прошлой версии больше не нужна
+    } catch {
+      /* приватный режим */
+    }
     alive.current = true;
     return () => {
       alive.current = false;
@@ -88,7 +80,6 @@ export function Upgrade() {
    */
   async function run() {
     if (!m) return;
-    const total = m.power + m.capacity + m.acceleration + m.luck + m.stability;
     skip.current = false;
     setPhase("wait");
     let res: UpgradeOut;
@@ -99,13 +90,6 @@ export function Upgrade() {
       return;
     }
     if (!alive.current) return;
-    const memo = { cost: res.cost, total };
-    try {
-      localStorage.setItem(COST_KEY, JSON.stringify(memo));
-    } catch {
-      /* приватный режим */
-    }
-    setCostMemo(memo);
     if (!prefersReducedMotion()) {
       setLast(null);
       setPhase("scan");
@@ -138,9 +122,8 @@ export function Upgrade() {
   const spinning = phase === "wait" || phase === "scan" || phase === "needle";
   const busy = upgrade.isPending || spinning;
   const animating = phase === "scan" || phase === "needle";
-  const total = m.power + m.capacity + m.acceleration + m.luck + m.stability;
-  const costExact = costMemo && costMemo.total === total ? Number(costMemo.cost) : null;
-  const costFloor = costMemo && costMemo.total < total ? Number(costMemo.cost) : null;
+  // цена с сервера (та же формула, что и списание); у старого сервера поля нет — строку не показываем
+  const cost = m.upgrade_cost != null && Number.isFinite(Number(m.upgrade_cost)) ? Number(m.upgrade_cost) : null;
 
   const chance = last && phase !== "scan" ? last.success_chance_bp / 10000 : null;
   const boost = (me?.success_boost_bp ?? 0) / 100;
@@ -239,19 +222,15 @@ export function Upgrade() {
           {spinning && <Tag tone="neon">идёт</Tag>}
         </div>
 
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="ui-label">Стоимость прогона</span>
-          {costExact != null ? (
-            <Num value={costExact.toFixed(4)} unit="TON" size="s" decode={false} />
-          ) : costFloor != null ? (
-            <span className="ui-sys">не меньше {costFloor.toFixed(4)} TON</span>
-          ) : (
-            <span className="ui-sys">станет известна после первого прогона</span>
-          )}
-        </div>
+        {cost != null && (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="ui-label">Стоимость прогона</span>
+            <Num value={cost.toFixed(4)} unit="TON" size="s" decode={false} />
+          </div>
+        )}
         <span className="ui-spill">
           <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy} onClick={run}>
-            {busy ? "Прогон…" : costExact != null ? `Запустить · ${costExact.toFixed(4)} TON` : "Запустить прогон"}
+            {busy ? "Прогон…" : cost != null ? `Запустить · ${cost.toFixed(4)} TON` : "Запустить прогон"}
           </Button>
         </span>
 

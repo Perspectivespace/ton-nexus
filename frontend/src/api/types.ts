@@ -12,6 +12,8 @@ export type MinerOut = {
   accrued_now?: string;
   session_started_at?: string | null;
   session_ends_at?: string | null;
+  /** Цена следующего прогона усиления (TON). Нет у старого сервера во время выкладки. */
+  upgrade_cost?: string;
 };
 
 export type MeOut = {

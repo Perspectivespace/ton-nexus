@@ -32,6 +32,7 @@ class MinerOut(BaseModel):
     accrued_now: Decimal
     session_started_at: str | None = None
     session_ends_at: str | None = None
+    upgrade_cost: Decimal = Field(description="Стоимость следующего прогона усиления, TON")
 
 
 class ClaimOut(BaseModel):
@@ -70,6 +71,7 @@ def _miner_out(v: miner_svc.MinerView) -> MinerOut:
         accrued_now=v.accrued_now,
         session_started_at=v.session_started_at.isoformat() if v.session_started_at else None,
         session_ends_at=v.session_ends_at.isoformat() if v.session_ends_at else None,
+        upgrade_cost=v.upgrade_cost,
     )
 
 

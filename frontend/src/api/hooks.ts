@@ -16,10 +16,12 @@ export function useMe() {
   });
 }
 
-export function useMiner() {
+export function useMiner(opts?: { fresh?: boolean }) {
   return useQuery({
     queryKey: ["miner"],
     queryFn: () => api<MinerOut>("/api/v1/miner"),
+    // fresh — перезапросить при открытии экрана (цена прогона могла измениться в настройках экономики)
+    ...(opts?.fresh ? { refetchOnMount: "always" as const } : {}),
   });
 }
 
@@ -83,7 +85,8 @@ export function useMinerUpgrade() {
         method: "POST",
         body: JSON.stringify(body ?? {}),
       }),
-    onSuccess: () => {
+    // и после ошибки: цена и уровни на сервере могли измениться
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["miner"] });
       qc.invalidateQueries({ queryKey: ["me"] });
     },
@@ -231,7 +234,10 @@ export function useEconomyUpdate() {
         method: "PUT",
         body: JSON.stringify({ value }),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["economy"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["economy"] });
+      qc.invalidateQueries({ queryKey: ["miner"] }); // цена прогона зависит от настроек
+    },
   });
 }
 
