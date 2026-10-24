@@ -321,9 +321,10 @@ a.ui-btn { text-decoration: none; }
 
 /* —— Колесо удачи (п. 8.3): прибор волнолёта — тонкий хром, шкала курса, стеклянные сектора, игла —— */
 .pw {
-  --pw-plate: rgba(6,9,16,.55); --pw-edge: rgba(190,210,255,.28); --pw-inner: rgba(0,0,0,.7);
+  --pw-edge: rgba(190,210,255,.28); --pw-inner: rgba(0,0,0,.7);
   --pw-b0: #EEF3FF; --pw-b1: #6A7390; --pw-b2: #232A3B;
-  --pw-tick: rgba(170,190,255,.30); --pw-tick-maj: rgba(210,225,255,.62); --pw-deg: rgba(200,214,245,.50); --pw-ring: rgba(43,245,255,.30);
+  --pw-tick: rgba(4,6,12,.62); --pw-tick-maj: rgba(4,6,12,.9); --pw-deg: rgba(4,6,12,.78); --pw-groove: rgba(4,6,12,.35); --pw-ring: rgba(43,245,255,.30);
+  --pw-tab: #1A2030; --pw-plate: rgba(4,6,12,.86);
   --pw-face: rgba(5,8,14,.84);
   --pw-hot: #FFE7C2; --pw-amber: #FFB547; --pw-neon: #2BF5FF; --pw-magenta: #FF2E7E; --pw-steel: rgba(180,198,255,.62); --pw-void: rgba(150,170,255,.22);
   --pw-hot-glass: rgba(255,190,90,.24); --pw-amber-glass: rgba(255,181,71,.13); --pw-neon-glass: rgba(43,245,255,.12);
@@ -331,14 +332,15 @@ a.ui-btn { text-decoration: none; }
   --pw-hot-ink: #FFF1DA; --pw-amber-ink: #FFC56E; --pw-neon-ink: #B8FCFF; --pw-magenta-ink: #FF9CC1; --pw-steel-ink: #DCE3F5; --pw-void-ink: #7A839B;
   --pw-sub: rgba(220,228,245,.55); --pw-div: rgba(170,190,255,.16);
   --pw-win: rgba(255,181,71,.20); --pw-win-edge: #FFD08A;
-  --pw-ptr: #2BF5FF; --pw-shine: rgba(230,245,255,.75);
+  --pw-ptr: #F2FEFF; --pw-ptr-edge: #2BF5FF; --pw-shine: rgba(230,245,255,.6);
   --pw-hud: rgba(200,214,245,.48); --pw-hud-v: #DDE6FA;
   position: relative; width: min(100%, 300px); aspect-ratio: 1; margin-inline: auto; contain: layout paint;
 }
 [data-theme="light"] .pw {
-  --pw-plate: rgba(255,255,255,.55); --pw-edge: rgba(10,20,50,.20); --pw-inner: rgba(10,20,50,.14);
+  --pw-edge: rgba(10,20,50,.20); --pw-inner: rgba(10,20,50,.14);
   --pw-b0: #FFFFFF; --pw-b1: #B9C2D2; --pw-b2: #7C879B;
-  --pw-tick: rgba(10,20,50,.26); --pw-tick-maj: rgba(10,20,50,.55); --pw-deg: rgba(27,35,51,.55); --pw-ring: rgba(0,126,149,.35);
+  --pw-tick: rgba(10,20,50,.35); --pw-tick-maj: rgba(10,20,50,.62); --pw-deg: rgba(10,20,50,.62); --pw-groove: rgba(10,20,50,.18); --pw-ring: rgba(0,126,149,.35);
+  --pw-tab: #E3E8F1; --pw-plate: rgba(236,240,246,.9);
   --pw-face: rgba(251,252,254,.88);
   --pw-hot: #C77E12; --pw-amber: #A35F00; --pw-neon: #007E95; --pw-magenta: #C8105A; --pw-steel: rgba(10,20,50,.40); --pw-void: rgba(10,20,50,.18);
   --pw-hot-glass: rgba(240,161,46,.20); --pw-amber-glass: rgba(163,95,0,.09); --pw-neon-glass: rgba(0,126,149,.08);
@@ -346,7 +348,7 @@ a.ui-btn { text-decoration: none; }
   --pw-hot-ink: #7A4300; --pw-amber-ink: #8A5000; --pw-neon-ink: #006A7E; --pw-magenta-ink: #B00E50; --pw-steel-ink: #1B2333; --pw-void-ink: #5A6378;
   --pw-sub: rgba(27,35,51,.58); --pw-div: rgba(10,20,50,.12);
   --pw-win: rgba(255,181,71,.24); --pw-win-edge: #A35F00;
-  --pw-ptr: #007E95; --pw-shine: rgba(255,255,255,.95);
+  --pw-ptr: #007E95; --pw-ptr-edge: #007E95; --pw-shine: rgba(255,255,255,.9);
   --pw-hud: rgba(27,35,51,.52); --pw-hud-v: #1B2333;
 }
 .pw-l, .pw-disc, .pw-shine { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -369,8 +371,12 @@ a.ui-btn { text-decoration: none; }
 .pw-win { fill: var(--pw-win); stroke: var(--pw-win-edge); stroke-width: 1.2; stroke-linejoin: round; }
 .pw.is-miss .pw-win { fill: rgba(150,170,255,.08); stroke: var(--pw-steel); }
 .pw.is-miss .pw-txt.win .pw-t1 { fill: var(--pw-steel-ink) !important; }
-.pw-ptr { stroke: var(--pw-ptr); stroke-linecap: square; }
-.pw-ptr-cap { fill: var(--pw-ptr); }
+.pw-groove { stroke: var(--pw-groove); }
+.pw-tab { fill: var(--pw-tab); stroke: var(--pw-edge); }
+.pw-ptr { fill: var(--pw-ptr); stroke: var(--pw-ptr-edge); stroke-width: 1.5; stroke-linejoin: round; }
+/* на выигрыше кристалл загорается натрием — статичная смена цвета */
+.pw.is-won:not(.is-miss) { --pw-ptr: #FFF3DE; --pw-ptr-edge: #FFB547; }
+[data-theme="light"] .pw.is-won:not(.is-miss) { --pw-ptr: #C77E12; --pw-ptr-edge: #A35F00; }
 .pw-flap { transform-box: view-box; }
 .pw-hub { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; display: grid; place-items: center; pointer-events: none; }
 /* табло по углам: моно, мелко, разрядка; значение чуть ярче подписи */
@@ -387,8 +393,8 @@ a.ui-btn { text-decoration: none; }
 .pw-shine {
   border-radius: 50%; pointer-events: none;
   background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, var(--pw-shine) 345deg, transparent 360deg);
-  -webkit-mask: radial-gradient(closest-side, transparent 92.4%, #000 93.1%, #000 94.6%, transparent 95.3%);
-  mask: radial-gradient(closest-side, transparent 92.4%, #000 93.1%, #000 94.6%, transparent 95.3%);
+  -webkit-mask: radial-gradient(closest-side, transparent 83.6%, #000 84.4%, #000 94.6%, transparent 95.4%);
+  mask: radial-gradient(closest-side, transparent 83.6%, #000 84.4%, #000 94.6%, transparent 95.4%);
   opacity: .7; animation: pw-shine 16s linear infinite;
 }
 [data-theme="light"] .pw-shine { opacity: .9; }

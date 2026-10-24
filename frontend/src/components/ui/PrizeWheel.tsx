@@ -29,13 +29,13 @@ type Props = {
 };
 
 const C = 160;
-const R = 118; // диск
+const R = 124; // диск
 const R_IN = 31; // под ступицей
-const R_T = 84; // название сектора
-const R_S = 71; // подстрочник
+const R_T = 88; // название сектора
+const R_S = 74; // подстрочник
 const TURNS = 5;
 const DUR = 3000;
-/** шкала: риска каждые 3°, средняя — 15°, крупная с цифрами — 30° */
+/** гравировка на широком ободе: риска каждые 3°, средняя — 15°, крупная с цифрами — 30° */
 const TICKS = Array.from({ length: 120 }, (_, i) => i * 3);
 const NUMS = Array.from({ length: 12 }, (_, i) => i * 30).filter((d) => d !== 0);
 
@@ -62,9 +62,9 @@ const norm = (a: number) => ((a % 360) + 360) % 360;
 
 /**
  * Колесо удачи — прибор на приборной панели волнолёта (DESIGN.md, п. 8.3).
- * Тонкий хромовый обод, градуированная шкала с цифрами курса и тонкое внутреннее кольцо — неподвижны;
+ * Широкий хромовый обод с гравированной шкалой и цифрами курса, тонкое внутреннее кольцо — неподвижны;
  * крутится только карта-диск: тёмные стеклянные сектора с волосяными неоновыми кромками по ролям цвета,
- * подписи Tektur с широкой разрядкой. Указатель — тонкая игла-шеврон. По углам — табло: вращения, сектор под иглой, курс диска, режим.
+ * подписи Tektur с широкой разрядкой. Указатель — металлический язычок с горящим кристаллом, как в PR #16. По углам — табло: вращения, сектор под иглой, курс диска, режим.
  * Вращение — только transform: одно вращение с торможением, щелчок (selection) на каждом секторе, игла отскакивает на кромках.
  * Тап — сразу к концу, «уменьшить движение» — результат без вращения.
  * Простой «жизни» — блик, медленно идущий по ободу (transform), на паузе при скрытом приложении и во время вращения.
@@ -162,7 +162,7 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
 
   return (
     <div className={cx("pw", spinning && "is-spinning", won && "is-won", won && miss && "is-miss", className)}>
-      {/* 1. корпус прибора: тонкий хромовый обод, шкала курса, внутреннее кольцо */}
+      {/* 1. корпус прибора: широкий хромовый обод с гравированной шкалой, внутреннее кольцо */}
       <svg className="pw-l" viewBox="0 0 320 320" aria-hidden>
         <defs>
           <linearGradient id={`${u}b`} x1="0" y1="0" x2="0" y2="1">
@@ -171,21 +171,24 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
             <stop offset="1" style={{ stopColor: "var(--pw-b2)" }} />
           </linearGradient>
         </defs>
-        <circle cx={C} cy={C} r="149" style={{ fill: "var(--pw-plate)" }} />
-        <circle cx={C} cy={C} r="150" fill="none" strokeWidth="2.4" stroke={`url(#${u}b)`} />
-        <circle cx={C} cy={C} r="152.2" fill="none" strokeWidth=".6" style={{ stroke: "var(--pw-edge)" }} />
-        <circle cx={C} cy={C} r="147.6" fill="none" strokeWidth=".6" style={{ stroke: "var(--pw-inner)" }} />
+        {/* утопленный колодец между ободом и диском */}
+        <circle cx={C} cy={C} r="134" style={{ fill: "var(--pw-plate)" }} />
+        {/* широкий хромовый обод 18 px — на нём сидит указатель */}
+        <circle cx={C} cy={C} r="143" fill="none" strokeWidth="18" stroke={`url(#${u}b)`} />
+        <circle cx={C} cy={C} r="152.6" fill="none" strokeWidth=".8" style={{ stroke: "var(--pw-edge)" }} />
+        <circle cx={C} cy={C} r="133.6" fill="none" strokeWidth="1.2" style={{ stroke: "var(--pw-inner)" }} />
+        <circle cx={C} cy={C} r="141.2" fill="none" strokeWidth=".5" className="pw-groove" />
         {TICKS.map((d) => {
           const maj = d % 30 === 0;
           const mid = !maj && d % 15 === 0;
-          const [x0, y0] = pt(maj ? 137 : mid ? 140 : 142.5, d);
-          const [x1, y1] = pt(145.5, d);
+          const [x0, y0] = pt(maj ? 142.4 : mid ? 145 : 147, d);
+          const [x1, y1] = pt(151.2, d);
           return (
-            <line key={d} x1={x0} y1={y0} x2={x1} y2={y1} strokeWidth={maj ? 0.9 : 0.55} className={maj ? "pw-tk maj" : "pw-tk"} />
+            <line key={d} x1={x0} y1={y0} x2={x1} y2={y1} strokeWidth={maj ? 1.3 : mid ? 0.9 : 0.6} className={maj ? "pw-tk maj" : "pw-tk"} />
           );
         })}
         {NUMS.map((d) => {
-          const [x, y] = pt(130.5, d);
+          const [x, y] = pt(137.6, d);
           return (
             <text key={d} x={x} y={y} textAnchor="middle" dominantBaseline="central" className="pw-deg" transform={`rotate(${d} ${x} ${y})`}>
               {String(d / 10).padStart(2, "0")}
@@ -272,8 +275,8 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
             <stop offset="0" stopColor="#fff" stopOpacity=".07" />
             <stop offset="1" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
-          <filter id={`${u}p`} x="-80%" y="-20%" width="260%" height="140%">
-            <feGaussianBlur stdDeviation="1.6" result="b" />
+          <filter id={`${u}p`} x="-60%" y="-30%" width="220%" height="160%">
+            <feGaussianBlur stdDeviation="3" result="b" />
             <feMerge>
               <feMergeNode in="b" />
               <feMergeNode in="SourceGraphic" />
@@ -284,13 +287,11 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
         <circle cx={C} cy={C} r="26" style={{ fill: "var(--pw-face)" }} />
         <circle cx={C} cy={C} r="26" fill="none" strokeWidth="1.6" stroke={`url(#${u}b)`} />
         <circle cx={C} cy={C} r="29.5" fill="none" strokeWidth=".5" className="pw-ring" />
-        <g ref={flap} className="pw-flap" style={{ transformOrigin: `${C}px 10px` }}>
-          {/* метка на ободе и игла-шеврон: тонкие линии циана */}
-          <path d={`M${C - 5} 5 L${C + 5} 5 L${C} 12 Z`} className="pw-ptr-cap" />
-          <g className="pw-ptr" filter={`url(#${u}p)`}>
-            <path d={`M${C - 7} 30 L${C} 41 L${C + 7} 30`} fill="none" strokeWidth="1.4" strokeLinejoin="miter" />
-            <path d={`M${C} 13 L${C} 50`} fill="none" strokeWidth="1" />
-          </g>
+        <g ref={flap} className="pw-flap" style={{ transformOrigin: `${C}px 8px` }}>
+          {/* указатель из PR #16: металлический язычок на ободе с горящим кристаллом (циан; на выигрыше — натрий) */}
+          <path d={`M${C - 11} 4 L${C + 11} 4 L${C + 11} 12 L${C} 34 L${C - 11} 12 Z`} className="pw-tab" strokeWidth="1" />
+          <path className="pw-ptr" d={`M${C - 5} 9 L${C + 5} 9 L${C} 27 Z`} filter={`url(#${u}p)`} />
+          <circle cx={C} cy="7" r="2.2" style={{ fill: "var(--pw-b0)" }} />
         </g>
       </svg>
       <span className="pw-hub" aria-hidden>
