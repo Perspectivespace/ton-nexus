@@ -65,6 +65,15 @@ export function Upgrade() {
   const [scanAt, setScanAt] = useState<string | null>(null);
   const [costMemo, setCostMemo] = useState<CostMemo | null>(readCost);
   const skip = useRef(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (phase !== "done") return;
+    const id = window.setTimeout(
+      () => resultRef.current?.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" }),
+      80,
+    );
+    return () => window.clearTimeout(id);
+  }, [phase]);
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -157,7 +166,7 @@ export function Upgrade() {
       <Panel level="hero" cut="l" lift="l2" className="px-4 pb-0 pt-4">
         <DialGauge chance={chance} className={cx(phase === "needle" && "is-run")} />
         <div className="-mt-2 flex flex-col items-center text-center">
-          <Num value={chance != null ? Math.round(chance * 100) : "—"} decode={phase !== "needle"} unit={chance != null ? "%" : undefined} size="xl" glow={chance != null} className="ui-shade" />
+          <Num value={chance != null ? Math.round(chance * 100) : "—"} decode={false} unit={chance != null ? "%" : undefined} size="xl" glow={chance != null} className="ui-shade" />
           <p className="ui-label ui-shade mt-1">
             {chance != null
               ? `Успех ${Math.round(chance * 100)}% / Сгорание ${100 - Math.round(chance * 100)}%`
@@ -214,7 +223,7 @@ export function Upgrade() {
             );
           })}
         </div>
-        <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">Тап: Фокус → Запрет → сброс. Тип выбирает колесо.</p>
+        <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">Тап: Фокус → Запрет → сброс. Параметр выбирает прогон.</p>
       </Panel>
 
       <Panel className="space-y-4 p-5">
@@ -261,6 +270,8 @@ export function Upgrade() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            ref={resultRef}
+            className="scroll-mb-28"
           >
             <Panel danger={!last.success} className={cx("p-5", phase === "done" && !last.success && "ui-burn")}>
               <div className="flex items-center justify-between">

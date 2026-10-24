@@ -550,6 +550,7 @@ html.app-hidden .rx-ring { animation-play-state: paused !important; }
 
 /* Момент C — прогон усиления (п. 13 C) */
 .ui-stat.scan { background: linear-gradient(180deg, var(--neon-core), var(--neon) 40%, rgba(43,245,255,.5)); }
+button.ui-stat.scan:disabled { opacity: 1; }
 .ui-stat.scan .v { color: var(--neon-core); }
 [data-theme="light"] .ui-stat.scan .v { color: var(--neon); }
 .dial.is-run .dl-needle { transition: transform .8s cubic-bezier(.3, 1.45, .5, 1); }
