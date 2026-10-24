@@ -447,3 +447,23 @@ html.app-hidden .rx-ring { animation-play-state: paused !important; }
 [data-theme="light"] .rx-p { display: none; }
 [data-theme="light"] .rx-plate b { color: var(--neon); text-shadow: none; }
 [data-theme="light"] .rx.is-ready .rx-plate b { color: var(--amber); }
+
+/* —— Герой-объект: циферблат шанса (п. 8.2) —— */
+.dial {
+  --dl-m0: #5A6380; --dl-m1: #1C2230; --dl-m2: #0A0C12; --dl-outer: rgba(255,255,255,.10); --dl-inner: rgba(0,0,0,.85); --dl-face: rgba(4,6,10,.55);
+  --dl-track: rgba(150,170,255,.08); --dl-burn: rgba(255,46,126,.16); --dl-c0: #0E9FB0; --dl-c1: #2BF5FF; --dl-c2: #D2FDFF;
+  --dl-tick: rgba(150,170,255,.3); --dl-tick-on: #7FF8FF; --dl-h0: #9AA4BA; --dl-h1: #2A3142; --dl-h2: #0B0E15; --dl-n0: #E6EBF5; --dl-n1: #9AA4BA;
+  width: 100%; max-width: 320px; display: block; margin: 0 auto;
+}
+.dial .dl-lab { font: 500 11px "JetBrains Mono", monospace; fill: var(--text-3); }
+.dial .dl-needle { transition: transform .7s var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .dial .dl-needle { transition: none; } }
+.dial.is-unknown .dl-tip { opacity: .35; }
+[data-theme="light"] .dial {
+  --dl-m0: #FFFFFF; --dl-m1: #C9D0DC; --dl-m2: #8C95A6; --dl-outer: rgba(10,20,50,.14); --dl-inner: rgba(10,20,50,.2); --dl-face: rgba(255,255,255,.7);
+  --dl-track: rgba(10,20,50,.07); --dl-burn: rgba(200,16,90,.12); --dl-c0: #0B9CB7; --dl-c1: #007E95; --dl-c2: #006B7F;
+  --dl-tick: rgba(10,20,50,.25); --dl-tick-on: #007E95; --dl-h0: #FFFFFF; --dl-h1: #C9D0DC; --dl-h2: #8C95A6; --dl-n0: #2A3142; --dl-n1: #4B5367;
+}
+[data-theme="light"] .dial .dl-ok, [data-theme="light"] .dial .dl-tip { filter: none; }
+[data-theme="light"] .dial .dl-shadow { opacity: .18; }
+[data-theme="light"] .dial .dl-glass { display: none; }

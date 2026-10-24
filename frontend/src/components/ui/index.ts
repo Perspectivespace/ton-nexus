@@ -13,3 +13,4 @@ export { SyncLine, Skeleton, SkeletonCard, EmptyState, ErrorState } from "./Stat
 export { Num, Bar, useDecode } from "./Num";
 export { cx, usePressed } from "./press";
 export { Reactor, type ReactorState } from "./Reactor";
+export { DialGauge } from "./DialGauge";

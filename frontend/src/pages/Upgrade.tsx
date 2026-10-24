@@ -8,8 +8,14 @@ import {
   LoadingPanel,
   ErrorPanel,
   Readout,
+  Panel,
+  Scrim,
+  Num,
+  Tag,
+  Button,
+  DialGauge,
 } from "@/components/ui";
-import { IconReactor, IconSpark } from "@/components/icons";
+import { IconSpark } from "@/components/icons";
 
 const TYPE_RU: Record<string, string> = {
   power: "Мощность",
@@ -65,30 +71,43 @@ export function Upgrade() {
 
   const busy = upgrade.isPending || spinning;
 
+  const chance = last ? last.success_chance_bp / 10000 : null;
+  const boost = (me?.success_boost_bp ?? 0) / 100;
+
   return (
     <div className="space-y-5">
       <ScreenHeader
         eyebrow="Модуль"
         title="Усиление"
         action={
-          <Link
-            to="/miner"
-            className="rounded-xl border border-[var(--line)] px-3 py-2 text-xs text-[var(--text-dim)] no-underline"
-          >
+          <Link to="/miner" className="ui-btn secondary sm no-underline">
             ← Реактор
           </Link>
         }
       />
 
-      <div className="panel panel-glow grid grid-cols-3 gap-3 p-4">
-        <Readout label="Баланс" value={me ? Number(me.balance).toFixed(4) : "—"} unit="TON" />
-        <Readout label="Фокус" value={String(me?.focus_tokens ?? 0)} hint="вес типа ×" />
-        <Readout label="Запрет" value={String(me?.block_tokens ?? 0)} hint="блок типа" />
-      </div>
+      {/* Герой: циферблат шанса (п. 8.2) */}
+      <Panel level="hero" cut="l" lift="l2" className="px-4 pb-0 pt-4">
+        <DialGauge chance={chance} />
+        <div className="-mt-2 flex flex-col items-center text-center">
+          <Num value={chance != null ? Math.round(chance * 100) : "—"} unit={chance != null ? "%" : undefined} size="xl" glow={chance != null} className="ui-shade" />
+          <p className="ui-label ui-shade mt-1">
+            {chance != null
+              ? `Успех ${Math.round(chance * 100)}% / Сгорание ${100 - Math.round(chance * 100)}%`
+              : "Шанс покажет прогон"}
+          </p>
+          {boost > 0 && <p className="ui-sys mt-1">бонус к шансу +{boost.toFixed(1)}%</p>}
+        </div>
+        <Scrim className="relative -mx-4 mt-4 grid grid-cols-3 gap-3 px-4 pb-4 pt-3">
+          <Readout label="Баланс" value={me ? Number(me.balance).toFixed(4) : "—"} unit="TON" />
+          <Readout label="Фокус" value={String(me?.focus_tokens ?? 0)} hint="вес типа ×" />
+          <Readout label="Запрет" value={String(me?.block_tokens ?? 0)} hint="блок типа" />
+        </Scrim>
+      </Panel>
 
-      <div className="panel p-4">
+      <Panel className="p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="eyebrow">Стойка параметров</p>
+          <p className="ui-label">Стойка параметров</p>
           <StatusPill tone={busy ? "live" : "neutral"}>
             {busy ? "вращение" : "двойное колесо"}
           </StatusPill>
@@ -125,101 +144,61 @@ export function Upgrade() {
             );
           })}
         </div>
-        <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-dim)]">
-          Тап: Фокус → Запрет → сброс. Тип выбирает колесо.
-        </p>
-      </div>
+        <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">Тап: Фокус → Запрет → сброс. Тип выбирает колесо.</p>
+      </Panel>
 
-      <div className="panel panel-glow space-y-4 p-5">
-        <div className="flex items-center gap-3">
-          <motion.div
-            animate={spinning ? { rotate: 360 } : { rotate: 0 }}
-            transition={
-              spinning
-                ? { repeat: Infinity, duration: 0.85, ease: "linear" }
-                : { duration: 0.3 }
-            }
-            className="rounded-2xl border border-[var(--line)] bg-[var(--accent-soft)] p-3 text-[var(--accent)]"
-          >
-            <IconReactor size={22} />
-          </motion.div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">{spinning ? spinLabel : "Прогон усиления"}</p>
-            <p className="text-[12px] text-[var(--text-dim)]">
-              1) тип · 2) шанс · провал = ставка сгорает
-            </p>
+      <Panel className="space-y-4 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="ui-h">{spinning ? spinLabel : "Прогон усиления"}</p>
+            <p className="ui-sec !text-[12px]">1) тип · 2) шанс · провал = ставка сгорает</p>
           </div>
+          {spinning && <Tag tone="neon">идёт</Tag>}
         </div>
 
-        <AnimatePresence>
-          {spinning && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="relative h-2 overflow-hidden rounded-full bg-[var(--line)]">
-                <motion.div
-                  className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
-                  animate={{ left: ["-33%", "100%"] }}
-                  transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }}
-                />
-              </div>
-              <p className="mt-2 text-center text-[11px] text-[var(--text-dim)]">
-                Считывание вероятностей…
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <button type="button" className="btn-primary w-full" disabled={busy} onClick={run}>
-          <IconSpark size={16} />
-          {busy ? "Прокрутка…" : "Запустить колесо"}
-        </button>
+        <span className="ui-spill">
+          <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy} onClick={run}>
+            {busy ? "Прокрутка…" : "Запустить колесо"}
+          </Button>
+        </span>
 
         {upgrade.isError && (
           <ErrorPanel
             message={upgrade.error instanceof Error ? upgrade.error.message : "Отказ модуля"}
           />
         )}
-      </div>
+      </Panel>
 
       <AnimatePresence mode="wait">
         {last && !spinning && (
           <motion.div
             key={`${last.upgrade_type}-${last.success}-${last.cost}`}
-            initial={{ opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className={`panel p-5 ${
-              last.success ? "border-[var(--success)]/30 panel-glow" : "border-[var(--danger)]/25"
-            }`}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="flex items-center justify-between">
-              <p className="eyebrow">{last.success ? "Lock-in" : "Burn"}</p>
-              <StatusPill tone={last.success ? "ok" : "danger"}>
-                {last.success ? "успех" : "сгорание"}
-              </StatusPill>
-            </div>
-            <p className="mt-2 text-lg font-semibold">
-              {TYPE_RU[last.upgrade_type] || last.upgrade_type}
-              {last.success && last.new_level != null && (
-                <span className="mono text-[var(--text-dim)]"> → {last.new_level}</span>
+            <Panel danger={!last.success} className="p-5">
+              <div className="flex items-center justify-between">
+                <p className="ui-label">{last.success ? "Закреплено" : "Сгорание"}</p>
+                <StatusPill tone={last.success ? "ok" : "danger"}>
+                  {last.success ? "успех" : "сгорание"}
+                </StatusPill>
+              </div>
+              <p className="ui-h mt-2 !text-[18px]">
+                {TYPE_RU[last.upgrade_type] || last.upgrade_type}
+                {last.success && last.new_level != null && (
+                  <span className="ui-num text-[var(--text-2)]"> → {last.new_level}</span>
+                )}
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Readout label="Стоимость" value={Number(last.cost).toFixed(4)} unit="TON" />
+                <Readout label="Шанс" value={`${(last.success_chance_bp / 100).toFixed(1)}`} unit="%" />
+              </div>
+              {last.burned && !last.success && (
+                <p className="ui-sec mt-3 !text-[12px] !text-[var(--magenta)]">Сумма списана без возврата.</p>
               )}
-            </p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Readout label="Стоимость" value={Number(last.cost).toFixed(4)} unit="TON" />
-              <Readout
-                label="Шанс"
-                value={`${(last.success_chance_bp / 100).toFixed(1)}`}
-                unit="%"
-              />
-            </div>
-            {last.burned && !last.success && (
-              <p className="mt-3 text-[12px] text-[var(--danger)]">Сумма списана без возврата.</p>
-            )}
+            </Panel>
           </motion.div>
         )}
       </AnimatePresence>
