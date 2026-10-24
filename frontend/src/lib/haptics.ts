@@ -6,7 +6,7 @@ import { WebApp } from "./telegram";
  * Вибрация остаётся при «уменьшить движение».
  *
  *   haptic.tap()        — тап по главной кнопке (impact light)
- *   haptic.select()     — вкладка, выбор, шаг прогона
+ *   haptic.select()     — вкладка, выбор, шаг попытки усиления
  *   haptic.collect()    — «Собрать»: medium сейчас, success — вызвать haptic.success() по ответу сервера
  *   haptic.success() / haptic.error() / haptic.warning()
  *   haptic.sheet()      — открытие шторки (impact soft)

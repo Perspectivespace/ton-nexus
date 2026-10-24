@@ -155,7 +155,7 @@ export function Upgrade() {
               ? `Успех ${Math.round(chance * 100)}% / Сгорание ${100 - Math.round(chance * 100)}%`
               : phase === "scan"
                 ? "Выбор параметра…"
-                : "Шанс покажет прогон"}
+                : "Шанс покажет попытка"}
           </p>
           {boost > 0 && <p className="ui-sys mt-1">бонус к шансу +{boost.toFixed(1)}%</p>}
         </div>
@@ -170,7 +170,7 @@ export function Upgrade() {
         <div className="mb-3 flex items-center justify-between">
           <p className="ui-label">Стойка параметров</p>
           <StatusPill tone={busy ? "live" : "neutral"}>
-            {busy ? "прогон" : "готов"}
+            {busy ? "попытка" : "готов"}
           </StatusPill>
         </div>
         <div className="grid grid-cols-5 gap-2">
@@ -206,14 +206,14 @@ export function Upgrade() {
             );
           })}
         </div>
-        <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">Тап: Фокус → Запрет → сброс. Параметр выбирает прогон.</p>
+        <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">Тап: Фокус → Запрет → сброс. Параметр выбирается при попытке.</p>
       </Panel>
 
       <Panel className="space-y-4 p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="ui-h">
-              {phase === "wait" ? "Связь с модулем…" : phase === "scan" ? "Выбор параметра" : phase === "needle" ? "Бросок шанса" : "Прогон усиления"}
+              {phase === "wait" ? "Связь с модулем…" : phase === "scan" ? "Выбор параметра" : phase === "needle" ? "Бросок шанса" : "Попытка усиления"}
             </p>
             <p className="ui-sec !text-[12px]">
               {animating ? "Тап по экрану — сразу к результату" : "1) параметр · 2) шанс · провал — стоимость сгорает"}
@@ -224,13 +224,13 @@ export function Upgrade() {
 
         {cost != null && (
           <div className="flex items-baseline justify-between gap-3">
-            <span className="ui-label">Стоимость прогона</span>
+            <span className="ui-label">Стоимость попытки</span>
             <Num value={cost.toFixed(4)} unit="TON" size="s" decode={false} />
           </div>
         )}
         <span className="ui-spill">
           <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy} onClick={run}>
-            {busy ? "Прогон…" : cost != null ? `Запустить · ${cost.toFixed(4)} TON` : "Запустить прогон"}
+            {busy ? "Усиление…" : cost != null ? `Усилить · ${cost.toFixed(4)} TON` : "Усилить"}
           </Button>
         </span>
 

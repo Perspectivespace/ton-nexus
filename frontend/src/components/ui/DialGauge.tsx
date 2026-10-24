@@ -30,7 +30,7 @@ export function DialGauge({ chance, className }: Props) {
   const pct = known ? Math.max(0, Math.min(1, chance as number)) : 0;
   const rot = pct * 180 - 90;
   return (
-    <svg className={cx("dial", !known && "is-unknown", className)} viewBox="0 0 320 186" role="img" aria-label={known ? `Шанс успеха ${Math.round(pct * 100)}%` : "Шанс успеха станет известен после прогона"}>
+    <svg className={cx("dial", !known && "is-unknown", className)} viewBox="0 0 320 186" role="img" aria-label={known ? `Шанс успеха ${Math.round(pct * 100)}%` : "Шанс успеха станет известен после попытки"}>
       <defs>
         <linearGradient id={`${u}m`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" style={{ stopColor: "var(--dl-m0)" }} />

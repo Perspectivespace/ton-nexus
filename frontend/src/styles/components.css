@@ -548,7 +548,7 @@ html.app-hidden .rx-ring { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) { .ui-gain { animation: ui-gain-r 1.8s both; } }
 @keyframes ui-gain-r { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
-/* Момент C — прогон усиления (п. 13 C) */
+/* Момент C — попытка усиления (п. 13 C) */
 .ui-stat.scan { background: linear-gradient(180deg, var(--neon-core), var(--neon) 40%, rgba(43,245,255,.5)); }
 button.ui-stat.scan:disabled { opacity: 1; }
 .ui-stat.scan .v { color: var(--neon-core); }
