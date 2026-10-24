@@ -292,3 +292,6 @@ html.app-hidden .ui-sk::after { animation-play-state: paused; }
   .ui-btn.hold[data-holding] > .charge { transition: transform var(--hold-ms, 800ms) linear; }
 }
 @keyframes ui-fade { from { opacity: 0; } }
+
+.ui-gauge-arc { transition: stroke-dashoffset .8s var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .ui-gauge-arc { transition: none; } }
