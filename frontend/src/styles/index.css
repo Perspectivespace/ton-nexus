@@ -117,7 +117,6 @@ body {
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: var(--bevel-1);
-  opacity: 0.94;
 }
 
 /* герой: одна на экран, циановый перелив сверху-слева, кромка ярче */
@@ -126,7 +125,7 @@ body {
   background:
     radial-gradient(90% 60% at 18% 0%, var(--neon-soft), transparent 70%),
     var(--toplight), var(--grain),
-    linear-gradient(180deg, rgba(14, 18, 30, 0.62), rgba(8, 10, 17, 0.84));
+    linear-gradient(180deg, rgba(14, 18, 30, 0.78), rgba(8, 10, 17, 0.92));
   border: 1px solid var(--line-strong);
   border-top-color: var(--neon-dim);
   border-radius: var(--radius);

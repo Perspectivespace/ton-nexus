@@ -16,8 +16,10 @@
   --tile-muted: linear-gradient(180deg, #20263A, #151927);
   --sheet-scrim: rgba(2, 3, 6, .72);
   --text-shade: 0 1px 2px rgba(0, 0, 0, .9);
-  --see-fill: linear-gradient(180deg, rgba(12, 15, 25, .66), rgba(8, 10, 17, .34) 38%, rgba(8, 10, 17, .38) 62%, rgba(8, 10, 17, .7));
-  --scrim-panel: linear-gradient(180deg, rgba(5, 6, 11, .0), rgba(5, 6, 11, .55) 40%, rgba(5, 6, 11, .7));
+  /* «окно в город» (hero.see): плотное ядро там, где лежат цифры и кольцо, город — только полосой сверху и у краёв */
+  --see-core: radial-gradient(82% 64% at 50% 60%, rgba(6, 8, 14, .66), rgba(6, 8, 14, .36) 62%, rgba(6, 8, 14, 0) 100%);
+  --see-fill: linear-gradient(180deg, rgba(12, 15, 25, .48), rgba(8, 10, 17, .7) 30%, rgba(8, 10, 17, .8) 70%, rgba(8, 10, 17, .88));
+  --scrim-panel: linear-gradient(180deg, rgba(5, 6, 11, .0), rgba(5, 6, 11, .62) 30%, rgba(5, 6, 11, .8));
 }
 [data-theme="light"] {
   --metal: linear-gradient(180deg, #FFFFFF, #EEF1F6);
@@ -29,6 +31,7 @@
   --text-shade: none;
   --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .86), rgba(246, 248, 251, .62) 40%, rgba(246, 248, 251, .62) 62%, rgba(255, 255, 255, .9));
   --scrim-panel: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .7) 40%, rgba(255, 255, 255, .85));
+  --see-core: linear-gradient(transparent, transparent);
 }
 
 /* —— Форма: срезанный угол + кромка 1 px + материал (п. 3.1–3.4) —— */
@@ -46,9 +49,9 @@
 .ui-cut.e0::before { background: var(--fill); }
 .ui-cut.hero {
   --edge: linear-gradient(160deg, var(--neon) 0%, rgba(43,245,255,.5) 16%, rgba(190,210,255,.18) 42%, rgba(0,0,0,.8) 100%);
-  --fill: radial-gradient(60% 22% at 30% 17%, rgba(43,245,255,.10), transparent 70%), var(--toplight), var(--grain), linear-gradient(180deg, rgba(14,18,30,.60), rgba(8,10,17,.84));
+  --fill: radial-gradient(60% 22% at 30% 17%, rgba(43,245,255,.10), transparent 70%), var(--toplight), var(--grain), linear-gradient(180deg, rgba(14,18,30,.78), rgba(8,10,17,.92));
 }
-.ui-cut.hero.see { --fill: radial-gradient(48% 34% at 50% 60%, rgba(43,245,255,.12), transparent 72%), var(--grain), var(--see-fill); }
+.ui-cut.hero.see { --fill: radial-gradient(48% 34% at 50% 60%, rgba(43,245,255,.08), transparent 72%), var(--grain), var(--see-core), var(--see-fill); }
 .ui-cut.hero::after {
   content: ""; position: absolute; inset: 1px; z-index: -1; pointer-events: none;
   background: var(--scan), var(--grid); background-size: auto, 22px 22px, 22px 22px;
