@@ -15,6 +15,7 @@ import {
   EmptyPanel,
   Readout,
   Field,
+  useToast,
 } from "@/components/ui";
 
 function formatDate(iso: string) {
@@ -41,6 +42,7 @@ function WithdrawCard({
   const review = useReviewWithdraw();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
 
   async function copyWallet() {
@@ -61,9 +63,10 @@ function WithdrawCard({
         approve,
         note: note.trim() || null,
       });
+      toast({ kind: approve ? "ok" : "info", title: approve ? "Вывод одобрен" : "Вывод отклонен", sub: `#${item.id}` });
       onDone();
-    } catch {
-      /* */
+    } catch (e) {
+      toast({ kind: "danger", title: "Решение не сохранено", sub: e instanceof Error ? e.message : "Ошибка" });
     } finally {
       setBusy(null);
     }
