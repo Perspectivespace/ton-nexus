@@ -1,19 +1,16 @@
-import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   useMe,
   useEconomySettings,
-  useEconomyUpdate,
   usePromoCreate,
   useOwnerStats,
   usePromoList,
-  type EconomySetting,
 } from "@/api/hooks";
 import { DeployPanel } from "@/components/DeployPanel";
-import { SettingEditor } from "@/components/SettingEditor";
-import { SETTINGS, summarize } from "@/lib/settingsMeta";
+import { OwnerShell } from "@/components/owner/OwnerShell";
+import { SettingsList } from "@/components/owner/SettingsList";
 import {
-  ScreenHeader,
   StatusPill,
   LoadingPanel,
   ErrorPanel,
@@ -25,85 +22,7 @@ import {
   ListRow,
   Tabs,
   Field,
-  useToast,
 } from "@/components/ui";
-import { IconBack } from "@/components/icons";
-
-const GROUP_RU: Record<string, string> = {
-  miner: "Майнер",
-  miner_upgrade: "Усиление",
-  tasks: "Задания",
-  withdraw: "Вывод",
-  growth: "Рост",
-  daily: "Ежедневно",
-  progression: "Уровни",
-  roulette: "Рулетка",
-  custom: "Прочее",
-};
-
-function SettingRow({
-  item,
-  onSaved,
-}: {
-  item: EconomySetting;
-  onSaved: () => void;
-}) {
-  const update = useEconomyUpdate();
-  const [editing, setEditing] = useState(false);
-  const meta = SETTINGS[item.key];
-  const title = meta?.title || item.label || item.key;
-  const subtitle = meta?.short || item.description;
-
-  const toast = useToast();
-
-  async function save(value: unknown) {
-    try {
-      await update.mutateAsync({ key: item.key, value });
-    } catch (e) {
-      // ошибку сервера показывает только тост; редактор остаётся открытым с введёнными значениями
-      toast({ kind: "danger", title: "Настройка не сохранена", sub: e instanceof Error ? e.message : "Ошибка" });
-      return;
-    }
-    onSaved();
-    setEditing(false);
-    toast({ kind: "ok", title: "Настройка сохранена", sub: title });
-  }
-
-  return (
-    <Panel className="overflow-hidden">
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="ui-h !text-[14px] !leading-[20px]">{title}</p>
-            {subtitle && <p className="ui-sec mt-0.5">{subtitle}</p>}
-          </div>
-          {!editing && (
-            <Button kind="secondary" size="sm" className="shrink-0" onClick={() => setEditing(true)}>
-              Изменить
-            </Button>
-          )}
-        </div>
-        {!editing && (
-          <p className="ui-num s-m mt-3 block">
-            {summarize(item.key, item.value)}
-          </p>
-        )}
-      </div>
-      {editing && (
-        <div className="space-y-4 border-t border-[var(--line)] p-4">
-          {meta?.about && <p className="ui-sec border-l-2 border-[var(--line-strong)] pl-3">{meta.about}</p>}
-          <SettingEditor
-            settingKey={item.key}
-            value={item.value}
-            saving={update.isPending}
-            onSave={save}
-            onCancel={() => setEditing(false)}
-          />
-        </div>
-      )}
-    </Panel>
-  );
-}
 
 function PromoCreatePanel() {
   const create = usePromoCreate();
@@ -145,11 +64,17 @@ function PromoCreatePanel() {
       <div className="grid grid-cols-3 gap-2">
         <Field label="TON" unit="TON">
           <input
- className="ui-input" value={ton} onChange={(e) => setTon(e.target.value)} />
+            className="ui-input"
+            value={ton}
+            onChange={(e) => setTon(e.target.value)}
+          />
         </Field>
         <Field label="XP" unit="XP">
           <input
- className="ui-input" value={xp} onChange={(e) => setXp(e.target.value)} />
+            className="ui-input"
+            value={xp}
+            onChange={(e) => setXp(e.target.value)}
+          />
         </Field>
         <Field label="Фокус">
           <input
@@ -167,7 +92,12 @@ function PromoCreatePanel() {
           placeholder="100"
         />
       </Field>
-      <Button kind="primary" block disabled={create.isPending || code.length < 3} onClick={submit}>
+      <Button
+        kind="primary"
+        block
+        disabled={create.isPending || code.length < 3}
+        onClick={submit}
+      >
         {create.isPending ? "…" : "Создать промокод"}
       </Button>
       {msg && <p className="ui-sec">{msg}</p>}
@@ -181,8 +111,16 @@ function OverviewTab() {
   if (error) return <ErrorPanel message="Не удалось загрузить статистику" />;
   return (
     <div className="grid grid-cols-2 gap-3">
-      <StatTile label="Пользователи" value={data?.total_users ?? 0} className="!h-[88px]" />
-      <StatTile label="Сегодня" value={data?.registrations_today ?? 0} className="!h-[88px]" />
+      <StatTile
+        label="Пользователи"
+        value={data?.total_users ?? 0}
+        className="!h-[88px]"
+      />
+      <StatTile
+        label="Сегодня"
+        value={data?.registrations_today ?? 0}
+        className="!h-[88px]"
+      />
     </div>
   );
 }
@@ -204,7 +142,9 @@ function PromosTab() {
               title={<span className="ui-num s-m">{p.code}</span>}
               sub={`${p.reward_ton} TON · ${p.reward_xp} XP · ${p.used_count}${p.max_uses != null ? ` / ${p.max_uses}` : ""}`}
               trailing={
-                <StatusPill tone={p.is_active ? "ok" : "neutral"}>{p.is_active ? "активен" : "выкл."}</StatusPill>
+                <StatusPill tone={p.is_active ? "ok" : "neutral"}>
+                  {p.is_active ? "активен" : "выкл."}
+                </StatusPill>
               }
             />
           ))}
@@ -221,7 +161,7 @@ const TABS = ["overview", "promos", "economy", "deploy"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_RU: Record<Tab, string> = {
   overview: "Обзор",
-  promos: "Промокоды",
+  promos: "Промо",
   economy: "Экономика",
   deploy: "Деплой",
 };
@@ -229,65 +169,52 @@ const TAB_RU: Record<Tab, string> = {
 export function Owner() {
   const { data: me, isLoading: meLoading } = useMe();
   const isOwner = !!me?.is_owner;
-  const { data, isLoading, error, refetch, isFetching } = useEconomySettings(isOwner);
+  const { data, isLoading, error, refetch, isFetching } =
+    useEconomySettings(isOwner);
   const [params] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(params.get("tab") === "deploy" ? "deploy" : "overview");
-  const [filter, setFilter] = useState<string>("all");
-
-  const groups = useMemo(() => {
-    const map = new Map<string, EconomySetting[]>();
-    for (const s of data || []) {
-      const g = s.group || "custom";
-      if (!map.has(g)) map.set(g, []);
-      map.get(g)!.push(s);
-    }
-    return map;
-  }, [data]);
-
-  const groupKeys = useMemo(() => ["all", ...Array.from(groups.keys())], [groups]);
+  const asked = params.get("tab") as Tab | null;
+  const [tab, setTab] = useState<Tab>(
+    asked && TABS.includes(asked) ? asked : "overview",
+  );
 
   if (meLoading) return <LoadingPanel label="Проверка доступа…" />;
   if (!isOwner && me?.can_deploy) {
     return (
-      <div className="space-y-5">
-        <ScreenHeader eyebrow="Деплой" title="Сервер" action={<StatusPill tone="ok">в сети</StatusPill>} />
+      <OwnerShell
+        eyebrow="Деплой"
+        title="Сервер"
+        status={<StatusPill tone="ok">в сети</StatusPill>}
+      >
         <DeployPanel />
-      </div>
+      </OwnerShell>
     );
   }
   if (!isOwner) {
     return (
-      <div className="space-y-4">
-        <ScreenHeader eyebrow="Кабинет" title="Владелец" />
-        <ErrorPanel message="Доступ только у владельца (TELEGRAM_OWNER_IDS)." />
-        <Link to="/" className="ui-btn secondary sm self-start no-underline">
-          <IconBack size={16} /> Контур
-        </Link>
-      </div>
+      <OwnerShell title="Нет доступа">
+        <ErrorPanel message="Кабинет открыт только владельцу." />
+      </OwnerShell>
     );
   }
 
-  const visible =
-    filter === "all" ? data : data?.filter((s) => (s.group || "custom") === filter);
-
   return (
-    <div className="space-y-5">
-      <ScreenHeader
-        eyebrow="Владелец"
-        title="Кабинет"
-        action={
-          <StatusPill tone={isFetching ? "live" : "ok"}>
-            {isFetching ? "синхр." : "в сети"}
-          </StatusPill>
-        }
-      />
-
-      <Tabs
-        label="Разделы кабинета"
-        items={TABS.map((t) => ({ value: t, label: TAB_RU[t] }))}
-        value={tab}
-        onChange={setTab}
-      />
+    <OwnerShell
+      title="Кабинет"
+      status={
+        <StatusPill tone={isFetching ? "live" : "ok"}>
+          {isFetching ? "синхр." : "в сети"}
+        </StatusPill>
+      }
+    >
+      <div className="ow-tabs">
+        <Tabs
+          kind="blocks"
+          label="Разделы кабинета"
+          items={TABS.map((t) => ({ value: t, label: TAB_RU[t] }))}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
 
       {tab === "overview" && <OverviewTab />}
       {tab === "promos" && <PromosTab />}
@@ -295,31 +222,14 @@ export function Owner() {
       {tab === "economy" && (
         <>
           {isLoading && <LoadingPanel label="Загрузка настроек…" />}
-          {error && <ErrorPanel message="Не удалось загрузить настройки экономики" />}
+          {error && (
+            <ErrorPanel message="Не удалось загрузить настройки экономики" />
+          )}
           {!isLoading && !error && data && (
-            <>
-              <Tabs
-                kind="line"
-                label="Группы настроек"
-                items={groupKeys.map((g) => ({ value: g, label: g === "all" ? "Все" : GROUP_RU[g] || g }))}
-                value={filter}
-                onChange={setFilter}
-              />
-              <ul className="space-y-3">
-                {visible?.map((item) => (
-                  <li key={item.key}>
-                    <SettingRow item={item} onSaved={() => refetch()} />
-                  </li>
-                ))}
-              </ul>
-            </>
+            <SettingsList items={data} onSaved={() => refetch()} />
           )}
         </>
       )}
-
-      <Link to="/" className="ui-btn secondary sm self-start no-underline">
-        <IconBack size={16} /> Контур
-      </Link>
-    </div>
+    </OwnerShell>
   );
 }
