@@ -169,7 +169,8 @@ function JobCard({ id, onClose }: { id: string; onClose?: () => void }) {
 const ERR_RU: Record<string, string> = {
   "user not found": "Пользователь ещё не открывал Mini App",
   "cannot revoke the last deployer": "Последнего деплойера снять нельзя",
-  "only an active deployer can manage deployers": "Назначать деплойеров может только деплойер",
+  "only a deployer can manage deployers": "Назначать деплойеров может только деплойер",
+  "deployer is set in server settings": "Этот деплойер задан в настройках сервера",
 };
 
 function DeployersCard() {
@@ -206,9 +207,6 @@ function DeployersCard() {
         <p className="ui-sec">Могут обновлять тест и прод. Доступа к экономике, кассе и модерации не получают.</p>
         {isLoading && <p className="ui-sys">Загрузка…</p>}
         {error && <p className="ui-fhint err">Не удалось загрузить список</p>}
-        {data && data.length === 0 && (
-          <p className="ui-sec">Пока никого. Назначьте первого — дальше деплойеров добавляют и снимают только они сами.</p>
-        )}
         {data && data.length > 0 && (
           <ul className="dp-people">
             {data.map((d) => (
@@ -217,24 +215,28 @@ function DeployersCard() {
                   <p className="truncate text-[15px] font-medium">{d.username ? `@${d.username}` : d.first_name || "—"}</p>
                   <p className="ui-num s-s block text-[var(--text-3)]">{d.telegram_id}</p>
                 </div>
-                <Button
-                  kind="danger"
-                  size="sm"
-                  disabled={setRole.isPending || last}
-                  onClick={() =>
-                    setRevoke({
-                      telegram_id: d.telegram_id,
-                      name: d.username ? `@${d.username}` : d.first_name || String(d.telegram_id),
-                    })
-                  }
-                >
-                  Снять
-                </Button>
+                {d.from_env ? (
+                  <StatusPill tone="neutral">из настроек сервера</StatusPill>
+                ) : (
+                  <Button
+                    kind="danger"
+                    size="sm"
+                    disabled={setRole.isPending || last}
+                    onClick={() =>
+                      setRevoke({
+                        telegram_id: d.telegram_id,
+                        name: d.username ? `@${d.username}` : d.first_name || String(d.telegram_id),
+                      })
+                    }
+                  >
+                    Снять
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
         )}
-        {last && <p className="ui-sys">Последнего деплойера снять нельзя — сначала добавьте второго.</p>}
+        {last && !data?.[0]?.from_env && <p className="ui-sys">Последнего деплойера снять нельзя — сначала добавьте второго.</p>}
         <div className="flex items-end gap-2">
           <Field className="flex-1" label="Добавить по Telegram ID">
             <input
@@ -452,11 +454,7 @@ export function DeployPanel() {
         )}
       </section>
 
-      {data.can_manage_deployers ? (
-        <DeployersCard />
-      ) : (
-        <p className="ui-onbg text-[12px]">Деплойеров назначают и снимают только деплойеры.</p>
-      )}
+      {data.can_manage_deployers && <DeployersCard />}
     </div>
   );
 }

@@ -169,6 +169,8 @@ const TAB_RU: Record<Tab, string> = {
 export function Owner() {
   const { data: me, isLoading: meLoading } = useMe();
   const isOwner = !!me?.is_owner;
+  // Вкладка «Деплой» — только деплойерам; владелец без права деплоя её не видит.
+  const tabs = TABS.filter((t) => t !== "deploy" || !!me?.can_deploy);
   const { data, isLoading, error, refetch, isFetching } =
     useEconomySettings(isOwner);
   const [params] = useSearchParams();
@@ -176,6 +178,8 @@ export function Owner() {
   const [tab, setTab] = useState<Tab>(
     asked && TABS.includes(asked) ? asked : "overview",
   );
+
+  const shown: Tab = tabs.includes(tab) ? tab : "overview";
 
   if (meLoading) return <LoadingPanel label="Проверка доступа…" />;
   if (!isOwner && me?.can_deploy) {
@@ -210,16 +214,16 @@ export function Owner() {
         <Tabs
           kind="blocks"
           label="Разделы кабинета"
-          items={TABS.map((t) => ({ value: t, label: TAB_RU[t] }))}
-          value={tab}
+          items={tabs.map((t) => ({ value: t, label: TAB_RU[t] }))}
+          value={shown}
           onChange={setTab}
         />
       </div>
 
-      {tab === "overview" && <OverviewTab />}
-      {tab === "promos" && <PromosTab />}
-      {tab === "deploy" && <DeployPanel />}
-      {tab === "economy" && (
+      {shown === "overview" && <OverviewTab />}
+      {shown === "promos" && <PromosTab />}
+      {shown === "deploy" && <DeployPanel />}
+      {shown === "economy" && (
         <>
           {isLoading && <LoadingPanel label="Загрузка настроек…" />}
           {error && (

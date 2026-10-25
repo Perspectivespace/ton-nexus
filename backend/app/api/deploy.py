@@ -1,4 +1,4 @@
-"""Deploy from Telegram: owner + deployers; deployers are managed by deployers only.
+"""Deploy from Telegram: deployers only (users.is_deployer or TELEGRAM_DEPLOYER_IDS).
 
 POST only queues a request; the root-owned runner on the server does the work.
 """
@@ -14,14 +14,14 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.services import deploy as svc
-from app.services.roles import can_assign_deployer, can_deploy, deployer_count
+from app.services.roles import can_deploy, env_deployer_ids
 
 router = APIRouter(prefix="/admin/deploy", tags=["deploy"])
 
 
 def require_deployer(user: User = Depends(get_current_user)) -> User:
     if not can_deploy(user):
-        raise HTTPException(status_code=403, detail="deployer or owner only")
+        raise HTTPException(status_code=403, detail="deployers only")
     return user
 
 
@@ -34,6 +34,7 @@ class DeployerOut(BaseModel):
     telegram_id: int
     username: str | None
     first_name: str | None
+    from_env: bool = False
 
 
 @router.get("/overview")
@@ -41,7 +42,6 @@ async def overview(
     target: Literal["test"] = "test",
     refresh: bool = False,
     user: User = Depends(require_deployer),
-    db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     installed = svc.runner_installed()
     deployed = svc.deployed_info(target)
@@ -54,7 +54,7 @@ async def overview(
         **gh,
         "active": svc.active_job(target) if installed else None,
         "last": jobs[0] if jobs else None,
-        "can_manage_deployers": can_assign_deployer(user, await deployer_count(db)),
+        "can_manage_deployers": True,  # require_deployer: управляют все деплойеры
     }
 
 
@@ -99,13 +99,25 @@ async def job(
 
 @router.get("/deployers", response_model=list[DeployerOut])
 async def deployers(
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_deployer),
     db: AsyncSession = Depends(get_db),
 ):
-    if not can_assign_deployer(user, await deployer_count(db)):
-        raise HTTPException(status_code=403, detail="deployers only")
-    rows = await db.scalars(select(User).where(User.is_deployer.is_(True)).order_by(User.id))
-    return [
-        DeployerOut(telegram_id=u.telegram_id, username=u.username, first_name=u.first_name)
-        for u in rows
+    """Все деплойеры: из настроек сервера (сначала, снять нельзя) и назначенные в приложении."""
+    env_ids = env_deployer_ids()
+    q = select(User).where(User.is_deployer.is_(True) | User.telegram_id.in_(env_ids)).order_by(User.id)
+    known = {u.telegram_id: u for u in (await db.scalars(q)).all()}
+    out = [
+        DeployerOut(
+            telegram_id=tg,
+            username=known[tg].username if tg in known else None,
+            first_name=known[tg].first_name if tg in known else None,
+            from_env=True,
+        )
+        for tg in sorted(env_ids)
     ]
+    out += [
+        DeployerOut(telegram_id=u.telegram_id, username=u.username, first_name=u.first_name)
+        for u in known.values()
+        if u.telegram_id not in env_ids
+    ]
+    return out
