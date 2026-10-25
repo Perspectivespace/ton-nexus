@@ -34,26 +34,28 @@ html.bz-fade .city .c-stage { opacity: .35; transition: opacity .22s ease-out; }
 .cv2-window .bh { --sw: min(100vw, 560px); position: absolute; top: 0; bottom: 34px;
   left: calc(50% + var(--sw) * var(--bx) / 720); width: calc(var(--sw) * var(--bw) / 720);
   padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-/* вывеска на башне — часть города, а не элемент интерфейса: маленькая табличка с тонкими буквами и знаком реактора,
- * масштаб городских вывесок («ОБМЕН», «РЕАКТОР»). Свечение статичное; оформление — по фазе суток города (не по теме UI). */
-.bh-sign { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 7px 4px 6px; white-space: nowrap; pointer-events: none;
-  font: 500 clamp(8px, 2.3vw, 10.5px)/1 var(--font-display, "Unbounded", sans-serif); letter-spacing: .22em; text-indent: .22em;
-  color: #E4FCFF; text-shadow: 0 0 6px rgba(43, 245, 255, .75);
-  background: linear-gradient(180deg, rgba(4, 16, 30, .72), rgba(3, 10, 22, .66));
-  box-shadow: inset 0 0 0 1px rgba(125, 249, 255, .42), inset 0 1px 0 rgba(125, 249, 255, .7);
+/* вывеска на башне — ещё одна неоновая вывеска города, собрана так же, как «ОБМЕН» / «РЕАКТОР»: вертикальная лопасть
+ * на фасаде, тёмная табличка, светящаяся циановая кромка-трубка, буквы — неоновые трубки (белое ядро + циановый ореол),
+ * шрифт и кегль городских вывесок. Свечение статичное (box-/text-shadow без анимации). Оформление — по фазе суток города. */
+.bh-sign { position: absolute; left: 31%; top: 47%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px 4px 7px; pointer-events: none; white-space: nowrap;
+  font: 700 clamp(9px, 2.6vw, 13px)/1 var(--font-display, "Unbounded", sans-serif); color: #F2FFFF;
+  text-shadow: 0 0 1px #fff, 0 0 5px rgba(43, 245, 255, .95), 0 0 11px rgba(43, 245, 255, .55);
+  background: linear-gradient(180deg, rgba(5, 34, 52, .92), rgba(3, 16, 32, .94));
+  box-shadow: inset 0 0 0 1.5px #6FF8FF, inset 0 0 9px rgba(43, 245, 255, .4), 0 0 0 1px rgba(43, 245, 255, .35), 0 0 12px rgba(43, 245, 255, .5);
   transition: transform .12s ease-out, opacity .12s ease-out; }
-/* знак реактора: кольцо с ядром */
-.bh-glyph { width: 1.05em; height: 1.05em; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor, 0 0 5px rgba(43, 245, 255, .6);
-  background: radial-gradient(circle, currentColor 0 22%, transparent 26%); }
+.bh-sign b { font: inherit; writing-mode: vertical-rl; text-orientation: upright; letter-spacing: .04em; }
+/* знак реактора над буквами: неоновое кольцо с ядром */
+.bh-glyph { width: .95em; height: .95em; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor, 0 0 5px rgba(43, 245, 255, .9);
+  background: radial-gradient(circle, currentColor 0 22%, transparent 27%); }
 /* T1 — город спит: вывеска тише */
-.bh.t1 .bh-sign { opacity: .82; }
-/* днём и на рассвете — как дневные вывески: светлое стекло, бирюзовые буквы */
-html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh-sign { color: #00788C; text-shadow: 0 0 5px rgba(43, 245, 255, .45);
-  background: linear-gradient(180deg, rgba(240, 253, 255, .8), rgba(214, 246, 252, .7));
-  box-shadow: inset 0 0 0 1px rgba(0, 150, 175, .42), 0 2px 8px rgba(30, 40, 90, .16); }
-html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh-glyph { box-shadow: inset 0 0 0 1.5px currentColor; }
-html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh.t1 .bh-sign { opacity: .92; }
+.bh.t1 .bh-sign { opacity: .8; }
+/* днём и на рассвете — как дневные городские вывески: светлая табличка, бирюзовые буквы, кромка остаётся неоновой */
+html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh-sign { color: #00788C; text-shadow: 0 0 6px rgba(43, 245, 255, .55);
+  background: linear-gradient(180deg, rgba(240, 253, 255, .82), rgba(208, 245, 252, .74));
+  box-shadow: inset 0 0 0 1.5px rgba(0, 170, 200, .7), 0 0 8px rgba(43, 245, 255, .45), 0 2px 10px rgba(30, 40, 90, .18); }
+html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh-glyph { box-shadow: inset 0 0 0 1.5px currentColor, 0 0 4px rgba(43, 245, 255, .5); }
+html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh.t1 .bh-sign { opacity: .9; }
 
 /* нажатие: башня коротко «отзывается» — подсветка по башне и вывеска чуть сжимается (только opacity / transform) */
 .bh-press { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .18s ease-out;

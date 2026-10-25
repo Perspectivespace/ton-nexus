@@ -70,11 +70,11 @@ export function TowerHotspot({ tier }: { tier: number }) {
       onPointerDown={() => prefetchInterior(b.id)}
       onClick={() => enterBuilding(b, tier, navigate)}
     >
-      {/* вывеска на башне — как остальные вывески города: маленькая неоновая табличка, своя подложка */}
+      {/* вывеска на башне — неоновая лопасть, как «ОБМЕН» и «РЕАКТОР»: тёмная табличка, светящаяся кромка */}
       <i className="bh-press" aria-hidden="true" />
       <span className="bh-sign" aria-hidden="true">
         <i className="bh-glyph" />
-        {b.section.toUpperCase()}
+        <b>{b.section.toUpperCase()}</b>
       </span>
     </button>
   );
