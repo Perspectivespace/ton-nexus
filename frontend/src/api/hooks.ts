@@ -369,6 +369,18 @@ export function useMyWithdrawals() {
   });
 }
 
+export type WithdrawLimits = { min_ton: string };
+
+/** Условия вывода (минимум). Старый сервер без адреса — null, форма тогда не знает минимума. */
+export function useWithdrawLimits() {
+  return useQuery({
+    queryKey: ["withdraw", "limits"],
+    queryFn: () => api<WithdrawLimits>("/api/v1/withdraw/limits"),
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export type PromoRedeemOut = {
   code: string;
   reward_ton: string;

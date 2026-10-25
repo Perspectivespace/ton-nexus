@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import {
   useWheelStatus,
   useWheelSpin,
-  usePromoRedeem,
   type SpinOut,
 } from "@/api/hooks";
 import {
@@ -13,7 +12,6 @@ import {
   Scrim,
   Tag,
   Button,
-  Field,
   Sheet,
   PrizeWheel,
   useToast,
@@ -25,6 +23,8 @@ import { haptic } from "@/lib/haptics";
 import { IconBolt, IconSpark } from "@/components/icons";
 import { useScreenBack } from "@/lib/backButton";
 import { useDaily } from "@/lib/useDaily";
+import { formatLeft, nextUtcMidnight, useCountdown } from "@/lib/countdown";
+import { useQueryClient } from "@tanstack/react-query";
 
 /**
  * Сектора колеса. Порядок — визуальный (цвета чередуются), выпавший сектор ищется по id ответа сервера.
@@ -79,8 +79,11 @@ export function Wheel() {
   useScreenBack("/");
   const daily = useDaily();
   const wheelSt = useWheelStatus();
+  const qc = useQueryClient();
+  const resetAt = wheelSt.data && wheelSt.data.left_today <= 0 ? (wheelSt.data.next_reset_at ? Date.parse(wheelSt.data.next_reset_at) : nextUtcMidnight()) : null;
+  const spinLeftMs = useCountdown(resetAt, 0, () => qc.invalidateQueries({ queryKey: ["wheel"] }));
+  const spinIn = spinLeftMs != null ? formatLeft(spinLeftMs) : null;
   const spinMut = useWheelSpin();
-  const promo = usePromoRedeem();
   const toast = useToast();
 
   const wheel = useRef<PrizeWheelHandle>(null);
@@ -89,7 +92,6 @@ export function Wheel() {
   const [win, setWin] = useState<number | null>(null);
   const [last, setLast] = useState<SpinOut | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [code, setCode] = useState("");
 
   const busy = phase === "wait" || phase === "spin";
 
@@ -123,16 +125,6 @@ export function Wheel() {
     requestAnimationFrame(() => resultRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
 
-  function onPromo() {
-    promo.mutate(code, {
-      onSuccess: (r) => {
-        setCode("");
-        toast({ kind: "ok", title: "Промокод активирован", sub: r.code });
-      },
-      onError: (e) => toast({ kind: "danger", title: "Код не принят", sub: e.message }),
-    });
-  }
-
   if (daily.loading || wheelSt.isLoading) {
     return <LoadingPanel label="Загрузка колеса…" />;
   }
@@ -143,6 +135,7 @@ export function Wheel() {
   const maxSpins = Math.max(w?.free_spins_per_day ?? 1, 1);
   const won = win != null ? PRIZES[win] : null;
   const miss = !!last && won?.id === "nothing" && rewardParts(last).length === 0;
+  const spinsOut = left <= 0;
   const odds = w?.sectors ? new Map(w.sectors.map((s) => [s.id, s])) : null;
 
   return (
@@ -185,11 +178,17 @@ export function Wheel() {
                 ? "Тап по экрану — сразу к результату"
                 : left > 0
                   ? "Сектор под указателем — ваша награда"
-                  : "Новое бесплатное вращение — завтра"}
+                  : "Бесплатные вращения обновляются в 03:00 мск"}
           </p>
           <span className="ui-spill block">
-            <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || left <= 0} onClick={onSpin}>
-              {phase === "wait" ? "Связь…" : phase === "spin" ? "Вращение…" : left <= 0 ? "Вращения закончились" : "Крутить колесо"}
+            <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || spinsOut} onClick={onSpin}>
+              {phase === "wait" ? "Связь…" : phase === "spin" ? "Вращение…" : spinsOut ? (
+                <>
+                  Следующее через <span className="ui-num">{spinIn ?? "—"}</span>
+                </>
+              ) : (
+                "Крутить колесо"
+              )}
             </Button>
           </span>
         </Scrim>
@@ -236,32 +235,6 @@ export function Wheel() {
         </div>
         <Button kind="secondary" block icon={<IconBolt size={18} />} disabled={!daily.ready} onClick={daily.claimNow}>
           {daily.pending ? "Начисление…" : daily.waiting ? "Отметка получена" : "Забрать отметку"}
-        </Button>
-      </Panel>
-
-      {/* Промокод */}
-      <Panel className="space-y-4 p-5">
-        <div className="min-w-0">
-          <p className="ui-h">Промокод</p>
-          <p className="ui-sec !text-[12px]">Один код — один раз на аккаунт</p>
-        </div>
-        <Field label="Код" error={promo.isError ? (promo.error instanceof Error ? promo.error.message : "Код не принят") : undefined}>
-          <input
-            className="ui-input uppercase tracking-wider"
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value.toUpperCase());
-              if (promo.isError) promo.reset();
-            }}
-            placeholder="NEXUS-START"
-            disabled={promo.isPending}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </Field>
-        <Button kind="secondary" block disabled={promo.isPending || code.trim().length < 3} onClick={onPromo}>
-          {promo.isPending ? "Проверка…" : "Активировать"}
         </Button>
       </Panel>
 

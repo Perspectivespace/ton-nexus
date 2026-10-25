@@ -57,6 +57,15 @@ def _view(w: WithdrawRequest) -> WithdrawView:
     )
 
 
+async def min_withdraw(session: AsyncSession) -> Decimal:
+    """Минимальная сумма вывода — та же, что проверяет create_request."""
+    return dec((await get_setting(session, "min_withdraw_ton"))["ton"])
+
+
+def is_valid_wallet(addr: str) -> bool:
+    return bool(_TON_RE.match(addr.strip()))
+
+
 def _validate_wallet(addr: str) -> str:
     addr = addr.strip()
     if not _TON_RE.match(addr):
@@ -76,7 +85,7 @@ async def create_request(
     if amount <= 0:
         raise WithdrawError("amount must be positive")
 
-    min_w = dec((await get_setting(session, "min_withdraw_ton"))["ton"])
+    min_w = await min_withdraw(session)
     if amount < min_w:
         raise WithdrawError(f"minimum withdraw is {min_w} TON")
 

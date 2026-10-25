@@ -174,7 +174,7 @@ export function Inbox() {
 
       <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
-          «Одобрить» начисляет TON и XP исполнителю. «Отклонить» — без выплаты. Слоты задания
+          «Одобрить» начисляет TON и XP исполнителю. «Отклонить» — без выплаты. Места задания
           обновляются автоматически.
         </p>
       </div>
@@ -208,7 +208,7 @@ export function Inbox() {
                     {t.description}
                   </p>
                   <p className="mono mt-2 text-[11px] text-[var(--accent)]">
-                    {Number(t.reward).toFixed(4)} TON · {t.total_slots} слотов
+                    {Number(t.reward).toFixed(4)} TON · мест: {t.total_slots}
                   </p>
                 </div>
                 <StatusPill tone="warn">ждёт</StatusPill>
