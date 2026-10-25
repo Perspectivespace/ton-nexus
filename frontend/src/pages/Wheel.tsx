@@ -1,7 +1,5 @@
 import { useRef, useState } from "react";
 import {
-  useDailyStatus,
-  useDailyClaimFull,
   useWheelStatus,
   useWheelSpin,
   usePromoRedeem,
@@ -10,7 +8,6 @@ import {
 import {
   ScreenHeader,
   LoadingPanel,
-  ErrorPanel,
   Readout,
   Panel,
   Scrim,
@@ -27,6 +24,7 @@ import {
 import { haptic } from "@/lib/haptics";
 import { IconBolt, IconSpark } from "@/components/icons";
 import { useScreenBack } from "@/lib/backButton";
+import { useDaily } from "@/lib/useDaily";
 
 /**
  * Сектора колеса. Порядок — визуальный (цвета чередуются), выпавший сектор ищется по id ответа сервера.
@@ -79,8 +77,7 @@ type Phase = "idle" | "wait" | "spin" | "done";
 
 export function Wheel() {
   useScreenBack("/");
-  const dailySt = useDailyStatus();
-  const dailyClaim = useDailyClaimFull();
+  const daily = useDaily();
   const wheelSt = useWheelStatus();
   const spinMut = useWheelSpin();
   const promo = usePromoRedeem();
@@ -126,27 +123,6 @@ export function Wheel() {
     requestAnimationFrame(() => resultRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
 
-  function onDaily() {
-    dailyClaim.mutate(undefined, {
-      onSuccess: (r) =>
-        r.already_claimed
-          ? toast({ kind: "info", title: "Сегодня уже отмечено", sub: `серия ${r.streak} дн · приходите завтра` })
-          : toast({
-              kind: "ok",
-              title: "Отметка засчитана",
-              sub: [
-                `+${Number(r.reward_ton).toFixed(4)} TON`,
-                r.reward_xp > 0 && `+${r.reward_xp} XP`,
-                r.reward_focus > 0 && `Фокус +${r.reward_focus}`,
-                `серия ${r.streak} дн`,
-              ]
-                .filter(Boolean)
-                .join(" · "),
-            }),
-      onError: (e) => toast({ kind: "danger", title: "Отметка не прошла", sub: e.message }),
-    });
-  }
-
   function onPromo() {
     promo.mutate(code, {
       onSuccess: (r) => {
@@ -157,11 +133,11 @@ export function Wheel() {
     });
   }
 
-  if (dailySt.isLoading || wheelSt.isLoading) {
+  if (daily.loading || wheelSt.isLoading) {
     return <LoadingPanel label="Загрузка колеса…" />;
   }
 
-  const d = dailySt.data;
+  const d = daily.status;
   const w = wheelSt.data;
   const left = w?.left_today ?? 0;
   const maxSpins = Math.max(w?.free_spins_per_day ?? 1, 1);
@@ -250,16 +226,16 @@ export function Wheel() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="ui-h">Ежедневная отметка</p>
-            <p className="ui-sec !text-[12px]">TON, опыт и фокус — раз в сутки</p>
+            <p className="ui-sec !text-[12px]">TON, опыт и фокус — раз в день, обновление в 03:00 мск</p>
           </div>
-          <Tag tone={d?.claimed_today ? "ok" : "amber"}>{d?.claimed_today ? "получено" : "доступно"}</Tag>
+          <Tag tone={daily.waiting ? "ok" : "amber"}>{daily.waiting ? "получено" : "доступно"}</Tag>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Readout label="Серия" value={String(d?.streak ?? 0)} unit="дн" />
-          <Readout label="Сегодня" value={d?.claimed_today ? "получено" : "доступно"} />
+          <Readout label={daily.waiting ? "Следующая через" : "Сегодня"} value={daily.countdown ?? "доступно"} />
         </div>
-        <Button kind="secondary" block icon={<IconBolt size={18} />} disabled={dailyClaim.isPending || !!d?.claimed_today} onClick={onDaily}>
-          {d?.claimed_today ? "Уже получено" : dailyClaim.isPending ? "Начисление…" : "Забрать отметку"}
+        <Button kind="secondary" block icon={<IconBolt size={18} />} disabled={!daily.ready} onClick={daily.claimNow}>
+          {daily.pending ? "Начисление…" : daily.waiting ? "Отметка получена" : "Забрать отметку"}
         </Button>
       </Panel>
 
@@ -288,10 +264,6 @@ export function Wheel() {
           {promo.isPending ? "Проверка…" : "Активировать"}
         </Button>
       </Panel>
-
-      {dailyClaim.isError && (
-        <ErrorPanel message={dailyClaim.error instanceof Error ? dailyClaim.error.message : "Отметка не прошла"} />
-      )}
 
       <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="Призы и шансы">
         <p className="ui-sec !text-[13px]">Указатель сверху. После остановки сектор под ним — ваша награда.</p>

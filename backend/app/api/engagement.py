@@ -27,12 +27,16 @@ class DailyOut(BaseModel):
     reward_xp: int
     reward_focus: int
     check_date: str
+    # После отметки (новой или повторной) — когда можно снова: следующая полночь UTC.
+    next_claim_at: str
 
 
 class DailyStatusOut(BaseModel):
     claimed_today: bool
     streak: int
     check_date: str
+    next_claim_at: str | None = None
+    server_time: str
 
 
 class PromoBody(BaseModel):
@@ -87,6 +91,7 @@ class WheelStatusOut(BaseModel):
     sectors: list[WheelSectorOut] = []
     # "settings" — веса владельца; "default" — запасные веса (в настройках все веса 0 или некорректны).
     weights_source: str = "settings"
+    next_reset_at: str | None = None
 
 
 @router.get("/daily/status", response_model=DailyStatusOut)
@@ -108,6 +113,7 @@ async def daily_claim(user: User = Depends(get_current_user), db: AsyncSession =
             reward_xp=r.reward_xp,
             reward_focus=r.reward_focus,
             check_date=r.check_date.isoformat(),
+            next_claim_at=daily_svc.reset_after(r.check_date).isoformat(),
         )
     except DailyError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

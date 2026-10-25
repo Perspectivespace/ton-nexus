@@ -1,10 +1,12 @@
 import { motion, type Variants } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useMe, useMiner, useDailyClaim } from "@/api/hooks";
+import { useMe, useMiner } from "@/api/hooks";
+import { useDaily } from "@/lib/useDaily";
 import { haptic } from "@/lib/haptics";
 import { WorkArea } from "@/components/WorkArea";
 import {
   IconBolt,
+  IconCheck,
   IconChevron,
   IconReactor,
   IconUp,
@@ -24,7 +26,6 @@ import {
   ListRow,
   Button,
   SectionLabel,
-  useToast,
 } from "@/components/ui";
 
 /** Нижний док уже ведёт на Майнер, Задания и Баланс — здесь только то, чего в доке нет */
@@ -62,8 +63,7 @@ const item: Variants = {
 export function Home() {
   const { data: me, isLoading, error, isFetching } = useMe();
   const { data: miner } = useMiner();
-  const daily = useDailyClaim();
-  const toast = useToast();
+  const daily = useDaily();
 
   return (
     <motion.div
@@ -158,38 +158,28 @@ export function Home() {
           size="lg"
           block
           className="!h-[60px] !justify-between !px-4 text-left"
-          disabled={daily.isPending}
-          onClick={() =>
-            daily.mutate(undefined, {
-              onSuccess: (r) =>
-                r.already_claimed
-                  ? toast({ kind: "info", title: "Сегодня уже отмечено", sub: `серия ${r.streak} дн · приходите завтра` })
-                  : toast({
-                      kind: "ok",
-                      title: "Отметка засчитана",
-                      sub: [
-                        `+${Number(r.reward_ton).toFixed(4)} TON`,
-                        r.reward_xp > 0 && `+${r.reward_xp} XP`,
-                        r.reward_focus > 0 && `Фокус +${r.reward_focus}`,
-                        `серия ${r.streak} дн`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · "),
-                    }),
-              onError: (e) => toast({ kind: "danger", title: "Отметка не прошла", sub: e.message }),
-            })
-          }
+          disabled={!daily.ready}
+          aria-label={daily.countdown ? `Отметка получена. Следующая награда через ${daily.countdown}` : undefined}
+          onClick={daily.claimNow}
         >
           <span className="flex items-center gap-3">
-            <IconBolt size={22} />
+            {daily.waiting ? <IconCheck size={22} /> : <IconBolt size={22} />}
             <span>
               <span className="block text-[15px] leading-[20px]">
-                {daily.isPending ? "Начисление…" : "Ежедневная отметка"}
+                {daily.pending ? "Начисление…" : daily.waiting ? "Отметка получена" : "Ежедневная отметка"}
               </span>
-              <span className="block text-[11px] leading-[16px] tracking-[0.14em] opacity-70">Серия · награда · XP</span>
+              <span className="block text-[11px] leading-[16px] tracking-[0.14em] opacity-80">
+                {daily.countdown ? (
+                  <>
+                    Следующая награда через <span className="ui-num">{daily.countdown}</span>
+                  </>
+                ) : (
+                  "Серия · награда · XP"
+                )}
+              </span>
             </span>
           </span>
-          <IconChevron size={20} />
+          {!daily.waiting && <IconChevron size={20} />}
         </Button>
       </motion.div>
 

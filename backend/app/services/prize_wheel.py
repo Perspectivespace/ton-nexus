@@ -16,6 +16,7 @@ from app.models.balance import BalanceHistory
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services.economy import dec, get_setting
+from app.services.daily import next_reset_utc
 from app.services.economy_seed import DEFAULTS
 
 log = logging.getLogger(__name__)
@@ -205,6 +206,8 @@ async def wheel_status(session: AsyncSession, *, user_id: int) -> dict:
         "free_spins_per_day": free,
         "used_today": used,
         "left_today": max(0, free - used),
+        # Бесплатные вращения считаются по дню UTC — следующие появятся в полночь UTC.
+        "next_reset_at": next_reset_utc().isoformat(),
         "sectors": sectors_view(pairs),
         "weights_source": source,
     }

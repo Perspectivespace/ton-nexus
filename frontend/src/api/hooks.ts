@@ -97,6 +97,10 @@ export type DailyStatus = {
   claimed_today: boolean;
   streak: number;
   check_date: string;
+  /** когда снова можно отметиться (полночь UTC); null — можно сейчас. Нет у старого сервера. */
+  next_claim_at?: string | null;
+  /** часы сервера — поправка для отсчёта */
+  server_time?: string;
 };
 
 export type DailyClaim = {
@@ -106,23 +110,13 @@ export type DailyClaim = {
   reward_xp: number;
   reward_focus: number;
   check_date: string;
+  next_claim_at?: string;
 };
 
 export function useDailyStatus() {
   return useQuery({
     queryKey: ["daily"],
     queryFn: () => api<DailyStatus>("/api/v1/daily/status"),
-  });
-}
-
-export function useDailyClaimFull() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => api<DailyClaim>("/api/v1/daily/claim", { method: "POST" }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["me"] });
-      qc.invalidateQueries({ queryKey: ["daily"] });
-    },
   });
 }
 
@@ -142,6 +136,8 @@ export type WheelStatus = {
   sectors?: WheelSector[];
   /** "default" — в настройках все веса 0 или некорректны, действуют запасные */
   weights_source?: "settings" | "default";
+  /** когда появятся новые бесплатные вращения (полночь UTC) */
+  next_reset_at?: string | null;
 };
 
 export type SpinOut = {
