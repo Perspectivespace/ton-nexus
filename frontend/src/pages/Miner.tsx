@@ -21,6 +21,8 @@ import {
 } from "@/components/ui";
 import { prefersReducedMotion } from "@/components/ui/press";
 import { haptic } from "@/lib/haptics";
+import { markTierSeen, reactorLevel, seenTier, tierFor } from "@/lib/reactorTiers";
+import { ReactorTierPanel } from "@/components/ReactorTierPanel";
 
 const statusTone = {
   idle: "neutral" as const,
@@ -57,6 +59,31 @@ export function Miner() {
   });
   // Момент A: неон зажигается один раз за сессию, если реактор горит
   const ignite = useIgniteOnce("miner", running || ready);
+
+  // Облик реактора по уровню: раскрытие и тост «Новый облик» — один раз за облик на устройстве (п. 8.1.1)
+  const level = m ? reactorLevel(m) : 1;
+  const tier = tierFor(level);
+  const [reveal, setReveal] = useState(false);
+  useEffect(() => {
+    if (!m) return;
+    const seen = seenTier();
+    if (tier.id <= seen) {
+      if (tier.id < seen) markTierSeen(tier.id);
+      return;
+    }
+    const reduce = prefersReducedMotion();
+    setReveal(true);
+    const t1 = window.setTimeout(() => {
+      markTierSeen(tier.id);
+      haptic.success();
+      toast({ kind: "ok", title: `Новый облик: «${tier.name}»`, sub: `Реактор ${tier.mk} · ${tier.look}` });
+    }, reduce ? 0 : 1500);
+    const t2 = window.setTimeout(() => setReveal(false), reduce ? 300 : 2400);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [m == null, tier.id]); // toast стабилен, m нужен только как «загрузился»
 
   // Момент B: после «Собрать» дуга стекает 600 мс и держится на нуле, пока не придут свежие данные
   const [claimAt, setClaimAt] = useState<number | null>(null);
@@ -127,6 +154,8 @@ export function Miner() {
               state={ready ? "ready" : running ? "running" : "idle"}
               draining={draining}
               ignite={ignite}
+              tier={tier.id}
+              reveal={reveal}
             />
             <p className="ui-label ui-shade mt-6">Накоплено в цикле</p>
             <Num
@@ -168,6 +197,8 @@ export function Miner() {
           </Scrim>
         </Panel>
       </motion.div>
+
+      <ReactorTierPanel tier={tier} level={level} />
 
       {/* Характеристики реактора */}
       <div className="grid grid-cols-5 gap-2">

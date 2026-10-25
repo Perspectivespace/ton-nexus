@@ -1,0 +1,160 @@
+/*
+ * Облик реактора по уровню (docs/DESIGN.md, п. 8.1.1; уровни — lib/reactorTiers.ts).
+ * Палитра облика красит «железо» (пластины, кольца, ядро). Сигналы состояния
+ * (дуга, деления, плашка, световые швы) остаются смысловыми: янтарь = хранилище полное, серый = стоит.
+ * Движение — только transform / opacity, только пока цикл идёт и экран виден.
+ * Новый облик (например, «Легенда», ур. 30): строка в REACTOR_TIERS + блок `.rx.t4` ниже.
+ */
+.rx {
+  --rx-pl0: #E4EBF7; --rx-pl1: #6F7A92; --rx-pl2: #232A3A; --rx-pl3: #8E9AB4;
+  --rx-engr: rgba(0,0,0,.55); --rx-bolt: #C9D3E6;
+  --rx-hud: rgba(43,245,255,.38); --rx-hud-b: rgba(43,245,255,.75);
+  --rx-coil: #6B3A16; --rx-coil-e: #E39A55; --rx-wire: rgba(255,214,160,.85);
+  --rx-tri: #FFFFFF; --rx-tri-in: rgba(43,245,255,.9);
+  --rx-pulse: radial-gradient(circle, rgba(255,255,255,.9) 0 12%, rgba(43,245,255,.55) 32%, rgba(43,245,255,0) 66%);
+  --rx-orb: #FFFFFF; --rx-orb-h: rgba(255,46,126,.9);
+  --rx-seam: #D2FDFF; --rx-seam-h: rgba(43,245,255,.45);
+}
+.rx.is-ready { --rx-seam: #FFE7C2; --rx-seam-h: rgba(255,181,71,.5); }
+.rx.is-idle { --rx-seam: #6E7891; --rx-seam-h: rgba(150,170,255,.12); }
+.rx-armor, .rx-coils, .rx-tri { inset: 0; width: 100%; height: 100%; }
+.rx-armor .rx-plt { transform-box: view-box; transform-origin: 105px 105px; }
+.rx-ring.c { inset: -7%; }
+.rx.is-running .rx-ring.c { animation: rx-spin 64s linear infinite; }
+
+/* Mk II «Контур» (ур. 5): полированная сталь, световые швы, внешнее HUD-кольцо, линза в ядре, дыхание ядра */
+.rx.t1:not(.is-ready):not(.is-idle) { --rx-ringB: rgba(235,252,255,.85); --rx-pip: #FFFFFF; --rx-arc0: #FFFFFF; }
+.rx.t1 { --rx-m0: #F2F6FF; --rx-m1: #7E8AA6; --rx-m2: #262E40; --rx-m3: #AEB9D2; }
+.rx-lens { inset: 36%; border-radius: 50%; pointer-events: none;
+  background: repeating-radial-gradient(circle, rgba(255,255,255,0) 0 5px, rgba(235,252,255,.55) 5.6px, rgba(255,255,255,0) 6.6px);
+  -webkit-mask: radial-gradient(circle, transparent 18%, #000 30%, #000 62%, transparent 72%); mask: radial-gradient(circle, transparent 18%, #000 30%, #000 62%, transparent 72%); }
+.rx.is-idle .rx-lens { opacity: .3; }
+.rx.t1:not(.is-ready) .rx-core { background: radial-gradient(circle, #fff 0 13%, #E6FEFF 22%, rgba(120,240,255,.95) 34%, rgba(0,170,205,.75) 52%, rgba(0,70,100,.5) 68%, rgba(0,30,45,0) 74%); }
+.rx-pulse { inset: 30%; border-radius: 50%; background: var(--rx-pulse); opacity: .35; }
+.rx.is-running .rx-pulse { animation: rx-breathe 4.2s ease-in-out infinite; will-change: opacity; }
+@keyframes rx-breathe { 0%, 100% { opacity: .22; } 50% { opacity: .75; } }
+.rx.is-idle .rx-pulse { opacity: 0; }
+
+/* Т2 «Марк» (ур. 10): золото-титан, катушки, треугольник, ядро раскалено добела */
+.rx.t2 {
+  --rx-seam: #FFF1C9; --rx-seam-h: rgba(255,200,100,.45);
+  --rx-pl0: #FFF1C9; --rx-pl1: #D9A441; --rx-pl2: #6A4510; --rx-pl3: #F2CF84;
+  --rx-engr: rgba(60,30,0,.7); --rx-bolt: #FFF1C9;
+  --rx-m0: #F2CF84; --rx-m1: #8A5A16; --rx-m2: #3A2406; --rx-m3: #C99A45;
+  --rx-hud: rgba(255,214,140,.40); --rx-hud-b: rgba(255,200,100,.85);
+}
+.rx.t2:not(.is-ready):not(.is-idle) { --rx-ringB: rgba(255,200,100,.8); --rx-pip: #FFE3A3; }
+.rx.t2 .rx-core, .rx.t3 .rx-core { inset: 32%; }
+.rx.t2:not(.is-ready) .rx-core {
+  background: radial-gradient(circle, #fff 0 15%, #F2FEFF 24%, rgba(150,245,255,.95) 36%, rgba(43,245,255,.7) 50%, rgba(0,90,120,.5) 66%, rgba(0,30,45,0) 74%);
+  box-shadow: 0 0 30px rgba(120,245,255,.6), 0 0 70px rgba(43,245,255,.24);
+}
+.rx.is-idle .rx-tri, .rx.is-idle .rx-coils { opacity: .45; }
+
+/* Т3 «Сингулярность» (ур. 20): тёмный хром с маджентой, призменное ядро, орбиты */
+.rx.t3 {
+  --rx-seam: #FFD6EA; --rx-seam-h: rgba(255,46,126,.5);
+  --rx-pl0: #F4E9FF; --rx-pl1: #4C3A63; --rx-pl2: #120B1E; --rx-pl3: #8F6FB8;
+  --rx-engr: rgba(255,46,126,.75); --rx-bolt: #FF8FBE;
+  --rx-m0: #CDB8F0; --rx-m1: #2A1D3F; --rx-m2: #0C0714; --rx-m3: #5A437E;
+  --rx-hud: rgba(255,120,190,.40); --rx-hud-b: rgba(255,46,126,.9);
+  --rx-coil: #2A1440; --rx-coil-e: #FF6FAE; --rx-wire: rgba(210,253,255,.8);
+  --rx-tri-in: rgba(255,46,126,.95);
+  --rx-pulse: radial-gradient(circle, rgba(255,255,255,.95) 0 12%, rgba(255,120,200,.55) 32%, rgba(180,92,255,0) 66%);
+}
+.rx.t3:not(.is-ready):not(.is-idle) { --rx-tick-on: #FF7AB8; --rx-arc0: #FFFFFF; --rx-arc1: #FF2E7E; --rx-ringA: rgba(210,253,255,.55); --rx-ringB: rgba(255,46,126,.85); --rx-pip: #FFFFFF; }
+.rx.t3:not(.is-ready) .rx-core {
+  background:
+    radial-gradient(circle, #fff 0 13%, rgba(255,255,255,.85) 20%, rgba(255,255,255,0) 34%),
+    conic-gradient(from 20deg, #FF2E7E, #B45CFF, #2BF5FF, #F4FFFF, #FFB0D6, #FF2E7E);
+  -webkit-mask: radial-gradient(circle, #000 52%, rgba(0,0,0,.5) 64%, transparent 74%);
+  mask: radial-gradient(circle, #000 52%, rgba(0,0,0,.5) 64%, transparent 74%);
+  box-shadow: none;
+}
+.rx.t3 .rx-shell { box-shadow: inset 0 0 0 1px rgba(255,180,220,.25), inset 0 -10px 18px rgba(0,0,0,.5), 0 0 0 5px rgba(10,6,16,.92), 0 0 0 6px rgba(255,46,126,.35); }
+.rx.t3:not(.is-ready) .rx-p { background: #FFE0EF; box-shadow: 0 0 6px #FF2E7E; }
+.rx-orb { inset: 13%; }
+.rx-orb.o0 { transform: rotate(-24deg) scaleY(.36); }
+.rx-orb.o1 { transform: rotate(38deg) scaleY(.30); inset: 8%; }
+.rx-orb.o2 { transform: rotate(96deg) scaleY(.42); inset: 18%; }
+.rx-orb i { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(255,140,200,.16); }
+.rx-orb i::before { content: ""; position: absolute; left: 50%; top: -5px; width: 5px; height: 12px; margin-left: -2.5px; border-radius: 50%; background: var(--rx-orb); box-shadow: 0 0 6px 1px var(--rx-orb-h); }
+.rx.is-running .rx-orb i { animation: rx-spin 7s linear infinite; will-change: transform; }
+.rx.is-running .rx-orb.o1 i { animation-duration: 11s; animation-direction: reverse; }
+.rx.is-running .rx-orb.o2 i { animation-duration: 5.2s; }
+.rx.is-idle .rx-orb { opacity: .3; }
+
+/* Швы — сигнал состояния: при полном хранилище янтарные, при остановке серые, в любом облике */
+.rx.is-ready.is-ready { --rx-seam: #FFE7C2; --rx-seam-h: rgba(255,181,71,.5); }
+.rx.is-idle.is-idle { --rx-seam: #6E7891; --rx-seam-h: rgba(150,170,255,.12); }
+
+/* Раскрытие нового облика (раз за тир, ≤ 1.8 с): пластины садятся, HUD докручивается, вспышка — только opacity */
+.rx.is-reveal .rx-seam { animation: rx-fade .5s ease-out .7s both; transform-box: view-box; transform-origin: 105px 105px; }
+.rx.is-reveal .rx-lens { animation: rx-fade .45s ease-out .9s both; }
+.rx.is-reveal .rx-plt { animation: rx-plate-in .62s cubic-bezier(.2,.9,.25,1.15) both; animation-delay: calc(var(--i) * 70ms); }
+@keyframes rx-plate-in { from { opacity: 0; transform: scale(1.16) rotate(-6deg); } to { opacity: 1; transform: none; } }
+.rx.is-reveal .rx-ring.c { animation: rx-hud-in 1.1s cubic-bezier(.2,.8,.2,1) .25s both; }
+@keyframes rx-hud-in { from { opacity: 0; transform: rotate(-140deg) scale(.9); } to { opacity: 1; transform: none; } }
+.rx.is-reveal .rx-coils { animation: rx-fade .5s ease-out .55s both; }
+.rx.is-reveal .rx-tri, .rx.is-reveal .rx-orb { animation: rx-fade .4s ease-out .95s both; }
+@keyframes rx-fade { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: none; } }
+.rx.is-reveal .rx-core { animation: ui-ignite .38s .7s both; }
+.rx-flash { inset: -6%; border-radius: 50%; opacity: 0; background: radial-gradient(circle, rgba(255,255,255,.95) 0 18%, rgba(210,253,255,.5) 36%, rgba(43,245,255,0) 62%); }
+.rx.t3 .rx-flash { background: radial-gradient(circle, rgba(255,255,255,.95) 0 18%, rgba(255,170,215,.5) 36%, rgba(255,46,126,0) 62%); }
+.rx.t2 .rx-flash { background: radial-gradient(circle, rgba(255,255,255,.95) 0 18%, rgba(255,226,160,.5) 36%, rgba(255,181,71,0) 62%); }
+.rx.is-reveal .rx-flash { animation: rx-flash 1s ease-out .62s both; }
+@keyframes rx-flash { 0% { opacity: 0; } 18% { opacity: .9; } 100% { opacity: 0; } }
+
+html.app-hidden .rx-pulse, html.app-hidden .rx-orb i { animation-play-state: paused !important; }
+html.app-hidden .rx-ring.c { animation-play-state: paused !important; }
+/* слабое устройство: облик остаётся, лишнее движение снимаем (кольцо C, орбиты, дыхание) */
+html.low-end .rx-orb i, html.low-end .rx-pulse, html.low-end .rx.is-running .rx-ring.c { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .rx .rx-pulse, .rx .rx-orb i, .rx .rx-ring.c { animation: none !important; }
+  .rx.is-reveal * { animation-duration: .12s !important; animation-delay: 0s !important; }
+}
+.rx-teaser .rx { opacity: .9; } .rx-teaser .rx-core { opacity: .55; }
+.rx-teaser .rx * { animation: none !important; }
+
+/* Светлая тема «Дневной HUD»: тот же облик в светлом металле, без ореолов, частиц и вспышки-ореола */
+[data-theme="light"] .rx {
+  --rx-pl0: #FFFFFF; --rx-pl1: #D3D9E4; --rx-pl2: #8F99AD; --rx-pl3: #E4E9F1;
+  --rx-engr: rgba(10,20,50,.3); --rx-bolt: #6E7891;
+  --rx-hud: rgba(0,107,127,.32); --rx-hud-b: rgba(0,107,127,.7);
+  --rx-seam: #007E95; --rx-seam-h: rgba(0,126,149,.18);
+  --rx-coil: #C98A4B; --rx-coil-e: #8A5420; --rx-wire: rgba(90,50,10,.55);
+  --rx-tri: #FFFFFF; --rx-tri-in: #007E95;
+  --rx-pulse: radial-gradient(circle, rgba(255,255,255,.9) 0 14%, rgba(127,217,230,.45) 34%, rgba(127,217,230,0) 64%);
+  --rx-orb: #C8105A; --rx-orb-h: transparent;
+}
+[data-theme="light"] .rx.t1 { --rx-m0: #FFFFFF; --rx-m1: #B9C2D2; --rx-m2: #7D879B; --rx-m3: #D3D9E4; }
+[data-theme="light"] .rx.t1:not(.is-ready):not(.is-idle) { --rx-ringB: rgba(0,107,127,.75); --rx-pip: #006B7F; --rx-arc0: #36C6DD; }
+[data-theme="light"] .rx.t1:not(.is-ready) .rx-core { background: radial-gradient(circle, #fff 0 14%, #A8EAF3 28%, #0B9CB7 54%, rgba(0,126,149,0) 72%); }
+[data-theme="light"] .rx-lens { background: repeating-radial-gradient(circle, rgba(255,255,255,0) 0 5px, rgba(255,255,255,.85) 5.6px, rgba(255,255,255,0) 6.6px); }
+[data-theme="light"] .rx.t2 {
+  --rx-pl0: #FFF6DC; --rx-pl1: #E2B85E; --rx-pl2: #9A6A14; --rx-pl3: #F2D99A;
+  --rx-m0: #FFF2CC; --rx-m1: #D7A846; --rx-m2: #9A6A14; --rx-m3: #E8C77A;
+  --rx-engr: rgba(90,55,0,.45); --rx-bolt: #8A5A10;
+  --rx-hud: rgba(154,106,20,.38); --rx-hud-b: rgba(154,106,20,.8);
+  --rx-seam: #9A6A14; --rx-seam-h: rgba(226,184,94,.3);
+}
+[data-theme="light"] .rx.t2:not(.is-ready):not(.is-idle) { --rx-ringB: rgba(154,106,20,.75); --rx-pip: #9A6A14; }
+[data-theme="light"] .rx.t2:not(.is-ready) .rx-core { background: radial-gradient(circle, #fff 0 18%, #C9F1F7 30%, #0B9CB7 56%, rgba(0,126,149,0) 72%); box-shadow: none; }
+[data-theme="light"] .rx.t3 {
+  --rx-pl0: #FBF6FF; --rx-pl1: #BBA6DA; --rx-pl2: #6A5194; --rx-pl3: #DCCFF0;
+  --rx-m0: #F3ECFF; --rx-m1: #A891CC; --rx-m2: #5E4787; --rx-m3: #CDBDE6;
+  --rx-engr: rgba(200,16,90,.55); --rx-bolt: #C8105A;
+  --rx-hud: rgba(200,16,90,.32); --rx-hud-b: rgba(200,16,90,.75);
+  --rx-coil: #E8DDF7; --rx-coil-e: #C8105A; --rx-wire: rgba(94,71,135,.6);
+  --rx-tri-in: #C8105A; --rx-seam: #C8105A; --rx-seam-h: rgba(200,16,90,.16);
+  --rx-pulse: radial-gradient(circle, rgba(255,255,255,.9) 0 14%, rgba(240,150,200,.4) 34%, rgba(240,150,200,0) 64%);
+}
+[data-theme="light"] .rx.t3:not(.is-ready):not(.is-idle) { --rx-tick-on: #C8105A; --rx-arc0: #E0559A; --rx-arc1: #C8105A; --rx-ringA: rgba(94,71,135,.5); --rx-ringB: rgba(200,16,90,.7); --rx-pip: #5E4787; }
+[data-theme="light"] .rx.t3:not(.is-ready) .rx-core {
+  background: radial-gradient(circle, #fff 0 14%, rgba(255,255,255,.8) 22%, rgba(255,255,255,0) 36%), conic-gradient(from 20deg, #E0337A, #8A4FD8, #0B9CB7, #FFFFFF, #F09AC4, #E0337A); }
+[data-theme="light"] .rx.t3 .rx-shell { box-shadow: inset 0 0 0 1px rgba(10,20,50,.15), 0 0 0 5px #fff, 0 0 0 6px rgba(200,16,90,.35); }
+[data-theme="light"] .rx-orb i { border-color: rgba(200,16,90,.18); }
+[data-theme="light"] .rx-orb i::before { box-shadow: none; }
+[data-theme="light"] .rx-flash { background: radial-gradient(circle, rgba(255,255,255,.95) 0 22%, rgba(255,255,255,0) 60%); }
+[data-theme="light"] .rx.is-ready.is-ready { --rx-seam: #A35F00; --rx-seam-h: rgba(163,95,0,.18); }
+[data-theme="light"] .rx.is-idle.is-idle { --rx-seam: #9AA3B4; --rx-seam-h: transparent; }
