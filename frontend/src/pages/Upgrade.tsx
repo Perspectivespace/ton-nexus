@@ -155,7 +155,6 @@ export function Upgrade() {
       }}
     >
       <ScreenHeader
-        eyebrow="Модуль"
         title="Усиление"
         action={<BackLink to="/miner" label="Реактор" />}
       />

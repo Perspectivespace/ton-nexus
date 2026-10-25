@@ -146,7 +146,6 @@ export function Wheel() {
       }}
     >
       <ScreenHeader
-        eyebrow="Удача"
         title="Колесо удачи"
         action={
           <Button kind="secondary" size="sm" onClick={() => setHelpOpen(true)} aria-label="Призы и шансы">

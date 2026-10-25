@@ -110,7 +110,6 @@ export function Miner() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Реактор"
         title="Майнер"
         action={
           <StatusPill tone={statusTone[m.status as keyof typeof statusTone] || "neutral"}>
