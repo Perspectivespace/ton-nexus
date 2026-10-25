@@ -13,6 +13,7 @@ from app.models.task import Task, TaskSubmission
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services.economy import get_setting
+from app.services.levels import add_xp
 from app.services.roles import (
     can_approve_ambassador_task,
     can_create_task,
@@ -408,14 +409,7 @@ async def review_submission(
         )
         worker = await session.get(User, sub.user_id)
         if worker and task.xp_reward:
-            worker.xp = int(worker.xp or 0) + int(task.xp_reward)
-            while True:
-                curve = await get_setting(session, "xp_per_level")
-                need = int(float(curve["base"]) * (float(curve["growth"]) ** (worker.level - 1)))
-                if worker.xp < need:
-                    break
-                worker.xp -= need
-                worker.level += 1
+            await add_xp(session, worker, int(task.xp_reward))
 
         task.filled_slots += 1
         if task.filled_slots >= task.total_slots:

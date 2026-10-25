@@ -15,6 +15,7 @@ from app.models.balance import BalanceHistory
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services.economy import dec, get_setting
+from app.services.levels import add_xp
 from app.services import gameday
 from app.services.economy_seed import DEFAULTS
 
@@ -173,7 +174,8 @@ async def spin(session: AsyncSession, *, user: User) -> SpinResult:
         )
 
     if xp > 0:
-        user.xp = int(user.xp or 0) + xp
+        # уровень растёт сразу, как и за ежедневку и задания
+        await add_xp(session, user, xp)
     if focus > 0:
         user.focus_tokens = int(user.focus_tokens or 0) + focus
     if block > 0:
