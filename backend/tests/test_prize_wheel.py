@@ -121,11 +121,16 @@ class SpinUsesSettingsTest(unittest.TestCase):
         async def credit(*_a, **_k):
             return None
 
+        async def fake_add_xp(_s, u, xp):
+            u.xp += xp
+
         session = SimpleNamespace(add=lambda *_: None, flush=mock.AsyncMock())
         user = SimpleNamespace(id=42, xp=0, focus_tokens=0, block_tokens=0, success_boost_bp=0, balance=Decimal("0"))
         with mock.patch.object(wheel, "get_setting", fake_get_setting), mock.patch.object(
             wheel, "_spins_today", zero
-        ), mock.patch.object(wheel.balance_svc, "credit", credit):
+        ), mock.patch.object(wheel.balance_svc, "credit", credit), mock.patch.object(
+            wheel, "add_xp", fake_add_xp
+        ):
             with self.assertLogs("app.services.prize_wheel", level="INFO") as logs:
                 res = asyncio.run(wheel.spin(session, user=user))
         return res, user, logs.output
