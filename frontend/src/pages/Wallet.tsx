@@ -10,11 +10,21 @@ import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, Sec
 const TON_ADDR = /^(UQ|EQ)[A-Za-z0-9_-]{46}$/;
 
 const W_STATUS: Record<string, { label: string; tone: Tone }> = {
-  pending: { label: "ожидает", tone: "warn" },
+  pending: { label: "на проверке", tone: "warn" },
   paid: { label: "выплачено", tone: "ok" },
   rejected: { label: "отклонено", tone: "danger" },
   approved: { label: "одобрено", tone: "ok" },
 };
+
+function shortAddr(a: string) {
+  return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-6)}` : a;
+}
+
+function fmtDate(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 export function Wallet() {
   const { data: me, refetch } = useMe();
@@ -35,9 +45,7 @@ export function Wallet() {
   const addrOk = TON_ADDR.test(addr);
 
   // Кнопка отражает доступность (п. 14, правило 13): первая причина, почему вывести нельзя
-  const why = pending
-    ? `Заявка на ${Number(pending.amount).toFixed(4)} TON уже на проверке. Новую можно создать после решения.`
-    : !amount.trim() || !Number.isFinite(sum) || sum <= 0
+  const why = !amount.trim() || !Number.isFinite(sum) || sum <= 0
       ? "Введите сумму."
       : min != null && sum < min
         ? `Минимум для вывода — ${min} TON.`
@@ -70,7 +78,7 @@ export function Wallet() {
 
   return (
     <div className="space-y-5">
-      <ScreenHeader eyebrow="Кошелёк" title="Баланс" />
+      <ScreenHeader title="Баланс" />
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <Panel level="hero" see cut="l" lift="l2" className="p-5">
@@ -85,43 +93,60 @@ export function Wallet() {
         </Panel>
       </motion.div>
 
-      <Panel className="space-y-4 p-5">
-        <div>
-          <h2 className="ui-h">Вывод</h2>
-          <p className="ui-sec mt-1">
-            Сумма замораживается до решения владельца. При отказе — возврат на баланс.
-            {min != null && ` Минимум — ${min} TON.`}
+      {pending ? (
+        // Пока заявка на проверке, форма не нужна: новую всё равно не создать — показываем статус
+        <Panel className="space-y-3 p-5" aria-live="polite">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="ui-h">Вывод</h2>
+            <Tag tone="warn">на проверке</Tag>
+          </div>
+          <Num value={Number(pending.amount).toFixed(4)} unit="TON" size="l" className="block" />
+          <p className="mono text-[12px] leading-[16px] text-[var(--text-2)]">
+            {[shortAddr(pending.wallet_address || ""), fmtDate(pending.created_at)].filter(Boolean).join(" · ")}
           </p>
-        </div>
-        <Field label="Сумма" unit="TON">
-          <input
-            className="ui-input"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </Field>
-        <Field label="Адрес TON">
-          <input
-            className="ui-input"
-            value={wallet}
-            onChange={(e) => setWallet(e.target.value)}
-            placeholder="UQ… / EQ…"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </Field>
-        <span className="ui-spill">
-          <Button kind="primary" size="lg" block icon={<IconOut size={20} />} disabled={loading || !ready} aria-describedby={why ? "withdraw-why" : undefined} onClick={() => setAsk(true)}>
-            {pending ? "Заявка на проверке" : "Запросить вывод"}
-          </Button>
-        </span>
-        {why && (
-          <p id="withdraw-why" className="ui-sec !text-[12px] !leading-[16px]">
-            {why}
+          <p className="ui-sec">
+            Сумма заморожена до решения владельца. При отказе вернётся на баланс. Новую заявку можно создать после решения.
           </p>
-        )}
-      </Panel>
+        </Panel>
+      ) : (
+        <Panel className="space-y-4 p-5">
+          <div>
+            <h2 className="ui-h">Вывод</h2>
+            <p className="ui-sec mt-1">
+              Сумма замораживается до решения владельца. При отказе — возврат на баланс.
+              {min != null && ` Минимум — ${min} TON.`}
+            </p>
+          </div>
+          <Field label="Сумма" unit="TON">
+            <input
+              className="ui-input"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </Field>
+          <Field label="Адрес TON">
+            <input
+              className="ui-input"
+              value={wallet}
+              onChange={(e) => setWallet(e.target.value)}
+              placeholder="UQ… / EQ…"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </Field>
+          <span className="ui-spill">
+            <Button kind="primary" size="lg" block icon={<IconOut size={20} />} disabled={loading || !ready} aria-describedby={why ? "withdraw-why" : undefined} onClick={() => setAsk(true)}>
+              Запросить вывод
+            </Button>
+          </span>
+          {why && (
+            <p id="withdraw-why" className="ui-sec !text-[12px] !leading-[16px]">
+              {why}
+            </p>
+          )}
+        </Panel>
+      )}
 
       {(mine.data?.length ?? 0) > 0 && (
         <div className="space-y-2.5">

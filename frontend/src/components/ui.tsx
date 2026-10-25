@@ -81,13 +81,17 @@ export function Gauge({ value, max = 100, label, sub }: { value: number; max?: n
   );
 }
 
-/** Шапка экрана: подпись капсом + заголовок Tektur, действие справа */
-export function ScreenHeader({ eyebrow, title, action }: { eyebrow: string; title: string; action?: ReactNode }) {
+/**
+ * Шапка экрана: заголовок Tektur, действие справа.
+ * Подпись капсом над заголовком — только если она что-то добавляет (раздел-родитель на вложенном экране,
+ * тип объекта); повтор названия раздела другим словом не ставим (DESIGN п. 14.14).
+ */
+export function ScreenHeader({ eyebrow, title, action }: { eyebrow?: string; title: string; action?: ReactNode }) {
   return (
-    <header className="flex items-start justify-between gap-3">
+    <header className={`flex justify-between gap-3 ${eyebrow ? "items-start" : "min-h-[40px] items-center"}`}>
       <div className="min-w-0">
-        <p className="ui-label">{eyebrow}</p>
-        <h1 className="ui-title ui-shade mt-1 truncate">{title}</h1>
+        {eyebrow && <p className="ui-label">{eyebrow}</p>}
+        <h1 className={`ui-title ui-shade truncate ${eyebrow ? "mt-1" : ""}`}>{title}</h1>
       </div>
       {action}
     </header>

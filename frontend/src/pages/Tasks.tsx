@@ -21,7 +21,6 @@ export function Tasks() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Маркет"
         title="Задания"
         action={
           <div className="flex items-center gap-2">

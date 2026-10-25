@@ -22,6 +22,7 @@ import {
 import { haptic } from "@/lib/haptics";
 import { IconBolt, IconSpark } from "@/components/icons";
 import { useScreenBack } from "@/lib/backButton";
+import { BackLink } from "@/components/BackLink";
 import { useDaily } from "@/lib/useDaily";
 import { formatLeft, nextMskMidnight, useCountdown } from "@/lib/countdown";
 import { useQueryClient } from "@tanstack/react-query";
@@ -146,7 +147,6 @@ export function Wheel() {
       }}
     >
       <ScreenHeader
-        eyebrow="Удача"
         title="Колесо удачи"
         action={
           <Button kind="secondary" size="sm" onClick={() => setHelpOpen(true)} aria-label="Призы и шансы">
@@ -237,6 +237,8 @@ export function Wheel() {
           {daily.pending ? "Начисление…" : daily.waiting ? "Отметка получена" : "Забрать отметку"}
         </Button>
       </Panel>
+
+      <BackLink to="/" />
 
       <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="Призы и шансы">
         <p className="ui-sec !text-[13px]">Указатель сверху. После остановки сектор под ним — ваша награда.</p>
