@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Field as UiField } from "@/components/ui/Field";
+import { cx } from "@/components/ui/press";
 import {
   HIDDEN_KEYS,
   SETTINGS,
@@ -21,7 +22,7 @@ type Path = (string | number)[];
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const isLeaf = (v: unknown) => v === null || typeof v !== "object";
 const pkey = (p: Path) => p.join(".");
-const capsCls = "mb-1 block text-[11px] font-medium uppercase tracking-wide text-[var(--text-dim)]";
+const capsCls = "ui-label mb-2 block";
 
 type Ctx = {
   settingKey: string;
@@ -64,10 +65,10 @@ function ReadOnlyValue({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="col-span-2">
       <span className={capsCls}>{label}</span>
-      <p className="rounded-xl border border-[var(--line)] bg-[var(--surface-3)] p-3 font-mono text-[12px] text-[var(--text-dim)]">
+      <p className="ui-num s-s block text-[var(--text-2)]">
         {Array.isArray(value) ? value.map((x) => (isLeaf(x) ? String(x) : "…")).join(", ") : "…"}
-        <span className="mt-1 block text-[11px]">Только просмотр</span>
       </p>
+      <span className="ui-sys mt-1 block">Только просмотр</span>
     </div>
   );
 }
@@ -110,10 +111,8 @@ function Group({ ctx, value, path }: { ctx: Ctx; value: Obj; path: Path }) {
         }
         if (isObj(v) && path.length < 2) {
           return (
-            <fieldset key={k} className="col-span-2 rounded-xl border border-[var(--line)] bg-[var(--surface-3)] px-3 pb-3 pt-1">
-              <legend className="px-1 font-mono text-[11px] uppercase tracking-wide text-[var(--accent)]">
-                {m.label}
-              </legend>
+            <fieldset key={k} className="se-sub col-span-2">
+              <legend className={capsCls}>{m.label}</legend>
               <Group ctx={ctx} value={v} path={p} />
             </fieldset>
           );
@@ -139,15 +138,15 @@ function Rows({
   const weightKeys = rows.map((_, i) => pkey([...path, i, "weight"]));
   const total = weightKeys.reduce((s, k) => s + (Number(ctx.draft[k]) || 0), 0);
   return (
-    <div className="space-y-2.5">
+    <div>
       {rows.map((row, i) => {
         const title = String(row[titleKey ?? "label"] ?? row.label ?? `#${i + 1}`);
         const fields = Object.entries(row).filter(
           ([k]) => !HIDDEN_KEYS.has(k) && k !== titleKey,
         );
         return (
-          <div key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface-3)] p-3">
-            <p className="mb-2 truncate font-mono text-[12px] text-[var(--accent)]">{title}</p>
+          <div key={i} className="se-sub">
+            <p className={cx(capsCls, "truncate")}>{title}</p>
             <div className="grid grid-cols-2 gap-2">
               {fields.map(([k, v]) => {
                 const base = fieldMeta(ctx.settingKey, k, v);
@@ -198,15 +197,14 @@ function setIn(root: unknown, path: Path, val: unknown): unknown {
 export function SettingEditor({
   settingKey,
   value,
-  saving,
+  formId,
   onSave,
-  onCancel,
 }: {
   settingKey: string;
   value: unknown;
-  saving: boolean;
+  /** id формы: кнопка «Сохранить» живёт в закреплённом низу шторки (type="submit" form={formId}) */
+  formId: string;
   onSave: (v: unknown) => Promise<void>;
-  onCancel: () => void;
 }) {
   const leaves = useMemo(() => {
     const out = new Map<string, [Path, FieldMeta, unknown]>();
@@ -266,7 +264,15 @@ export function SettingEditor({
   }
 
   return (
-    <div className="space-y-4">
+    <form
+      id={formId}
+      className="space-y-4"
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
       {isLeaf(value) ? (
         <Field ctx={ctx} path={[]} m={leaves.get("")![1]} />
       ) : isObj(value) ? (
@@ -274,15 +280,11 @@ export function SettingEditor({
       ) : (
         <ReadOnlyValue label="Значение" value={value} />
       )}
-      {err && <p className="text-[12px] text-[var(--danger)]">{err}</p>}
-      <div className="flex gap-2 pt-1">
-        <button type="button" className="ui-btn primary flex-1" onClick={save} disabled={saving}>
-          {saving ? "Сохранение…" : "Применить"}
-        </button>
-        <button type="button" className="ui-btn secondary" onClick={onCancel}>
-          Отмена
-        </button>
-      </div>
-    </div>
+      {err && (
+        <p className="ui-fhint err" role="alert">
+          {err}
+        </p>
+      )}
+    </form>
   );
 }

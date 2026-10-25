@@ -277,6 +277,8 @@
 [data-theme="light"] .ui-sheet .grab { background: var(--neon); box-shadow: none; }
 .ui-sheet .s-head { padding: 0 16px 12px; }
 .ui-sheet .s-body { padding: 0 16px calc(24px + var(--safe-b, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+.ui-sheet .s-body:has(+ .s-foot) { padding-bottom: 16px; }
+.ui-sheet .s-foot { flex: none; padding: 12px 16px calc(14px + var(--safe-b, 0px)); border-top: 1px solid var(--line); }
 
 /* —— Состояния: скелетон, пусто, ошибка (п. 10) —— */
 .ui-state { text-align: center; padding: 24px 16px; display: grid; gap: 8px; justify-items: center; }
@@ -629,3 +631,14 @@ button.ui-stat.scan:disabled { opacity: 1; }
 .home-rx { display: flex; align-items: center; gap: 12px; min-height: 44px; color: var(--text); }
 .home-rx > svg:first-child { color: var(--neon); flex: none; }
 .home-rx > svg:last-child { color: var(--text-3); flex: none; }
+
+/* —— Кабинет владельца: редактор настройки (фаза 3) —— */
+.se-sub { border: 0; margin: 0; padding: 12px 0 0; min-width: 0; border-top: 1px solid var(--line); }
+.se-sub + .se-sub { margin-top: 12px; }
+.se-sub > legend { float: left; width: 100%; padding: 0; }
+.se-sub > legend + * { clear: both; }
+.ow-about { padding: 12px 14px; box-shadow: inset 2px 0 0 var(--neon-dim); background: var(--neon-soft);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut-s)), calc(100% - var(--cut-s)) 100%, 0 100%); }
+.ow-about p + p { margin-top: 6px; }
+/* 4 раздела на 360px: ширина вкладки по подписи, без обрезки */
+.ow-tabs .ui-tab { flex: 1 1 auto; padding: 0 4px; }
