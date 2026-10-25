@@ -162,23 +162,29 @@ html.cv2-home .city .c-stage { transform: translate3d(-50%, -120px, 0); }
 @keyframes cv2-ripple { 0% { opacity: 0; transform: scale(.2) } 12% { opacity: .9 } 100% { opacity: 0; transform: scale(1.6) } }
 html.low-end .cv2 .ripple { display: none; }
 
-/* ── «Дневной HUD»: тот же город в утренней дымке ──
- * Дневной кадр (city-tN-day.webp) осветлён и укрыт вуалью цвета фона заранее — во время работы ничего не фильтруется.
- * Движение светлее и тише; вывески получают тёмную подложку — текст всегда на подложке. */
-[data-theme="light"] .cv2 .rain { opacity: .5;
-  background: repeating-linear-gradient(104deg, transparent 0 22px, rgba(40,70,110,.35) 22px 23px, transparent 23px 61px); }
-[data-theme="light"] .cv2 .fog { opacity: .9; }
-[data-theme="light"] .cv2 .f-far { background: radial-gradient(50% 50% at 30% 50%, rgba(255,255,255,.7), transparent 70%), radial-gradient(40% 45% at 75% 55%, rgba(255,255,255,.55), transparent 70%); }
-[data-theme="light"] .cv2 .f-near { background: radial-gradient(45% 50% at 40% 50%, rgba(255,255,255,.65), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(255,255,255,.5), transparent 70%); }
-[data-theme="light"] .cv2 .win { background: #E89A2C; box-shadow: none; }
-[data-theme="light"] .cv2 .bcn { box-shadow: 0 0 3px 1px rgba(255,46,90,.5); }
-[data-theme="light"] .cv2 .steam { background: radial-gradient(closest-side, rgba(255,255,255,.9), rgba(255,255,255,0)); }
-[data-theme="light"] .cv2 .ripple { border-color: rgba(30,60,100,.45); }
+/* ── «Дневной HUD»: город на рассвете ──
+ * Дневной кадр (city-tN-day.webp) заранее перекрашен: небо циан → роза → персик, кварталы сохраняют глубину,
+ * неон и окна живые — во время работы ничего не фильтруется. Вывески — на светлом тонированном стекле
+ * (статично, без backdrop-filter), буквы цветные: циан/бирюза и маджента. Текст всегда на подложке. */
+[data-theme="light"] .cv2 .rain { opacity: .45;
+  background: repeating-linear-gradient(104deg, transparent 0 22px, rgba(255,240,250,.5) 22px 23px, transparent 23px 61px); }
+[data-theme="light"] .cv2 .fog { opacity: .45; }
+[data-theme="light"] .cv2 .f-far { background: radial-gradient(50% 50% at 30% 50%, rgba(255,226,222,.55), transparent 70%), radial-gradient(40% 45% at 75% 55%, rgba(255,236,232,.45), transparent 70%); }
+[data-theme="light"] .cv2 .f-near { background: radial-gradient(45% 50% at 40% 50%, rgba(255,240,236,.5), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(236,248,255,.4), transparent 70%); }
+[data-theme="light"] .cv2 .win { background: #FFC266; }
+[data-theme="light"] .cv2 .steam { background: radial-gradient(closest-side, rgba(255,255,255,.85), rgba(255,255,255,0)); }
+[data-theme="light"] .cv2 .ripple { border-color: rgba(255,255,255,.7); }
 [data-theme="light"] .cv2 .drone::before { background: #1B2236; box-shadow: 9px 2px 0 -.5px #E0324F; }
-[data-theme="light"] .cv2 .craft::before { box-shadow: none; }
-[data-theme="light"] .cv2 .sign { background: rgba(8,14,26,.82); color: #E6FCFF; padding: 2px; }
-[data-theme="light"] .cv2 .sign.quiet { opacity: .8; }
-[data-theme="light"] .cv2 .beam { opacity: .35; background: linear-gradient(0deg, rgba(255,255,255,.9), rgba(255,255,255,0) 85%); }
+[data-theme="light"] .cv2 .sign { padding: 3px; color: #00788C; text-shadow: 0 0 6px rgba(43,245,255,.55);
+  background: linear-gradient(180deg, rgba(240,253,255,.72), rgba(214,246,252,.58));
+  box-shadow: inset 0 0 0 1px rgba(0,150,175,.38), 0 2px 10px rgba(30,40,90,.18); }
+[data-theme="light"] .cv2 .sign.quiet { opacity: .9; }
+[data-theme="light"] .cv2 .sign.wide { color: #B4106A; text-shadow: 0 0 6px rgba(255,79,154,.45);
+  background: linear-gradient(180deg, rgba(255,242,250,.74), rgba(252,224,242,.6));
+  box-shadow: inset 0 0 0 1px rgba(200,16,90,.32), 0 2px 10px rgba(60,20,70,.18); }
+[data-theme="light"] .cv2 .sign small { color: #00788C; }
+[data-theme="light"] .cv2 .sign.scan::after { background: linear-gradient(180deg, transparent, rgba(255,255,255,.55), transparent); }
+[data-theme="light"] .cv2 .beam { opacity: .5; background: linear-gradient(0deg, rgba(255,255,255,.9), rgba(255,255,255,0) 85%); }
 [data-theme="light"] .cv2-chip { color: var(--text); background: rgba(255,255,255,.9); border-color: var(--line-strong); }
-/* днём за полупрозрачными панелями тёмные подложки вывесок не спорят с цифрами: на главной (в «окне») — полностью, на остальных экранах — приглушены */
-html[data-theme="light"]:not(.cv2-home) .cv2 .sign { opacity: .55; }
+/* вне главной вывески за полупрозрачными панелями чуть тише, чтобы не спорить с цифрами */
+html[data-theme="light"]:not(.cv2-home) .cv2 .sign { opacity: .75; }
