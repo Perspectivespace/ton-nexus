@@ -7,10 +7,12 @@ export function formatLeft(ms: number) {
   return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
 }
 
-/** Ближайшая полночь UTC — запасное правило, если старый сервер не прислал время сброса. */
-export function nextUtcMidnight(now = Date.now()) {
-  const d = new Date(now);
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+const MSK_MS = 3 * 3600 * 1000; // Москва — UTC+3 круглый год
+
+/** Ближайшие 00:00 по Москве (игровой день) — запасное правило, если сервер не прислал время сброса. */
+export function nextMskMidnight(now = Date.now()) {
+  const d = new Date(now + MSK_MS);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1) - MSK_MS;
 }
 
 /**

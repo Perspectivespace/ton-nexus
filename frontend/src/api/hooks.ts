@@ -97,7 +97,7 @@ export type DailyStatus = {
   claimed_today: boolean;
   streak: number;
   check_date: string;
-  /** когда снова можно отметиться (полночь UTC); null — можно сейчас. Нет у старого сервера. */
+  /** когда снова можно отметиться (00:00 МСК); null — можно сейчас. Нет у старого сервера. */
   next_claim_at?: string | null;
   /** часы сервера — поправка для отсчёта */
   server_time?: string;
@@ -136,7 +136,7 @@ export type WheelStatus = {
   sectors?: WheelSector[];
   /** "default" — в настройках все веса 0 или некорректны, действуют запасные */
   weights_source?: "settings" | "default";
-  /** когда появятся новые бесплатные вращения (полночь UTC) */
+  /** когда появятся новые бесплатные вращения (00:00 МСК) */
   next_reset_at?: string | null;
 };
 

@@ -23,7 +23,7 @@ import { haptic } from "@/lib/haptics";
 import { IconBolt, IconSpark } from "@/components/icons";
 import { useScreenBack } from "@/lib/backButton";
 import { useDaily } from "@/lib/useDaily";
-import { formatLeft, nextUtcMidnight, useCountdown } from "@/lib/countdown";
+import { formatLeft, nextMskMidnight, useCountdown } from "@/lib/countdown";
 import { useQueryClient } from "@tanstack/react-query";
 
 /**
@@ -80,7 +80,7 @@ export function Wheel() {
   const daily = useDaily();
   const wheelSt = useWheelStatus();
   const qc = useQueryClient();
-  const resetAt = wheelSt.data && wheelSt.data.left_today <= 0 ? (wheelSt.data.next_reset_at ? Date.parse(wheelSt.data.next_reset_at) : nextUtcMidnight()) : null;
+  const resetAt = wheelSt.data && wheelSt.data.left_today <= 0 ? (wheelSt.data.next_reset_at ? Date.parse(wheelSt.data.next_reset_at) : nextMskMidnight()) : null;
   const spinLeftMs = useCountdown(resetAt, 0, () => qc.invalidateQueries({ queryKey: ["wheel"] }));
   const spinIn = spinLeftMs != null ? formatLeft(spinLeftMs) : null;
   const spinMut = useWheelSpin();
@@ -178,7 +178,7 @@ export function Wheel() {
                 ? "Тап по экрану — сразу к результату"
                 : left > 0
                   ? "Сектор под указателем — ваша награда"
-                  : "Бесплатные вращения обновляются в 03:00 мск"}
+                  : "Бесплатные вращения обновляются в 00:00 мск"}
           </p>
           <span className="ui-spill block">
             <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || spinsOut} onClick={onSpin}>
@@ -225,7 +225,7 @@ export function Wheel() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="ui-h">Ежедневная отметка</p>
-            <p className="ui-sec !text-[12px]">TON, опыт и фокус — раз в день, обновление в 03:00 мск</p>
+            <p className="ui-sec !text-[12px]">TON, опыт и фокус — раз в день, обновление в 00:00 мск</p>
           </div>
           <Tag tone={daily.waiting ? "ok" : "amber"}>{daily.waiting ? "получено" : "доступно"}</Tag>
         </div>
