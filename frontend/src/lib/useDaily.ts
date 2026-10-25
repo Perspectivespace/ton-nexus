@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDailyClaim, useDailyStatus, type DailyClaim, type DailyStatus } from "@/api/hooks";
 import { useToast } from "@/components/ui";
+import { setServerClock } from "@/lib/cityPhase";
 import { nextMskMidnight, useCountdown, formatLeft } from "@/lib/countdown";
 
 /**
@@ -20,6 +21,9 @@ export function useDaily() {
     const srv = d?.server_time ? Date.parse(d.server_time) : NaN;
     return Number.isFinite(srv) ? srv - Date.now() : 0;
   }, [d?.server_time]);
+
+  // те же часы сервера поправляют смену суток в городе
+  useEffect(() => setServerClock(d?.server_time), [d?.server_time]);
 
   const target = useMemo(() => {
     if (!d?.claimed_today) return null;

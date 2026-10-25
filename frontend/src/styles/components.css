@@ -64,6 +64,10 @@
 }
 [data-theme="light"] .ui-cut.hero { --edge: linear-gradient(160deg, var(--neon), rgba(10,20,50,.14) 30%, rgba(10,20,50,.26)); --fill: radial-gradient(90% 60% at 18% 0%, var(--neon-soft), transparent 70%), var(--mat-1); }
 [data-theme="light"] .ui-cut.hero.see { --fill: var(--see-fill); }
+/* светлая тема над вечерним/ночным городом: стекло плотнее, иначе белое поверх тёмного даёт серость (п. 3.8.2) */
+html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"]) .ui-cut.hero.see {
+  --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(246, 248, 251, .88) 40%, rgba(246, 248, 251, .88) 62%, rgba(255, 255, 255, .95));
+}
 
 /* тень-подложка без filter (п. 3.5) */
 .ui-lift { position: relative; isolation: isolate; }

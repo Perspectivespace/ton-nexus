@@ -1,11 +1,12 @@
-import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useMe } from "@/api/hooks";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
+import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 
 /**
  * Город растёт вместе с реактором (DESIGN.md п. 3.10–3.11). Облик города = облик реактора (п. 8.1.1):
  * T1 Mk I (ур. 1–4), T2 Mk II (5+), T3 Mk III (10+), T4 Mk IV (20+).
- * Один нарисованный кадр на облик (webp 720×1280, грузится лениво — только текущий облик)
+ * Один нарисованный кадр на облик × фазу суток по МСК (webp 720×1280, грузится лениво — только текущий; п. 3.8.2)
  * + слой движения поверх: базовая жизнь на каждом облике, облики добавляют слои. Только transform / opacity.
  * Координаты — в пикселях кадра 720×1280.
  */
@@ -19,17 +20,18 @@ const box = (x: number, y: number, w: number, h: number): CSSProperties => ({
   height: pc(h, H),
 });
 
-// ночной и дневной («Дневной HUD») кадр на облик; дневной — тот же кадр, заранее осветлённый и в дымке
+// кадр на облик × фазу суток (п. 3.8.2): ночь city-tN, рассвет -dawn, день -day, вечер -dusk.
+// Грузится только текущий; следующий подкачивается за полторы минуты до смены фазы.
 const loaders = import.meta.glob<string>("../assets/city/v2/city-t*.webp", { query: "?url", import: "default" });
-const load = (t: number, day: boolean) => loaders[`../assets/city/v2/city-t${t}${day ? "-day" : ""}.webp`]?.();
-
-/** светлая тема на <html data-theme> (меняется по событию Telegram themeChanged) */
-function subscribeTheme(cb: () => void) {
-  const mo = new MutationObserver(cb);
-  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  return () => mo.disconnect();
-}
-const isDay = () => document.documentElement.dataset.theme === "light";
+const SUFFIX: Record<CityPhase, string> = { night: "", dawn: "-dawn", day: "-day", dusk: "-dusk" };
+const load = (t: number, p: CityPhase) => loaders[`../assets/city/v2/city-t${t}${SUFFIX[p]}.webp`]?.();
+/** заранее скачать кадр (в кэш браузера), не показывая */
+const preload = (t: number, p: CityPhase) =>
+  load(t, p)?.then((url) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+  });
 
 type Vars = CSSProperties & Record<`--${string}`, string>;
 
@@ -82,26 +84,40 @@ export function CityV2({ tier }: { tier: number }) {
   const [src, setSrc] = useState<string | null>(null);
   const [prev, setPrev] = useState<string | null>(null);
 
-  const day = useSyncExternalStore(subscribeTheme, isDay);
+  const { phase, upcoming } = useCityPhase();
+  // за полторы минуты до смены фазы кадр следующей фазы (для текущего облика) уходит в кэш браузера
+  useEffect(() => {
+    if (upcoming) preload(tier, upcoming);
+  }, [tier, upcoming]);
+  const lastPhase = useRef(phase);
+  const [slow, setSlow] = useState(false); // смена фазы растворяется дольше (2.4 с), чем смена облика
+
+  // фаза на <html data-city-phase> — по ней панели светлой темы уплотняются над тёмной сценой (п. 3.8.2)
+  useEffect(() => {
+    document.documentElement.dataset.cityPhase = phase;
+  }, [phase]);
 
   useEffect(() => {
     let alive = true;
-    load(tier, day)?.then((url) => {
+    const phaseChanged = lastPhase.current !== phase;
+    lastPhase.current = phase;
+    load(tier, phase)?.then((url) => {
       if (!alive) return;
+      setSlow(phaseChanged);
       setSrc((old) => {
-        setPrev(old); // смена облика: старый кадр растворяется под новым
+        setPrev(old); // смена облика или фазы суток: старый кадр растворяется под новым
         return url;
       });
     });
     return () => {
       alive = false;
     };
-  }, [tier, day]);
+  }, [tier, phase]);
 
   return (
-    <div className={`cv2 t${tier}`}>
+    <div className={`cv2 t${tier} ph-${phase}`}>
       {prev && prev !== src && <img className="cv2-img prev" src={prev} alt="" />}
-      {src && <img key={src} className="cv2-img" src={src} alt="" decoding="async" />}
+      {src && <img key={src} className={`cv2-img${slow ? " slow" : ""}`} src={src} alt="" decoding="async" />}
       <div className="cv2-life">
         {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (11 анимаций) ── */}
         <i className="fog f-far" />
