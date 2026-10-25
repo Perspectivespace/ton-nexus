@@ -29,8 +29,19 @@ class DailyResult:
     check_date: date
 
 
-def _today_utc() -> date:
-    return datetime.now(timezone.utc).date()
+def _today_utc(now: datetime | None = None) -> date:
+    return (now or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
+
+
+def next_reset_utc(now: datetime | None = None) -> datetime:
+    """Следующая полночь UTC — с неё снова можно отметиться (отметка — по календарному дню UTC, не «24 часа»)."""
+    return reset_after(_today_utc(now))
+
+
+def reset_after(day: date) -> datetime:
+    """Начало следующего дня UTC после `day` — момент, когда отметка за `day` перестаёт блокировать новую."""
+    d = day + timedelta(days=1)
+    return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
 
 
 def _reward_for_streak(cfg: dict, streak: int) -> dict:
@@ -116,8 +127,9 @@ async def claim_daily(session: AsyncSession, *, user: User) -> DailyResult:
     )
 
 
-async def daily_status(session: AsyncSession, *, user_id: int) -> dict:
-    today = _today_utc()
+async def daily_status(session: AsyncSession, *, user_id: int, now: datetime | None = None) -> dict:
+    now = now or datetime.now(timezone.utc)
+    today = _today_utc(now)
     existing = await session.scalar(
         select(DailyCheckIn).where(
             DailyCheckIn.user_id == user_id,
@@ -139,4 +151,7 @@ async def daily_status(session: AsyncSession, *, user_id: int) -> dict:
         "claimed_today": existing is not None,
         "streak": streak,
         "check_date": today.isoformat(),
+        # Когда снова можно отметиться: null — можно сейчас. Правило то же, что в claim_daily (день UTC).
+        "next_claim_at": next_reset_utc(now).isoformat() if existing is not None else None,
+        "server_time": now.isoformat(),
     }
