@@ -20,6 +20,20 @@ const box = (x: number, y: number, w: number, h: number): CSSProperties => ({
 const loaders = import.meta.glob<string>("../assets/city/v2/city-t*.webp", { query: "?url", import: "default" });
 const load = (t: number) => loaders[`../assets/city/v2/city-t${t}.webp`]?.();
 
+type Vars = CSSProperties & Record<`--${string}`, string>;
+
+// окна, которые зажигаются и гаснут: x, y, период, сдвиг (все в «окне в город» на главной)
+const WIN: [number, number, number, number][] = [
+  [118, 520, 4.6, 0.7],
+  [338, 610, 5.8, 3.1],
+  [470, 742, 6.9, 1.9],
+];
+// красные огни на шпилях: x, y, сдвиг
+const BEACONS: [number, number, number][] = [
+  [55, 412, 0.4],
+  [650, 548, 1.5],
+];
+
 export function readCityTier(): number {
   try {
     const q = new URLSearchParams(location.search).get("city");
@@ -53,19 +67,29 @@ export function CityV2({ tier }: { tier: number }) {
       {prev && prev !== src && <img className="cv2-img prev" src={prev} alt="" />}
       {src && <img key={src} className="cv2-img" src={src} alt="" decoding="async" />}
       <div className="cv2-life">
-        {/* туман на двух глубинах — всегда */}
+        {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (11 анимаций) ── */}
         <i className="fog f-far" />
         <i className="fog f-near" />
-        {/* T2+: машина по улице */}
-        {tier >= 2 && <i className="car" style={{ top: pc(1018, H) }} />}
-        {/* T2: вывески только зажглись — тихий текст */}
-        {tier === 2 && (
+        <i className="rain" />
+        {WIN.map(([x, y, d, dl], n) => (
+          <i key={`w${n}`} className="win" style={{ ...box(x, y, 7, 8), "--d": `${d}s`, "--dl": `-${dl}s` } as Vars} />
+        ))}
+        {BEACONS.map(([x, y, dl], n) => (
+          <i key={`b${n}`} className="bcn" style={{ left: pc(x, W), top: pc(y, H), "--dl": `-${dl}s` } as Vars} />
+        ))}
+        <i className="drone" style={{ top: pc(470, H) }} />
+        <i className="steam" style={{ left: pc(598, W), top: pc(628, H) }} />
+        <i className="steam s2" style={{ left: pc(612, W), top: pc(630, H) }} />
+
+        {/* ── T2+: вывески зажглись (одна иногда «моргает»), воздушная полоса ── */}
+        {tier >= 2 && (
           <>
-            <b className="sign v quiet" style={box(72, 578, 40, 170)}>ОБМЕН</b>
-            <b className="sign quiet" style={box(444, 808, 44, 52)}>TON</b>
+            <b className={`sign v ${tier >= 4 ? "holo" : "quiet cut"}`} style={box(72, 578, 40, 170)}>ОБМЕН</b>
+            <b className={`sign ${tier >= 4 ? "holo" : "quiet"}`} style={box(444, 808, 44, 52)}>TON</b>
+            <i className="craft c0" />
           </>
         )}
-        {/* T3+: башня под током — энергия бежит по каналу, борта в небе */}
+        {/* ── T3+: башня под током, ещё два борта ── */}
         {tier >= 3 && (
           <>
             <i className="conduit" style={box(379, 370, 24, 500)} />
@@ -73,17 +97,14 @@ export function CityV2({ tier }: { tier: number }) {
             <i className="craft c2" />
           </>
         )}
-        {/* T4: голо-вывески, луч, третий борт, блики на асфальте */}
+        {/* ── T4: голо-«РЕАКТОР» с развёрткой, прожектор, третий борт ── */}
         {tier >= 4 && (
           <>
-            <b className="sign v holo" style={box(72, 578, 40, 170)}>ОБМЕН</b>
-            <b className="sign holo" style={box(444, 808, 44, 52)}>TON</b>
-            <b className="sign holo wide" style={box(543, 705, 112, 86)}>
+            <b className="sign holo wide scan" style={box(543, 705, 112, 86)}>
               РЕАКТОР<small>MK IV · ОНЛАЙН</small>
             </b>
             <i className="beam" style={{ left: pc(600, W), top: pc(1000, H) }} />
             <i className="craft c3" />
-            <i className="sheen" style={box(0, 1030, 720, 250)} />
           </>
         )}
       </div>
