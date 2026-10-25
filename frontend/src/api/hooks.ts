@@ -263,9 +263,10 @@ export type InboxSubmission = {
   review_note: string | null;
 };
 
-export function usePendingSubmissions() {
+export function usePendingSubmissions(enabled = true) {
   return useQuery({
     queryKey: ["inbox", "submissions"],
+    enabled,
     queryFn: () => api<InboxSubmission[]>("/api/v1/tasks/inbox/pending"),
   });
 }
@@ -293,9 +294,10 @@ export function useReviewSubmission() {
   });
 }
 
-export function usePendingTaskApprovals() {
+export function usePendingTaskApprovals(enabled = true) {
   return useQuery({
     queryKey: ["inbox", "task-approvals"],
+    enabled,
     queryFn: () => api<TaskOut[]>("/api/v1/tasks/approval/pending"),
     retry: false,
   });
@@ -330,9 +332,10 @@ export type WithdrawOut = {
   reviewed_at: string | null;
 };
 
-export function usePendingWithdrawals() {
+export function usePendingWithdrawals(enabled = true) {
   return useQuery({
     queryKey: ["withdraw", "pending"],
+    enabled,
     queryFn: () => api<WithdrawOut[]>("/api/v1/withdraw/pending"),
   });
 }

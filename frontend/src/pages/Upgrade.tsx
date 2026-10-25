@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
 import { useMe, useMiner, useMinerUpgrade, type UpgradeOut } from "@/api/hooks";
 import {
   ScreenHeader,
@@ -19,6 +18,8 @@ import {
 import { prefersReducedMotion } from "@/components/ui/press";
 import { haptic } from "@/lib/haptics";
 import { IconSpark } from "@/components/icons";
+import { useScreenBack } from "@/lib/backButton";
+import { BackLink } from "@/components/BackLink";
 
 const TYPE_RU: Record<string, string> = {
   power: "Мощность",
@@ -43,6 +44,7 @@ type Phase = "idle" | "wait" | "scan" | "needle" | "done";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function Upgrade() {
+  useScreenBack("/miner");
   const { data: me } = useMe();
   const { data: m, isLoading, error } = useMiner({ fresh: true });
   const upgrade = useMinerUpgrade();
@@ -138,11 +140,7 @@ export function Upgrade() {
       <ScreenHeader
         eyebrow="Модуль"
         title="Усиление"
-        action={
-          <Link to="/miner" className="ui-btn secondary sm no-underline">
-            ← Реактор
-          </Link>
-        }
+        action={<BackLink to="/miner" label="Реактор" />}
       />
 
       {/* Герой: циферблат шанса (п. 8.2) */}

@@ -12,6 +12,7 @@ import { Wheel } from "@/pages/Wheel";
 import { Owner } from "@/pages/Owner";
 import { Inbox } from "@/pages/Inbox";
 import { WithdrawQueue } from "@/pages/WithdrawQueue";
+import { Deploy } from "@/pages/Deploy";
 
 // Витрина набора компонентов — только в dev-сборке, в прод не попадает
 const Kit = import.meta.env.DEV ? lazy(() => import("@/pages/Kit")) : null;
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/owner" element={<Owner />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/withdraws" element={<WithdrawQueue />} />
+          <Route path="/deploy" element={<Deploy />} />
           {Kit && (
             <Route
               path="/kit"

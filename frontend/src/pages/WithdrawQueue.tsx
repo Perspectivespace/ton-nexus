@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
 import {
   useMe,
   usePendingWithdrawals,
@@ -17,6 +16,8 @@ import {
   Field,
   useToast,
 } from "@/components/ui";
+import { useScreenBack } from "@/lib/backButton";
+import { BackLink } from "@/components/BackLink";
 
 function formatDate(iso: string) {
   try {
@@ -148,6 +149,7 @@ function WithdrawCard({
 }
 
 export function WithdrawQueue() {
+  useScreenBack("/");
   const { data: me, isLoading: meLoading } = useMe();
   const q = usePendingWithdrawals();
 
@@ -160,11 +162,9 @@ export function WithdrawQueue() {
   if (!allowed) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Касса" title="Выводы" />
+        <ScreenHeader eyebrow="Работа" title="Касса" />
         <ErrorPanel message="Очередь доступна только владельцу и админам." />
-        <Link to="/" className="ui-btn secondary sm no-underline">
-          ← Контур
-        </Link>
+        <BackLink />
       </div>
     );
   }
@@ -178,8 +178,8 @@ export function WithdrawQueue() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Касса"
-        title="Выводы"
+        eyebrow="Работа"
+        title="Касса"
         action={
           <StatusPill tone={list.length ? "warn" : "ok"}>{list.length} в холде</StatusPill>
         }
@@ -205,14 +205,7 @@ export function WithdrawQueue() {
         ))}
       </AnimatePresence>
 
-      <div className="flex gap-2">
-        <Link to="/owner" className="ui-btn secondary flex-1 no-underline">
-          Экономика
-        </Link>
-        <Link to="/" className="ui-btn secondary flex-1 no-underline">
-          Контур
-        </Link>
-      </div>
+      <BackLink />
     </div>
   );
 }

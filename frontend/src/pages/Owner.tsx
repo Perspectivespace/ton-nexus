@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import {
   useMe,
   useEconomySettings,
@@ -7,7 +7,6 @@ import {
   useOwnerStats,
   usePromoList,
 } from "@/api/hooks";
-import { DeployPanel } from "@/components/DeployPanel";
 import { OwnerShell } from "@/components/owner/OwnerShell";
 import { SettingsList } from "@/components/owner/SettingsList";
 import {
@@ -157,42 +156,30 @@ function PromosTab() {
   );
 }
 
-const TABS = ["overview", "promos", "economy", "deploy"] as const;
+const TABS = ["overview", "promos", "economy"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_RU: Record<Tab, string> = {
   overview: "Обзор",
   promos: "Промо",
   economy: "Экономика",
-  deploy: "Деплой",
 };
 
 export function Owner() {
   const { data: me, isLoading: meLoading } = useMe();
   const isOwner = !!me?.is_owner;
-  // Вкладка «Деплой» — только деплойерам; владелец без права деплоя её не видит.
-  const tabs = TABS.filter((t) => t !== "deploy" || !!me?.can_deploy);
   const { data, isLoading, error, refetch, isFetching } =
     useEconomySettings(isOwner);
   const [params] = useSearchParams();
-  const asked = params.get("tab") as Tab | null;
+  const asked = params.get("tab");
   const [tab, setTab] = useState<Tab>(
-    asked && TABS.includes(asked) ? asked : "overview",
+    asked && (TABS as readonly string[]).includes(asked) ? (asked as Tab) : "overview",
   );
 
-  const shown: Tab = tabs.includes(tab) ? tab : "overview";
-
-  if (meLoading) return <LoadingPanel label="Проверка доступа…" />;
-  if (!isOwner && me?.can_deploy) {
-    return (
-      <OwnerShell
-        eyebrow="Кабинет деплойера"
-        title="Деплой"
-        status={<StatusPill tone="ok">в сети</StatusPill>}
-      >
-        <DeployPanel />
-      </OwnerShell>
-    );
+  // Деплой живёт на своём экране: старые ссылки `/owner?tab=deploy` (и деплойер без кабинета) — туда.
+  if (asked === "deploy" || (!meLoading && !isOwner && me?.can_deploy)) {
+    return <Navigate to="/deploy" replace />;
   }
+  if (meLoading) return <LoadingPanel label="Проверка доступа…" />;
   if (!isOwner) {
     return (
       <OwnerShell title="Нет доступа">
@@ -203,7 +190,8 @@ export function Owner() {
 
   return (
     <OwnerShell
-      title="Кабинет"
+      title="Кабинет владельца"
+      eyebrow="Работа"
       status={
         <StatusPill tone={isFetching ? "live" : "ok"}>
           {isFetching ? "синхр." : "в сети"}
@@ -214,16 +202,15 @@ export function Owner() {
         <Tabs
           kind="blocks"
           label="Разделы кабинета"
-          items={tabs.map((t) => ({ value: t, label: TAB_RU[t] }))}
-          value={shown}
+          items={TABS.map((t) => ({ value: t, label: TAB_RU[t] }))}
+          value={tab}
           onChange={setTab}
         />
       </div>
 
-      {shown === "overview" && <OverviewTab />}
-      {shown === "promos" && <PromosTab />}
-      {shown === "deploy" && <DeployPanel />}
-      {shown === "economy" && (
+      {tab === "overview" && <OverviewTab />}
+      {tab === "promos" && <PromosTab />}
+      {tab === "economy" && (
         <>
           {isLoading && <LoadingPanel label="Загрузка настроек…" />}
           {error && (

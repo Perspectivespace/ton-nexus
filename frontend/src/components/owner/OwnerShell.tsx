@@ -1,12 +1,11 @@
-import { useEffect, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { hasBackButton, pushBack } from "@/lib/backButton";
+import type { ReactNode } from "react";
+import { useScreenBack } from "@/lib/backButton";
 import { ScreenHeader } from "@/components/ui";
-import { IconBack } from "@/components/icons";
+import { BackLink } from "@/components/BackLink";
 
 /**
- * Общая оболочка экранов кабинета владельца (фаза 3): шапка на верхнем скриме,
- * системная «Назад» Telegram ведёт на «Контур». Вне Telegram — своя ссылка внизу (с заливкой, п. 3.8).
+ * Общая оболочка экранов рабочей зоны (кабинет, деплой): шапка на верхнем скриме,
+ * системная «Назад» Telegram — назад по истории или на «Контур». Вне Telegram — своя ссылка внизу (с заливкой, п. 3.8).
  */
 export function OwnerShell({
   eyebrow = "Кабинет владельца",
@@ -21,17 +20,12 @@ export function OwnerShell({
   back?: string;
   children: ReactNode;
 }) {
-  const navigate = useNavigate();
-  useEffect(() => pushBack(() => navigate(back)), [navigate, back]);
+  useScreenBack(back);
   return (
     <div className="space-y-5">
       <ScreenHeader eyebrow={eyebrow} title={title} action={status} />
       {children}
-      {!hasBackButton() && (
-        <Link to={back} className="ui-btn secondary sm self-start no-underline">
-          <IconBack size={16} /> Контур
-        </Link>
-      )}
+      <BackLink to={back} />
     </div>
   );
 }
