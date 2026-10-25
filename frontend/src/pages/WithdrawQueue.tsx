@@ -162,7 +162,7 @@ export function WithdrawQueue() {
   if (!allowed) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Работа" title="Касса" />
+        <ScreenHeader eyebrow="Управление" title="Касса" />
         <ErrorPanel message="Очередь доступна только владельцу и админам." />
         <BackLink />
       </div>
@@ -178,7 +178,7 @@ export function WithdrawQueue() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Работа"
+        eyebrow="Управление"
         title="Касса"
         action={
           <StatusPill tone={list.length ? "warn" : "ok"}>{list.length} в холде</StatusPill>

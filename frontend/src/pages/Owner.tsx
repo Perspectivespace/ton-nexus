@@ -191,7 +191,7 @@ export function Owner() {
   return (
     <OwnerShell
       title="Кабинет владельца"
-      eyebrow="Работа"
+      eyebrow="Управление"
       status={
         <StatusPill tone={isFetching ? "live" : "ok"}>
           {isFetching ? "синхр." : "в сети"}

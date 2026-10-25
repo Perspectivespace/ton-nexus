@@ -3,13 +3,15 @@ import { useMe, usePendingSubmissions, usePendingTaskApprovals, usePendingWithdr
 import { IconCheck, IconGear, IconOut, IconRefresh, IconSpark } from "@/components/icons";
 import { List, ListRow, SectionLabel, StatusPill } from "@/components/ui";
 
+const POLL_MS = 60_000;
+
 /** Счётчик «ждёт решения» справа в строке — только когда есть что разбирать. */
 function Count({ n }: { n: number }) {
   return n > 0 ? <StatusPill tone="warn">{n}</StatusPill> : null;
 }
 
 /**
- * «Работа» — единственный вход в инструменты команды на «Контуре» (DESIGN.md §14.1).
+ * «Управление» — единственный вход в инструменты команды на «Контуре» (DESIGN.md §14.1).
  * Строки показываются по роли; доступ всё равно проверяет сервер, здесь только видимость.
  * Сначала очереди со счётчиками, потом создание, потом кабинет и деплой.
  */
@@ -17,9 +19,10 @@ export function WorkArea() {
   const { data: me } = useMe();
   const moderator = !!(me?.is_owner || me?.is_admin || me?.is_ambassador);
   const staff = !!(me?.is_owner || me?.is_admin);
-  const subs = usePendingSubmissions(moderator);
-  const approvals = usePendingTaskApprovals(staff);
-  const withdraws = usePendingWithdrawals(staff);
+  // Пока открыт «Контур», счётчики обновляются раз в минуту (вкладка в фоне — не опрашиваем).
+  const subs = usePendingSubmissions(moderator, POLL_MS);
+  const approvals = usePendingTaskApprovals(staff, POLL_MS);
+  const withdraws = usePendingWithdrawals(staff, POLL_MS);
 
   if (!me || !(moderator || me.is_owner || me.can_deploy)) return null;
 
@@ -83,7 +86,7 @@ export function WorkArea() {
   return (
     <div className="space-y-2.5 pt-3">
       <SectionLabel action={total > 0 ? <StatusPill tone="warn">{total} ждут</StatusPill> : undefined}>
-        Работа
+        Управление
       </SectionLabel>
       <List>{rows}</List>
     </div>

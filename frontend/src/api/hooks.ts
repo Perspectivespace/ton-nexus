@@ -263,8 +263,9 @@ export type InboxSubmission = {
   review_note: string | null;
 };
 
-export function usePendingSubmissions(enabled = true) {
+export function usePendingSubmissions(enabled = true, refetchInterval?: number) {
   return useQuery({
+    refetchInterval,
     queryKey: ["inbox", "submissions"],
     enabled,
     queryFn: () => api<InboxSubmission[]>("/api/v1/tasks/inbox/pending"),
@@ -294,8 +295,9 @@ export function useReviewSubmission() {
   });
 }
 
-export function usePendingTaskApprovals(enabled = true) {
+export function usePendingTaskApprovals(enabled = true, refetchInterval?: number) {
   return useQuery({
+    refetchInterval,
     queryKey: ["inbox", "task-approvals"],
     enabled,
     queryFn: () => api<TaskOut[]>("/api/v1/tasks/approval/pending"),
@@ -332,8 +334,9 @@ export type WithdrawOut = {
   reviewed_at: string | null;
 };
 
-export function usePendingWithdrawals(enabled = true) {
+export function usePendingWithdrawals(enabled = true, refetchInterval?: number) {
   return useQuery({
+    refetchInterval,
     queryKey: ["withdraw", "pending"],
     enabled,
     queryFn: () => api<WithdrawOut[]>("/api/v1/withdraw/pending"),

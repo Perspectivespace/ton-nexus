@@ -147,7 +147,7 @@ export function Inbox() {
   if (!canModerate) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Работа" title="Модерация" />
+        <ScreenHeader eyebrow="Управление" title="Модерация" />
         <ErrorPanel message="Модерация доступна амбассадорам, админам и владельцу." />
         <BackLink />
       </div>
@@ -165,7 +165,7 @@ export function Inbox() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Работа"
+        eyebrow="Управление"
         title="Модерация"
         action={
           <StatusPill tone={list.length ? "live" : "ok"}>{list.length} сдач</StatusPill>

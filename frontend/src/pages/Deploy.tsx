@@ -9,13 +9,13 @@ export function Deploy() {
   if (isLoading) return <LoadingPanel label="Проверка доступа…" />;
   if (!me?.can_deploy) {
     return (
-      <OwnerShell eyebrow="Работа" title="Нет доступа">
+      <OwnerShell eyebrow="Управление" title="Нет доступа">
         <ErrorPanel message="Деплой доступен только деплойерам." />
       </OwnerShell>
     );
   }
   return (
-    <OwnerShell eyebrow="Работа" title="Деплой" status={<StatusPill tone="ok">в сети</StatusPill>}>
+    <OwnerShell eyebrow="Управление" title="Деплой" status={<StatusPill tone="ok">в сети</StatusPill>}>
       <DeployPanel />
     </OwnerShell>
   );
