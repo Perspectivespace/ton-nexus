@@ -1,0 +1,94 @@
+/*
+ * КОНЦЕПТ «интерактивные здания» (DESIGN.md п. 3.8.3). Только transform / opacity, свечение статичное,
+ * бесконечных анимаций нет. «Уменьшить движение» — без наезда; слабое устройство — простое растворение.
+ */
+
+/* камера: наезд на здание — центр здания в центр экрана, масштаб вокруг него */
+.city .c-zoom { position: absolute; inset: 0; transform-origin: var(--bz-ox, 50%) var(--bz-oy, 50%);
+  transition: transform .45s cubic-bezier(.55, 0, .25, 1); will-change: auto; }
+html.bz-in .city .c-zoom { transform: translate3d(var(--bz-dx, 0), var(--bz-dy, 0), 0) scale(var(--bz-s, 2.3)); will-change: transform; }
+/* растушёвка краёв сцены не масштабируется — на время наезда убираем её, иначе виден «шов» */
+.city .c-stage::after { transition: opacity .25s ease-out; }
+html.bz-in .city .c-stage::after { opacity: 0; }
+html.bz-snap .city .c-zoom, html.bz-snap .city .c-stage::after, html.bz-back .city .c-stage { transition: none; }
+html.bz-back .city .c-zoom { will-change: transform; }
+/* внутри здания улица скрыта под интерьером: не рисуется и не анимируется */
+.city.inside .c-stage { visibility: hidden; }
+.city.inside .c-zoom { transition: none; }
+.city.inside .cv2 *, .city.inside .cv2 *::before, .city.inside .cv2 *::after { animation-play-state: paused; }
+
+/* контент растворяется на время наезда (интерфейс «остаётся на улице») */
+.app-stage { transition: opacity .28s ease-out; }
+html.bz-hide .app-stage { opacity: 0; }
+html.bz-fade .city .c-stage { opacity: .35; transition: opacity .22s ease-out; }
+
+/* главная: полосы между панелями и «окно в город» пропускают тап к зданиям */
+html.cv2-home .app-stage, html.cv2-home .app-stage > div, html.cv2-home .cv2-window { pointer-events: none; }
+html.cv2-home .app-stage > div > *:not(.cv2-window) { pointer-events: auto; }
+
+/* ── точки входа ── */
+.bh-layer { position: absolute; inset: 0; }
+.city .bh { position: absolute; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: opacity .18s ease-out; }
+html.bz-in .city .bh, html.bz-fade .city .bh { opacity: 0; }
+/* статичная подсветка: тонкие уголки и лёгкий цветной налёт снизу (без свечения и анимации) */
+.bh-frame { position: absolute; inset: 0; pointer-events: none; --c: rgba(125, 249, 255, .78); --l: 14px;
+  background:
+    linear-gradient(var(--c), var(--c)) 0 0 / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 0 0 / 1.5px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0 / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 100% 0 / 1.5px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) 0 100% / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 0 100% / 1.5px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 100% 100% / 1.5px var(--l) no-repeat,
+    linear-gradient(180deg, transparent 40%, rgba(125, 249, 255, .10)); }
+.bh-exchange .bh-frame { --c: rgba(255, 196, 92, .82); background-color: transparent; }
+.bh-exchange .bh-frame { background:
+    linear-gradient(var(--c), var(--c)) 0 0 / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 0 0 / 1.5px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0 / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 100% 0 / 1.5px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) 0 100% / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 0 100% / 1.5px var(--l) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 100% 100% / 1.5px var(--l) no-repeat,
+    linear-gradient(180deg, transparent 40%, rgba(255, 196, 92, .10)); }
+
+/* подпись — лёгкая стеклянная табличка на плотной подложке (текст всегда на подложке, п. 3.6) */
+.bh-label { position: absolute; left: 50%; top: 56%; transform: translateX(-50%); display: flex; flex-direction: column;
+  align-items: center; gap: 1px; padding: 5px 10px 6px; white-space: nowrap; pointer-events: none;
+  background: linear-gradient(180deg, rgba(10, 26, 44, .84), rgba(8, 18, 34, .8));
+  border: 1px solid rgba(125, 249, 255, .38); border-radius: 2px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%); }
+.bh-exchange .bh-label { border-color: rgba(255, 196, 92, .45); top: 50%; }
+.bh-name { font: 600 9.5px/1.2 var(--font-mono, ui-monospace, monospace); letter-spacing: .14em; text-transform: uppercase; color: #9FEFFF; }
+.bh-exchange .bh-name { color: #FFD48A; }
+.bh-sec { font: 600 13px/1.25 var(--font-display, system-ui); color: #F4FAFF; }
+.bh-go { color: #7DF9FF; }
+.bh-exchange .bh-go { color: #FFC45C; }
+.city .bh:active .bh-label { transform: translateX(-50%) scale(.96); }
+.city .bh:focus-visible { outline: 2px solid #7DF9FF; outline-offset: 2px; }
+
+[data-theme="light"] .bh-label { background: linear-gradient(180deg, rgba(255, 255, 255, .94), rgba(244, 248, 252, .92)); border-color: rgba(0, 150, 170, .45); }
+[data-theme="light"] .bh-name { color: #00788A; }
+[data-theme="light"] .bh-sec { color: #0B1626; }
+[data-theme="light"] .bh-go { color: #00A3B5; }
+[data-theme="light"] .bh-exchange .bh-label { border-color: rgba(190, 120, 0, .5); }
+[data-theme="light"] .bh-exchange .bh-name { color: #9A5A00; }
+[data-theme="light"] .bh-exchange .bh-go { color: #C27800; }
+
+/* ── интерьер раздела: один нарисованный кадр, поверх — обычные панели раздела ── */
+.city .bi { position: absolute; inset: 0; overflow: hidden; }
+.bi-reactor { background: #061a2c; }
+.bi-exchange { background: #062430; }
+.bi img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+@media (min-width: 561px) { .bi img { width: 560px; left: 50%; transform: translateX(-50%); } }
+.bi.a-zoom { animation: bi-in .4s cubic-bezier(.2, .8, .2, 1) both; }
+.bi.a-fade, .bi.a-dock { animation: bi-fade .26s ease-out both; }
+.bi.a-out { animation: bi-out .3s cubic-bezier(.4, 0, .8, .4) both; }
+.bi.a-out-fade { animation: bi-fade .22s ease-in reverse both; }
+@keyframes bi-in { from { opacity: 0; transform: scale(1.16) } to { opacity: 1; transform: none } }
+@keyframes bi-out { from { opacity: 1; transform: none } to { opacity: 0; transform: scale(.88) } }
+@keyframes bi-fade { from { opacity: 0 } to { opacity: 1 } }
+
+/* светлая тема внутри здания: интерьер тёмный, поэтому панели плотнее (как над ночным городом), низ без молочной дымки */
+html[data-theme="light"].in-bld { --scrim-top: linear-gradient(180deg, rgba(238,241,246,.94) 0, rgba(238,241,246,.7) 52px, rgba(238,241,246,0) 104px);
+  --scrim-bottom: linear-gradient(0deg, rgba(238,241,246,.9), rgba(238,241,246,0) 120px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .city .c-zoom, .app-stage, .city .bh { transition: none; }
+  .bi.a-zoom, .bi.a-fade, .bi.a-dock, .bi.a-out, .bi.a-out-fade { animation: none; }
+}
