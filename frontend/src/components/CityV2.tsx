@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useMe } from "@/api/hooks";
+import { TowerHotspot } from "./CityBuildings";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 
@@ -177,8 +178,9 @@ export function CityWindow() {
     return () => document.documentElement.classList.remove("cv2-home");
   }, []);
   return (
-    <div className="cv2-window" aria-hidden="true">
-      <span className="cv2-chip">
+    <div className="cv2-window">
+      <TowerHotspot tier={t} />
+      <span className="cv2-chip" aria-hidden="true">
         <span className="ui-label">Район</span> {TIER_MOOD[t]} · «{REACTOR_TIERS[t - 1]?.name}»
       </span>
     </div>
