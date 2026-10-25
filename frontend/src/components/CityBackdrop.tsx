@@ -28,6 +28,8 @@ const SPARKS: [number, number, string, number][] = [
   [96, 568, "#FFB547", 5], [222, 566, "#2BF5FF", -4], [300, 470, "#FFB547", 6],
   [150, 570, "#FFB547", -3], [332, 566, "#2BF5FF", 4],
 ];
+// КОНЦЕПТ: окна центральной башни, загорающиеся волной снизу вверх
+const CC_WIN: [number, number][] = [[192, 540], [210, 522], [198, 500], [216, 478], [188, 455], [205, 432], [193, 405], [212, 380]];
 // красные огни на крышах
 const BEACONS: [number, number][] = [[273, 79], [126, 137]];
 
@@ -88,6 +90,19 @@ export function CityBackdrop() {
             <i key={`b${n}`} className="bcn" style={{ left: pc(x, W), top: pc(y, H), "--dl": `-${n * 1.1 + 0.4}s` } as Vars} />
           ))}
           <i className="drone" />
+          {/* КОНЦЕПТ города (concept/miner-tiers): слои скрыты, пока на <html> нет класса cc-a / cc-b / cc-c */}
+          <i className="cc cc-a fly f1" />
+          <i className="cc cc-a fly f2" />
+          <i className="cc cc-a fly f3" />
+          <i className="cc cc-b stream" style={box(186, 232, 30, 330)} />
+          <i className="cc cc-b halo" style={{ left: pc(201, W), top: pc(186, H) }} />
+          {CC_WIN.map(([x, y], n) => (
+            <i key={`cw${n}`} className="cc cc-b wwave" style={{ ...box(x, y, 4, 4.6), "--dl": `${(n * 0.32).toFixed(2)}s` } as Vars} />
+          ))}
+          <i className="cc cc-c fog g1" />
+          <i className="cc cc-c fog g2" />
+          <i className="cc cc-c beam b1" style={{ left: pc(330, W), top: pc(470, H) }} />
+          <i className="cc cc-c beam b2" style={{ left: pc(70, W), top: pc(300, H) }} />
         </div>
       </div>
       <div className="c-scrim" />

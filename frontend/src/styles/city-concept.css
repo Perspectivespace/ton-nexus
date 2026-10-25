@@ -1,0 +1,52 @@
+/* КОНЦЕПТ города (ветка concept/miner-tiers). Только transform / opacity, без filter и анимации свечения. */
+.life .cc { display: none; }
+html.cc-a .life .cc-a, html.cc-b .life .cc-b, html.cc-c .life .cc-c { display: block; }
+
+/* A. Транспортный поток: три борта на разной глубине, путь — дуга из ключевых точек */
+.life .fly { left: 0; width: 100%; height: 8px; will-change: transform; }
+.life .fly::before { content: ""; position: absolute; left: 0; top: 0; width: 16px; height: 4px; border-radius: 2px 4px 4px 2px;
+  background: linear-gradient(90deg, #FF4766 0 2px, #2A3348 2px 13px, #F4FBFF 13px); box-shadow: 0 0 4px 1px rgba(200,240,255,.35); }
+.life .fly::after { content: ""; position: absolute; left: 16px; top: -5px; width: 46px; height: 14px;
+  background: linear-gradient(90deg, rgba(220,245,255,.45), rgba(220,245,255,0)); clip-path: polygon(0 35%, 100% 0, 100% 100%, 0 65%); }
+.life .fly.f1 { top: 21%; animation: fly1 19s linear -6s infinite; }
+.life .fly.f2 { top: 36%; transform: scale(.7); animation: fly2 27s linear -15s infinite; }
+.life .fly.f3 { top: 47%; animation: fly3 13s linear -3s infinite; }
+.life .fly.f3::before { width: 20px; height: 5px; }
+.life .fly.f3::after { left: 20px; }
+@keyframes fly1 { 0% { transform: translate3d(-8%, 0, 0) } 50% { transform: translate3d(50%, -26px, 0) } 100% { transform: translate3d(108%, -8px, 0) } }
+@keyframes fly2 { 0% { transform: translate3d(108%, 0, 0) scaleX(-1) } 50% { transform: translate3d(50%, 14px, 0) scaleX(-1) } 100% { transform: translate3d(-8%, -4px, 0) scaleX(-1) } }
+@keyframes fly3 { 0% { transform: translate3d(-8%, 10px, 0) } 45% { transform: translate3d(42%, -6px, 0) } 100% { transform: translate3d(108%, -30px, 0) } }
+
+/* B. Башня майнинга: поток данных вверх по центральной башне + кольцо над знаком + окна волной. Цвет — облик реактора игрока */
+html { --cc-tier: #2BF5FF; --cc-tier-soft: rgba(43,245,255,.0); }
+html.cc-t2 { --cc-tier: #FFC864; }
+html.cc-t3 { --cc-tier: #FF4F9A; }
+.life .stream { overflow: hidden; opacity: 1;
+  -webkit-mask: linear-gradient(180deg, transparent, #000 12%, #000 80%, transparent); mask: linear-gradient(180deg, transparent, #000 12%, #000 80%, transparent); }
+.life .stream::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 200%;
+  background:
+    repeating-linear-gradient(180deg, var(--cc-tier) 0 3px, transparent 3px 14px) 18% 0 / 2.5px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--cc-tier) 0 2px, transparent 2px 22px) 50% 0 / 2.5px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--cc-tier) 0 4px, transparent 4px 18px) 82% 0 / 2.5px 100% no-repeat;
+  animation: stream 2.6s linear infinite; will-change: transform; }
+.life .stream::after { content: ""; position: absolute; inset: 0; opacity: .28;
+  background: linear-gradient(90deg, transparent, var(--cc-tier) 50%, transparent); }
+@keyframes stream { from { transform: translate3d(0, 0, 0) } to { transform: translate3d(0, -126px, 0) } }
+.life .halo { width: 9%; aspect-ratio: 1; margin: -4.5% 0 0 -4.5%; border-radius: 50%; border: 1.5px solid var(--cc-tier); opacity: 0; animation: halo 3.2s ease-out infinite; }
+@keyframes halo { 0% { opacity: .9; transform: scale(.5) } 100% { opacity: 0; transform: scale(2.1) } }
+.life .wwave { background: #FFD58F; opacity: 0; animation: wwave 7s steps(1, end) var(--dl, 0s) infinite; }
+@keyframes wwave { 0% { opacity: 0 } 6% { opacity: .95 } 55% { opacity: .95 } 56% { opacity: 0 } }
+
+/* C. Туман и прожекторы: заранее «размытые» градиенты дрейфуют, лучи качаются */
+.life .fog { left: -30%; width: 160%; height: 22%; opacity: .7; will-change: transform;
+  background: radial-gradient(40% 50% at 30% 50%, rgba(140,170,225,.55), transparent 70%), radial-gradient(35% 45% at 72% 55%, rgba(140,170,225,.45), transparent 70%); }
+.life .fog.g1 { top: 52%; animation: fog 70s linear infinite alternate; }
+.life .fog.g2 { top: 64%; opacity: .55; animation: fog 95s linear -30s infinite alternate-reverse; }
+@keyframes fog { from { transform: translate3d(-12%, 0, 0) } to { transform: translate3d(12%, 0, 0) } }
+.life .beam { width: 50%; height: 60%; margin-left: -23%; transform-origin: 50% 0; opacity: .5;
+  background: linear-gradient(180deg, rgba(170,225,255,.40), rgba(160,220,255,0) 85%);
+  clip-path: polygon(48% 0, 52% 0, 100% 100%, 0 100%); animation: beam 9s ease-in-out infinite alternate; }
+.life .beam.b1 { transform: rotate(180deg); animation-name: beam1; }
+.life .beam.b2 { animation-name: beam2; animation-duration: 12s; }
+@keyframes beam1 { from { transform: rotate(150deg) } to { transform: rotate(200deg) } }
+@keyframes beam2 { from { transform: rotate(165deg) } to { transform: rotate(215deg) } }
