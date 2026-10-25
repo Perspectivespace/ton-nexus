@@ -10,8 +10,9 @@ from app.db.session import get_db
 from app.models.user import User
 from app.services.roles import (
     can_assign_admin,
-    can_assign_deployer,
     can_deploy,
+    deployer_change_error,
+    deployer_count,
     is_admin,
     is_platform_owner,
 )
@@ -58,8 +59,10 @@ async def set_roles(
         target.is_ambassador = body.is_ambassador
 
     if body.is_deployer is not None:
-        if not can_assign_deployer(user):
-            raise HTTPException(status_code=403, detail="only owner can assign deployers")
+        count = await deployer_count(db, lock=True)
+        err = deployer_change_error(user, target, body.is_deployer, count)
+        if err:
+            raise HTTPException(status_code=403, detail=err)
         target.is_deployer = body.is_deployer
 
     await db.commit()
