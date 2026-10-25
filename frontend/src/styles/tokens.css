@@ -95,6 +95,10 @@
   --scrim-bottom: linear-gradient(0deg, rgba(238,241,246,.95), transparent 260px);
   --city-floor: var(--bg);
 }
+/* светлая тема над вечерним/ночным городом: светлая шапка короче и плотнее — без молочной дымки на полнеба */
+html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"]) {
+  --scrim-top: linear-gradient(180deg, rgba(238,241,246,.94) 0, rgba(238,241,246,.7) 52px, rgba(238,241,246,0) 104px);
+}
 
 /*
  * Tailwind 4: токены доступны как классы — bg-surface-1, text-neon, text-text-2, border-line,
