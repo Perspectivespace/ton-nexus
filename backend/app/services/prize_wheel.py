@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from decimal import Decimal
 import logging
 import math
@@ -16,7 +15,7 @@ from app.models.balance import BalanceHistory
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services.economy import dec, get_setting
-from app.services.daily import next_reset_utc
+from app.services import gameday
 from app.services.economy_seed import DEFAULTS
 
 log = logging.getLogger(__name__)
@@ -41,8 +40,8 @@ class SpinResult:
 
 
 async def _spins_today(session: AsyncSession, user_id: int) -> int:
-    today = datetime.now(timezone.utc).date()
-    start = datetime(today.year, today.month, today.day, tzinfo=timezone.utc)
+    # считаем по моменту вращения от 00:00 МСК — при переходе с UTC-суток лишнего вращения не появляется
+    start = gameday.day_start_of()
     cnt = await session.scalar(
         select(func.count())
         .select_from(BalanceHistory)
@@ -206,8 +205,8 @@ async def wheel_status(session: AsyncSession, *, user_id: int) -> dict:
         "free_spins_per_day": free,
         "used_today": used,
         "left_today": max(0, free - used),
-        # Бесплатные вращения считаются по дню UTC — следующие появятся в полночь UTC.
-        "next_reset_at": next_reset_utc().isoformat(),
+        # Бесплатные вращения считаются по игровому дню — следующие появятся в 00:00 МСК.
+        "next_reset_at": gameday.next_reset().isoformat(),
         "sectors": sectors_view(pairs),
         "weights_source": source,
     }

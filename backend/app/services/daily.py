@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.promo import DailyCheckIn
 from app.models.user import User
 from app.services import balance as balance_svc
+from app.services import gameday
 from app.services.economy import dec, get_setting
 
 
@@ -29,19 +30,34 @@ class DailyResult:
     check_date: date
 
 
-def _today_utc(now: datetime | None = None) -> date:
-    return (now or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
+# Граница суток — игровой день (00:00 МСК), см. app.services.gameday.
+# Имена next_reset_utc/reset_after оставлены для совместимости импорта; время отдаётся в UTC.
+next_reset_utc = gameday.next_reset
+reset_after = gameday.reset_after
 
 
-def next_reset_utc(now: datetime | None = None) -> datetime:
-    """Следующая полночь UTC — с неё снова можно отметиться (отметка — по календарному дню UTC, не «24 часа»)."""
-    return reset_after(_today_utc(now))
+def effective_day(row) -> date:
+    """Игровой день, к которому относится отметка.
+
+    До перехода на московские сутки check_date писался по UTC. Отметка, сделанная с 21:00 до 24:00 UTC,
+    по Москве уже относится к следующему дню, а записана вчерашней датой. Берём позднюю из двух дат —
+    записанной и московской даты created_at: так старая отметка не даёт отметиться второй раз в тот же
+    московский день и не рвёт серию. Для новых записей обе даты совпадают.
+    """
+    d = row.check_date
+    created = getattr(row, "created_at", None)
+    if isinstance(created, datetime):
+        d = max(d, gameday.game_day(created))
+    return d
 
 
-def reset_after(day: date) -> datetime:
-    """Начало следующего дня UTC после `day` — момент, когда отметка за `day` перестаёт блокировать новую."""
-    d = day + timedelta(days=1)
-    return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+async def _last_checkin(session: AsyncSession, user_id: int):
+    return await session.scalar(
+        select(DailyCheckIn)
+        .where(DailyCheckIn.user_id == user_id)
+        .order_by(DailyCheckIn.check_date.desc(), DailyCheckIn.created_at.desc())
+        .limit(1)
+    )
 
 
 def _reward_for_streak(cfg: dict, streak: int) -> dict:
@@ -57,32 +73,21 @@ def _reward_for_streak(cfg: dict, streak: int) -> dict:
     return cfg.get("day_1", {"ton": "0.001", "xp": 5})
 
 
-async def claim_daily(session: AsyncSession, *, user: User) -> DailyResult:
-    today = _today_utc()
-    existing = await session.scalar(
-        select(DailyCheckIn).where(
-            DailyCheckIn.user_id == user.id,
-            DailyCheckIn.check_date == today,
-        )
-    )
-    if existing:
+async def claim_daily(session: AsyncSession, *, user: User, now: datetime | None = None) -> DailyResult:
+    today = gameday.game_day(now)
+    prev = await _last_checkin(session, user.id)
+    prev_day = effective_day(prev) if prev else None
+    if prev and prev_day >= today:
         return DailyResult(
             already_claimed=True,
-            streak=existing.streak,
-            reward_ton=Decimal(existing.reward_ton),
+            streak=prev.streak,
+            reward_ton=Decimal(prev.reward_ton),
             reward_xp=0,
             reward_focus=0,
             check_date=today,
         )
 
-    yesterday = today - timedelta(days=1)
-    prev = await session.scalar(
-        select(DailyCheckIn)
-        .where(DailyCheckIn.user_id == user.id)
-        .order_by(DailyCheckIn.check_date.desc())
-        .limit(1)
-    )
-    streak = prev.streak + 1 if prev and prev.check_date == yesterday else 1
+    streak = prev.streak + 1 if prev and prev_day == today - timedelta(days=1) else 1
 
     cfg = await get_setting(session, "daily_rewards")
     reward = _reward_for_streak(cfg, streak)
@@ -128,30 +133,19 @@ async def claim_daily(session: AsyncSession, *, user: User) -> DailyResult:
 
 
 async def daily_status(session: AsyncSession, *, user_id: int, now: datetime | None = None) -> dict:
-    now = now or datetime.now(timezone.utc)
-    today = _today_utc(now)
-    existing = await session.scalar(
-        select(DailyCheckIn).where(
-            DailyCheckIn.user_id == user_id,
-            DailyCheckIn.check_date == today,
-        )
-    )
-    prev = await session.scalar(
-        select(DailyCheckIn)
-        .where(DailyCheckIn.user_id == user_id)
-        .order_by(DailyCheckIn.check_date.desc())
-        .limit(1)
-    )
+    now = now or gameday.now_utc()
+    today = gameday.game_day(now)
+    prev = await _last_checkin(session, user_id)
+    prev_day = effective_day(prev) if prev else None
+    claimed = prev is not None and prev_day >= today
     streak = 0
-    if existing:
-        streak = existing.streak
-    elif prev and prev.check_date == today - timedelta(days=1):
+    if claimed or (prev and prev_day == today - timedelta(days=1)):
         streak = prev.streak
     return {
-        "claimed_today": existing is not None,
+        "claimed_today": claimed,
         "streak": streak,
         "check_date": today.isoformat(),
-        # Когда снова можно отметиться: null — можно сейчас. Правило то же, что в claim_daily (день UTC).
-        "next_claim_at": next_reset_utc(now).isoformat() if existing is not None else None,
+        # Когда снова можно отметиться: null — можно сейчас. Правило то же, что в claim_daily (игровой день, 00:00 МСК).
+        "next_claim_at": gameday.next_reset(now).isoformat() if claimed else None,
         "server_time": now.isoformat(),
     }

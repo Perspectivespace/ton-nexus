@@ -94,7 +94,7 @@ async def my_roles(user: User = Depends(get_current_user)):
     )
 
 
-from datetime import datetime, timezone
+from app.services import gameday
 from sqlalchemy import func, select
 
 
@@ -107,7 +107,7 @@ async def owner_stats(
         raise HTTPException(status_code=403, detail="owner only")
 
     total = await db.scalar(select(func.count()).select_from(User))
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = gameday.day_start_of()  # «сегодня» — игровой день, с 00:00 МСК
     today = await db.scalar(
         select(func.count()).select_from(User).where(User.created_at >= today_start)
     )

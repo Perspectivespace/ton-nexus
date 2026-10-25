@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDailyClaim, useDailyStatus, type DailyClaim, type DailyStatus } from "@/api/hooks";
 import { useToast } from "@/components/ui";
-import { nextUtcMidnight, useCountdown, formatLeft } from "@/lib/countdown";
+import { nextMskMidnight, useCountdown, formatLeft } from "@/lib/countdown";
 
 /**
  * Состояние ежедневной отметки для всех кнопок «Ежедневная отметка».
- * Правило сервера — календарный день UTC: после отметки следующая доступна с полуночи UTC (`next_claim_at`).
+ * Правило сервера — игровой день по Москве: после отметки следующая доступна с 00:00 МСК (`next_claim_at`).
  * Кнопка активна только когда можно забрать; иначе — отсчёт «Следующая награда через 23:41:05».
  * По окончании отсчёта статус перечитывается, кнопка оживает без перезагрузки.
  */
@@ -24,7 +24,7 @@ export function useDaily() {
   const target = useMemo(() => {
     if (!d?.claimed_today) return null;
     const t = d.next_claim_at ? Date.parse(d.next_claim_at) : NaN;
-    return Number.isFinite(t) ? t : nextUtcMidnight(Date.now() + offset);
+    return Number.isFinite(t) ? t : nextMskMidnight(Date.now() + offset);
   }, [d?.claimed_today, d?.next_claim_at, offset]);
 
   const toast = useToast();
