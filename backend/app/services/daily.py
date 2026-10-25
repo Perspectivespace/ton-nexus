@@ -14,6 +14,7 @@ from app.models.user import User
 from app.services import balance as balance_svc
 from app.services import gameday
 from app.services.economy import dec, get_setting
+from app.services.levels import add_xp
 
 
 class DailyError(Exception):
@@ -106,14 +107,7 @@ async def claim_daily(session: AsyncSession, *, user: User, now: datetime | None
             reference_id=None,
         )
     if xp > 0:
-        user.xp = int(user.xp or 0) + xp
-        while True:
-            curve = await get_setting(session, "xp_per_level")
-            need = int(float(curve["base"]) * (float(curve["growth"]) ** (user.level - 1)))
-            if user.xp < need:
-                break
-            user.xp -= need
-            user.level += 1
+        await add_xp(session, user, xp)
     if focus > 0:
         user.focus_tokens = int(user.focus_tokens or 0) + focus
 
