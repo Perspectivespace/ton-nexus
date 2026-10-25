@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { WebApp } from "@/lib/telegram";
 
 /**
@@ -39,4 +41,21 @@ export function pushBack(handler: () => void): () => void {
     if (i >= 0) stack.splice(i, 1);
     if (b && !stack.length) b.hide();
   };
+}
+
+/**
+ * Вложенный экран: системная «Назад» Telegram.
+ * Если в приложении есть куда вернуться — шаг назад по истории, иначе (открыли по прямой ссылке) — на `fallback`.
+ */
+export function useScreenBack(fallback = "/") {
+  const navigate = useNavigate();
+  useEffect(
+    () =>
+      pushBack(() => {
+        const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+        if (idx > 0) navigate(-1);
+        else navigate(fallback, { replace: true });
+      }),
+    [navigate, fallback],
+  );
 }

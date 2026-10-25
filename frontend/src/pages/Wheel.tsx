@@ -26,6 +26,7 @@ import {
 } from "@/components/ui";
 import { haptic } from "@/lib/haptics";
 import { IconBolt, IconSpark } from "@/components/icons";
+import { useScreenBack } from "@/lib/backButton";
 
 /**
  * Сектора колеса. Порядок — визуальный (цвета чередуются), выпавший сектор ищется по id ответа сервера.
@@ -77,6 +78,7 @@ const pct = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
 type Phase = "idle" | "wait" | "spin" | "done";
 
 export function Wheel() {
+  useScreenBack("/");
   const dailySt = useDailyStatus();
   const dailyClaim = useDailyClaimFull();
   const wheelSt = useWheelStatus();

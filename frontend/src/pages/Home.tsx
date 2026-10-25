@@ -2,6 +2,7 @@ import { motion, type Variants } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useMe, useMiner, useDailyClaim } from "@/api/hooks";
 import { haptic } from "@/lib/haptics";
+import { WorkArea } from "@/components/WorkArea";
 import {
   IconBolt,
   IconChevron,
@@ -124,6 +125,8 @@ export function Home() {
               )}
               {me.is_owner && <StatusPill tone="live">владелец</StatusPill>}
               {me.is_admin && !me.is_owner && <StatusPill tone="neutral">админ</StatusPill>}
+              {me.is_ambassador && !me.is_admin && !me.is_owner && <StatusPill tone="neutral">амбассадор</StatusPill>}
+              {me.can_deploy && <StatusPill tone="neutral">деплойер</StatusPill>}
             </div>
 
             {miner && (() => {
@@ -200,20 +203,9 @@ export function Home() {
         </List>
       </motion.div>
 
-      {(me?.is_owner || me?.is_admin || me?.is_ambassador || me?.can_deploy) && (
-        <motion.div variants={item} className="space-y-2.5">
-          <SectionLabel>Операции</SectionLabel>
-          <List>
-            {(me.is_owner || me.is_admin || me.is_ambassador) && (
-              <ListRow to="/tasks/new" title="Создать задание" />
-            )}
-            {(me.is_owner || me.is_admin || me.is_ambassador) && (
-              <ListRow to="/inbox" title="Модерация · входящие" />
-            )}
-            {(me.is_owner || me.is_admin) && <ListRow to="/withdraws" title="Касса · выводы" />}
-            {me.is_owner && <ListRow to="/owner" title="Владелец · экономика" />}
-            {me.can_deploy && <ListRow to="/owner?tab=deploy" title="Деплой · тест и прод" />}
-          </List>
+      {me && (
+        <motion.div variants={item}>
+          <WorkArea />
         </motion.div>
       )}
     </motion.div>

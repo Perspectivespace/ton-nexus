@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
 import {
   useMe,
   usePendingSubmissions,
@@ -20,6 +19,8 @@ import {
   SectionLabel,
   useToast,
 } from "@/components/ui";
+import { useScreenBack } from "@/lib/backButton";
+import { BackLink } from "@/components/BackLink";
 
 function SubmissionCard({
   item,
@@ -129,6 +130,7 @@ function SubmissionCard({
 }
 
 export function Inbox() {
+  useScreenBack("/");
   const { data: me, isLoading: meLoading } = useMe();
   const subs = usePendingSubmissions();
   const approvals = usePendingTaskApprovals();
@@ -139,17 +141,15 @@ export function Inbox() {
   const canModerate = me?.is_owner || me?.is_admin || me?.is_ambassador;
 
   if (meLoading || subs.isLoading) {
-    return <LoadingPanel label="Открываем входящие…" />;
+    return <LoadingPanel label="Открываем модерацию…" />;
   }
 
   if (!canModerate) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Модерация" title="Входящие" />
-        <ErrorPanel message="Входящие доступны амбассадорам, админам и владельцу." />
-        <Link to="/" className="ui-btn secondary sm no-underline">
-          ← Контур
-        </Link>
+        <ScreenHeader eyebrow="Управление" title="Модерация" />
+        <ErrorPanel message="Модерация доступна амбассадорам, админам и владельцу." />
+        <BackLink />
       </div>
     );
   }
@@ -165,8 +165,8 @@ export function Inbox() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Модерация"
-        title="Входящие"
+        eyebrow="Управление"
+        title="Модерация"
         action={
           <StatusPill tone={list.length ? "live" : "ok"}>{list.length} сдач</StatusPill>
         }
@@ -271,9 +271,7 @@ export function Inbox() {
         </AnimatePresence>
       </section>
 
-      <Link to="/tasks" className="ui-btn secondary sm no-underline">
-        ← Лента заданий
-      </Link>
+      <BackLink />
     </div>
   );
 }

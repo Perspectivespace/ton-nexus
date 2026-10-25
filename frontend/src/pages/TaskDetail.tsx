@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMe, useTask, useTaskSubmit } from "@/api/hooks";
 import {
@@ -11,6 +11,8 @@ import {
   Field,
   useToast,
 } from "@/components/ui";
+import { useScreenBack } from "@/lib/backButton";
+import { BackLink } from "@/components/BackLink";
 
 const TASK_STATUS_RU: Record<string, string> = {
   active: "активно",
@@ -23,6 +25,7 @@ const TASK_STATUS_RU: Record<string, string> = {
 };
 
 export function TaskDetail() {
+  useScreenBack("/tasks");
   const { id } = useParams();
   const taskId = Number(id) || 0;
   const { data: me } = useMe();
@@ -60,14 +63,7 @@ export function TaskDetail() {
       <ScreenHeader
         eyebrow="Задание"
         title={t.title}
-        action={
-          <Link
-            to="/tasks"
-            className="ui-btn secondary sm no-underline"
-          >
-            ← Лента
-          </Link>
-        }
+        action={<BackLink to="/tasks" label="Лента" />}
       />
 
       <div className="ui-cut hero space-y-4 p-5">

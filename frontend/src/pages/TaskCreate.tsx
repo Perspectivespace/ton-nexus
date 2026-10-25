@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useMe, useCreateTask } from "@/api/hooks";
 import {
   ScreenHeader,
@@ -10,8 +10,11 @@ import {
   Field,
   useToast,
 } from "@/components/ui";
+import { useScreenBack } from "@/lib/backButton";
+import { BackLink } from "@/components/BackLink";
 
 export function TaskCreate() {
+  useScreenBack("/tasks");
   const { data: me, isLoading } = useMe();
   const create = useCreateTask();
   const nav = useNavigate();
@@ -66,9 +69,7 @@ export function TaskCreate() {
       <div className="space-y-4">
         <ScreenHeader eyebrow="Маркет" title="Новое задание" />
         <ErrorPanel message="Создание доступно амбассадору, админу и владельцу." />
-        <Link to="/tasks" className="ui-btn secondary sm no-underline">
-          ← Лента
-        </Link>
+        <BackLink to="/tasks" label="Лента" />
       </div>
     );
   }
@@ -223,9 +224,7 @@ export function TaskCreate() {
 
       </form>
 
-      <Link to="/tasks" className="ui-btn secondary sm no-underline">
-        ← Лента
-      </Link>
+      <BackLink to="/tasks" label="Лента" />
     </div>
   );
 }
