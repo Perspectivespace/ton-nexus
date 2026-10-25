@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://nexus:nexus@localhost:5432/ton_nexus"
     telegram_bot_token: str = ""
     telegram_owner_ids: str = ""
+    # Деплойеры из настроек сервера (через запятую): всегда деплойеры, из приложения не снимаются.
+    telegram_deployer_ids: str = ""
     webapp_url: str = "https://example.com"
     dev_telegram_id: int = 1
 

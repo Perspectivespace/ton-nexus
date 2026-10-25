@@ -11,7 +11,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.miner import Miner
 from app.models.user import User
-from app.services.roles import can_deploy, is_platform_owner
+from app.services.roles import can_deploy, is_deployer, is_platform_owner
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -69,7 +69,7 @@ async def me(
         is_ambassador=user.is_ambassador,
         is_admin=bool(getattr(user, "is_admin", False)),
         is_owner=is_platform_owner(user),
-        is_deployer=bool(getattr(user, "is_deployer", False)),
+        is_deployer=is_deployer(user),
         can_deploy=can_deploy(user),
         miner=MinerOut.model_validate(miner) if miner else None,
     )

@@ -104,4 +104,6 @@ export type DeployerOut = {
   telegram_id: number;
   username: string | null;
   first_name: string | null;
+  /** из TELEGRAM_DEPLOYER_IDS на сервере — в приложении не снимается */
+  from_env?: boolean;
 };

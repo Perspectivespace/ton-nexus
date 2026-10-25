@@ -166,6 +166,13 @@ function JobCard({ id, onClose }: { id: string; onClose?: () => void }) {
   );
 }
 
+const ERR_RU: Record<string, string> = {
+  "user not found": "Пользователь ещё не открывал Mini App",
+  "cannot revoke the last deployer": "Последнего деплойера снять нельзя",
+  "only a deployer can manage deployers": "Назначать деплойеров может только деплойер",
+  "deployer is set in server settings": "Этот деплойер задан в настройках сервера",
+};
+
 function DeployersCard() {
   const { data, isLoading, error } = useDeployers();
   const setRole = useSetDeployer();
@@ -174,6 +181,8 @@ function DeployersCard() {
   // Кого снимаем — пока открыта шторка подтверждения (раньше был системный confirm()).
   const [revoke, setRevoke] = useState<{ telegram_id: number; name: string } | null>(null);
   const toast = useToast();
+
+  const last = !!data && data.length === 1;
 
   async function change(telegram_id: number, is_deployer: boolean) {
     setMsg(null);
@@ -185,7 +194,7 @@ function DeployersCard() {
       toast({ kind: "ok", title: done, sub: String(telegram_id) });
     } catch (e) {
       const m = e instanceof Error ? e.message : "Ошибка";
-      const text = m === "user not found" ? "Пользователь ещё не открывал Mini App" : m;
+      const text = ERR_RU[m] ?? m;
       setMsg(text);
       toast({ kind: "danger", title: is_deployer ? "Не удалось добавить" : "Не удалось снять доступ", sub: text });
     }
@@ -193,12 +202,11 @@ function DeployersCard() {
 
   return (
     <section className="space-y-2">
-      <SectionLabel action={<StatusPill tone="neutral">только владелец</StatusPill>}>Деплойеры</SectionLabel>
+      <SectionLabel action={<StatusPill tone="neutral">только деплойеры</StatusPill>}>Деплойеры</SectionLabel>
       <Panel className="space-y-4 p-4">
         <p className="ui-sec">Могут обновлять тест и прод. Доступа к экономике, кассе и модерации не получают.</p>
         {isLoading && <p className="ui-sys">Загрузка…</p>}
         {error && <p className="ui-fhint err">Не удалось загрузить список</p>}
-        {data && data.length === 0 && <p className="ui-sec">Пока никого — деплоит только владелец.</p>}
         {data && data.length > 0 && (
           <ul className="dp-people">
             {data.map((d) => (
@@ -207,23 +215,28 @@ function DeployersCard() {
                   <p className="truncate text-[15px] font-medium">{d.username ? `@${d.username}` : d.first_name || "—"}</p>
                   <p className="ui-num s-s block text-[var(--text-3)]">{d.telegram_id}</p>
                 </div>
-                <Button
-                  kind="danger"
-                  size="sm"
-                  disabled={setRole.isPending}
-                  onClick={() =>
-                    setRevoke({
-                      telegram_id: d.telegram_id,
-                      name: d.username ? `@${d.username}` : d.first_name || String(d.telegram_id),
-                    })
-                  }
-                >
-                  Снять
-                </Button>
+                {d.from_env ? (
+                  <StatusPill tone="neutral">из настроек сервера</StatusPill>
+                ) : (
+                  <Button
+                    kind="danger"
+                    size="sm"
+                    disabled={setRole.isPending || last}
+                    onClick={() =>
+                      setRevoke({
+                        telegram_id: d.telegram_id,
+                        name: d.username ? `@${d.username}` : d.first_name || String(d.telegram_id),
+                      })
+                    }
+                  >
+                    Снять
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
         )}
+        {last && !data?.[0]?.from_env && <p className="ui-sys">Последнего деплойера снять нельзя — сначала добавьте второго.</p>}
         <div className="flex items-end gap-2">
           <Field className="flex-1" label="Добавить по Telegram ID">
             <input
