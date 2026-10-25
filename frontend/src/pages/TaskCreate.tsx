@@ -93,7 +93,7 @@ export function TaskCreate() {
       <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
           {canDirectPublish
-            ? "Админ или владелец: можно сразу опубликовать — бюджет (награда × слоты + ~10%) спишется с баланса."
+            ? "Админ или владелец: можно сразу опубликовать — бюджет (награда × места + ~10%) спишется с баланса."
             : "Амбассадор: задание уйдёт на одобрение. После одобрения — публикация, бюджет уйдёт в холд."}
         </p>
       </div>
@@ -174,7 +174,7 @@ export function TaskCreate() {
               disabled={create.isPending}
             />
           </Field>
-          <Field label="Слоты">
+          <Field label="Мест (исполнителей)">
             <input
               className="ui-input"
               value={slots}

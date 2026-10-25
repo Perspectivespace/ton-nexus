@@ -70,7 +70,7 @@ export function TaskDetail() {
         <div className="flex flex-wrap items-center gap-2">
           <StatusPill tone={t.status === "active" ? "live" : "neutral"}>{TASK_STATUS_RU[t.status] ?? t.status}</StatusPill>
           <StatusPill tone={slotsLeft > 0 ? "ok" : "warn"}>
-            {t.filled_slots}/{t.total_slots} слотов
+            занято {t.filled_slots} из {t.total_slots}
           </StatusPill>
           {!levelOk && <StatusPill tone="danger">нужен ур. {t.min_level}</StatusPill>}
           {isOwn && <StatusPill tone="neutral">ваше задание</StatusPill>}
@@ -119,7 +119,7 @@ export function TaskDetail() {
               : !levelOk
                 ? `Требуется уровень ${t.min_level}.`
                 : slotsLeft <= 0
-                  ? "Слоты закончились."
+                  ? "Места закончились."
                   : t.status !== "active"
                     ? "Задание неактивно."
                     : "Сдача недоступна."}

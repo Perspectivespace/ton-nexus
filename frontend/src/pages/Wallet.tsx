@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useMe, useMyWithdrawals } from "@/api/hooks";
+import { useMe, useMyWithdrawals, useWithdrawLimits } from "@/api/hooks";
+import { PromoPanel } from "@/components/PromoPanel";
 import { api } from "@/api/client";
 import { IconOut } from "@/components/icons";
 import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Sheet, Tag, useToast, type Tone } from "@/components/ui";
+
+/** Тот же формат, что проверяет сервер */
+const TON_ADDR = /^(UQ|EQ)[A-Za-z0-9_-]{46}$/;
 
 const W_STATUS: Record<string, { label: string; tone: Tone }> = {
   pending: { label: "ожидает", tone: "warn" },
@@ -15,13 +19,36 @@ const W_STATUS: Record<string, { label: string; tone: Tone }> = {
 export function Wallet() {
   const { data: me, refetch } = useMe();
   const mine = useMyWithdrawals();
-  const [amount, setAmount] = useState("0.2");
+  const limits = useWithdrawLimits();
+  const [typed, setAmount] = useState<string | null>(null);
   const [wallet, setWallet] = useState("");
   const [loading, setLoading] = useState(false);
   const [ask, setAsk] = useState(false);
   const toast = useToast();
 
-  const ready = amount.trim() !== "" && wallet.trim() !== "";
+  const min = limits.data ? Number(limits.data.min_ton) : null;
+  const amount = typed ?? (limits.data?.min_ton ? String(Number(limits.data.min_ton)) : "");
+  const sum = Number(amount.replace(",", "."));
+  const balance = me ? Number(me.balance) : null;
+  const pending = (mine.data || []).find((w) => w.status === "pending");
+  const addr = wallet.trim();
+  const addrOk = TON_ADDR.test(addr);
+
+  // Кнопка отражает доступность (п. 14, правило 13): первая причина, почему вывести нельзя
+  const why = pending
+    ? `Заявка на ${Number(pending.amount).toFixed(4)} TON уже на проверке. Новую можно создать после решения.`
+    : !amount.trim() || !Number.isFinite(sum) || sum <= 0
+      ? "Введите сумму."
+      : min != null && sum < min
+        ? `Минимум для вывода — ${min} TON.`
+        : balance != null && sum > balance
+          ? `На балансе ${balance.toFixed(4)} TON — меньше суммы вывода.`
+          : !addr
+            ? "Укажите адрес TON."
+            : !addrOk
+              ? "Адрес TON начинается с UQ или EQ, всего 48 символов."
+              : null;
+  const ready = !why;
 
   async function submit() {
     setAsk(false);
@@ -29,7 +56,7 @@ export function Wallet() {
     try {
       await api("/api/v1/withdraw", {
         method: "POST",
-        body: JSON.stringify({ amount, wallet_address: wallet }),
+        body: JSON.stringify({ amount: amount.replace(",", "."), wallet_address: addr }),
       });
       toast({ kind: "ok", title: "Заявка на вывод создана", sub: `${amount} TON · подтвердят вручную` });
       refetch();
@@ -61,11 +88,15 @@ export function Wallet() {
       <Panel className="space-y-4 p-5">
         <div>
           <h2 className="ui-h">Вывод</h2>
-          <p className="ui-sec mt-1">Средства холдятся до решения владельца. При отказе — возврат на баланс.</p>
+          <p className="ui-sec mt-1">
+            Сумма замораживается до решения владельца. При отказе — возврат на баланс.
+            {min != null && ` Минимум — ${min} TON.`}
+          </p>
         </div>
         <Field label="Сумма" unit="TON">
           <input
             className="ui-input"
+            inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
@@ -76,13 +107,20 @@ export function Wallet() {
             value={wallet}
             onChange={(e) => setWallet(e.target.value)}
             placeholder="UQ… / EQ…"
+            autoComplete="off"
+            spellCheck={false}
           />
         </Field>
         <span className="ui-spill">
-          <Button kind="primary" size="lg" block icon={<IconOut size={20} />} disabled={loading || !ready} onClick={() => setAsk(true)}>
-            Запросить вывод
+          <Button kind="primary" size="lg" block icon={<IconOut size={20} />} disabled={loading || !ready} aria-describedby={why ? "withdraw-why" : undefined} onClick={() => setAsk(true)}>
+            {pending ? "Заявка на проверке" : "Запросить вывод"}
           </Button>
         </span>
+        {why && (
+          <p id="withdraw-why" className="ui-sec !text-[12px] !leading-[16px]">
+            {why}
+          </p>
+        )}
       </Panel>
 
       {(mine.data?.length ?? 0) > 0 && (
@@ -103,13 +141,15 @@ export function Wallet() {
         </div>
       )}
 
+      <PromoPanel />
+
       <Sheet open={ask} onClose={() => setAsk(false)} title="Вывод TON">
         <p className="ui-label">Сумма</p>
         <Num value={amount.trim()} unit="TON" size="l" className="mt-1 block" />
         <p className="ui-label mt-4">На адрес</p>
-        <p className="mono mt-1 break-all text-[13px] leading-snug text-[var(--text)]">{wallet.trim()}</p>
+        <p className="mono mt-1 break-all text-[13px] leading-snug text-[var(--text)]">{addr}</p>
         <p className="ui-sec mt-4">
-          Сумма сразу уйдёт в холд. Владелец выплатит вручную; при отказе TON вернётся на баланс.
+          Сумма сразу заморозится. Владелец выплатит вручную; при отказе TON вернётся на баланс.
         </p>
         <div className="mt-5 grid gap-2">
           <HoldButton block disabled={loading} onConfirm={submit}>

@@ -20,6 +20,8 @@ import { haptic } from "@/lib/haptics";
 import { IconSpark } from "@/components/icons";
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
+import { formatLeft, useCountdown } from "@/lib/countdown";
+import { useQueryClient } from "@tanstack/react-query";
 
 const TYPE_RU: Record<string, string> = {
   power: "Мощность",
@@ -48,6 +50,9 @@ export function Upgrade() {
   const { data: me } = useMe();
   const { data: m, isLoading, error } = useMiner({ fresh: true });
   const upgrade = useMinerUpgrade();
+  const qc = useQueryClient();
+  const cycleEnd = m?.status === "running" && m.session_ends_at ? Date.parse(m.session_ends_at) : null;
+  const cycleLeft = useCountdown(Number.isFinite(cycleEnd) ? cycleEnd : null, 0, () => qc.invalidateQueries({ queryKey: ["miner"] }));
   const [focusOn, setFocusOn] = useState<string | null>(null);
   const [blockType, setBlockType] = useState<string | null>(null);
   const [last, setLast] = useState<UpgradeOut | null>(null);
@@ -127,6 +132,18 @@ export function Upgrade() {
   // цена с сервера (та же формула, что и списание); у старого сервера поля нет — строку не показываем
   const cost = m.upgrade_cost != null && Number.isFinite(Number(m.upgrade_cost)) ? Number(m.upgrade_cost) : null;
 
+  // Кнопка отражает доступность (п. 14, правило 13): причина видна до нажатия, а не ошибкой после
+  const balance = me ? Number(me.balance) : null;
+  const inCycle = m.status === "running";
+  const short = cost != null && balance != null && balance < cost ? cost - balance : null;
+  const blockReason = inCycle
+    ? "Реактор в цикле — усиление доступно, когда цикл закончится."
+    : short != null
+      ? `Не хватает ${short.toFixed(4)} TON. Пополните баланс майнингом, заданиями или промокодом.`
+      : null;
+  const canFocus = (me?.focus_tokens ?? 0) > 0;
+  const canBlock = (me?.block_tokens ?? 0) > 0;
+
   const chance = last && phase !== "scan" ? last.success_chance_bp / 10000 : null;
   const boost = (me?.success_boost_bp ?? 0) / 100;
 
@@ -181,16 +198,19 @@ export function Upgrade() {
               <button
                 key={t}
                 type="button"
-                disabled={busy}
+                disabled={busy || (!canFocus && !canBlock && !focused && !blocked)}
                 onClick={() => {
+                  // цикл пропускает метку, если жетонов нет: нельзя выбрать то, что сервер отклонит
                   if (focused) {
                     setFocusOn(null);
-                    setBlockType(t);
+                    if (canBlock) setBlockType(t);
                   } else if (blocked) {
                     setBlockType(null);
-                  } else {
+                  } else if (canFocus) {
                     setFocusOn(t);
                     if (blockType === t) setBlockType(null);
+                  } else if (canBlock) {
+                    setBlockType(t);
                   }
                 }}
                 title={TYPE_RU[t]}
@@ -204,7 +224,11 @@ export function Upgrade() {
             );
           })}
         </div>
-        <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">Тап: Фокус → Запрет → сброс. Параметр выбирается при попытке.</p>
+        <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">
+          {canFocus || canBlock
+            ? "Тап: Фокус → Запрет → сброс. Параметр выбирается при попытке."
+            : "Жетонов Фокус и Запрет нет — их дают колесо удачи, ежедневная отметка и промокоды."}
+        </p>
       </Panel>
 
       <Panel className="space-y-4 p-5">
@@ -227,10 +251,15 @@ export function Upgrade() {
           </div>
         )}
         <span className="ui-spill">
-          <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy} onClick={run}>
-            {busy ? "Усиление…" : cost != null ? `Усилить · ${cost.toFixed(4)} TON` : "Усилить"}
+          <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || !!blockReason} aria-describedby={blockReason ? "upgrade-why" : undefined} onClick={run}>
+            {busy ? "Усиление…" : inCycle ? (cycleLeft != null ? `Доступно через ${formatLeft(cycleLeft)}` : "Реактор в цикле") : short != null ? "Не хватает TON" : cost != null ? `Усилить · ${cost.toFixed(4)} TON` : "Усилить"}
           </Button>
         </span>
+        {blockReason && !busy && (
+          <p id="upgrade-why" className="ui-sec !text-[12px] !leading-[16px]">
+            {blockReason}
+          </p>
+        )}
 
         {upgrade.isError && (
           <ErrorPanel

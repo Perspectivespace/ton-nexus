@@ -76,6 +76,19 @@ async def create_withdraw(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+class LimitsOut(BaseModel):
+    min_ton: Decimal
+
+
+@router.get("/limits", response_model=LimitsOut)
+async def withdraw_limits(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Условия вывода для формы: кнопка неактивна, пока сумма ниже минимума."""
+    return LimitsOut(min_ton=await w_svc.min_withdraw(db))
+
+
 @router.get("/mine", response_model=list[WithdrawOut])
 async def my_withdrawals(
     limit: int = Query(50, ge=1, le=100),

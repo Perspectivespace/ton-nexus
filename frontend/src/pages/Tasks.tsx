@@ -42,7 +42,7 @@ export function Tasks() {
 
       {!isLoading && !error && data?.length === 0 && (
         <EmptyPanel
-          title="Пустой рынок"
+          title="Заданий пока нет"
           body="Активных заданий пока нет. Амбассадоры и админы публикуют их в разделе «Управление» на «Контуре»."
         />
       )}
@@ -69,10 +69,10 @@ export function Tasks() {
                     </span>
                   </div>
                   <p className="ui-sec mt-2 line-clamp-2">{t.description}</p>
-                  <Bar value={fillPct / 100} className="mt-3" label="Заполнено слотов" />
+                  <Bar value={fillPct / 100} className="mt-3" label="Занято мест" />
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Tag tone="neutral" dot={false}>
-                      {slotsLeft} слот{slotsLeft === 1 ? "" : "ов"}
+                      {slotsLeft} {plural(slotsLeft, "место", "места", "мест")}
                     </Tag>
                     <Tag tone="neutral" dot={false}>ур. {t.min_level}+</Tag>
                     <Tag tone="amber" dot={false}>+{t.xp_reward} XP</Tag>
@@ -85,4 +85,14 @@ export function Tasks() {
       </ul>
     </div>
   );
+}
+
+/** 1 место, 2 места, 5 мест */
+function plural(n: number, one: string, few: string, many: string) {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b === 1) return one;
+  if (b >= 2 && b <= 4) return few;
+  return many;
 }

@@ -214,7 +214,7 @@ export function Miner() {
           </span>
         )}
         <Link to="/upgrade" className="ui-btn secondary block lg no-underline" onClick={() => haptic.tap()}>
-          Модуль усиления · двойное колесо
+          Усиление реактора
         </Link>
       </div>
     </div>
