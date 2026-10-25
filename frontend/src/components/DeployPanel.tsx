@@ -147,7 +147,7 @@ function JobCard({ id, onClose }: { id: string; onClose?: () => void }) {
       {job.error && (
         <p className="dp-note err">
           {job.error}
-          {job.status === "failed" ? " — сервер откатан на прежнюю версию." : ""}
+          {job.status === "failed" ? " — тест откатан на прежнюю версию." : ""}
         </p>
       )}
       {job.warning && <p className="dp-note warn">{job.warning}</p>}
@@ -203,7 +203,7 @@ function DeployersCard() {
     <section className="space-y-2">
       <SectionLabel action={<StatusPill tone="neutral">только деплойеры</StatusPill>}>Деплойеры</SectionLabel>
       <Panel className="space-y-4 p-4">
-        <p className="ui-sec">Могут обновлять сервер. Доступа к экономике, кассе и модерации не получают.</p>
+        <p className="ui-sec">Могут обновлять тест и прод. Доступа к экономике, кассе и модерации не получают.</p>
         {isLoading && <p className="ui-sys">Загрузка…</p>}
         {error && <p className="ui-fhint err">Не удалось загрузить список</p>}
         {data && data.length === 0 && (
@@ -254,7 +254,7 @@ function DeployersCard() {
       </Panel>
       <Sheet open={!!revoke} onClose={() => setRevoke(null)} title="Снять право деплоя?">
         <p className="ui-sec text-[15px]">
-          {revoke?.name} больше не сможет обновлять сервер. Вернуть доступ можно в любой момент — добавить по Telegram ID.
+          {revoke?.name} больше не сможет обновлять тест и прод. Вернуть доступ можно в любой момент — добавить по Telegram ID.
         </p>
         <div className="mt-5 grid gap-2">
           <HoldButton
@@ -303,12 +303,12 @@ export function DeployPanel() {
     prevActive.current = activeId;
   }, [activeId, jobs]);
 
-  if (isLoading) return <LoadingPanel label="Проверка сервера…" />;
+  if (isLoading) return <LoadingPanel label="Проверка деплоя…" />;
   if (error || !data) return <ErrorPanel message="Не удалось получить статус деплоя" />;
 
   const askText = force
     ? "Полный деплой теста: переустановить зависимости, миграции и пересобрать всё?"
-    : "Обновить тестовый сервер до последней версии из GitHub?";
+    : "Обновить тест до последней версии из GitHub?";
 
   // Тот же запрос, что и раньше; подтверждение теперь — удержание в шторке.
   async function run() {
@@ -339,11 +339,11 @@ export function DeployPanel() {
       )}
 
       <section className="space-y-2">
-        <SectionLabel>Тестовый сервер</SectionLabel>
+        <SectionLabel>Тест</SectionLabel>
         <Panel className="space-y-4 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="ui-label">Версия на сервере</p>
+              <p className="ui-label">Версия на тесте</p>
               <p className="ui-num s-l mt-1 block">{short(data.deployed.commit)}</p>
               {data.deployed.subject && <p className="ui-sec mt-1">{data.deployed.subject}</p>}
             </div>
@@ -401,13 +401,13 @@ export function DeployPanel() {
             </div>
           </div>
           {msg && <p className="ui-fhint err">{msg}</p>}
-          <p className="ui-sys border-t border-[var(--line)] pt-3">Боевой сервер — скоро, отдельной кнопкой.</p>
+          <p className="ui-sys border-t border-[var(--line)] pt-3">Прод — скоро</p>
         </Panel>
       </section>
 
       {shownId && <JobCard id={shownId} onClose={activeId ? undefined : () => setOpenId(null)} />}
 
-      <Sheet open={ask} onClose={() => setAsk(false)} title={force ? "Полный деплой теста" : "Обновить тестовый сервер"}>
+      <Sheet open={ask} onClose={() => setAsk(false)} title={force ? "Полный деплой теста" : "Обновить тест"}>
         <p className="ui-sec text-[15px]">{askText}</p>
         {data.latest && (
           <p className="ui-num s-s mt-3 block whitespace-normal text-[var(--text-3)]">

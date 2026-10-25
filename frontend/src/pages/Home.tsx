@@ -212,7 +212,7 @@ export function Home() {
             )}
             {(me.is_owner || me.is_admin) && <ListRow to="/withdraws" title="Касса · выводы" />}
             {me.is_owner && <ListRow to="/owner" title="Владелец · экономика" />}
-            {me.can_deploy && <ListRow to="/owner?tab=deploy" title="Деплой · сервер" />}
+            {me.can_deploy && <ListRow to="/owner?tab=deploy" title="Деплой · тест и прод" />}
           </List>
         </motion.div>
       )}
