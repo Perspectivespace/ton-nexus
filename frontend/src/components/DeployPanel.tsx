@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   useDeployCheck,
   useDeployJob,
@@ -9,7 +9,22 @@ import {
   useSetDeployer,
 } from "@/api/hooks";
 import type { DeployJob, DeployStatus } from "@/api/types";
-import { Button, EmptyPanel, ErrorPanel, Field, HoldButton, LoadingPanel, Sheet, StatusPill, useToast } from "@/components/ui";
+import {
+  Button,
+  EmptyPanel,
+  ErrorPanel,
+  Field,
+  HoldButton,
+  List,
+  ListRow,
+  LoadingPanel,
+  Panel,
+  SectionLabel,
+  Sheet,
+  StatusPill,
+  useToast,
+} from "@/components/ui";
+import { cx } from "@/components/ui/press";
 
 const STEPS: { key: string; label: string }[] = [
   { key: "fetch", label: "GitHub" },
@@ -58,34 +73,28 @@ function duration(j: DeployJob) {
   return s >= 60 ? `${Math.floor(s / 60)}м ${s % 60}с` : `${s}с`;
 }
 
+/** Рельс шагов без подписей под каждым (на 360 px они обрезались) — подпись текущего шага строкой ниже. */
 function StepRail({ job }: { job: DeployJob }) {
   const done = new Set(job.steps_done ?? []);
+  const idx = STEPS.findIndex((s) => s.key === job.step);
+  const cur = idx >= 0 ? STEPS[idx] : null;
+  const caption =
+    job.status === "success"
+      ? `Все ${STEPS.length} шагов пройдены`
+      : cur
+        ? `Шаг ${idx + 1} из ${STEPS.length} · ${cur.label}${job.status === "failed" ? " — ошибка" : ""}`
+        : STATUS_RU[job.status] ?? job.status;
   return (
-    <div className="grid grid-cols-9 gap-1">
-      {STEPS.map((s) => {
-        const current = job.step === s.key && job.status !== "success";
-        const failed = current && job.status === "failed";
-        const ok = done.has(s.key) || (job.status === "success" && job.step === s.key);
-        const cls = failed
-          ? "bg-[var(--danger)]"
-          : current
-            ? "bg-[var(--accent-bright)] animate-pulse"
-            : ok
-              ? "bg-[var(--success)]"
-              : "bg-[var(--line)]";
-        return (
-          <div key={s.key} className="min-w-0 text-center">
-            <div className={`h-1 rounded-full ${cls}`} />
-            <p
-              className={`mt-1 truncate text-[8px] font-semibold uppercase tracking-[0.08em] ${
-                current ? "text-[var(--text)]" : "text-[var(--text-dim)]"
-              }`}
-            >
-              {s.label}
-            </p>
-          </div>
-        );
-      })}
+    <div>
+      <div className="dp-rail" aria-hidden>
+        {STEPS.map((s) => {
+          const current = job.step === s.key && job.status !== "success";
+          const failed = current && job.status === "failed";
+          const ok = done.has(s.key) || (job.status === "success" && job.step === s.key);
+          return <i key={s.key} className={cx(failed ? "err" : current ? "cur" : ok ? "ok" : "")} />;
+        })}
+      </div>
+      <p className="ui-sys mt-2">{caption}</p>
     </div>
   );
 }
@@ -96,12 +105,18 @@ function LogTail({ text }: { text?: string }) {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
   }, [text]);
   return (
-    <pre
-      ref={ref}
-      className="mono max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-[var(--line)] bg-[var(--surface-3)] p-3 text-[10px] leading-relaxed text-[var(--text-dim)]"
-    >
+    <pre ref={ref} className="dp-log">
       {text?.trim() || "Лог пока пуст…"}
     </pre>
+  );
+}
+
+function Meta({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="ui-label">{label}</p>
+      <p className="ui-num s-s mt-1 block truncate">{children}</p>
+    </div>
   );
 }
 
@@ -112,48 +127,42 @@ function JobCard({ id, onClose }: { id: string; onClose?: () => void }) {
   if (!job) return <LoadingPanel label="Деплой поставлен в очередь…" />;
   const live = job.status === "queued" || job.status === "running";
   return (
-    <div className="metal-plate-dim space-y-3 p-4">
+    <Panel className="space-y-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="eyebrow">Деплой · {job.target}</p>
-          <p className="mono mt-1 truncate text-[12px] text-[var(--text)]">
+          <p className="ui-label">Деплой · {job.target}</p>
+          <p className="ui-num s-m mt-1 block truncate">
             {short(job.from_commit)} → {short(job.to_commit)}
           </p>
-          {job.to_subject && (
-            <p className="mt-0.5 truncate text-[11px] text-[var(--text-dim)]">{job.to_subject}</p>
-          )}
+          {job.to_subject && <p className="ui-sec mt-0.5 truncate">{job.to_subject}</p>}
         </div>
         <StatusPill tone={tone(job.status)}>{STATUS_RU[job.status] ?? job.status}</StatusPill>
       </div>
       <StepRail job={job} />
-      <p className="label-meta text-[10px] text-[var(--text-dim)]">
+      <p className="ui-sys">
         {job.requested_by_name ?? job.requested_by ?? "—"} · {when(job.requested_at)}
         {duration(job) ? ` · ${duration(job)}` : ""}
         {job.force ? " · полный" : ""}
       </p>
       {job.error && (
-        <p className="rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/10 p-2 text-[12px] text-[var(--danger)]">
+        <p className="dp-note err">
           {job.error}
           {job.status === "failed" ? " — сервер откатан на прежнюю версию." : ""}
         </p>
       )}
-      {job.warning && (
-        <p className="rounded-lg border border-[var(--warn)]/30 bg-[var(--warn)]/10 p-2 text-[12px] text-[var(--warn)]">
-          {job.warning}
-        </p>
-      )}
+      {job.warning && <p className="dp-note warn">{job.warning}</p>}
       <div className="flex gap-2">
-        <button type="button" className="ui-btn ghost sm" onClick={() => setShowLog((v) => !v)}>
+        <Button kind="ghost" size="sm" onClick={() => setShowLog((v) => !v)}>
           {showLog ? "Скрыть лог" : "Показать лог"}
-        </button>
+        </Button>
         {onClose && !live && (
-          <button type="button" className="ui-btn ghost sm" onClick={onClose}>
+          <Button kind="ghost" size="sm" onClick={onClose}>
             Закрыть
-          </button>
+          </Button>
         )}
       </div>
       {showLog && <LogTail text={job.log_tail} />}
-    </div>
+    </Panel>
   );
 }
 
@@ -183,62 +192,57 @@ function DeployersCard() {
   }
 
   return (
-    <div className="ui-cut space-y-3 p-4">
-      <div className="flex items-center justify-between">
-        <p className="eyebrow">Деплойеры</p>
-        <StatusPill tone="neutral">только владелец</StatusPill>
-      </div>
-      <p className="text-[11px] leading-snug text-[var(--text-dim)]">
-        Могут обновлять сервер. Доступа к экономике, кассе и модерации не получают.
-      </p>
-      {isLoading && <p className="text-[12px] text-[var(--text-dim)]">Загрузка…</p>}
-      {error && <p className="text-[12px] text-[var(--danger)]">Не удалось загрузить список</p>}
-      {data && data.length === 0 && (
-        <p className="text-[12px] text-[var(--text-dim)]">Пока никого — деплоит только владелец.</p>
-      )}
-      {data && data.length > 0 && (
-        <ul className="divide-y divide-[var(--line)]">
-          {data.map((d) => (
-            <li key={d.telegram_id} className="flex items-center justify-between py-2">
-              <div className="min-w-0">
-                <p className="truncate text-[13px]">{d.username ? `@${d.username}` : d.first_name || "—"}</p>
-                <p className="mono text-[10px] text-[var(--text-dim)]">{d.telegram_id}</p>
-              </div>
-              <button
-                type="button"
-                className="ui-btn danger sm"
-                disabled={setRole.isPending}
-                onClick={() => setRevoke({ telegram_id: d.telegram_id, name: d.username ? `@${d.username}` : d.first_name || String(d.telegram_id) })}
-              >
-                Снять
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="flex gap-2">
-        <Field className="flex-1">
-          <input
-            className="ui-input"
-            inputMode="numeric"
-            placeholder="Telegram ID"
-            aria-label="Telegram ID"
-            value={tgId}
-            onChange={(e) => setTgId(e.target.value.replace(/\D/g, ""))}
-          />
-        </Field>
-        <button
-          type="button"
-          className="ui-btn primary"
-          disabled={setRole.isPending || tgId.length < 5}
-          onClick={() => change(Number(tgId), true)}
-        >
-          Добавить
-        </button>
-      </div>
-      {msg && <p className="text-[12px] text-[var(--text-dim)]">{msg}</p>}
+    <section className="space-y-2">
+      <SectionLabel action={<StatusPill tone="neutral">только владелец</StatusPill>}>Деплойеры</SectionLabel>
+      <Panel className="space-y-4 p-4">
+        <p className="ui-sec">Могут обновлять сервер. Доступа к экономике, кассе и модерации не получают.</p>
+        {isLoading && <p className="ui-sys">Загрузка…</p>}
+        {error && <p className="ui-fhint err">Не удалось загрузить список</p>}
+        {data && data.length === 0 && <p className="ui-sec">Пока никого — деплоит только владелец.</p>}
+        {data && data.length > 0 && (
+          <ul className="dp-people">
+            {data.map((d) => (
+              <li key={d.telegram_id}>
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-medium">{d.username ? `@${d.username}` : d.first_name || "—"}</p>
+                  <p className="ui-num s-s block text-[var(--text-3)]">{d.telegram_id}</p>
+                </div>
+                <Button
+                  kind="danger"
+                  size="sm"
+                  disabled={setRole.isPending}
+                  onClick={() =>
+                    setRevoke({
+                      telegram_id: d.telegram_id,
+                      name: d.username ? `@${d.username}` : d.first_name || String(d.telegram_id),
+                    })
+                  }
+                >
+                  Снять
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex items-end gap-2">
+          <Field className="flex-1" label="Добавить по Telegram ID">
+            <input
+              className="ui-input"
+              inputMode="numeric"
+              placeholder="528193047"
+              aria-label="Telegram ID"
+              value={tgId}
+              onChange={(e) => setTgId(e.target.value.replace(/\D/g, ""))}
+            />
+          </Field>
+          <Button disabled={setRole.isPending || tgId.length < 5} onClick={() => change(Number(tgId), true)}>
+            Добавить
+          </Button>
+        </div>
+        {msg && <p className="ui-sys">{msg}</p>}
+      </Panel>
       <Sheet open={!!revoke} onClose={() => setRevoke(null)} title="Снять право деплоя?">
-        <p className="text-[14px] leading-snug text-[var(--text-2)]">
+        <p className="ui-sec text-[15px]">
           {revoke?.name} больше не сможет обновлять сервер. Вернуть доступ можно в любой момент — добавить по Telegram ID.
         </p>
         <div className="mt-5 grid gap-2">
@@ -259,7 +263,7 @@ function DeployersCard() {
           </Button>
         </div>
       </Sheet>
-    </div>
+    </section>
   );
 }
 
@@ -315,104 +319,87 @@ export function DeployPanel() {
   const busy = !!data.active || request.isPending;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {!data.runner_installed && (
-        <div className="ui-cut p-4">
-          <p className="eyebrow text-[var(--warn)]">Runner не установлен</p>
-          <p className="mt-1 text-[12px] leading-snug text-[var(--text-dim)]">
-            Один раз выполните на сервере команду установки из docs/DEPLOY_TELEGRAM.md — после
-            этого обновление работает отсюда.
-          </p>
-        </div>
+        <p className="dp-note warn">
+          <b className="ui-label block text-[var(--amber)]">Runner не установлен</b>
+          Один раз выполните на сервере команду установки из docs/DEPLOY_TELEGRAM.md — после этого обновление работает отсюда.
+        </p>
       )}
 
-      <div className="metal-plate-dim space-y-4 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="eyebrow">Тест · версия на сервере</p>
-            <p className="mono mt-1 text-[20px] font-medium text-[var(--text)]">
-              {short(data.deployed.commit)}
-            </p>
+      <section className="space-y-2">
+        <SectionLabel>Тестовый сервер</SectionLabel>
+        <Panel className="space-y-4 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="ui-label">Версия на сервере</p>
+              <p className="ui-num s-l mt-1 block">{short(data.deployed.commit)}</p>
+              {data.deployed.subject && <p className="ui-sec mt-1">{data.deployed.subject}</p>}
+            </div>
+            <StatusPill tone={data.active ? "live" : upToDate ? "ok" : data.update_available ? "warn" : "neutral"}>
+              {data.active ? "деплой" : upToDate ? "актуально" : data.update_available ? "есть обновление" : "нет данных"}
+            </StatusPill>
           </div>
-          <StatusPill tone={data.active ? "live" : upToDate ? "ok" : data.update_available ? "warn" : "neutral"}>
-            {data.active ? "деплой" : upToDate ? "актуально" : data.update_available ? "есть обновление" : "нет данных"}
-          </StatusPill>
-        </div>
-        {data.deployed.subject && (
-          <p className="-mt-2 text-[12px] leading-snug text-[var(--text-dim)]">{data.deployed.subject}</p>
-        )}
-        <div className="grid grid-cols-2 gap-3 border-t border-[var(--line)] pt-3">
-          <div>
-            <p className="label-meta text-[10px] text-[var(--text-dim)]">Обновлено</p>
-            <p className="mono text-[12px]">{when(data.deployed.deployed_at)}</p>
-          </div>
-          <div>
-            <p className="label-meta text-[10px] text-[var(--text-dim)]">GitHub main</p>
-            <p className="mono text-[12px]">
+          <div className="grid grid-cols-2 gap-3 border-t border-[var(--line)] pt-3">
+            <Meta label="Обновлено">{when(data.deployed.deployed_at)}</Meta>
+            <Meta label="GitHub main">
               {short(data.latest?.commit)}
-              {data.ahead_by ? <span className="text-[var(--warn)]"> · +{data.ahead_by}</span> : null}
-            </p>
+              {data.ahead_by ? <span className="text-[var(--amber)]"> · +{data.ahead_by}</span> : null}
+            </Meta>
           </div>
-        </div>
 
-        {data.pending.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="eyebrow">Что приедет</p>
-            <ul className="space-y-1">
-              {data.pending.map((c) => (
-                <li key={c.sha} className="flex gap-2 text-[12px] leading-snug">
-                  <span className="mono shrink-0 text-[var(--accent)]">{c.sha}</span>
-                  <span className="min-w-0 text-[var(--text)]">{c.subject}</span>
-                </li>
-              ))}
-            </ul>
-            {data.ahead_by != null && data.ahead_by > data.pending.length && (
-              <p className="text-[11px] text-[var(--text-dim)]">…и ещё {data.ahead_by - data.pending.length}</p>
-            )}
+          {data.pending.length > 0 && (
+            <div className="space-y-2 border-t border-[var(--line)] pt-3">
+              <p className="ui-label">Что приедет</p>
+              <ul className="space-y-1.5">
+                {data.pending.map((c) => (
+                  <li key={c.sha} className="flex gap-2.5 text-[13px] leading-snug">
+                    <span className="ui-num s-s shrink-0 text-[var(--neon)]">{c.sha}</span>
+                    <span className="min-w-0 text-[var(--text)]">{c.subject}</span>
+                  </li>
+                ))}
+              </ul>
+              {data.ahead_by != null && data.ahead_by > data.pending.length && (
+                <p className="ui-sys">…и ещё {data.ahead_by - data.pending.length}</p>
+              )}
+            </div>
+          )}
+
+          {data.github_error && (
+            <p className="dp-note warn">{data.github_error}. Показана версия последней проверки сервера.</p>
+          )}
+
+          <div className="space-y-3 pt-1">
+            <Button block disabled={busy || !data.runner_installed} onClick={() => setAsk(true)}>
+              {data.active
+                ? "Деплой идёт…"
+                : request.isPending
+                  ? "Ставлю в очередь…"
+                  : force
+                    ? "Полный деплой теста"
+                    : "Обновить тест"}
+            </Button>
+            <div className="flex items-center justify-between gap-2">
+              <label className="dp-check">
+                <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} disabled={busy} />
+                Полный (всё заново)
+              </label>
+              <Button kind="ghost" size="sm" disabled={check.isPending} onClick={() => check.mutate()}>
+                {check.isPending ? "Проверяю…" : "Проверить GitHub"}
+              </Button>
+            </div>
           </div>
-        )}
-
-        {data.github_error && (
-          <p className="text-[11px] leading-snug text-[var(--warn)]">
-            {data.github_error}. Показана версия последней проверки сервера.
-          </p>
-        )}
-
-        <button type="button" className="ui-btn primary block" disabled={busy || !data.runner_installed} onClick={() => setAsk(true)}>
-          {data.active
-            ? "Деплой идёт…"
-            : request.isPending
-              ? "Ставлю в очередь…"
-              : force
-                ? "Полный деплой теста"
-                : "Обновить тест"}
-        </button>
-        <div className="flex items-center justify-between gap-2">
-          <label className="flex items-center gap-2 text-[11px] text-[var(--text-dim)]">
-            <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} disabled={busy} />
-            Полный (всё заново)
-          </label>
-          <button
-            type="button"
-            className="ui-btn ghost sm"
-            disabled={check.isPending}
-            onClick={() => check.mutate()}
-          >
-            {check.isPending ? "Проверяю…" : "Проверить GitHub"}
-          </button>
-        </div>
-        <button type="button" disabled className="ui-btn secondary block">
-          Прод — скоро
-        </button>
-        {msg && <p className="text-[12px] text-[var(--danger)]">{msg}</p>}
-      </div>
+          {msg && <p className="ui-fhint err">{msg}</p>}
+          <p className="ui-sys border-t border-[var(--line)] pt-3">Боевой сервер — скоро, отдельной кнопкой.</p>
+        </Panel>
+      </section>
 
       {shownId && <JobCard id={shownId} onClose={activeId ? undefined : () => setOpenId(null)} />}
 
       <Sheet open={ask} onClose={() => setAsk(false)} title={force ? "Полный деплой теста" : "Обновить тестовый сервер"}>
-        <p className="text-[14px] leading-snug text-[var(--text-2)]">{askText}</p>
+        <p className="ui-sec text-[15px]">{askText}</p>
         {data.latest && (
-          <p className="mono mt-3 text-[12px] text-[var(--text-3)]">
+          <p className="ui-num s-s mt-3 block whitespace-normal text-[var(--text-3)]">
             → {short(data.latest.commit)} {data.latest.subject ?? ""}
           </p>
         )}
@@ -426,39 +413,33 @@ export function DeployPanel() {
         </div>
       </Sheet>
 
-      <div className="space-y-2">
-        <p className="eyebrow">История</p>
+      <section className="space-y-2">
+        <SectionLabel>История</SectionLabel>
         {jobs.isLoading && <LoadingPanel label="Загрузка истории…" />}
         {jobs.data && jobs.data.length === 0 && (
           <EmptyPanel title="Деплоев ещё не было" body="Первый запуск появится здесь." />
         )}
         {jobs.data && jobs.data.length > 0 && (
-          <ul className="ui-cut divide-y divide-[var(--line)] overflow-hidden p-0">
+          <List>
             {jobs.data.map((j) => (
-              <li key={j.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpenId(j.id)}
-                  className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition ${
-                    shownId === j.id ? "bg-[var(--accent-soft)]" : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="mono truncate text-[12px]">
-                      {short(j.to_commit)} <span className="text-[var(--text-dim)]">{j.to_subject ?? ""}</span>
-                    </p>
-                    <p className="text-[10px] text-[var(--text-dim)]">
-                      {when(j.requested_at)} · {j.requested_by_name ?? j.requested_by ?? "—"}
-                      {duration(j) ? ` · ${duration(j)}` : ""}
-                    </p>
-                  </div>
-                  <StatusPill tone={tone(j.status)}>{STATUS_RU[j.status] ?? j.status}</StatusPill>
-                </button>
-              </li>
+              <ListRow
+                key={j.id}
+                className={cx(shownId === j.id && "dp-row-on")}
+                title={
+                  <span className="flex min-w-0 gap-2">
+                    <span className="ui-num s-s shrink-0">{short(j.to_commit)}</span>
+                    <span className="truncate">{j.to_subject ?? ""}</span>
+                  </span>
+                }
+                sub={`${when(j.requested_at)} · ${j.requested_by_name ?? j.requested_by ?? "—"}${duration(j) ? ` · ${duration(j)}` : ""}`}
+                trailing={<StatusPill tone={tone(j.status)}>{STATUS_RU[j.status] ?? j.status}</StatusPill>}
+                chevron={false}
+                onClick={() => setOpenId(j.id)}
+              />
             ))}
-          </ul>
+          </List>
         )}
-      </div>
+      </section>
 
       {data.can_manage_deployers && <DeployersCard />}
     </div>
