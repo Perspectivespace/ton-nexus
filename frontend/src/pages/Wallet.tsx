@@ -20,7 +20,8 @@ function shortAddr(a: string) {
   return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-6)}` : a;
 }
 
-function fmtDate(iso: string) {
+function fmtDate(iso?: string) {
+  if (!iso) return "";
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
@@ -101,7 +102,7 @@ export function Wallet() {
           </div>
           <Num value={Number(pending.amount).toFixed(4)} unit="TON" size="l" className="block" />
           <p className="mono text-[12px] leading-[16px] text-[var(--text-2)]">
-            {shortAddr(pending.wallet_address)} · {fmtDate(pending.created_at)}
+            {[shortAddr(pending.wallet_address || ""), fmtDate(pending.created_at)].filter(Boolean).join(" · ")}
           </p>
           <p className="ui-sec">
             Сумма заморожена до решения владельца. При отказе вернётся на баланс. Новую заявку можно создать после решения.
