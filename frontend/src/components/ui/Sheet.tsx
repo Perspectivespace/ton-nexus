@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { haptic } from "@/lib/haptics";
-import { WebApp } from "@/lib/telegram";
+import { pushBack } from "@/lib/backButton";
 
 /**
  * Нижняя шторка: срез сверху с обеих сторон, неоновая ручка, выезд 260 мс, подложка 72 %.
@@ -13,11 +13,14 @@ export function Sheet({
   onClose,
   title,
   children,
+  footer,
 }: {
   open: boolean;
   onClose: () => void;
   title?: ReactNode;
   children: ReactNode;
+  /** закреплённый низ шторки (главная кнопка формы) — не уезжает при прокрутке */
+  footer?: ReactNode;
 }) {
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(false);
@@ -49,24 +52,11 @@ export function Sheet({
     const back = () => closeRef.current();
     const key = (e: KeyboardEvent) => e.key === "Escape" && back();
     window.addEventListener("keydown", key);
-    let bb: typeof WebApp.BackButton | null = null;
-    try {
-      if (WebApp.platform !== "unknown" && WebApp.isVersionAtLeast("6.1")) {
-        bb = WebApp.BackButton;
-        bb.onClick(back);
-        bb.show();
-      }
-    } catch {
-      bb = null;
-    }
+    // стек «Назад»: пока шторка открыта, кнопка закрывает её, потом снова ведёт с экрана
+    const pop = pushBack(back);
     return () => {
       window.removeEventListener("keydown", key);
-      try {
-        bb?.offClick(back);
-        bb?.hide();
-      } catch {
-        /* вне Telegram */
-      }
+      pop();
     };
   }, [open]);
 
@@ -114,6 +104,7 @@ export function Sheet({
           </div>
         ) : null}
         <div className="s-body">{children}</div>
+        {footer ? <div className="s-foot">{footer}</div> : null}
       </div>
     </div>,
     document.body,
