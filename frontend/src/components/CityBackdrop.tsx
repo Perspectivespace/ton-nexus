@@ -1,4 +1,5 @@
 import { useEffect, useRef, type CSSProperties } from "react";
+import { CityV2, readCityTier } from "./CityV2";
 
 /**
  * Фоновый город «Ночного контура» + «искры жизни» (DESIGN.md п. 3.10–3.11).
@@ -56,9 +57,13 @@ export function CityBackdrop() {
     };
   }, []);
 
+  // КОНЦЕПТ v2: ?city=1..4 или localStorage cityv2 — город по облику реактора
+  const v2 = readCityTier();
+
   return (
-    <div className="city" aria-hidden="true">
+    <div className={v2 ? "city v2" : "city"} aria-hidden="true">
       <div className="c-stage">
+        {v2 > 0 && <CityV2 tier={v2} />}
         <div className="c-front" ref={front} />
         <div className="life">
           {WINDOWS.map(([x, y], n) => (

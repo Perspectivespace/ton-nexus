@@ -4,6 +4,7 @@ import { useMe, useMiner } from "@/api/hooks";
 import { useDaily } from "@/lib/useDaily";
 import { haptic } from "@/lib/haptics";
 import { WorkArea } from "@/components/WorkArea";
+import { CityWindow } from "@/components/CityV2";
 import {
   IconBolt,
   IconCheck,
@@ -85,6 +86,9 @@ export function Home() {
           }
         />
       </motion.div>
+
+      {/* КОНЦЕПТ v2: «окно в город» — полоса, где город не закрыт панелями */}
+      <CityWindow />
 
       {isLoading && <LoadingPanel label="Синхронизация контура…" />}
       {error && (

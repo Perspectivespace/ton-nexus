@@ -1,0 +1,97 @@
+/*
+ * КОНЦЕПТ «Город растёт с реактором» (concept/city-tiers). Не для мержа.
+ * Только transform / opacity. Свечение статичное. Пауза при скрытом приложении,
+ * на слабых устройствах — только картинка и туман, при «уменьшить движение» — только картинка.
+ * Бесконечных анимаций: T1 — 2, T2 — 3, T3 — 6, T4 — 13 (лимит города 19).
+ */
+.city.v2 .c-stage { background: none; aspect-ratio: 720 / 1280; }
+.city.v2 .c-front, .city.v2 .life { display: none; }
+.cv2 { position: absolute; inset: 0; overflow: hidden; }
+.cv2-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: cv2-in 1.2s ease-out both; }
+.cv2-img.prev { animation: none; }
+@keyframes cv2-in { from { opacity: 0 } to { opacity: 1 } }
+.cv2-life { position: absolute; inset: 0; }
+.cv2-life > * { position: absolute; display: block; }
+
+/* туман: заранее мягкие градиенты, две глубины, разная скорость */
+.cv2 .fog { left: -30%; width: 160%; pointer-events: none; will-change: transform; }
+.cv2 .f-far { top: 44%; height: 22%; opacity: .55;
+  background: radial-gradient(50% 50% at 30% 50%, rgba(120,150,190,.28), transparent 70%), radial-gradient(40% 45% at 75% 55%, rgba(120,150,190,.22), transparent 70%);
+  animation: cv2-drift 95s linear infinite alternate; }
+.cv2 .f-near { top: 70%; height: 16%; opacity: .5;
+  background: radial-gradient(45% 50% at 40% 50%, rgba(150,175,210,.24), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(150,175,210,.2), transparent 70%);
+  animation: cv2-drift 60s linear -20s infinite alternate-reverse; }
+.cv2.t1 .fog { opacity: .8; }
+.cv2.t4 .f-far { opacity: .35; }
+@keyframes cv2-drift { from { transform: translate3d(-8%, 0, 0) } to { transform: translate3d(8%, 0, 0) } }
+
+/* машина: фары и хвост по линии улицы */
+.cv2 .car { left: 0; width: 100%; height: 6px; animation: cv2-car 26s linear -9s infinite; }
+.cv2 .car::before { content: ""; position: absolute; width: 22px; height: 3px; border-radius: 2px;
+  background: linear-gradient(90deg, #FF3B55, #3A1420 30%, #2A3348 60%, #FFF6DA); box-shadow: 0 0 6px 1px rgba(255,230,180,.45); }
+.cv2 .car::after { content: ""; position: absolute; left: 22px; top: -4px; width: 60px; height: 11px;
+  background: linear-gradient(90deg, rgba(255,240,200,.35), transparent); clip-path: polygon(0 40%, 100% 0, 100% 100%, 0 60%); }
+@keyframes cv2-car { from { transform: translate3d(-10%, 0, 0) } to { transform: translate3d(110%, 0, 0) } }
+
+/* вывески — живой текст поверх нарисованных панелей */
+.cv2 .sign { display: flex; align-items: center; justify-content: center; flex-direction: column;
+  font: 700 clamp(9px, 2.6vw, 13px)/1 var(--font-display, "Unbounded", sans-serif); letter-spacing: .08em; color: #DFFBFF; text-align: center; }
+.cv2 .sign.v { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: .02em; }
+.cv2 .sign small { display: block; margin-top: 4px; font: 600 clamp(6px, 1.5vw, 8px)/1 var(--font-mono, monospace); letter-spacing: .14em; color: #FFC7F0; }
+.cv2 .sign.quiet { opacity: .55; text-shadow: 0 0 6px rgba(43,245,255,.6); }
+.cv2 .sign.holo { text-shadow: 0 0 8px rgba(43,245,255,.85), 0 0 2px #fff; }
+.cv2 .sign.wide { color: #FFE9FB; text-shadow: 0 0 8px rgba(255,79,154,.8), 0 0 2px #fff; font-size: clamp(9px, 2.8vw, 14px); }
+/* голо-развёртка: полоса света проходит по панели (opacity + transform, без анимации свечения) */
+.cv2 .sign.holo { overflow: hidden; }
+.cv2 .sign.holo::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 30%;
+  background: linear-gradient(180deg, transparent, rgba(220,250,255,.35), transparent); animation: cv2-scan 6s ease-in-out infinite; }
+.cv2 .sign.wide::after { animation-duration: 7.5s; animation-delay: -2s; }
+.cv2 .sign.v::after { animation-duration: 9s; animation-delay: -4s; }
+@keyframes cv2-scan { 0% { transform: translate3d(0, -110%, 0); opacity: 0 } 15% { opacity: 1 } 60% { opacity: 1 } 75%, 100% { transform: translate3d(0, 360%, 0); opacity: 0 } }
+
+/* энергия по каналу башни: цвет — облик реактора */
+.cv2 { --cv2-energy: #7DF9FF; }
+.cv2 .conduit { overflow: hidden;
+  -webkit-mask: linear-gradient(180deg, transparent, #000 10%, #000 85%, transparent); mask: linear-gradient(180deg, transparent, #000 10%, #000 85%, transparent); }
+.cv2 .conduit::before { content: ""; position: absolute; left: 30%; width: 40%; top: 0; height: 200%;
+  background: repeating-linear-gradient(180deg, transparent 0 34px, rgba(230,255,255,.95) 34px 40px, transparent 40px 90px);
+  animation: cv2-flow 3.2s linear infinite; will-change: transform; }
+@keyframes cv2-flow { from { transform: translate3d(0, 0, 0) } to { transform: translate3d(0, -50%, 0) } }
+
+/* борта: медленные, на разной глубине (меньше = дальше) */
+.cv2 .craft { left: 0; width: 100%; height: 8px; will-change: transform; }
+.cv2 .craft::before { content: ""; position: absolute; width: 14px; height: 4px; border-radius: 2px 5px 5px 2px;
+  background: linear-gradient(90deg, #FF4766 0 2px, #1E2638 2px 10px, #F4FBFF 10px); box-shadow: 0 0 5px 1px rgba(200,240,255,.4); }
+.cv2 .craft.c1 { top: 22%; animation: cv2-c1 34s linear -8s infinite; }
+.cv2 .craft.c2 { top: 33%; transform: scale(.6); animation: cv2-c2 48s linear -30s infinite; }
+.cv2 .craft.c3 { top: 15%; animation: cv2-c3 40s linear -12s infinite; }
+@keyframes cv2-c1 { 0% { transform: translate3d(-6%, 0, 0) } 50% { transform: translate3d(50%, -14px, 0) } 100% { transform: translate3d(106%, -4px, 0) } }
+@keyframes cv2-c2 { 0% { transform: translate3d(106%, 0, 0) scale(.6) } 100% { transform: translate3d(-6%, 12px, 0) scale(.6) } }
+@keyframes cv2-c3 { 0% { transform: translate3d(106%, 10px, 0) scaleX(-1) } 100% { transform: translate3d(-6%, -20px, 0) scaleX(-1) } }
+
+/* луч прожектора: мягкий клин, медленно качается */
+.cv2 .beam { width: 70px; height: 90%; margin-left: -35px; transform-origin: 50% 100%; translate: 0 -100%; opacity: .32;
+  background: linear-gradient(0deg, rgba(200,235,255,.55), rgba(200,235,255,0) 85%); clip-path: polygon(46% 100%, 54% 100%, 100% 0, 0 0);
+  animation: cv2-beam 14s ease-in-out infinite alternate; }
+@keyframes cv2-beam { from { transform: rotate(-16deg) } to { transform: rotate(4deg) } }
+
+/* мокрый асфальт: бликующие штрихи медленно дрожат */
+.cv2 .sheen { opacity: .5;
+  background: repeating-linear-gradient(90deg, transparent 0 9px, rgba(125,249,255,.10) 9px 11px, transparent 11px 23px, rgba(255,181,71,.08) 23px 25px, transparent 25px 41px);
+  -webkit-mask: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent); mask: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+  animation: cv2-sheen 5s ease-in-out infinite alternate; }
+@keyframes cv2-sheen { from { transform: translate3d(-4px, 0, 0); opacity: .35 } to { transform: translate3d(4px, 0, 0); opacity: .6 } }
+
+html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::after { animation-play-state: paused; }
+html.low-end .cv2-life > :not(.fog):not(.sign) { display: none; }
+html.low-end .cv2 .sign::after { animation: none; display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .cv2 *, .cv2 *::before, .cv2 *::after { animation: none !important; }
+  .cv2 .craft, .cv2 .car { display: none; }
+}
+
+/* «окно в город» на главной: город сдвинут вверх, чтобы башня и вывески попали в окно */
+.cv2-window { height: 236px; display: flex; align-items: flex-end; justify-content: flex-start; }
+.cv2-chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 5px 10px; font-size: 12px; color: #D5E6F2;
+  background: rgba(6, 9, 16, .78); border: 1px solid rgba(125, 249, 255, .16); clip-path: polygon(0 0, 100% 0, 100% 70%, calc(100% - 7px) 100%, 0 100%); }
+html.cv2-home .city.v2 .c-stage { top: -120px; transition: top .6s ease; }

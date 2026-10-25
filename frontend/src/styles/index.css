@@ -5,6 +5,7 @@
 @import "./components.css";
 @import "./rx-tiers.css";
 @import "./city-concept.css";
+@import "./city-v2.css";
 
 /*
  * Старые имена переменных (экраны v1) теперь ссылаются на токены «Ночного контура».
