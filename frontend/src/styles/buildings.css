@@ -34,34 +34,33 @@ html.bz-fade .city .c-stage { opacity: .35; transition: opacity .22s ease-out; }
 .cv2-window .bh { --sw: min(100vw, 560px); position: absolute; top: 0; bottom: 34px;
   left: calc(50% + var(--sw) * var(--bx) / 720); width: calc(var(--sw) * var(--bw) / 720);
   padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-/* статичная подсветка: тонкие уголки и лёгкий цветной налёт снизу (без свечения и анимации) */
-.bh-frame { position: absolute; inset: 0; pointer-events: none; --c: rgba(125, 249, 255, .8); --l: 14px;
-  background:
-    linear-gradient(var(--c), var(--c)) 0 0 / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 0 0 / 1.5px var(--l) no-repeat,
-    linear-gradient(var(--c), var(--c)) 100% 0 / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 100% 0 / 1.5px var(--l) no-repeat,
-    linear-gradient(var(--c), var(--c)) 0 100% / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 0 100% / 1.5px var(--l) no-repeat,
-    linear-gradient(var(--c), var(--c)) 100% 100% / var(--l) 1.5px no-repeat, linear-gradient(var(--c), var(--c)) 100% 100% / 1.5px var(--l) no-repeat,
-    linear-gradient(180deg, transparent 45%, rgba(125, 249, 255, .10)); }
+/* вывеска на башне — часть города, а не элемент интерфейса: маленькая табличка с тонкими буквами и знаком реактора,
+ * масштаб городских вывесок («ОБМЕН», «РЕАКТОР»). Свечение статичное; оформление — по фазе суток города (не по теме UI). */
+.bh-sign { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 7px 4px 6px; white-space: nowrap; pointer-events: none;
+  font: 500 clamp(8px, 2.3vw, 10.5px)/1 var(--font-display, "Unbounded", sans-serif); letter-spacing: .22em; text-indent: .22em;
+  color: #E4FCFF; text-shadow: 0 0 6px rgba(43, 245, 255, .75);
+  background: linear-gradient(180deg, rgba(4, 16, 30, .72), rgba(3, 10, 22, .66));
+  box-shadow: inset 0 0 0 1px rgba(125, 249, 255, .42), inset 0 1px 0 rgba(125, 249, 255, .7);
+  transition: transform .12s ease-out, opacity .12s ease-out; }
+/* знак реактора: кольцо с ядром */
+.bh-glyph { width: 1.05em; height: 1.05em; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor, 0 0 5px rgba(43, 245, 255, .6);
+  background: radial-gradient(circle, currentColor 0 22%, transparent 26%); }
+/* T1 — город спит: вывеска тише */
+.bh.t1 .bh-sign { opacity: .82; }
+/* днём и на рассвете — как дневные вывески: светлое стекло, бирюзовые буквы */
+html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh-sign { color: #00788C; text-shadow: 0 0 5px rgba(43, 245, 255, .45);
+  background: linear-gradient(180deg, rgba(240, 253, 255, .8), rgba(214, 246, 252, .7));
+  box-shadow: inset 0 0 0 1px rgba(0, 150, 175, .42), 0 2px 8px rgba(30, 40, 90, .16); }
+html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh-glyph { box-shadow: inset 0 0 0 1.5px currentColor; }
+html:is([data-city-phase="day"], [data-city-phase="dawn"]) .bh.t1 .bh-sign { opacity: .92; }
 
-/* подпись — лёгкая стеклянная табличка: тонкая рамка, неоновая риска сверху, текст на плотной подложке (п. 3.6) */
-.bh-label { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; flex-direction: column;
-  align-items: center; gap: 2px; padding: 7px 14px 8px; white-space: nowrap; pointer-events: none;
-  background: linear-gradient(90deg, transparent, #7DF9FF 30%, #7DF9FF 70%, transparent) 50% 0 / 100% 1.5px no-repeat,
-    linear-gradient(180deg, rgba(8, 26, 46, .86), rgba(6, 16, 32, .82));
-  border: 1px solid rgba(125, 249, 255, .34); border-radius: 2px; transition: transform .12s ease-out;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%); }
-.bh-name { font: 600 10.5px/1.2 var(--font-mono, ui-monospace, monospace); letter-spacing: .16em; text-transform: uppercase; color: #A6F3FF; }
-.bh-sec { font: 700 16px/1.2 var(--font-display, system-ui); letter-spacing: .01em; color: #F6FBFF; }
-.bh-go { color: #7DF9FF; }
-.cv2-window .bh:active .bh-label { transform: translateX(-50%) scale(.96); }
-.cv2-window .bh:focus-visible { outline: 2px solid #7DF9FF; outline-offset: 2px; }
-
-[data-theme="light"] .bh-frame { --c: rgba(0, 196, 220, .9); }
-[data-theme="light"] .bh-label { background: linear-gradient(90deg, transparent, #00C2DA 30%, #00C2DA 70%, transparent) 50% 0 / 100% 2px no-repeat,
-    linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(240, 250, 253, .93)); border-color: rgba(0, 160, 185, .5); }
-[data-theme="light"] .bh-name { color: #007C90; }
-[data-theme="light"] .bh-sec { color: #0A1424; }
-[data-theme="light"] .bh-go { color: #00A9BF; }
+/* нажатие: башня коротко «отзывается» — подсветка по башне и вывеска чуть сжимается (только opacity / transform) */
+.bh-press { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .18s ease-out;
+  background: radial-gradient(60% 46% at 50% 52%, rgba(125, 249, 255, .22), rgba(125, 249, 255, 0) 100%); }
+.cv2-window .bh:active .bh-press { opacity: 1; transition-duration: .05s; }
+.cv2-window .bh:active .bh-sign { transform: translate(-50%, -50%) scale(.93); }
+.cv2-window .bh:focus-visible { outline: 1.5px solid #7DF9FF; outline-offset: -2px; }
 
 /* ── интерьер раздела: один нарисованный кадр на тему, поверх — обычные панели раздела ── */
 .city .bi { position: absolute; inset: 0; overflow: hidden; background: #061a2c; }
@@ -89,6 +88,6 @@ html[data-theme="light"].in-bld { --scrim-top: linear-gradient(180deg, rgba(238,
   --scrim-bottom: linear-gradient(0deg, rgba(238, 246, 252, .88), rgba(238, 246, 252, 0) 110px); }
 
 @media (prefers-reduced-motion: reduce) {
-  .city .c-zoom, .app-stage, .bh-label { transition: none; }
+  .city .c-zoom, .app-stage, .bh-sign, .bh-press { transition: none; }
   .bi.a-zoom, .bi.a-fade, .bi.a-dock, .bi.a-out, .bi.a-out-fade { animation: none; }
 }

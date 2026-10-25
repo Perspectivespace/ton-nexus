@@ -50,7 +50,8 @@ export function enterBuilding(b: Building, tier: number, navigate: NavigateFunct
 }
 
 /**
- * Точка входа на главной — прямо в «окне в город» (обычная кнопка в потоке страницы, не в слое города):
+ * Точка входа на главной — прямо в «окне в город». Вся башня — зона тапа; видимая часть — только маленькая
+ * вывеска «◎ МАЙНЕР» на башне в стилистике городских вывесок (без UI-рамок), что на неё можно нажать — покажет туториал. (обычная кнопка в потоке страницы, не в слое города):
  * тап проходит только здесь, промежутки между панелями город не трогают.
  * По горизонтали окно и сцена города центрированы одинаково, поэтому x башни считается от центра:
  * left = 50% + ширина сцены × (x − 360) / 720.
@@ -63,18 +64,17 @@ export function TowerHotspot({ tier }: { tier: number }) {
   return (
     <button
       type="button"
-      className={`bh bh-${b.id}`}
+      className={`bh bh-${b.id} t${tier}`}
       style={style}
       aria-label={`${b.name}: войти — раздел «${b.section}»`}
       onPointerDown={() => prefetchInterior(b.id)}
       onClick={() => enterBuilding(b, tier, navigate)}
     >
-      <i className="bh-frame" aria-hidden="true" />
-      <span className="bh-label" aria-hidden="true">
-        <span className="bh-name">{b.name}</span>
-        <span className="bh-sec">
-          {b.section} <span className="bh-go">›</span>
-        </span>
+      {/* вывеска на башне — как остальные вывески города: маленькая неоновая табличка, своя подложка */}
+      <i className="bh-press" aria-hidden="true" />
+      <span className="bh-sign" aria-hidden="true">
+        <i className="bh-glyph" />
+        {b.section.toUpperCase()}
       </span>
     </button>
   );
