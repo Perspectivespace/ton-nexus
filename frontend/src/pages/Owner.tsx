@@ -181,8 +181,8 @@ export function Owner() {
   if (!isOwner && me?.can_deploy) {
     return (
       <OwnerShell
-        eyebrow="Деплой"
-        title="Сервер"
+        eyebrow="Кабинет деплойера"
+        title="Деплой"
         status={<StatusPill tone="ok">в сети</StatusPill>}
       >
         <DeployPanel />
