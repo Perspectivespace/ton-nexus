@@ -107,13 +107,17 @@
 .cv2 .sign.wide::after { animation-duration: 7.5s; animation-delay: -2s; }
 @keyframes cv2-scan { 0% { transform: translate3d(0, -110%, 0); opacity: 0 } 15% { opacity: 1 } 60% { opacity: 1 } 75%, 100% { transform: translate3d(0, 360%, 0); opacity: 0 } }
 
-/* энергия по каналу башни: цвет — облик реактора */
+/* энергия по неоновому каналу башни (T3+): мягкие сгустки света бегут вверх.
+ * Сгусток — векторный SVG с растушёванной головой и хвостом (радиальные градиенты), размер в % от канала — без scale,
+ * движение только translate на отдельном слое → растр под DPR, без ступенек. Канал обрезан по контуру полосы
+ * в кадре (clip-path), на перемычках и концах свет приглушён маской. Свечение статичное (в самом спрайте). */
 .cv2 { --cv2-energy: #7DF9FF; }
 .cv2 .conduit { overflow: hidden;
-  -webkit-mask: linear-gradient(180deg, transparent, #000 10%, #000 85%, transparent); mask: linear-gradient(180deg, transparent, #000 10%, #000 85%, transparent); }
-.cv2 .conduit::before { content: ""; position: absolute; left: 30%; width: 40%; top: 0; height: 200%;
-  background: repeating-linear-gradient(180deg, transparent 0 34px, rgba(230,255,255,.95) 34px 40px, transparent 40px 90px);
-  animation: cv2-flow 3.2s linear infinite; will-change: transform; }
+  clip-path: polygon(100.0% 0.0%, 100.0% 54.0%, 91.7% 71.0%, 83.3% 72.0%, 87.5% 97.6%, 2.1% 97.6%, 4.2% 72.0%, 20.8% 70.4%, 16.7% 55.0%, 4.2% 49.0%, 4.2% 35.6%, 16.7% 33.0%, 20.8% 0.0%);
+  -webkit-mask: linear-gradient(180deg, transparent, #000 3.6%, #000 32.4%, rgba(0,0,0,.35) 34.2%, #000 36.0%, #000 50.4%, rgba(0,0,0,.3) 52.4%, rgba(0,0,0,.3) 56.0%, #000 58.0%, #000 93.0%, transparent); mask: linear-gradient(180deg, transparent, #000 3.6%, #000 32.4%, rgba(0,0,0,.35) 34.2%, #000 36.0%, #000 50.4%, rgba(0,0,0,.3) 52.4%, rgba(0,0,0,.3) 56.0%, #000 58.0%, #000 93.0%, transparent); }
+.cv2 .conduit::before { content: ""; position: absolute; left: 0; width: 100%; top: 0; height: 200%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 250' preserveAspectRatio='none'%3E%3Cdefs%3E%3CradialGradient id='h' fy='.2'%3E%3Cstop offset='0' stop-color='%232BF5FF' stop-opacity='.7'/%3E%3Cstop offset='1' stop-color='%232BF5FF' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='t' fy='.1'%3E%3Cstop offset='0' stop-color='%23fff'/%3E%3Cstop offset='.3' stop-color='%23DCFFFF' stop-opacity='.95'/%3E%3Cstop offset='.7' stop-color='%237DF9FF' stop-opacity='.45'/%3E%3Cstop offset='1' stop-color='%237DF9FF' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='c'%3E%3Cstop offset='0' stop-color='%23fff'/%3E%3Cstop offset='.45' stop-color='%23B8FDFF' stop-opacity='.75'/%3E%3Cstop offset='1' stop-color='%237DF9FF' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='12' cy='100' rx='12' ry='70' fill='url(%23h)'/%3E%3Cellipse cx='12' cy='118' rx='6.5' ry='88' fill='url(%23t)'/%3E%3Cellipse cx='12' cy='50' rx='4' ry='16' fill='url(%23c)'/%3E%3C/svg%3E") 0 0 / 100% 25% repeat-y;
+  animation: cv2-flow 3.6s linear infinite; will-change: transform; backface-visibility: hidden; }
 @keyframes cv2-flow { from { transform: translate3d(0, 0, 0) } to { transform: translate3d(0, -50%, 0) } }
 
 /* ── Борта (п. 12.1): векторные спрайты assets/craft/*.svg, вид сбоку, нос по ходу движения.
