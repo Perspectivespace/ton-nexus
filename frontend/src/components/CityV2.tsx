@@ -5,6 +5,7 @@ import { CityLightning } from "./CityLightning";
 import { BUILDINGS, tierBox } from "@/lib/buildings";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
+import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
 
 /**
  * Город растёт вместе с реактором (DESIGN.md п. 3.10–3.11). Облик города = облик реактора (п. 8.1.1):
@@ -88,6 +89,7 @@ export function CityV2({ tier }: { tier: number }) {
   const [prev, setPrev] = useState<string | null>(null);
 
   const { phase, upcoming } = useCityPhase();
+  const occ = TOWER_SILHOUETTE[tier] ?? TOWER_SILHOUETTE[1];
   // за полторы минуты до смены фазы кадр следующей фазы (для текущего облика) уходит в кэш браузера
   useEffect(() => {
     if (upcoming) preload(tier, upcoming);
@@ -121,8 +123,22 @@ export function CityV2({ tier }: { tier: number }) {
     <div className={`cv2 t${tier} ph-${phase}`}>
       {prev && prev !== src && <img className="cv2-img prev" src={prev} alt="" />}
       {src && <img key={src} className={`cv2-img${slow ? " slow" : ""}`} src={src} alt="" decoding="async" />}
+      {/* ── ГЛУБИНА: задние борта летят за башней (п. 12.1). Над ними — копия кадра, вырезанная по силуэту
+          башни: она закрывает борта, пока те за башней. Копия повторяет смену кадра (те же классы). ── */}
+      <div className="cv2-back">
+        <i className="drone flip" />
+        {tier >= 3 && (
+          <>
+            <i className="craft c1" />
+            <i className="craft c2 flip" />
+          </>
+        )}
+        {tier >= 4 && <i className="craft c3 flip" />}
+      </div>
+      {prev && prev !== src && <img className="cv2-img prev cv2-occ" src={prev} alt="" style={{ clipPath: occ }} />}
+      {src && <img key={`o${src}`} className={`cv2-img cv2-occ${slow ? " slow" : ""}`} src={src} alt="" decoding="async" style={{ clipPath: occ }} />}
       <div className="cv2-life">
-        {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (11 анимаций) ── */}
+        {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (10 анимаций + дрон в заднем слое) ── */}
         <i className="fog f-far" />
         <i className="fog f-near" />
         <i className="rain" />
@@ -132,37 +148,33 @@ export function CityV2({ tier }: { tier: number }) {
         {BEACONS.map(([x, y, dl], n) => (
           <i key={`b${n}`} className="bcn" style={{ left: pc(x, W), top: pc(y, H), "--dl": `-${dl}s` } as Vars} />
         ))}
-        <i className="drone" style={{ top: pc(470, H) }} />
         <i className="steam" style={{ left: pc(598, W), top: pc(628, H) }} />
         <i className="steam s2" style={{ left: pc(612, W), top: pc(630, H) }} />
 
         {/* ── T1–T2: круги на лужах (город ещё спит, дождь слышнее) ── */}
         {tier <= 2 && <i className="ripple" style={{ left: pc(250, W), top: pc(1090, H) }} />}
 
-        {/* ── T2+: вывески зажглись (одна иногда «моргает»), воздушная полоса ── */}
+        {/* ── T2+: вывески зажглись (одна иногда «моргает»); единственный борт ПЕРЕД башней ── */}
         {tier >= 2 && (
           <>
             <b className={`sign v ${tier >= 4 ? "holo" : "quiet cut"}`} style={box(72, 578, 40, 170)}>ОБМЕН</b>
             <b className={`sign ${tier >= 4 ? "holo" : "quiet"}`} style={box(444, 808, 44, 52)}>TON</b>
-            <i className="craft c0" />
+            <i className="craft c0 front" />
           </>
         )}
-        {/* ── T3+: башня под током, ещё два борта ── */}
+        {/* ── T3+: башня под током (ещё два борта — в заднем слое .cv2-back) ── */}
         {tier >= 3 && (
           <>
             <i className="conduit" style={box(379, 370, 24, 500)} />
-            <i className="craft c1" />
-            <i className="craft c2" />
           </>
         )}
-        {/* ── T4: голо-«РЕАКТОР» с развёрткой, прожектор, третий борт ── */}
+        {/* ── T4: голо-«РЕАКТОР» с развёрткой, прожектор (третий борт — в заднем слое) ── */}
         {tier >= 4 && (
           <>
             <b className="sign holo wide scan" style={box(543, 705, 112, 86)}>
               РЕАКТОР<small>MK IV · ОНЛАЙН</small>
             </b>
             <i className="beam" style={{ left: pc(600, W), top: pc(1000, H) }} />
-            <i className="craft c3" />
           </>
         )}
         {/* ── экран раздела «Майнер» на реакторной башне (на всех обликах, статичный) ── */}

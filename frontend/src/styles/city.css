@@ -80,11 +80,8 @@
 .cv2 .bcn { width: 1.1%; aspect-ratio: 1; margin: -.55% 0 0 -.55%; border-radius: 50%; background: #FF5468;
   box-shadow: 0 0 6px 2px rgba(255,46,90,.7); animation: cv2-bcn 2.4s steps(1, end) var(--dl, 0s) infinite; }
 @keyframes cv2-bcn { 0%, 66% { opacity: .12 } 67%, 84% { opacity: 1 } 85% { opacity: .12 } }
-/* дальний дрон: белый огонёк с красным хвостом пересекает небо */
-.cv2 .drone { left: 0; width: 100%; height: 6px; animation: cv2-drone 22s linear -6s infinite; }
-.cv2 .drone::before { content: ""; position: absolute; width: 3px; height: 3px; background: #F2F6FF;
-  box-shadow: 0 0 5px 1px rgba(160,230,255,.9), 9px 2px 0 -.5px #FF5468; }
-@keyframes cv2-drone { from { transform: translate3d(106%, 0, 0) } to { transform: translate3d(-6%, -26px, 0) } }
+/* дальний дрон: курьерский квадро-дрон (спрайт; задний слой, летит за башней) — см. блок «Борта» ниже */
+@keyframes cv2-drone { from { transform: translate3d(106%, 0, 0) rotate(2deg) } to { transform: translate3d(-6%, -26px, 0) rotate(3.5deg) } }
 /* пар из вентиляции на крыше: мягкий клуб поднимается и тает */
 .cv2 .steam { width: 7%; aspect-ratio: 1; margin-left: -3.5%; border-radius: 50%; opacity: 0;
   background: radial-gradient(closest-side, rgba(190,210,235,.55), rgba(190,210,235,0));
@@ -119,19 +116,43 @@
   animation: cv2-flow 3.2s linear infinite; will-change: transform; }
 @keyframes cv2-flow { from { transform: translate3d(0, 0, 0) } to { transform: translate3d(0, -50%, 0) } }
 
-/* борта: медленные, на разной глубине (меньше = дальше) */
-.cv2 .craft { left: 0; width: 100%; height: 8px; will-change: transform; }
-.cv2 .craft::before { content: ""; position: absolute; width: 14px; height: 4px; border-radius: 2px 5px 5px 2px;
-  background: linear-gradient(90deg, #FF4766 0 2px, #1E2638 2px 10px, #F4FBFF 10px); box-shadow: 0 0 5px 1px rgba(200,240,255,.4); }
-.cv2 .craft.c1 { top: 22%; animation: cv2-c1 34s linear -8s infinite; }
-.cv2 .craft.c2 { top: 33%; transform: scale(.6); animation: cv2-c2 48s linear -30s infinite; }
-.cv2 .craft.c3 { top: 15%; animation: cv2-c3 40s linear -12s infinite; }
-@keyframes cv2-c1 { 0% { transform: translate3d(-6%, 0, 0) } 50% { transform: translate3d(50%, -14px, 0) } 100% { transform: translate3d(106%, -4px, 0) } }
-@keyframes cv2-c2 { 0% { transform: translate3d(106%, 0, 0) scale(.6) } 100% { transform: translate3d(-6%, 12px, 0) scale(.6) } }
-/* T2: дальняя воздушная полоса — маленький борт высоко над городом */
-.cv2 .craft.c0 { top: 27%; transform: scale(.5); animation: cv2-c0 30s linear -11s infinite; }
-@keyframes cv2-c0 { 0% { transform: translate3d(-6%, 0, 0) scale(.5) } 100% { transform: translate3d(106%, -10px, 0) scale(.5) } }
-@keyframes cv2-c3 { 0% { transform: translate3d(106%, 10px, 0) scaleX(-1) } 100% { transform: translate3d(-6%, -20px, 0) scaleX(-1) } }
+/* ── Борта (п. 12.1): векторные спрайты assets/craft/*.svg, вид сбоку, нос по ходу движения.
+ * Полоса .craft/.drone на всю ширину сцены едет translate3d (+ лёгкий крен rotate), сам борт — ::before
+ * с размером в % ширины сцены. Никакого scale: слой растрируется сразу в нужном размере и плотности
+ * пикселей экрана, поэтому борт не мылится и не «пикселит». Огни и ореолы статичные (запечены в SVG).
+ * Ночь/закат — тёмный корпус, огни главные; рассвет/день — светлый металл, огни приглушены. ── */
+.cv2 .craft, .cv2 .drone { left: 0; width: 100%; height: 0; will-change: transform; transform-origin: 0 0; }
+.cv2 .craft::before, .cv2 .drone::before { content: ""; position: absolute; left: 0; top: 0; translate: 0 -50%;
+  background: center / contain no-repeat; }
+.cv2 .flip::before { scale: -1 1; }
+.cv2 .drone::before { width: 4.4%; aspect-ratio: 3; background-image: url("../assets/craft/drone-night.svg"); }
+.cv2 .craft.c0::before { width: 12%; aspect-ratio: 200 / 56; background-image: url("../assets/craft/c0-night.svg"); }
+.cv2 .craft.c1::before { width: 5.6%; aspect-ratio: 180 / 52; background-image: url("../assets/craft/c1-night.svg"); }
+.cv2 .craft.c2::before { width: 5.2%; aspect-ratio: 180 / 56; background-image: url("../assets/craft/c2-night.svg"); }
+.cv2 .craft.c3::before { width: 6%; aspect-ratio: 200 / 48; background-image: url("../assets/craft/c3-night.svg"); }
+:is(.ph-dawn,.ph-day).cv2 .drone::before { background-image: url("../assets/craft/drone-day.svg"); }
+:is(.ph-dawn,.ph-day).cv2 .craft.c0::before { background-image: url("../assets/craft/c0-day.svg"); }
+:is(.ph-dawn,.ph-day).cv2 .craft.c1::before { background-image: url("../assets/craft/c1-day.svg"); }
+:is(.ph-dawn,.ph-day).cv2 .craft.c2::before { background-image: url("../assets/craft/c2-day.svg"); }
+:is(.ph-dawn,.ph-day).cv2 .craft.c3::before { background-image: url("../assets/craft/c3-day.svg"); }
+
+/* ── Глубина (п. 12.1): задние борта — в слое .cv2-back под вырезанной по силуэту копией кадра,
+ * поэтому уходят за башню. Они меньше и чуть прозрачнее (воздушная перспектива).
+ * Высоты подобраны так, чтобы каждый задний борт пересекал башню, а не антенны и не ближние дома. ── */
+.cv2-back { position: absolute; inset: 0; pointer-events: none; }
+.cv2-back > * { position: absolute; display: block; }
+.cv2-occ { pointer-events: none; }
+.cv2-back .drone { top: 30.47%; opacity: .9; animation: cv2-drone 22s linear -6s infinite; }
+.cv2-back .craft.c1 { top: 26.17%; opacity: .85; animation: cv2-c1 34s linear -8s infinite; }
+.cv2-back .craft.c2 { top: 34.77%; opacity: .7; animation: cv2-c2 48s linear -30s infinite; }
+.cv2-back .craft.c3 { top: 22.66%; opacity: .85; animation: cv2-c3 40s linear -12s infinite; }
+:is(.ph-dawn,.ph-day) .cv2-back .craft, :is(.ph-dawn,.ph-day) .cv2-back .drone { opacity: .78; }
+@keyframes cv2-c1 { 0% { transform: translate3d(-6%, 0, 0) rotate(-3deg) } 50% { transform: translate3d(50%, -10px, 0) rotate(0deg) } 100% { transform: translate3d(106%, -4px, 0) rotate(1.5deg) } }
+@keyframes cv2-c2 { 0% { transform: translate3d(106%, 0, 0) rotate(-1deg) } 100% { transform: translate3d(-6%, 8px, 0) rotate(-1deg) } }
+@keyframes cv2-c3 { 0% { transform: translate3d(106%, 8px, 0) rotate(2.5deg) } 100% { transform: translate3d(-6%, -12px, 0) rotate(1.5deg) } }
+/* единственный борт ПЕРЕД башней (T2+): ниже, крупнее и детальнее, проходит над экраном «МАЙНЕР» */
+.cv2 .craft.c0.front { top: 42.19%; animation: cv2-c0 30s linear -11s infinite; }
+@keyframes cv2-c0 { 0% { transform: translate3d(-13%, 0, 0) rotate(-1.5deg) } 100% { transform: translate3d(106%, -12px, 0) rotate(-1deg) } }
 
 /* луч прожектора: мягкий клин, медленно качается */
 .cv2 .beam { width: 70px; height: 90%; margin-left: -35px; transform-origin: 50% 100%; translate: 0 -100%; opacity: .32;
@@ -143,6 +164,7 @@ html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::
 html.low-end .cv2-life > :not(.fog):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.tw-press) { display: none; }
 html.low-end .cv2 .win, html.low-end .cv2 .bcn, html.low-end .cv2 .sign.cut { animation: none; opacity: .5; }
 html.low-end .cv2 .sign::after { animation: none; display: none; }
+html.low-end .cv2-back { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .cv2 *, .cv2 *::before, .cv2 *::after { animation: none !important; }
   .cv2 .craft, .cv2 .drone, .cv2 .rain, .cv2 .steam, .cv2 .ripple { display: none; }
@@ -176,7 +198,6 @@ html.low-end .cv2 .ripple { display: none; }
 :is(.ph-dawn,.ph-day).cv2 .win { background: #FFC266; }
 :is(.ph-dawn,.ph-day).cv2 .steam { background: radial-gradient(closest-side, rgba(255,255,255,.85), rgba(255,255,255,0)); }
 :is(.ph-dawn,.ph-day).cv2 .ripple { border-color: rgba(255,255,255,.7); }
-:is(.ph-dawn,.ph-day).cv2 .drone::before { background: #1B2236; box-shadow: 9px 2px 0 -.5px #E0324F; }
 :is(.ph-dawn,.ph-day).cv2 .sign { padding: 3px; color: #00788C; text-shadow: 0 0 6px rgba(43,245,255,.55);
   background: linear-gradient(180deg, rgba(240,253,255,.72), rgba(214,246,252,.58));
   box-shadow: inset 0 0 0 1px rgba(0,150,175,.38), 0 2px 10px rgba(30,40,90,.18); }
