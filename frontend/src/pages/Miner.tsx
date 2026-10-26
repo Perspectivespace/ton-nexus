@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useMe, useMiner, useMinerStart, useMinerClaim } from "@/api/hooks";
 import {
@@ -146,7 +145,8 @@ export function Miner() {
       />
 
       {/* Герой: «окно в город» со скримом под цифрами */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      {/* появление героя — CSS (прежняя пружина framer-motion в linear()), чтобы чанк «Майнера» не ждал библиотеку анимаций */}
+      <div className="mn-rise">
         <Panel level="hero" see cut="l" lift="l2" className="p-5">
           <div className="relative flex flex-col items-center">
             <Reactor
@@ -196,7 +196,7 @@ export function Miner() {
             </div>
           </Scrim>
         </Panel>
-      </motion.div>
+      </div>
 
       <ReactorTierPanel tier={tier} level={level} />
 
