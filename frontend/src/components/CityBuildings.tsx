@@ -4,6 +4,7 @@ import { haptic } from "@/lib/haptics";
 import { IconBack } from "@/components/icons";
 import { hasBackButton, pushBack } from "@/lib/backButton";
 import { prefetchRoute } from "@/lib/routes";
+import { warmFonts } from "@/lib/fontWarm";
 import {
   BUILDINGS,
   FADE_MS,
@@ -48,7 +49,7 @@ export function enterBuilding(b: Building, tier: number, navigate: NavigateFunct
   // чанк подтянут в простое главной и ещё раз запрошен на pointerdown), но не раньше NAV_AT и не позже конца наезда +0,5 с
   const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
   const end = mode === "zoom" ? ZOOM_MS : FADE_MS;
-  const ready = Promise.all([prefetchInterior(b.id), prefetchRoute(b.route)]);
+  const ready = Promise.all([prefetchInterior(b.id), prefetchRoute(b.route), warmFonts()]);
   Promise.all([wait(NAV_AT[mode]), Promise.race([ready, wait(end + 500)])]).then(go);
 }
 
@@ -113,6 +114,7 @@ export function TowerHotspot({ tier }: { tier: number }) {
         onPointerDown={() => {
           prefetchInterior(b.id);
           void prefetchRoute(b.route);
+          void warmFonts();
           pressed(true);
         }}
         onPointerUp={() => pressed(false)}
