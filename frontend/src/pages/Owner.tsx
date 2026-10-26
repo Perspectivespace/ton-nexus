@@ -21,7 +21,9 @@ import {
   ListRow,
   Tabs,
   Field,
+  SectionLabel,
 } from "@/components/ui";
+import { isFpsOn, setFpsOn } from "@/lib/fps";
 
 function PromoCreatePanel() {
   const create = usePromoCreate();
@@ -124,6 +126,38 @@ function OverviewTab() {
   );
 }
 
+/**
+ * Счётчик FPS для проверки плавности на телефоне: плашка в левом верхнем углу.
+ * Только на этом устройстве (localStorage), включается и выключается сразу, без перезапуска.
+ * Ссылки ?fps=1 / startapp=fps1 работают как раньше.
+ */
+function FpsToggle() {
+  const [on, setOn] = useState(isFpsOn);
+  return (
+    <div className="space-y-2">
+      <SectionLabel>Проверка</SectionLabel>
+      <List>
+        <ListRow
+          title="Счётчик FPS"
+          sub={
+            on
+              ? "Плашка слева вверху · этот телефон"
+              : "Плавность в углу экрана"
+          }
+          trailing={
+            <StatusPill tone={on ? "ok" : "neutral"}>{on ? "вкл" : "выкл"}</StatusPill>
+          }
+          chevron={false}
+          onClick={() => {
+            setFpsOn(!on);
+            setOn(!on);
+          }}
+        />
+      </List>
+    </div>
+  );
+}
+
 function PromosTab() {
   const { data, isLoading, error, refetch } = usePromoList();
   if (isLoading) return <LoadingPanel label="Загрузка промокодов…" />;
@@ -208,7 +242,12 @@ export function Owner() {
         />
       </div>
 
-      {tab === "overview" && <OverviewTab />}
+      {tab === "overview" && (
+        <div className="space-y-4">
+          <OverviewTab />
+          <FpsToggle />
+        </div>
+      )}
       {tab === "promos" && <PromosTab />}
       {tab === "economy" && (
         <>

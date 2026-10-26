@@ -6,9 +6,19 @@
  */
 type Sum = { frames: number; ms: number; worst: number; janks: number; long: number; minFps: number };
 
+/** чем выключить запущенный счётчик (переключатель в кабинете владельца) */
+let stopCurrent: (() => void) | null = null;
+
+export function stopFpsMeter() {
+  stopCurrent?.();
+  stopCurrent = null;
+}
+
 export function startFpsMeter() {
   if ((window as { __fpsOn?: boolean }).__fpsOn) return;
   (window as { __fpsOn?: boolean }).__fpsOn = true;
+  let raf = 0;
+  let observer: PerformanceObserver | null = null;
 
   const el = document.createElement("div");
   el.setAttribute("aria-hidden", "true");
@@ -22,10 +32,11 @@ export function startFpsMeter() {
   let longSupported = false;
   try {
     if (PerformanceObserver.supportedEntryTypes?.includes("longtask")) {
-      new PerformanceObserver((l) => {
+      observer = new PerformanceObserver((l) => {
         long += l.getEntries().length;
         win.long += l.getEntries().length;
-      }).observe({ type: "longtask", buffered: false });
+      });
+      observer.observe({ type: "longtask", buffered: false });
       longSupported = true;
     }
   } catch {
@@ -62,7 +73,7 @@ export function startFpsMeter() {
   };
 
   const frame = (now: number) => {
-    requestAnimationFrame(frame);
+    raf = requestAnimationFrame(frame);
     if (!last) {
       last = secStart = now;
       return;
@@ -88,9 +99,18 @@ export function startFpsMeter() {
     if (now - lastLog >= 10_000) log(now);
   };
   // свёрнутое приложение не считаем: после возврата начинаем отсчёт кадров заново
-  document.addEventListener("visibilitychange", () => {
+  const onVisibility = () => {
     last = 0;
     secFrames = 0;
-  });
-  requestAnimationFrame(frame);
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+  raf = requestAnimationFrame(frame);
+
+  stopCurrent = () => {
+    cancelAnimationFrame(raf);
+    observer?.disconnect();
+    document.removeEventListener("visibilitychange", onVisibility);
+    el.remove();
+    (window as { __fpsOn?: boolean }).__fpsOn = false;
+  };
 }
