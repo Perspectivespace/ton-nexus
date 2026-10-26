@@ -91,6 +91,8 @@ async def create_request(
 
     wallet = _validate_wallet(wallet_address)
 
+    # Блокируем пользователя до проверки «уже есть заявка»: две параллельные заявки не пройдут обе.
+    await balance_svc.get_user_for_update(session, user.id)
     pending = await session.scalar(
         select(WithdrawRequest.id).where(
             WithdrawRequest.user_id == user.id,
@@ -156,7 +158,14 @@ async def review(
     if not is_platform_owner(actor) and not is_admin(actor):
         raise WithdrawPermissionError("owner or admin required")
 
-    req = await session.get(WithdrawRequest, request_id)
+    # Заявка под блокировкой и перечитана: второе нажатие «Отклонить»/«Выплачено» ждёт первое
+    # и видит уже изменённый статус — возврат не начисляется дважды.
+    req = await session.scalar(
+        select(WithdrawRequest)
+        .where(WithdrawRequest.id == request_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if not req or req.status != "pending":
         raise WithdrawStateError("request not pending")
 

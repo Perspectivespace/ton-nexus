@@ -82,7 +82,12 @@ async def attempt_upgrade(
     block_type: str | None = None,
 ) -> UpgradeResult:
     user = await balance_svc.get_user_for_update(session, user_id)
-    miner = await session.scalar(select(Miner).where(Miner.user_id == user_id))
+    miner = await session.scalar(
+        select(Miner)
+        .where(Miner.user_id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
     if not miner:
         raise MinerError("miner not found")
     await sync_status(session, miner)

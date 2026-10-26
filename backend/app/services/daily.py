@@ -75,6 +75,9 @@ def _reward_for_streak(cfg: dict, streak: int) -> dict:
 
 
 async def claim_daily(session: AsyncSession, *, user: User, now: datetime | None = None) -> DailyResult:
+    # Блокируем строку пользователя до проверки «уже отмечено»: второй параллельный запрос
+    # дождётся первого и увидит его отметку.
+    user = await balance_svc.get_user_for_update(session, user.id)
     today = gameday.game_day(now)
     prev = await _last_checkin(session, user.id)
     prev_day = effective_day(prev) if prev else None

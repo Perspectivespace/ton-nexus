@@ -66,7 +66,9 @@ class WheelXpLevelsUpTest(unittest.TestCase):
         )
         with mock.patch.object(wheel, "get_setting", fake_get_setting), mock.patch.object(
             levels, "get_setting", fake_get_setting
-        ), mock.patch.object(wheel, "_spins_today", zero):
+        ), mock.patch.object(wheel, "_spins_today", zero), mock.patch.object(
+            wheel.balance_svc, "get_user_for_update", mock.AsyncMock(return_value=user)
+        ):
             res = asyncio.run(wheel.spin(session, user=user))
         self.assertEqual(res.reward_xp, 150)
         self.assertEqual((user.level, user.xp), (2, 50))

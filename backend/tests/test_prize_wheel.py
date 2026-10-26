@@ -129,6 +129,8 @@ class SpinUsesSettingsTest(unittest.TestCase):
         with mock.patch.object(wheel, "get_setting", fake_get_setting), mock.patch.object(
             wheel, "_spins_today", zero
         ), mock.patch.object(wheel.balance_svc, "credit", credit), mock.patch.object(
+            wheel.balance_svc, "get_user_for_update", mock.AsyncMock(return_value=user)
+        ), mock.patch.object(
             wheel, "add_xp", fake_add_xp
         ):
             with self.assertLogs("app.services.prize_wheel", level="INFO") as logs:

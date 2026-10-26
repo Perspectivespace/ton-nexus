@@ -37,9 +37,11 @@ CFG = {"day_1": {"ton": "0.01", "xp": 0}, "day_2": {"ton": "0.02", "xp": 0}}
 
 def _claim(prev, now):
     s = _session(prev)
+    user = _user()
     with mock.patch.object(daily, "get_setting", mock.AsyncMock(return_value=CFG)), \
+         mock.patch.object(daily.balance_svc, "get_user_for_update", mock.AsyncMock(return_value=user)), \
          mock.patch.object(daily.balance_svc, "credit", mock.AsyncMock()) as credit:
-        r = asyncio.run(daily.claim_daily(s, user=_user(), now=now))
+        r = asyncio.run(daily.claim_daily(s, user=user, now=now))
     return r, s, credit
 
 

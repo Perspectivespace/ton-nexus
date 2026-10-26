@@ -20,8 +20,18 @@ class UserNotFoundError(Exception):
 
 
 async def get_user_for_update(session: AsyncSession, user_id: int) -> User:
+    """Строка пользователя под блокировкой (FOR UPDATE) со свежими значениями из БД.
+
+    Сначала сбрасываем несохранённые изменения сессии (autoflush выключен), затем перечитываем
+    строку: без populate_existing объект из сессии остался бы со старым балансом, прочитанным
+    до блокировки, и параллельное начисление затёрлось бы.
+    """
+    await session.flush()
     result = await session.execute(
-        select(User).where(User.id == user_id).with_for_update()
+        select(User)
+        .where(User.id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     user = result.scalar_one_or_none()
     if not user:
