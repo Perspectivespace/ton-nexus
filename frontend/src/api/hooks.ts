@@ -101,11 +101,18 @@ export type DailyStatus = {
   next_claim_at?: string | null;
   /** часы сервера — поправка для отсчёта */
   server_time?: string;
+  /** день 7-дневного круга «сегодня» (1..7): уже полученный или тот, что даст следующая отметка */
+  cycle_day?: number;
+  /** награды всех 7 дней круга. Нет у старого сервера — полоса не показывается. */
+  rewards?: DailyDay[];
 };
+
+export type DailyDay = { day: number; ton: string; xp: number; focus: number };
 
 export type DailyClaim = {
   already_claimed: boolean;
   streak: number;
+  cycle_day?: number;
   reward_ton: string;
   reward_xp: number;
   reward_focus: number;

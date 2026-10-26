@@ -23,6 +23,7 @@ router = APIRouter(tags=["engagement"])
 class DailyOut(BaseModel):
     already_claimed: bool
     streak: int
+    cycle_day: int = 1
     reward_ton: Decimal
     reward_xp: int
     reward_focus: int
@@ -31,9 +32,19 @@ class DailyOut(BaseModel):
     next_claim_at: str
 
 
+class DailyDayOut(BaseModel):
+    day: int
+    ton: str
+    xp: int
+    focus: int
+
+
 class DailyStatusOut(BaseModel):
     claimed_today: bool
     streak: int
+    # День 7-дневного круга «сегодня» (1..7) и награды всех 7 дней — для полосы на экране.
+    cycle_day: int = 1
+    rewards: list[DailyDayOut] = []
     check_date: str
     next_claim_at: str | None = None
     server_time: str
@@ -109,6 +120,7 @@ async def daily_claim(user: User = Depends(get_current_user), db: AsyncSession =
         return DailyOut(
             already_claimed=r.already_claimed,
             streak=r.streak,
+            cycle_day=daily_svc.cycle_day(r.streak),
             reward_ton=r.reward_ton,
             reward_xp=r.reward_xp,
             reward_focus=r.reward_focus,
