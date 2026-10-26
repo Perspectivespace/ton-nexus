@@ -84,6 +84,24 @@ async def _get_miner(session: AsyncSession, user_id: int) -> Miner:
     return miner
 
 
+async def lock_miner(session: AsyncSession, user_id: int) -> Miner:
+    """Майнер под блокировкой со свежими значениями.
+
+    Порядок блокировок везде один: сначала пользователь, потом майнер — так сбор и усиление
+    одного игрока не могут заблокировать друг друга насмерть.
+    """
+    await balance_svc.get_user_for_update(session, user_id)
+    miner = await session.scalar(
+        select(Miner)
+        .where(Miner.user_id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if not miner:
+        raise MinerError("miner not found")
+    return miner
+
+
 async def _rate_params(session: AsyncSession) -> tuple[Decimal, Decimal, Decimal]:
     rate = dec((await get_setting(session, "miner_base_rate"))["ton_per_hour"])
     p_mult = dec((await get_setting(session, "miner_power_mult"))["per_level"])
@@ -213,7 +231,7 @@ async def get_miner_view(session: AsyncSession, user_id: int) -> MinerView:
 
 
 async def start_session(session: AsyncSession, user_id: int) -> MinerView:
-    miner = await _get_miner(session, user_id)
+    miner = await lock_miner(session, user_id)
     await sync_status(session, miner)
 
     if miner.status == "running":
@@ -235,7 +253,7 @@ async def start_session(session: AsyncSession, user_id: int) -> MinerView:
 
 async def claim(session: AsyncSession, user_id: int) -> tuple[MinerView, Decimal]:
     """Claim while running (partial) or ready (frozen)."""
-    miner = await _get_miner(session, user_id)
+    miner = await lock_miner(session, user_id)
     await sync_status(session, miner)
 
     if miner.status not in ("running", "ready"):

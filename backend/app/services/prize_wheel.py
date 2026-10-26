@@ -126,6 +126,8 @@ def sectors_view(pairs: list[tuple[dict, float]]) -> list[dict]:
 
 
 async def spin(session: AsyncSession, *, user: User) -> SpinResult:
+    # Блокируем пользователя до подсчёта вращений: параллельный запрос ждёт и видит уже сделанное.
+    user = await balance_svc.get_user_for_update(session, user.id)
     cfg = await get_setting(session, "prize_wheel")
     free = int(cfg.get("free_spins_per_day", 1))
     used = await _spins_today(session, user.id)
