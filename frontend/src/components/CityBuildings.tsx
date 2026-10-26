@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import { haptic } from "@/lib/haptics";
 import { IconBack } from "@/components/icons";
@@ -7,9 +7,9 @@ import {
   BUILDINGS,
   FADE_MS,
   NAV_AT,
+  hitShape,
   ZOOM_MS,
   motionMode,
-  tierBox,
   zoomVars,
   type Building,
   type BuildingId,
@@ -49,36 +49,74 @@ export function enterBuilding(b: Building, tier: number, navigate: NavigateFunct
   Promise.all([wait(NAV_AT[mode]), Promise.race([prefetchInterior(b.id), wait(end + 500)])]).then(go);
 }
 
-/**
- * Точка входа на главной — прямо в «окне в город» (обычная кнопка в потоке страницы, не в слое города).
- * Сама кнопка невидима: экран «МАЙНЕР» на башне — в слое города (CityV2, TowerScreen), иначе при прокрутке
- * он уезжал бы вместе со страницей, а башня стоит на месте. Что на башню можно нажать — покажет туториал. Тап проходит только здесь, промежутки между панелями город не трогают.
- * По горизонтали окно и сцена города центрированы одинаково, поэтому x башни считается от центра:
- * left = 50% + ширина сцены × (x − 360) / 720.
- */
 /** отклик нажатия рисует сама башня в слое города (экран «МАЙНЕР» + подсветка): кнопка лишь ставит класс на <html> */
 const pressed = (on: boolean) => document.documentElement.classList.toggle("bh-down", on);
 
+/**
+ * Точка входа на главной — невидимая кнопка в «окне в город» (в потоке страницы: карточки, наехавшие на башню, тап забирают себе).
+ * Город — position: fixed и не скроллится, а окно едет со страницей, поэтому кнопка каждый кадр прокрутки ставится по
+ * сцене города (.c-stage) — в координатах кадра 720×1280, как экран «МАЙНЕР» (TowerScreen): форма — силуэт башни (clip-path),
+ * без неба над шпилем. Видимая часть — только внутри окна (обрезка .bh-clip): ниже — карточки, они сверху.
+ */
 export function TowerHotspot({ tier }: { tier: number }) {
   const navigate = useNavigate();
   const b = BUILDINGS.reactor;
-  const [x, , w] = tierBox(b, tier);
-  const style = { "--bx": String(x - 360), "--bw": String(w) } as CSSProperties;
+  const clipRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const { box, clip } = hitShape(b);
+
+  useLayoutEffect(() => {
+    const [x, y, w, h] = box;
+    let raf = 0;
+    const place = () => {
+      raf = 0;
+      const stage = document.querySelector<HTMLElement>(".city .c-stage");
+      const c = clipRef.current?.getBoundingClientRect();
+      const el = btnRef.current;
+      if (!stage || !c || !el) return;
+      const s = stage.getBoundingClientRect();
+      const k = s.width / 720;
+      el.style.width = `${w * k}px`;
+      el.style.height = `${h * k}px`;
+      el.style.transform = `translate3d(${s.left + x * k - c.left}px, ${s.top + y * k - c.top}px, 0)`;
+    };
+    const queue = () => {
+      if (!raf) raf = requestAnimationFrame(place);
+    };
+    place();
+    const stage = document.querySelector(".city .c-stage");
+    window.addEventListener("scroll", queue, { passive: true });
+    window.addEventListener("resize", queue);
+    stage?.addEventListener("transitionend", queue); // сдвиг сцены при входе на главную (.cv2-home)
+    const t = window.setTimeout(queue, 700);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+      window.removeEventListener("scroll", queue);
+      window.removeEventListener("resize", queue);
+      stage?.removeEventListener("transitionend", queue);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tier]);
+
   return (
-    <button
-      type="button"
-      className={`bh bh-${b.id} t${tier}`}
-      style={style}
-      aria-label={`${b.name}: войти — раздел «${b.section}»`}
-      onPointerDown={() => {
-        prefetchInterior(b.id);
-        pressed(true);
-      }}
-      onPointerUp={() => pressed(false)}
-      onPointerCancel={() => pressed(false)}
-      onPointerLeave={() => pressed(false)}
-      onClick={() => enterBuilding(b, tier, navigate)}
-    />
+    <div className="bh-clip" ref={clipRef}>
+      <button
+        ref={btnRef}
+        type="button"
+        className={`bh bh-${b.id} t${tier}`}
+        style={{ clipPath: clip } as CSSProperties}
+        aria-label={`${b.name}: войти — раздел «${b.section}»`}
+        onPointerDown={() => {
+          prefetchInterior(b.id);
+          pressed(true);
+        }}
+        onPointerUp={() => pressed(false)}
+        onPointerCancel={() => pressed(false)}
+        onPointerLeave={() => pressed(false)}
+        onClick={() => enterBuilding(b, tier, navigate)}
+      />
+    </div>
   );
 }
 

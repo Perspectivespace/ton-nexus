@@ -28,12 +28,12 @@ html.bz-hide .app-stage { opacity: 0; }
 html:is(.bz-hide, .bz-show) .app-stage { will-change: opacity; }
 html.bz-fade .city .c-stage { opacity: .35; transition: opacity .22s ease-out; }
 
-/* ── точка входа: кнопка внутри «окна в город» (в потоке страницы — тап проходит только по башне) ──
- * окно и сцена центрированы одинаково → x башни от центра; ширина сцены = min(100vw, 560px) */
+/* ── точка входа: невидимая кнопка в «окне в город», каждый кадр прокрутки ставится по сцене города (CityBuildings → TowerHotspot).
+ * .bh-clip — область, где башню видно: окно (без полосы чипа «Район» снизу) и шапка над ним; ниже — карточки, тап у них. */
 .cv2-window { position: relative; }
-.cv2-window .bh { --sw: min(100vw, 560px); position: absolute; top: 0; bottom: 34px;
-  left: calc(50% + var(--sw) * var(--bx) / 720); width: calc(var(--sw) * var(--bw) / 720);
-  padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cv2-window .bh-clip { position: absolute; top: -100vh; bottom: 34px; left: 0; right: 0; overflow: hidden; pointer-events: none; }
+.cv2-window .bh { position: absolute; left: 0; top: 0; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto;
+  -webkit-tap-highlight-color: transparent; }
 /* экран «МАЙНЕР» — встроенный дисплей башни в слое города (CityV2 → TowerScreen), в координатах кадра:
  * сцена фиксирована под страницей, поэтому экран стоит на башне при любой прокрутке. Лёгкий: тонкие моноширинные буквы
  * с разрядкой, полупрозрачное стекло + тонкая кромка, статичная строчная развёртка (LED-матрица). Свечение статичное. */
@@ -78,7 +78,8 @@ html:not(.cv2-home) .cv2:is(.ph-dawn, .ph-day) .tw-scr { opacity: .75; }
   background: radial-gradient(55% 40% at 52% 40%, rgba(125, 249, 255, .2), rgba(125, 249, 255, 0) 100%); }
 html.bh-down .cv2 .tw-press { opacity: 1; transition-duration: .05s; }
 html.bh-down .cv2 .tw-scr { transform: scale(.94); }
-.cv2-window .bh:focus-visible { outline: 1.5px solid #7DF9FF; outline-offset: -2px; }
+/* фокус с клавиатуры: подсветка башни в слое города (clip-path обрезал бы обводку) */
+html:has(.cv2-window .bh:focus-visible) .cv2 .tw-press { opacity: .7; }
 
 /* ── интерьер раздела: один нарисованный кадр на тему, поверх — обычные панели раздела ── */
 .city .bi { position: absolute; inset: 0; overflow: hidden; background: #061a2c; }
