@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.balance import BalanceHistory
 from app.models.task import Task, TaskSubmission
 from app.models.user import User
 from app.services import balance as balance_svc
@@ -32,6 +33,71 @@ class TaskPermissionError(TaskError):
 
 class TaskStateError(TaskError):
     pass
+
+
+class TaskBudgetError(TaskError):
+    """Не хватает денег на изменение бюджета или бюджет задания исчерпан."""
+
+
+# ── Бюджет задания ────────────────────────────────────────────────────────────
+# budget_locked — всё, что списано с создателя за задание (выплаты + комиссия), только растёт.
+# После публикации награду и число мест можно лишь повышать, и только с доплатой разницы;
+# выплата исполнителю не может вывести сумму выплат за пределы budget_locked.
+
+MAX_SLOTS = 10_000
+
+
+def _q(v: Decimal) -> Decimal:
+    return Decimal(v).quantize(Decimal("0.00000001"))
+
+
+def _ton(v: Decimal) -> str:
+    return format(_q(v).normalize(), "f")
+
+
+async def _commission(session: AsyncSession, payout: Decimal) -> Decimal:
+    bp = int((await get_setting(session, "task_platform_commission_bp"))["bp"])
+    return _q(payout * Decimal(bp) / Decimal(10000))
+
+
+async def _lock_task(session: AsyncSession, task_id: int) -> Task | None:
+    """Строка задания под блокировкой (FOR UPDATE) со свежими значениями из БД."""
+    return await session.scalar(
+        select(Task)
+        .where(Task.id == task_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+
+
+async def paid_out(session: AsyncSession, task_id: int) -> Decimal:
+    """Сколько TON уже выплачено исполнителям по этому заданию (по журналу баланса)."""
+    sub_ids = select(TaskSubmission.id).where(TaskSubmission.task_id == task_id)
+    total = await session.scalar(
+        select(func.coalesce(func.sum(BalanceHistory.amount), 0)).where(
+            BalanceHistory.operation_type == "credit",
+            BalanceHistory.reference_type == "task_submission",
+            BalanceHistory.reference_id.in_(sub_ids),
+        )
+    )
+    return _q(Decimal(str(total or 0)))
+
+
+async def _charge_creator(session: AsyncSession, task: Task, amount: Decimal, description: str) -> None:
+    try:
+        await balance_svc.debit(
+            session,
+            user_id=task.creator_id,
+            amount=amount,
+            balance_type="tasks",
+            description=description,
+            reference_type="task",
+            reference_id=task.id,
+        )
+    except balance_svc.InsufficientBalanceError as e:
+        raise TaskBudgetError(
+            f"Недостаточно TON на балансе создателя задания: нужно {_ton(amount)} TON."
+        ) from e
 
 
 @dataclass
@@ -144,7 +210,7 @@ async def update_task(
     min_level: int | None = None,
     xp_reward: int | None = None,
 ) -> TaskView:
-    task = await session.get(Task, task_id)
+    task = await _lock_task(session, task_id)
     if not task:
         raise TaskError("task not found")
     if not _can_edit_task(actor, task):
@@ -152,24 +218,41 @@ async def update_task(
     if task.status == "completed":
         raise TaskStateError("completed task is frozen")
 
-    if task.status == "active" and task.budget_locked and task.budget_locked > 0:
-        if reward is not None and reward != task.reward:
-            raise TaskStateError("cannot change reward after publish")
-        if total_slots is not None and total_slots < task.filled_slots:
-            raise TaskError("total_slots < filled_slots")
+    if task.budget_locked and task.budget_locked > 0:
+        # Опубликованное задание (активное или на паузе): деньги уже списаны.
+        old_reward = Decimal(task.reward)
+        new_reward = Decimal(reward) if reward is not None else old_reward
+        new_slots = total_slots if total_slots is not None else task.total_slots
+        if new_reward < old_reward:
+            raise TaskStateError("После публикации награду можно только повысить.")
+        if new_slots < task.total_slots:
+            raise TaskStateError("После публикации число мест можно только увеличить.")
+        if new_slots > MAX_SLOTS:
+            raise TaskError("invalid total_slots")
+        # Доплата: новые обязательства по незанятым местам минус старые, плюс комиссия на разницу.
+        left_old = task.total_slots - task.filled_slots
+        left_new = new_slots - task.filled_slots
+        extra = _q(new_reward * left_new - old_reward * left_old)
+        if extra > 0:
+            total = extra + await _commission(session, extra)
+            await _charge_creator(session, task, total, f"Доплата бюджета задания #{task.id}")
+            task.budget_locked = _q(Decimal(task.budget_locked) + total)
+        task.reward = new_reward
+        task.total_slots = new_slots
+    else:
+        if reward is not None and task.status in ("draft", "pending_approval", "paused", "rejected"):
+            if reward <= 0:
+                raise TaskError("reward must be positive")
+            task.reward = reward
+        if total_slots is not None:
+            if total_slots < max(1, task.filled_slots) or total_slots > MAX_SLOTS:
+                raise TaskError("invalid total_slots")
+            task.total_slots = total_slots
 
     if title is not None:
         task.title = title.strip()[:255]
     if description is not None:
         task.description = description.strip()
-    if reward is not None and task.status in ("draft", "pending_approval", "paused", "rejected"):
-        if reward <= 0:
-            raise TaskError("reward must be positive")
-        task.reward = reward
-    if total_slots is not None:
-        if total_slots < max(1, task.filled_slots):
-            raise TaskError("invalid total_slots")
-        task.total_slots = total_slots
     if task_type is not None:
         task.task_type = task_type
     if target_url is not None:
@@ -225,7 +308,7 @@ async def reject_task(
 
 
 async def publish_task(session: AsyncSession, *, task_id: int, actor: User) -> TaskView:
-    task = await session.get(Task, task_id)
+    task = await _lock_task(session, task_id)
     if not task:
         raise TaskError("task not found")
     if not _can_edit_task(actor, task) and not can_manage_any_task(actor):
@@ -241,24 +324,20 @@ async def publish_task(session: AsyncSession, *, task_id: int, actor: User) -> T
             raise TaskStateError(f"cannot publish from {task.status}")
 
     if task.budget_locked and task.budget_locked > 0 and task.status == "paused":
+        # Возобновление без нового списания — только если оставшиеся места покрыты оплаченным бюджетом.
+        need = _q(Decimal(task.reward) * (task.total_slots - task.filled_slots))
+        if await paid_out(session, task.id) + need > Decimal(task.budget_locked):
+            raise TaskBudgetError(
+                "Бюджет задания не покрывает оставшиеся места — возобновить нельзя. Обратитесь к администратору."
+            )
         task.status = "active"
         await session.flush()
         return _view(task)
 
-    payout = Decimal(task.reward) * task.total_slots
-    bp = int((await get_setting(session, "task_platform_commission_bp"))["bp"])
-    commission = (payout * Decimal(bp) / Decimal(10000)).quantize(Decimal("0.00000001"))
-    total = payout + commission
+    payout = _q(Decimal(task.reward) * task.total_slots)
+    total = payout + await _commission(session, payout)
 
-    await balance_svc.debit(
-        session,
-        user_id=task.creator_id,
-        amount=total,
-        balance_type="tasks",
-        description=f"Бюджет задания #{task.id}",
-        reference_type="task",
-        reference_id=task.id,
-    )
+    await _charge_creator(session, task, total, f"Бюджет задания #{task.id}")
     task.budget_locked = total
     task.status = "active"
     await session.flush()
@@ -380,9 +459,13 @@ async def review_submission(
     if not sub or sub.status != "pending":
         raise TaskStateError("submission not pending")
 
-    task = await session.get(Task, sub.task_id)
+    # Блокируем задание и перечитываем заявку: проверки бюджета и мест идут уже под блокировкой.
+    task = await _lock_task(session, sub.task_id)
     if not task:
         raise TaskError("task not found")
+    await session.refresh(sub)
+    if sub.status != "pending":
+        raise TaskStateError("submission not pending")
 
     allowed = can_manage_any_task(actor) or task.creator_id == actor.id
     if not allowed:
@@ -396,8 +479,12 @@ async def review_submission(
     if approve:
         if task.filled_slots >= task.total_slots:
             raise TaskStateError("no slots left")
-        sub.status = "approved"
         reward = Decimal(task.reward)
+        if await paid_out(session, task.id) + reward > Decimal(task.budget_locked or 0):
+            raise TaskBudgetError(
+                "Бюджет задания исчерпан: эта выплата превысила бы оплаченный бюджет. Заявка осталась на проверке."
+            )
+        sub.status = "approved"
         await balance_svc.credit(
             session,
             user_id=sub.user_id,
