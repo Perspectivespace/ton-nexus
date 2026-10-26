@@ -52,9 +52,12 @@ DEFAULTS: dict[str, tuple[object, str]] = {
             "day_1": {"ton": "0.001", "xp": 5},
             "day_2": {"ton": "0.0015", "xp": 8},
             "day_3": {"ton": "0.002", "xp": 10},
+            "day_4": {"ton": "0.0025", "xp": 12},
+            "day_5": {"ton": "0.003", "xp": 15},
+            "day_6": {"ton": "0.0035", "xp": 18},
             "day_7": {"ton": "0.005", "xp": 25, "focus": 1},
         },
-        "Daily / streak",
+        "Ежедневная награда: 7 дней по кругу",
     ),
     "xp_per_level": ({"base": 100, "growth": 1.35}, "XP curve"),
     "prize_wheel": (

@@ -35,6 +35,23 @@ def _user():
 CFG = {"day_1": {"ton": "0.01", "xp": 0}, "day_2": {"ton": "0.02", "xp": 0}}
 
 
+_PATCHES = []
+
+
+def setUpModule():
+    # Награды берутся из CFG (дни, которых нет в CFG, — из значений по умолчанию); опыт не начисляем —
+    # у заглушки сессии нет таблицы уровней.
+    for attr, value in (("get_setting", mock.AsyncMock(return_value=CFG)), ("add_xp", mock.AsyncMock())):
+        p = mock.patch.object(daily, attr, value)
+        p.start()
+        _PATCHES.append(p)
+
+
+def tearDownModule():
+    while _PATCHES:
+        _PATCHES.pop().stop()
+
+
 def _claim(prev, now):
     s = _session(prev)
     user = _user()

@@ -681,3 +681,38 @@ button.ui-stat.scan:disabled { opacity: 1; }
 .dp-check input { width: 16px; height: 16px; accent-color: var(--neon); }
 .ui-row.dp-row-on { background: linear-gradient(90deg, var(--neon-soft), transparent); box-shadow: inset 2px 0 0 var(--neon); }
 .dp-row-on .ttl { min-width: 0; }
+
+/* ── Ежедневка: 7 дней по кругу (страница колеса) ─────────────────────────────
+   Плитки со срезом, дорожка-проводник под ними. done — пройден (ok), today — сегодня (натрий),
+   got — сегодня уже забрано (ok + свечение), next — впереди (приглушено), bonus — день с Фокусом. */
+.dw { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding-bottom: 10px; }
+.dw-track { position: absolute; left: 6px; right: 6px; bottom: 0; height: 3px; background: var(--mat-0); box-shadow: var(--bevel-0); overflow: hidden; }
+.dw-fill { position: absolute; inset: 0; transform-origin: left center; background: linear-gradient(90deg, var(--ok), var(--amber)); box-shadow: var(--halo-amber); transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+.dw-day { --c: 6px; --tone: var(--text-3); position: relative; isolation: isolate; min-width: 0; padding: 6px 0 5px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: var(--edge-1); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.dw-day::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1), var(--surface-1); box-shadow: var(--bevel-1);
+  clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
+.dw-k { font: 700 10px/12px var(--f-display); font-stretch: 75%; letter-spacing: .08em; text-transform: uppercase; color: var(--tone); }
+.dw-ic { width: 20px; height: 20px; display: grid; place-items: center; color: var(--tone); }
+.dw-ic i, .dw-ic b { font: 700 12px/1 var(--f-mono); font-style: normal; }
+.dw-v { font: 600 10px/13px var(--f-mono); letter-spacing: -.03em; color: var(--text-2); font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap; }
+.dw-p { font: 500 9px/11px var(--f-mono); color: var(--text-3); white-space: nowrap; }
+.dw-day.next { opacity: .72; }
+.dw-day.done { --tone: var(--ok); }
+.dw-day.done::before { background: radial-gradient(90% 70% at 50% 0%, var(--ok-soft), transparent 70%), var(--mat-1), var(--surface-1); }
+.dw-day.done .dw-v { color: var(--text-3); }
+.dw-day.today { --tone: var(--amber); background: linear-gradient(180deg, var(--amber-core), var(--amber) 45%, rgba(255,181,71,.45)); }
+.dw-day.today::before { background: radial-gradient(90% 70% at 50% 100%, var(--amber-soft), transparent 75%), linear-gradient(var(--amber-soft), var(--amber-soft)), var(--mat-1), var(--surface-1); }
+.dw-day.today .dw-v { color: var(--amber-core); text-shadow: var(--halo-amber); }
+.dw-day.today .dw-ic { background: radial-gradient(50% 50% at 50% 50%, var(--amber-soft), transparent 70%); }
+.dw-day.got { --tone: var(--ok); background: linear-gradient(180deg, var(--ok), rgba(93,255,176,.35)); }
+.dw-day.got::before { background: radial-gradient(90% 70% at 50% 100%, var(--ok-soft), transparent 75%), var(--mat-1), var(--surface-1); }
+.dw-day.got .dw-v { color: var(--text); }
+.dw-day.bonus .dw-ic b { color: var(--magenta); text-shadow: var(--halo-magenta); }
+.dw-day.bonus:not(.done):not(.got)::after { content: ""; position: absolute; top: 0; right: 0; width: 6px; height: 6px; background: var(--magenta); box-shadow: var(--halo-magenta); }
+.dw-day.bonus.next { opacity: .9; }
+[data-theme="light"] .dw-day.today { background: linear-gradient(180deg, var(--amber), rgba(163,95,0,.45)); }
+[data-theme="light"] .dw-day.today .dw-v { color: var(--amber); }
+[data-theme="light"] .dw-day.got { background: linear-gradient(180deg, var(--ok), rgba(14,138,85,.35)); }
+[data-theme="light"] .dw-fill { background: linear-gradient(90deg, var(--ok), var(--amber)); }
+@media (prefers-reduced-motion: reduce) { .dw-fill { transition: none; } }

@@ -24,6 +24,17 @@ class SettingView:
     description: str | None
 
 
+def _fill_missing(key: str, value: Any) -> Any:
+    """Ежедневка: в старой записи нет дней 4–6 — показываем их со значениями по умолчанию,
+    чтобы в форме были все 7 дней (сохранение запишет их в базу)."""
+    if key == "daily_rewards" and isinstance(value, dict):
+        week = DEFAULTS[key][0]
+        merged = {d: value.get(d, week[d]) for d in week}
+        merged.update({k: v for k, v in value.items() if k not in merged})
+        return merged
+    return value
+
+
 async def list_settings(session: AsyncSession) -> list[SettingView]:
     await seed_economy(session)
     result = await session.execute(select(EconomySetting).order_by(EconomySetting.key))
@@ -33,7 +44,7 @@ async def list_settings(session: AsyncSession) -> list[SettingView]:
         if key in rows:
             r = rows[key]
             views.append(
-                SettingView(key=r.key, value=json.loads(r.value_json), description=r.description)
+                SettingView(key=r.key, value=_fill_missing(r.key, json.loads(r.value_json)), description=r.description)
             )
         else:
             val, desc = DEFAULTS[key]
@@ -45,7 +56,7 @@ async def get_setting_admin(session: AsyncSession, key: str) -> SettingView:
     await seed_economy(session)
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     if row:
-        return SettingView(key=row.key, value=json.loads(row.value_json), description=row.description)
+        return SettingView(key=row.key, value=_fill_missing(row.key, json.loads(row.value_json)), description=row.description)
     if key in DEFAULTS:
         val, desc = DEFAULTS[key]
         return SettingView(key=key, value=val, description=desc)

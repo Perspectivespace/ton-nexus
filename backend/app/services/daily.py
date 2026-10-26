@@ -14,7 +14,10 @@ from app.models.user import User
 from app.services import balance as balance_svc
 from app.services import gameday
 from app.services.economy import dec, get_setting
+from app.services.economy_seed import DEFAULTS
 from app.services.levels import add_xp
+
+CYCLE_DAYS = 7
 
 
 class DailyError(Exception):
@@ -61,17 +64,27 @@ async def _last_checkin(session: AsyncSession, user_id: int):
     )
 
 
+def cycle_day(streak: int) -> int:
+    """День 7-дневного круга для серии: 1..7, после 7-го снова 1 (серия при этом растёт дальше)."""
+    return (max(1, streak) - 1) % CYCLE_DAYS + 1
+
+
 def _reward_for_streak(cfg: dict, streak: int) -> dict:
-    key = f"day_{streak}"
-    if key in cfg:
-        return cfg[key]
-    if streak >= 7 and "day_7" in cfg:
-        return cfg["day_7"]
-    if streak >= 3 and "day_3" in cfg:
-        return cfg["day_3"]
-    if streak >= 2 and "day_2" in cfg:
-        return cfg["day_2"]
-    return cfg.get("day_1", {"ton": "0.001", "xp": 5})
+    """Награда дня круга. Дня нет в настройках (старая запись без дней 4–6) — берём значение по умолчанию."""
+    key = f"day_{cycle_day(streak)}"
+    day = (cfg or {}).get(key)
+    if isinstance(day, dict):
+        return day
+    return DEFAULTS["daily_rewards"][0][key]
+
+
+def week_rewards(cfg: dict) -> list[dict]:
+    """Все 7 дней круга — для полосы на экране."""
+    out = []
+    for d in range(1, CYCLE_DAYS + 1):
+        r = _reward_for_streak(cfg, d)
+        out.append({"day": d, "ton": str(dec(r.get("ton", "0"))), "xp": int(r.get("xp", 0)), "focus": int(r.get("focus", 0))})
+    return out
 
 
 async def claim_daily(session: AsyncSession, *, user: User, now: datetime | None = None) -> DailyResult:
@@ -138,9 +151,14 @@ async def daily_status(session: AsyncSession, *, user_id: int, now: datetime | N
     streak = 0
     if claimed or (prev and prev_day == today - timedelta(days=1)):
         streak = prev.streak
+    # День круга, который показывается «сегодня»: уже полученный или тот, что даст следующая отметка.
+    today_day = cycle_day(streak if claimed else streak + 1)
+    cfg = await get_setting(session, "daily_rewards")
     return {
         "claimed_today": claimed,
         "streak": streak,
+        "cycle_day": today_day,
+        "rewards": week_rewards(cfg),
         "check_date": today.isoformat(),
         # Когда снова можно отметиться: null — можно сейчас. Правило то же, что в claim_daily (игровой день, 00:00 МСК).
         "next_claim_at": gameday.next_reset(now).isoformat() if claimed else None,

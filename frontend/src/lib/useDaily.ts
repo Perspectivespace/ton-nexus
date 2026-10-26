@@ -38,13 +38,15 @@ export function useDaily() {
 
   /** Сразу после отметки кладём ответ в кэш — кнопка гаснет без лишнего запроса. */
   function remember(r: DailyClaim) {
-    qc.setQueryData<DailyStatus>(["daily"], {
+    qc.setQueryData<DailyStatus>(["daily"], (prev) => ({
+      ...prev,
+      cycle_day: r.cycle_day ?? prev?.cycle_day,
       claimed_today: true,
       streak: r.streak,
       check_date: r.check_date,
       next_claim_at: r.next_claim_at ?? null,
       server_time: new Date(Date.now() + offset).toISOString(),
-    });
+    }));
   }
 
   /** Нажатие: забрать отметку, показать награду. Повтор (например, уже отмечено с другого устройства) — спокойный тост. */
