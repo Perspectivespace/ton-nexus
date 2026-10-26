@@ -3,24 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, DialGauge, Num, Panel, Reactor, Tag } from "./ui/index";
 import { haptic } from "@/lib/haptics";
 
-const KEY = "tn-onboarded";
-
-/** Знакомство показываем один раз: отметка хранится только на устройстве (localStorage), сервер не трогаем. */
-export function shouldShowOnboarding() {
-  try {
-    return localStorage.getItem(KEY) !== "1";
-  } catch {
-    return false;
-  }
-}
-
-function markDone() {
-  try {
-    localStorage.setItem(KEY, "1");
-  } catch {
-    /* нет доступа к хранилищу — покажем ещё раз, это не страшно */
-  }
-}
+import { markDone } from "./onboardingFlag";
 
 type Slide = { title: string; text: string; art: ReactNode };
 

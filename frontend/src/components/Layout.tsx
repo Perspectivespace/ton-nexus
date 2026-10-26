@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { CityBackdrop, viaBuilding } from "./CityBackdrop";
 import { StreetBack } from "./CityBuildings";
@@ -6,7 +6,12 @@ import { buildingAt } from "@/lib/buildings";
 import { Nav, isDockRoute } from "./Nav";
 import { AppHeader } from "./Brand";
 import { Splash, shouldShowSplash } from "./Splash";
-import { Onboarding, shouldShowOnboarding } from "./Onboarding";
+import { shouldShowOnboarding } from "./onboardingFlag";
+
+// знакомство нужно только при первом запуске — его чанк начинает грузиться сразу, пока играет заставка
+const loadOnboarding = () => import("./Onboarding");
+if (shouldShowOnboarding()) void loadOnboarding();
+const Onboarding = lazy(() => loadOnboarding().then((m) => ({ default: m.Onboarding })));
 import { ToastProvider } from "./ui/index";
 
 export function Layout() {
@@ -30,7 +35,11 @@ export function Layout() {
         </main>
         {dock && <Nav />}
       </div>
-      {onboarding && <Onboarding onDone={endOnboarding} />}
+      {onboarding && (
+        <Suspense fallback={null}>
+          <Onboarding onDone={endOnboarding} />
+        </Suspense>
+      )}
       {splash && <Splash onDone={endSplash} />}
     </ToastProvider>
   );

@@ -3,6 +3,7 @@ import { useNavigate, type NavigateFunction } from "react-router-dom";
 import { haptic } from "@/lib/haptics";
 import { IconBack } from "@/components/icons";
 import { hasBackButton, pushBack } from "@/lib/backButton";
+import { prefetchRoute } from "@/lib/routes";
 import {
   BUILDINGS,
   FADE_MS,
@@ -43,10 +44,12 @@ export function enterBuilding(b: Building, tier: number, navigate: NavigateFunct
   setZoomVars(b, tier);
   arriveAt = performance.now() + (mode === "zoom" ? ZOOM_MS : FADE_MS);
   root.classList.add("bz-hide", mode === "zoom" ? "bz-in" : "bz-fade");
-  // маршрут — когда кадр интерьера раскодирован (обычно уже к касанию), но не раньше NAV_AT и не позже конца наезда +0,5 с
+  // маршрут — когда кадр интерьера раскодирован и чанк раздела загружен (обычно оба готовы уже к касанию:
+  // чанк подтянут в простое главной и ещё раз запрошен на pointerdown), но не раньше NAV_AT и не позже конца наезда +0,5 с
   const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
   const end = mode === "zoom" ? ZOOM_MS : FADE_MS;
-  Promise.all([wait(NAV_AT[mode]), Promise.race([prefetchInterior(b.id), wait(end + 500)])]).then(go);
+  const ready = Promise.all([prefetchInterior(b.id), prefetchRoute(b.route)]);
+  Promise.all([wait(NAV_AT[mode]), Promise.race([ready, wait(end + 500)])]).then(go);
 }
 
 /** отклик нажатия рисует сама башня в слое города (экран «МАЙНЕР» + подсветка): кнопка лишь ставит класс на <html> */
@@ -109,6 +112,7 @@ export function TowerHotspot({ tier }: { tier: number }) {
         aria-label={`${b.name}: войти — раздел «${b.section}»`}
         onPointerDown={() => {
           prefetchInterior(b.id);
+          void prefetchRoute(b.route);
           pressed(true);
         }}
         onPointerUp={() => pressed(false)}

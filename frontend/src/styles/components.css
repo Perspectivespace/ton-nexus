@@ -296,6 +296,20 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 [data-theme="light"] .ui-sk { background: #E3E7EF; }
 [data-theme="light"] .ui-sk::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); }
 @keyframes ui-sk { to { transform: translateX(100%); } }
+/* появление главной (pages/Home.tsx): только opacity/transform, fill backwards — после конца анимации стиль снимается,
+   transform не остаётся (не создаёт контейнер для fixed-шторок внутри блоков) */
+.home-in { animation: home-in .3s cubic-bezier(.25,.1,.35,1) backwards; }
+.home-rise { animation: home-rise .45s cubic-bezier(.22,1,.36,1) var(--rise-d, 0s) backwards; }
+@keyframes home-in { from { opacity: 0; } }
+@keyframes home-rise { from { opacity: 0; transform: translateY(16px); } }
+/* появление героя «Майнера»: opacity 0,3 с + подъём на 10 px пружиной (жёсткость 500, демпфирование 25 — как было в framer-motion) */
+.mn-rise { animation: home-in .3s cubic-bezier(.25,.1,.35,1) backwards, mn-rise .42s 16ms backwards
+  linear(0, .049, .172, .333, .505, .67, .814, .93, 1.016, 1.074, 1.107, 1.12, 1.117, 1.105, 1.086, 1.066, 1.045, 1.027, 1.012, 1.001, .993, .988, .986, .986, .987, .989, .991, .994, 1); }
+@supports not (animation-timing-function: linear(0, 1)) { .mn-rise { animation-timing-function: cubic-bezier(.25,.1,.35,1), cubic-bezier(.22,1,.36,1); } }
+@keyframes mn-rise { from { transform: translateY(10px); } }
+/* заглушка раздела, пока грузится чанк: проявляется через 150 мс — быстрая загрузка не мигает */
+.route-sk { animation: route-sk-in .2s ease-out .15s both; }
+@keyframes route-sk-in { from { opacity: 0; } }
 .ui-sync { display: inline-flex; gap: 8px; align-items: center; }
 .ui-sync i { display: inline-block; width: 6px; height: 10px; background: var(--line-strong); margin-left: 2px; }
 .ui-sync i.on { background: var(--neon); }
@@ -307,6 +321,7 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 html.app-hidden .ui-sk::after { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
   .ui-sk::after { animation: none; }
+  .route-sk, .home-in, .home-rise, .mn-rise { animation: none; }
   .ui-toast, .ui-toast.out { animation-duration: 120ms; animation-name: ui-fade; }
   .ui-sheet { transition: none; }
   .ui-btn, .ui-bar > i { transition: none; }

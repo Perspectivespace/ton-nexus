@@ -1,4 +1,5 @@
-import { motion, type Variants } from "framer-motion";
+import { useEffect, useRef, type CSSProperties } from "react";
+import { prefetchLikely } from "@/lib/routes";
 import { Link } from "react-router-dom";
 import { useMe, useMiner } from "@/api/hooks";
 import { useDaily } from "@/lib/useDaily";
@@ -41,39 +42,31 @@ const MINER_RU: Record<string, string> = {
   ready: "хранилище полное — соберите",
 };
 
-const container: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const item: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
-  },
+/**
+ * Появление главной — CSS вместо framer-motion (главная в стартовом чанке, библиотека анимаций туда не входит).
+ * Повторяет прежний рисунок: контейнер проявляется за 0,3 с; блоки, что есть при первом кадре, — по очереди
+ * (0,1 с + 0,08 с на каждый), поднимаясь на 16 px за 0,45 с; блоки, пришедшие позже с данными, — сразу.
+ */
+type Rise = "head" | "hero" | "spill" | "more" | "work";
+const rise = (order: Rise[], k: Rise): { className: string; style?: CSSProperties } => {
+  const i = order.indexOf(k);
+  return { className: "home-rise", style: i >= 0 ? ({ "--rise-d": `${100 + i * 80}ms` } as CSSProperties) : undefined };
 };
 
 export function Home() {
   const { data: me, isLoading, error, isFetching } = useMe();
   const { data: miner } = useMiner();
   const daily = useDaily();
+  // порядок блоков первого кадра — фиксируется один раз, как стаггер у framer-motion
+  const first = useRef<Rise[] | null>(null);
+  first.current ??= (["head", me && "hero", "spill", "more", me && "work"] as const).filter(Boolean) as Rise[];
+  const r = (k: Rise) => rise(first.current!, k);
+  // главная показана — в простое подтягиваем разделы, куда обычно идут дальше
+  useEffect(prefetchLikely, []);
 
   return (
-    <motion.div
-      className="space-y-5"
-      variants={container}
-      initial="hidden"
-      animate="show"
-    >
-      <motion.div variants={item}>
+    <div className="home-in space-y-5">
+      <div {...r("head")}>
         <ScreenHeader
           eyebrow="TON Nexus"
           title={me?.first_name || me?.username || "Контур"}
@@ -85,7 +78,7 @@ export function Home() {
             ) : undefined
           }
         />
-      </motion.div>
+      </div>
 
       {/* «окно в город»: полоса, где город не закрыт панелями (DESIGN.md п. 3.11) */}
       <CityWindow />
@@ -96,7 +89,7 @@ export function Home() {
       )}
 
       {me && (
-        <motion.section variants={item}>
+        <section {...r("hero")}>
           <Panel level="hero" see cut="l" lift="l2" className="p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
@@ -153,10 +146,10 @@ export function Home() {
               );
             })()}
           </Panel>
-        </motion.section>
+        </section>
       )}
 
-      <motion.div variants={item} className="ui-spill">
+      <div className={`${r("spill").className} ui-spill`} style={r("spill").style}>
         <Button
           kind="primary"
           size="lg"
@@ -185,9 +178,9 @@ export function Home() {
           </span>
           {!daily.waiting && <IconChevron size={20} />}
         </Button>
-      </motion.div>
+      </div>
 
-      <motion.div variants={item} className="space-y-2.5">
+      <div className={`${r("more").className} space-y-2.5`} style={r("more").style}>
         <SectionLabel>Ещё</SectionLabel>
         <List>
           {more.map((m) => {
@@ -195,13 +188,13 @@ export function Home() {
             return <ListRow key={m.to} to={m.to} icon={<Icon size={20} />} title={m.title} sub={m.sub} />;
           })}
         </List>
-      </motion.div>
+      </div>
 
       {me && (
-        <motion.div variants={item}>
+        <div {...r("work")}>
           <WorkArea />
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }
