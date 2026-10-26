@@ -125,14 +125,14 @@ export function CityV2({ tier }: { tier: number }) {
       {/* ── ГЛУБИНА: задние борта летят за башней (п. 12.1). Над ними — копия кадра, вырезанная по силуэту
           башни: она закрывает борта, пока те за башней. Копия повторяет смену кадра (те же классы). ── */}
       <div className="cv2-back">
-        <i className="drone" />
+        <i className="drone flip" />
         {tier >= 3 && (
           <>
             <i className="craft c1" />
-            <i className="craft c2" />
+            <i className="craft c2 flip" />
           </>
         )}
-        {tier >= 4 && <i className="craft c3" />}
+        {tier >= 4 && <i className="craft c3 flip" />}
       </div>
       {prev && prev !== src && <img className="cv2-img prev cv2-occ" src={prev} alt="" style={{ clipPath: occ }} />}
       {src && <img key={`o${src}`} className={`cv2-img cv2-occ${slow ? " slow" : ""}`} src={src} alt="" decoding="async" style={{ clipPath: occ }} />}
