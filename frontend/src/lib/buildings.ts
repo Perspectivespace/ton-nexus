@@ -17,6 +17,8 @@ export interface Building {
   /** раздел, который откроется внутри */
   section: string;
   box: Record<1 | 2 | 3 | 4, Box>;
+  /** зона тапа: силуэт здания в кадре (многоугольник [x, y], общий для T1–T4 и фаз; без антенн и неба) */
+  hit: [number, number][];
 }
 
 export const BUILDINGS: Record<BuildingId, Building> = {
@@ -26,6 +28,11 @@ export const BUILDINGS: Record<BuildingId, Building> = {
     name: "Реакторная башня",
     section: "Майнер",
     box: { 1: [300, 430, 180, 420], 2: [322, 430, 160, 420], 3: [316, 430, 150, 420], 4: [334, 430, 140, 420] },
+    // корона ~280, ниже башня расширяется ступенями до ~310–512 у земли
+    hit: [
+      [362, 282], [453, 282], [470, 330], [482, 460], [494, 600], [512, 800], [514, 860],
+      [306, 860], [308, 800], [322, 600], [334, 460], [345, 330],
+    ],
   },
 };
 
@@ -80,4 +87,15 @@ export function zoomVars(b: Building, tier: number): Record<string, string> {
     "--bz-dy": `${Math.round(dy)}px`,
     "--bz-s": String(ZOOM_SCALE),
   };
+}
+
+/** рамка многоугольника зоны тапа [x, y, w, h] и сам многоугольник в % этой рамки (для clip-path) */
+export function hitShape(b: Building): { box: Box; clip: string } {
+  const xs = b.hit.map((p) => p[0]);
+  const ys = b.hit.map((p) => p[1]);
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const pct = (v: number) => `${+(v * 100).toFixed(2)}%`;
+  const clip = `polygon(${b.hit.map(([px, py]) => `${pct((px - x) / w)} ${pct((py - y) / h)}`).join(", ")})`;
+  return { box: [x, y, w, h], clip };
 }
