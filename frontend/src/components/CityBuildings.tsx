@@ -51,11 +51,14 @@ export function enterBuilding(b: Building, tier: number, navigate: NavigateFunct
 
 /**
  * Точка входа на главной — прямо в «окне в город» (обычная кнопка в потоке страницы, не в слое города).
- * Вся башня — зона тапа; видна только маленькая вывеска «◎ МАЙНЕР» в стилистике городских (без UI-рамок),
- * а что на башню можно нажать — покажет туториал. Тап проходит только здесь, промежутки между панелями город не трогают.
+ * Сама кнопка невидима: экран «МАЙНЕР» на башне — в слое города (CityV2, TowerScreen), иначе при прокрутке
+ * он уезжал бы вместе со страницей, а башня стоит на месте. Что на башню можно нажать — покажет туториал. Тап проходит только здесь, промежутки между панелями город не трогают.
  * По горизонтали окно и сцена города центрированы одинаково, поэтому x башни считается от центра:
  * left = 50% + ширина сцены × (x − 360) / 720.
  */
+/** отклик нажатия рисует сама башня в слое города (экран «МАЙНЕР» + подсветка): кнопка лишь ставит класс на <html> */
+const pressed = (on: boolean) => document.documentElement.classList.toggle("bh-down", on);
+
 export function TowerHotspot({ tier }: { tier: number }) {
   const navigate = useNavigate();
   const b = BUILDINGS.reactor;
@@ -67,16 +70,15 @@ export function TowerHotspot({ tier }: { tier: number }) {
       className={`bh bh-${b.id} t${tier}`}
       style={style}
       aria-label={`${b.name}: войти — раздел «${b.section}»`}
-      onPointerDown={() => prefetchInterior(b.id)}
+      onPointerDown={() => {
+        prefetchInterior(b.id);
+        pressed(true);
+      }}
+      onPointerUp={() => pressed(false)}
+      onPointerCancel={() => pressed(false)}
+      onPointerLeave={() => pressed(false)}
       onClick={() => enterBuilding(b, tier, navigate)}
-    >
-      {/* вывеска на башне — неоновая лопасть, как «ОБМЕН» и «РЕАКТОР»: тёмная табличка, светящаяся кромка */}
-      <i className="bh-press" aria-hidden="true" />
-      <span className="bh-sign" aria-hidden="true">
-        <i className="bh-glyph" />
-        <b>{b.section.toUpperCase()}</b>
-      </span>
-    </button>
+    />
   );
 }
 
