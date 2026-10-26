@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useMe } from "@/api/hooks";
 import { TowerHotspot } from "./CityBuildings";
+import { CityLightning } from "./CityLightning";
 import { BUILDINGS, tierBox } from "@/lib/buildings";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
@@ -167,6 +168,8 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── экран раздела «Майнер» на реакторной башне (на всех обликах, статичный) ── */}
         <TowerScreen tier={tier} />
       </div>
+      {/* ── редкая молния ночью: разовая вспышка раз в 25–60 с (п. 12.1) ── */}
+      {phase === "night" && <CityLightning />}
     </div>
   );
 }
