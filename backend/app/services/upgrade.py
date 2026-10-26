@@ -145,6 +145,9 @@ async def attempt_upgrade(
 
     upgrade_type = _weighted_choice(weights)
     chance_bp = await preview_success_bp(session, miner, upgrade_type, user)
+    used_boost_bp = int(user.success_boost_bp or 0)
+    # Бонус с колеса — на одну попытку: тратится целиком при успехе и при неудаче.
+    user.success_boost_bp = 0
     roll = random.randint(1, 10000)
     success = roll <= chance_bp
 
@@ -164,7 +167,7 @@ async def attempt_upgrade(
             rolled_success=success,
             used_focus=used_focus,
             used_block_type=used_block,
-            meta=json.dumps({"roll": roll}, ensure_ascii=False),
+            meta=json.dumps({"roll": roll, "boost_bp": used_boost_bp}, ensure_ascii=False),
         )
     )
     await session.flush()

@@ -111,6 +111,7 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "upgrade_success_decay_per_level_bp", "group": "miner_upgrade", "label": "Decay шанса за уровень"},
     {"key": "soft_caps", "group": "miner_upgrade", "label": "Soft-cap статов"},
     {"key": "focus_weight_bonus", "group": "miner_upgrade", "label": "Множитель Фокуса"},
+    {"key": "success_boost_cap_bp", "group": "miner_upgrade", "label": "Потолок бонуса к успеху"},
     {"key": "miner_session_hours", "group": "miner", "label": "Базовая длительность цикла (ч)"},
     {"key": "miner_base_rate", "group": "miner", "label": "Базовая ставка TON/час"},
     {"key": "miner_power_mult", "group": "miner", "label": "Множитель Мощности"},

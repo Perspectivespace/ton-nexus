@@ -68,6 +68,15 @@ def _weight(raw) -> float | None:
     return w
 
 
+async def boost_cap_bp(session: AsyncSession) -> int:
+    """Потолок накопленного бонуса к успеху усиления (bp)."""
+    raw = (await get_setting(session, "success_boost_cap_bp") or {}).get("bp", 1500)
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 1500
+
+
 def effective_items(cfg: dict | None) -> tuple[list[tuple[dict, float]], str]:
     """Сектора с весами, по которым реально крутится колесо.
 
@@ -183,7 +192,9 @@ async def spin(session: AsyncSession, *, user: User) -> SpinResult:
     if block > 0:
         user.block_tokens = int(user.block_tokens or 0) + block
     if boost > 0:
-        user.success_boost_bp = int(user.success_boost_bp or 0) + boost
+        # Бонус копится от выигрыша к выигрышу, но не выше потолка; тратится целиком на следующем усилении.
+        cap = await boost_cap_bp(session)
+        user.success_boost_bp = min(cap, int(user.success_boost_bp or 0) + boost)
 
     await session.flush()
     left = max(0, free - used - 1)

@@ -72,6 +72,10 @@ DEFAULTS: dict[str, tuple[object, str]] = {
         "Колесо наград",
     ),
     "focus_weight_bonus": ({"multiplier": 2.0}, "Фокус: множитель веса типа"),
+    "success_boost_cap_bp": (
+        {"bp": 1500},
+        "Потолок накопленного бонуса к успеху (bp), 1500 = +15%",
+    ),
 }
 
 

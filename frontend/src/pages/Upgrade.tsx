@@ -171,7 +171,11 @@ export function Upgrade() {
                 ? "Выбор параметра…"
                 : "Шанс покажет попытка"}
           </p>
-          {boost > 0 && <p className="ui-sys mt-1">бонус к шансу +{boost.toFixed(1)}%</p>}
+          {boost > 0 && (
+            <p className="ui-sys mt-1">
+              бонус к шансу +{Number(boost.toFixed(1))}% — сработает на следующей попытке и сгорит после неё
+            </p>
+          )}
         </div>
         <Scrim className="relative -mx-4 mt-4 grid grid-cols-3 gap-3 px-4 pb-4 pt-3">
           <Readout label="Баланс" value={me ? Number(me.balance).toFixed(4) : "—"} unit="TON" />
