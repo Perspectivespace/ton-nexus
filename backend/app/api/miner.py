@@ -33,6 +33,9 @@ class MinerOut(BaseModel):
     session_started_at: str | None = None
     session_ends_at: str | None = None
     upgrade_cost: Decimal = Field(description="Стоимость следующего прогона усиления, TON")
+    capacity_bonus_pct: float = Field(default=0.0, description="Ёмкость: прибавка к добыче за цикл, %")
+    luck_min_pct: float = Field(default=0.0, description="Удача: нижняя граница броска при сборе, %")
+    luck_max_pct: float = Field(default=0.0, description="Удача: верхняя граница броска при сборе, %")
 
 
 class ClaimOut(BaseModel):
@@ -72,6 +75,9 @@ def _miner_out(v: miner_svc.MinerView) -> MinerOut:
         session_started_at=v.session_started_at.isoformat() if v.session_started_at else None,
         session_ends_at=v.session_ends_at.isoformat() if v.session_ends_at else None,
         upgrade_cost=v.upgrade_cost,
+        capacity_bonus_pct=v.capacity_bonus_pct,
+        luck_min_pct=v.luck_min_pct,
+        luck_max_pct=v.luck_max_pct,
     )
 
 

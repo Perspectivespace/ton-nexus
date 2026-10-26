@@ -127,6 +127,7 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "miner_base_rate", "group": "miner", "label": "Базовая ставка TON/час"},
     {"key": "miner_power_mult", "group": "miner", "label": "Множитель Мощности"},
     {"key": "miner_capacity_mult", "group": "miner", "label": "Множитель Ёмкости"},
+    {"key": "miner_luck_roll_bp", "group": "miner", "label": "Бросок Удачи при сборе"},
     {"key": "task_platform_commission_bp", "group": "tasks", "label": "Комиссия платформы (bp)"},
     {"key": "min_withdraw_ton", "group": "withdraw", "label": "Мин. вывод TON"},
     {"key": "referral_reward", "group": "growth", "label": "Реферальная награда"},

@@ -43,7 +43,11 @@ DEFAULTS: dict[str, tuple[object, str]] = {
     "miner_session_hours": ({"hours": 12}, "Длительность сессии (часы)"),
     "miner_base_rate": ({"ton_per_hour": "0.00035"}, "Базовая ставка TON/час"),
     "miner_power_mult": ({"per_level": "0.08"}, "Множитель за Мощность"),
-    "miner_capacity_mult": ({"per_level": "0.06"}, "Множитель за Ёмкость"),
+    "miner_capacity_mult": ({"per_level": "0.06"}, "Ёмкость: +доля добычи за цикл за уровень выше 1"),
+    "miner_luck_roll_bp": (
+        {"min_bp": -100, "max_bp": 500},
+        "Удача: границы броска при сборе (bp), −100..500 = −1%..+5%; полный диапазон с 26-го уровня",
+    ),
     "task_platform_commission_bp": ({"bp": 1000}, "Комиссия платформы 10%"),
     "min_withdraw_ton": ({"ton": "0.2"}, "Минимальный вывод"),
     "referral_reward": ({"ton": "0.04"}, "Реферальная награда"),
