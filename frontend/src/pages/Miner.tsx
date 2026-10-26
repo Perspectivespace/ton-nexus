@@ -132,6 +132,12 @@ export function Miner() {
 
   const draining = claimAt != null;
   const shown = draining ? 0 : live;
+  // «Заполнено» — только когда в хранилище действительно ~100% (после частичного сбора цикл кончается раньше)
+  const full = ready && cap > 0 && accrued >= cap * 0.999;
+  const capBonus = m?.capacity_bonus_pct ?? null;
+  const luckLo = m?.luck_min_pct ?? null;
+  const luckHi = m?.luck_max_pct ?? null;
+  const pctFmt = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(Math.round(n * 100) / 100)}%`;
 
   return (
     <div className="space-y-5">
@@ -139,7 +145,7 @@ export function Miner() {
         title="Майнер"
         action={
           <StatusPill tone={statusTone[m.status as keyof typeof statusTone] || "neutral"}>
-            {statusLabel[m.status] || m.status}
+            {ready && !full ? "Цикл завершён" : statusLabel[m.status] || m.status}
           </StatusPill>
         }
       />
@@ -175,7 +181,7 @@ export function Miner() {
           <Scrim className="relative -mx-5 -mb-5 mt-5 px-5 pb-5 pt-4">
             <div className="min-w-0 space-y-2">
               <div className="grid grid-cols-2 gap-3">
-                <Readout label="Ёмкость" value={cap.toFixed(6)} unit="TON" />
+                <Readout label="Хранилище за цикл" value={cap.toFixed(6)} unit="TON" />
                 <div className="relative min-w-0">
                   <p className="ui-label">Баланс</p>
                   <Num value={me ? Number(me.balance).toFixed(4) : "—"} unit="TON" size="m" className="mt-1 block truncate !text-[19px] !font-bold" />
@@ -187,12 +193,32 @@ export function Miner() {
                 </div>
               </div>
               <p className="ui-sec !text-[12px] !leading-[16px]">
-                {ready
+                {full
                   ? "Хранилище заполнено — соберите награду, иначе фарм остановлен."
-                  : running
-                    ? "Реактор работает. Можно собрать до конца цикла."
-                    : "Запустите цикл, чтобы начать накопление."}
+                  : ready
+                    ? "Цикл завершён — соберите остаток и запустите новый цикл."
+                    : running
+                      ? "Реактор работает: к концу цикла хранилище заполнится на 100%. Собрать можно раньше."
+                      : "Запустите цикл, чтобы начать накопление."}
               </p>
+              {(capBonus != null || (luckLo != null && luckHi != null)) && (
+                <p className="ui-sec !text-[12px] !leading-[16px]">
+                  {capBonus != null && (
+                    <>
+                      Ёмкость ур. {m.capacity}: <span className="ui-num text-[var(--text)]">{pctFmt(capBonus)}</span> TON за цикл
+                    </>
+                  )}
+                  {capBonus != null && luckLo != null && luckHi != null && " · "}
+                  {luckLo != null && luckHi != null && (
+                    <>
+                      Удача ур. {m.luck}: сбор{" "}
+                      <span className="ui-num text-[var(--text)]">
+                        {luckLo === 0 && luckHi === 0 ? "без разброса" : `${pctFmt(luckLo)}…${pctFmt(luckHi)}`}
+                      </span>
+                    </>
+                  )}
+                </p>
+              )}
             </div>
           </Scrim>
         </Panel>

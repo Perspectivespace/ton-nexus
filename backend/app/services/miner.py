@@ -11,9 +11,11 @@ ready → claim → idle (must start again to farm)
 Upgrades
 --------
 power        → TON/hour rate
-capacity     → max storage (TON) this cycle can hold
+capacity     → +per_level (6%) TON per cycle for each level above 1: the storage grows AND fills
+               at the same pace, so it is exactly full (100%) when the cycle ends
 acceleration → LONGER cycle (hours), fewer check-ins
-luck         → small ± on claim
+luck         → payout roll on claim, range from setting miner_luck_roll_bp (default −1%..+5%),
+               scaled by luck level: full range at luck 26
 stability    → used mainly in upgrade success; minor reliability
 """
 
@@ -63,6 +65,9 @@ class MinerView:
     cycle_hours: float
     accrued_now: Decimal
     upgrade_cost: Decimal
+    capacity_bonus_pct: float = 0.0
+    luck_min_pct: float = 0.0
+    luck_max_pct: float = 0.0
 
 
 def _utcnow() -> datetime:
@@ -102,6 +107,25 @@ def _cycle_hours(miner: Miner, base_hours: float) -> float:
     return base_hours * (1.0 + 0.06 * (acc - 1))
 
 
+def _cap_factor(miner: Miner, capacity_mult: Decimal) -> Decimal:
+    """Ёмкость: множитель добычи за цикл, +capacity_mult за каждый уровень выше 1."""
+    return Decimal("1") + capacity_mult * Decimal(max(0, miner.capacity - 1))
+
+
+LUCK_FULL_BP = 500  # шкала как раньше: (удача − 1) × 20 bp, полный диапазон с 26-го уровня
+
+
+def luck_range_bp(luck: int, cfg: dict | None) -> tuple[int, int]:
+    """Диапазон броска Удачи при сборе, bp: границы из настройки × доля уровня."""
+    cfg = cfg or {}
+    lo_set = int(cfg.get("min_bp", -100))
+    hi_set = int(cfg.get("max_bp", 500))
+    scale = Decimal(min(LUCK_FULL_BP, max(0, (luck - 1) * 20))) / Decimal(LUCK_FULL_BP)
+    lo = int((Decimal(lo_set) * scale).to_integral_value())
+    hi = int((Decimal(hi_set) * scale).to_integral_value())
+    return min(lo, hi), max(lo, hi)
+
+
 def _storage_cap(
     miner: Miner,
     base_rate: Decimal,
@@ -111,8 +135,7 @@ def _storage_cap(
 ) -> Decimal:
     rate = _ton_per_hour(miner, base_rate, power_mult)
     full_cycle = rate * Decimal(str(cycle_hours))
-    cap_factor = Decimal("1") + capacity_mult * Decimal(max(0, miner.capacity - 1))
-    return (full_cycle * cap_factor).quantize(Decimal("0.00000001"))
+    return (full_cycle * _cap_factor(miner, capacity_mult)).quantize(Decimal("0.00000001"))
 
 
 def _accrued(
@@ -140,11 +163,12 @@ def _accrued(
         frozen = Decimal(miner.pending_reward or 0)
         if frozen > 0:
             return min(cap, frozen)
-        return min(cap, rate * Decimal(str(cycle_h)))
+        return cap
 
     effective_end = min(now, ends) if ends else now
     elapsed_h = max(0.0, (effective_end - started).total_seconds() / 3600.0)
-    raw = rate * Decimal(str(elapsed_h))
+    # Ёмкость ускоряет наполнение в той же доле, что и размер хранилища → к концу цикла ровно 100%.
+    raw = rate * _cap_factor(miner, capacity_mult) * Decimal(str(elapsed_h))
     return min(cap, raw).quantize(Decimal("0.00000001"))
 
 
@@ -193,6 +217,7 @@ async def get_miner_view(session: AsyncSession, user_id: int) -> MinerView:
     )
     if miner.status == "idle":
         accrued = Decimal("0")
+    lo, hi = luck_range_bp(miner.luck, await get_setting(session, "miner_luck_roll_bp"))
 
     return MinerView(
         power=miner.power,
@@ -209,6 +234,9 @@ async def get_miner_view(session: AsyncSession, user_id: int) -> MinerView:
         cycle_hours=cycle_h,
         accrued_now=accrued,
         upgrade_cost=await upgrade_cost(session, miner),
+        capacity_bonus_pct=float((_cap_factor(miner, c_mult) - 1) * 100),
+        luck_min_pct=lo / 100,
+        luck_max_pct=hi / 100,
     )
 
 
@@ -254,9 +282,9 @@ async def claim(session: AsyncSession, user_id: int) -> tuple[MinerView, Decimal
     )
 
     if amount > 0:
-        luck_bp = min(500, (miner.luck - 1) * 20)
-        if luck_bp:
-            factor = Decimal("1") + Decimal(random.randint(-luck_bp, luck_bp)) / Decimal(10000)
+        lo, hi = luck_range_bp(miner.luck, await get_setting(session, "miner_luck_roll_bp"))
+        if lo or hi:
+            factor = Decimal("1") + Decimal(random.randint(lo, hi)) / Decimal(10000)
             amount = (amount * factor).quantize(Decimal("0.00000001"))
             if amount < 0:
                 amount = Decimal("0")

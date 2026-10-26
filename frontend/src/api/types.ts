@@ -14,6 +14,11 @@ export type MinerOut = {
   session_ends_at?: string | null;
   /** Цена следующей попытки усиления (TON). Нет у старого сервера во время выкладки. */
   upgrade_cost?: string;
+  /** Ёмкость: прибавка к добыче за цикл, % (нет у старого сервера) */
+  capacity_bonus_pct?: number;
+  /** Удача: границы броска при сборе, % */
+  luck_min_pct?: number;
+  luck_max_pct?: number;
 };
 
 export type MeOut = {
