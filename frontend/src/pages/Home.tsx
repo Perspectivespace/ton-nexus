@@ -118,7 +118,11 @@ export function Home() {
               <Chip label="Фокус" value={me.focus_tokens} />
               <Chip label="Запрет" value={me.block_tokens} />
               {me.success_boost_bp > 0 && (
-                <StatusPill tone="ok">+{(me.success_boost_bp / 100).toFixed(0)}% к удаче</StatusPill>
+                <span title="Бонус с колеса: прибавится к шансу следующей попытки усиления и потратится на ней">
+                  <StatusPill tone="ok">
+                    +{Number((me.success_boost_bp / 100).toFixed(1))}% к успеху · след. усиление
+                  </StatusPill>
+                </span>
               )}
               {me.is_owner && <StatusPill tone="live">владелец</StatusPill>}
               {me.is_admin && !me.is_owner && <StatusPill tone="neutral">админ</StatusPill>}
