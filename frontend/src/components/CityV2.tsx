@@ -149,7 +149,7 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── T3+: башня под током, ещё два борта ── */}
         {tier >= 3 && (
           <>
-            <i className="conduit" style={box(379, 370, 24, 500)} />
+            <i className="conduit" style={box(378, 356, 26, 502)} />
             <i className="craft c1" />
             <i className="craft c2" />
           </>
