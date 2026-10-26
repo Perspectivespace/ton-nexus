@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useMe } from "@/api/hooks";
 import { TowerHotspot } from "./CityBuildings";
+import { BUILDINGS, tierBox } from "@/lib/buildings";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 
@@ -163,8 +164,35 @@ export function CityV2({ tier }: { tier: number }) {
             <i className="craft c3" />
           </>
         )}
+        {/* ── экран раздела «Майнер» на реакторной башне (на всех обликах, статичный) ── */}
+        <TowerScreen tier={tier} />
       </div>
     </div>
+  );
+}
+
+/**
+ * Экран «МАЙНЕР» на реакторной башне (п. 3.8.3) — живёт в слое города, в координатах кадра, как вывески:
+ * сцена фиксирована под страницей, поэтому экран всегда стоит на башне, при любой прокрутке и ширине.
+ * band — тонкая светодиодная полоса поперёк фасада; blade — узкая вертикальная панель справа от шахты.
+ */
+type TwScreen = "band" | "blade";
+const TW_SCREEN = "band" as TwScreen;
+const TW_BOX: Record<TwScreen, [number, number, number, number]> = {
+  band: [342, 576, 146, 20],
+  blade: [426, 520, 22, 136],
+};
+
+function TowerScreen({ tier }: { tier: number }) {
+  const [x, y, w, h] = TW_BOX[TW_SCREEN];
+  return (
+    <>
+      <i className="tw-press" style={box(...tierBox(BUILDINGS.reactor, tier))} />
+      <b className={`tw-scr ${TW_SCREEN}`} style={box(x, y, w, h)}>
+        <i className="tw-led" />
+        <span>МАЙНЕР</span>
+      </b>
+    </>
   );
 }
 
