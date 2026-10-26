@@ -12,7 +12,7 @@ from app.models.user import User
 from app.services import tasks as tasks_svc
 from app.services.balance import InsufficientBalanceError
 from app.services.roles import can_approve_ambassador_task
-from app.services.tasks import TaskError, TaskPermissionError, TaskStateError
+from app.services.tasks import TaskBudgetError, TaskError, TaskPermissionError, TaskStateError
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -122,6 +122,8 @@ async def review_submission(submission_id: int, body: ReviewBody,
                              proof_text=sub.proof_text, proof_url=sub.proof_url, review_note=sub.review_note)
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
     except (TaskStateError, TaskError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -147,6 +149,8 @@ async def create_task(body: TaskCreateBody, user: User = Depends(get_current_use
         return _task_out(t)
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
     except InsufficientBalanceError as e:
         raise HTTPException(status_code=402, detail=str(e)) from e
     except TaskError as e:
@@ -165,6 +169,8 @@ async def update_task(task_id: int, body: TaskUpdateBody,
         return _task_out(t)
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
     except (TaskStateError, TaskError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -177,6 +183,8 @@ async def submit_approval(task_id: int, user: User = Depends(get_current_user), 
         return _task_out(t)
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
     except (TaskStateError, TaskError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -189,6 +197,8 @@ async def approve_task(task_id: int, user: User = Depends(get_current_user), db:
         return _task_out(t)
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
     except (TaskStateError, TaskError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -201,6 +211,8 @@ async def reject_task(task_id: int, user: User = Depends(get_current_user), db: 
         return _task_out(t)
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
     except (TaskStateError, TaskError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -213,6 +225,8 @@ async def publish_task(task_id: int, user: User = Depends(get_current_user), db:
         return _task_out(t)
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
     except InsufficientBalanceError as e:
         raise HTTPException(status_code=402, detail=str(e)) from e
     except (TaskStateError, TaskError) as e:
@@ -227,6 +241,8 @@ async def pause_task(task_id: int, user: User = Depends(get_current_user), db: A
         return _task_out(t)
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
     except (TaskStateError, TaskError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
