@@ -56,10 +56,33 @@
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
 }
 .tw-combo {
+  display: inline-block;
+  transform-origin: 50% 50%;
+  margin-inline: 6px;
   font: 700 13px/18px var(--f-display);
   letter-spacing: .06em;
   color: var(--amber);
   white-space: nowrap;
+  /* один хлопок при каждом новом значении (key={combo}); цикла нет */
+  animation: tw-pop 360ms cubic-bezier(.2, 1.4, .4, 1) both;
+}
+/* чем длиннее серия, тем ярче: янтарь → неон → маджента, у ×5 и выше счётчик крупнее */
+.tw-combo[data-lv="3"],
+.tw-combo[data-lv="4"] { color: var(--neon); }
+.tw-combo[data-lv="5"],
+.tw-combo[data-lv="6"] { color: var(--magenta); font-size: 15px; }
+.tw-plate[data-lv="3"],
+.tw-plate[data-lv="4"] { border-color: var(--neon); }
+.tw-plate[data-lv="5"],
+.tw-plate[data-lv="6"] { border-color: var(--magenta); }
+.tw-plate[data-lv="6"] { border-width: 2px; }
+@keyframes tw-pop {
+  0% { transform: scale(.6); opacity: 0; }
+  45% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tw-combo { animation: none; }
 }
 .tw-out {
   padding: 10px 12px;

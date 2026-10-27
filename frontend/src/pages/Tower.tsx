@@ -180,9 +180,13 @@ export default function Tower() {
           <canvas ref={canvas} aria-label="Поле игры «Башня»" role="img" />
 
           {phase !== "idle" && (
-            <div className="tw-plate" aria-live="off">
+            <div className="tw-plate" data-lv={combo >= 2 ? Math.min(combo, 6) : undefined} aria-live="off">
               <Num value={score} size="l" decode={false} className="!text-[28px] !leading-[32px]" />
-              {combo >= 2 && <span className="tw-combo">×{combo} идеально</span>}
+              {combo >= 2 && (
+                <span key={combo} className="tw-combo" data-lv={Math.min(combo, 6)}>
+                  ×{combo} идеально
+                </span>
+              )}
             </div>
           )}
 

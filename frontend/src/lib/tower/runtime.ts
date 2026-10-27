@@ -2,18 +2,25 @@
  * «Башня» — отрисовка и цикл. Один <canvas> 2D и ровно один requestAnimationFrame.
  *
  * Бережём ресурсы (docs/DESIGN.md, «Скорость»):
- *  — цикл крутится, только пока идёт забег или доезжают падающие куски и камера; в простое (старт, итог),
+ *  — цикл крутится, только пока идёт забег или доезжают падающие куски, искры и камера; в простое (старт, итог),
  *    при свёрнутом приложении и без канваса на экране — ни одного кадра;
  *  — размер канваса меняется только по ResizeObserver, в кадре нет чтения вёрстки (getBoundingClientRect и т. п.);
  *  — DPR ограничен (2, на слабых 1,5) и один раз снижается до 1,25, если кадры стабильно тяжелее ~24 мс;
- *  — цвета читаются из токенов темы при старте и при смене data-theme — никаких сырых hex в логике;
- *  — без filter / shadowBlur / backdrop-filter, свечение — двойной штрих; вспышка «идеально» — одно угасание, не цикл;
- *  — «уменьшить движение»: без падения кусков, вспышки и сглаживания камеры.
+ *  — вся «красота» нарисована заранее на маленьких оффскрин-канвасах: спрайты блоков (тело-стекло, неоновая кромка,
+ *    свечение — один раз на оттенок), небо с солнцем и звёздами, два слоя города, пол с сеткой. В кадре — только drawImage;
+ *    shadowBlur и градиенты в кадре не создаются (shadowBlur только при заготовке спрайта);
+ *  — эффекты комбо (кольцо, блик по кромке, искры, «вырост» блока) короткие, каждый гаснет сам; бесконечных циклов нет;
+ *  — оттенки блоков плывут от циана токена --neon к маджента токена --magenta и обратно; это единственные «сырые» цвета
+ *    в логике (канвас не читает hex из CSS), остальные цвета (линии) — из токенов темы;
+ *  — «уменьшить движение»: без падения кусков, колец, искр и сглаживания камеры.
  *
  * Игровые часы идут только в кадрах (не больше 50 мс за кадр) — пауза и свёрнутое приложение их не двигают.
  * Тап оценивается в момент события (event.timeStamp), а не кадра, и пишется в журнал целыми мс (engine.ts).
+ * Вся графика — только отображение: счёт, журнал тапов и движок от неё не зависят.
  */
 import { CONFIG, LIMITS, drop, newGame, sliderX, top, type Block, type Booster, type DropResult, type Game } from "./engine";
+
+import { Background, Sprites, stepOf, lineColor, GOLD_KEY } from "./visuals";
 
 export interface RunCallbacks {
   /** бросок принят (идеальный, обычный или промах) */
@@ -23,10 +30,7 @@ export interface RunCallbacks {
 }
 
 interface Palette {
-  skyTop: string;
-  skyBottom: string;
   line: string;
-  star: string;
   dark: boolean;
 }
 
@@ -38,13 +42,48 @@ interface Piece {
   vy: number;
   rot: number;
   vr: number;
-  hue: number;
+  step: number;
+  age: number;
+}
+
+/** кольцо вдоль кромки поставленного блока; lv — сила комбо 1…6 */
+interface Ring {
+  x: number;
+  w: number;
+  level: number;
+  step: number;
+  lv: number;
+  age: number;
+}
+
+interface Spark {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  age: number;
+  life: number;
+  size: number;
+  key: number;
+}
+
+/** «вырост» блока на 3+ идеальных подряд: ширина плавно доезжает, по краям — шевроны */
+interface Grow {
+  level: number;
+  fromW: number;
+  toX: number;
+  toW: number;
+  step: number;
   age: number;
 }
 
 const MAX_DT = 50;
-const BLINK_MS = 280;
 const PIECE_MS = 1400;
+const RING_MS = 420;
+const SWEEP_MS = 240;
+const GROW_MS = 380;
+const GROW_ANIM_MS = 170;
+const MAX_SPARKS = 90;
 const IGNORE_AFTER_RESUME = 350;
 
 const prefersReduced = () => {
@@ -55,7 +94,7 @@ const prefersReduced = () => {
   }
 };
 
-/** слабое устройство: мало ядер или памяти — меньше DPR и без лишних штрихов */
+/** слабое устройство: мало ядер или памяти — меньше DPR и меньше искр */
 export function isLowEnd(): boolean {
   const n = navigator as Navigator & { deviceMemory?: number };
   return (n.hardwareConcurrency ?? 8) <= 4 || (n.deviceMemory ?? 8) <= 2;
@@ -67,34 +106,12 @@ function readPalette(): Palette {
   const dark = document.documentElement.dataset.theme !== "light";
   return {
     dark,
-    skyTop: token(dark ? "--bg-sunken" : "--surface-1", dark ? "#030407" : "#FFFFFF"),
-    skyBottom: token(dark ? "--surface-3" : "--surface-3", dark ? "#181C2A" : "#E7EBF2"),
     line: token("--line-strong", dark ? "rgba(150,170,255,.20)" : "rgba(10,20,50,.20)"),
-    star: token("--text-2", "#9AA4BA"),
   };
 }
 
-/** цвет слоя i: оттенок плывёт от неонового бирюзового по кругу, светлая тема темнее и плотнее */
-function layerColors(i: number, dark: boolean) {
-  const h = (185 + i * 8) % 360;
-  return dark
-    ? { fill: `hsla(${h},85%,14%,.94)`, edge: `hsl(${h},100%,62%)`, soft: `hsla(${h},100%,60%,.28)`, top: `hsl(${h},100%,88%)` }
-    : { fill: `hsla(${h},75%,90%,.96)`, edge: `hsl(${h},90%,34%)`, soft: `hsla(${h},90%,34%,.20)`, top: `hsl(${h},90%,22%)` };
-}
-
-// звёзды фона: фиксированный набор (свой простой генератор, игровой rng не трогаем)
-const STARS = (() => {
-  const a: number[] = [];
-  let s = 12345;
-  for (let i = 0; i < 28; i++) {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    const x = (s >>> 8) / 16777216;
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    const y = (s >>> 8) / 16777216;
-    a.push(x, y);
-  }
-  return a;
-})();
+const easeOutCubic = (p: number) => 1 - (1 - p) ** 3;
+const easeOutBack = (p: number) => 1 + 2.4 * (p - 1) ** 3 + 1.4 * (p - 1) ** 2;
 
 export class TowerRun {
   private ctx: CanvasRenderingContext2D;
@@ -115,10 +132,14 @@ export class TowerRun {
   private cam = -80;
   private sheetUp = true;
   private pieces: Piece[] = [];
-  private flash: { x: number; w: number; level: number; t0: number; hue: number } | null = null;
+  private rings: Ring[] = [];
+  private sparks: Spark[] = [];
+  private grow: Grow | null = null;
   private reduced = prefersReduced();
   private lite = isLowEnd();
-  private sky: CanvasGradient | null = null;
+  private spr: Sprites | null = null;
+  private bg: Background | null = null;
+  private rebuild = false;
   private ro: ResizeObserver;
   private mo: MutationObserver;
   private mq: MediaQueryList | null = null;
@@ -139,7 +160,7 @@ export class TowerRun {
     this.ro.observe(canvas.parentElement ?? canvas);
     this.mo = new MutationObserver(() => {
       this.pal = readPalette();
-      this.sky = null;
+      this.invalidate();
       this.paintIdle();
     });
     this.mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -155,11 +176,11 @@ export class TowerRun {
   /** новый забег с этим seed и (необязательно) бустером — их выдаёт сервер */
   start(seed: number, booster: Booster | null = null) {
     this.g = newGame(seed, booster);
-    this.pieces = [];
-    this.flash = null;
+    this.clearFx();
     this.clock = 0;
+    const was = this.pal.dark;
     this.pal = readPalette();
-    this.sky = null;
+    if (was !== this.pal.dark) this.invalidate();
     this.sheetUp = false;
     this.playing = true;
     this.lastNow = performance.now();
@@ -170,8 +191,7 @@ export class TowerRun {
   /** показать башню без забега (старт, итог) — один кадр */
   idle(seed = 1) {
     this.g = newGame(seed);
-    this.pieces = [];
-    this.flash = null;
+    this.clearFx();
     this.playing = false;
     this.sheetUp = true;
     this.cam = this.camTarget();
@@ -197,14 +217,7 @@ export class TowerRun {
     if (t - this.g.spawnT < (this.g.taps.length ? LIMITS.MIN_TAP_GAP_MS : LIMITS.MIN_FIRST_TAP_MS)) return;
     const r = drop(this.g, t);
     if (!r) return;
-    const hue = r.level;
-    if (r.kind === "perfect") {
-      if (!this.reduced) this.flash = { x: r.placed!.x, w: r.placed!.w, level: r.level, t0: this.lastNow, hue };
-    } else if (r.cut && !this.reduced) {
-      // кусок отлетает в сторону свеса и падает
-      const dir = r.cut.x + r.cut.w / 2 < r.drop.x + r.drop.w / 2 ? -1 : 1;
-      this.pieces.push({ x: r.cut.x, y: r.level * CONFIG.BLOCK_H, w: r.cut.w, vx: dir * 70, vy: 0, rot: 0, vr: dir * 0.13, hue, age: 0 });
-    }
+    if (!this.reduced) this.fx(r);
     this.cb.onDrop(r, this.g);
     if (r.kind === "miss") {
       this.playing = false;
@@ -230,6 +243,59 @@ export class TowerRun {
     this.mo.disconnect();
     document.removeEventListener("visibilitychange", this.onVis);
     this.mq?.removeEventListener("change", this.onMotion);
+  }
+
+  // ——— эффекты (только картинка) ———
+
+  private clearFx() {
+    this.pieces = [];
+    this.rings = [];
+    this.sparks = [];
+    this.grow = null;
+  }
+
+  private spark(x: number, y: number, vx: number, vy: number, life: number, size: number, key: number) {
+    if (this.sparks.length >= MAX_SPARKS) this.sparks.shift();
+    this.sparks.push({ x, y, vx, vy, age: 0, life, size, key });
+  }
+
+  /** эффекты броска: идеальный — кольцо, блик, искры (сильнее с комбо), «вырост»; обрез — падающий кусок и крошка */
+  private fx(r: DropResult) {
+    const step = stepOf(r.level);
+    const topY = (r.level + 1) * CONFIG.BLOCK_H;
+    if (r.kind === "perfect" && r.placed) {
+      const p = r.placed;
+      const lv = Math.min(r.combo, 6);
+      this.rings.push({ x: p.x, w: p.w, level: r.level, step, lv, age: 0 });
+      if (this.rings.length > 4) this.rings.shift();
+      const n = Math.round((4 + 3 * lv) * (this.lite ? 0.5 : 1));
+      for (let i = 0; i < n; i++) {
+        const gold = lv >= 5 && i % 3 === 0;
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        this.spark(
+          p.x + Math.random() * p.w,
+          topY,
+          dir * (40 + Math.random() * (140 + 20 * lv)),
+          140 + Math.random() * (200 + 30 * lv),
+          380 + Math.random() * 280,
+          (3 + Math.random() * 4 + lv * 0.7) * 2.2,
+          gold ? GOLD_KEY : step,
+        );
+      }
+      if (r.combo >= CONFIG.REGROW_FROM && p.w > r.drop.w) {
+        this.grow = { level: r.level, fromW: r.drop.w, toX: p.x, toW: p.w, step, age: 0 };
+      }
+    } else if (r.cut) {
+      // кусок отлетает в сторону свеса и падает
+      const dir = r.cut.x + r.cut.w / 2 < r.drop.x + r.drop.w / 2 ? -1 : 1;
+      this.pieces.push({ x: r.cut.x, y: r.level * CONFIG.BLOCK_H, w: r.cut.w, vx: dir * 70, vy: 0, rot: 0, vr: dir * 0.13, step, age: 0 });
+      // крошка по линии разреза
+      const edgeX = dir < 0 ? r.cut.x + r.cut.w : r.cut.x;
+      const cnt = this.lite ? 3 : 6;
+      for (let i = 0; i < cnt; i++) {
+        this.spark(edgeX, topY - Math.random() * CONFIG.BLOCK_H, dir * (30 + Math.random() * 110), 40 + Math.random() * 120, 300 + Math.random() * 220, 5 + Math.random() * 4, step);
+      }
+    }
   }
 
   // ——— цикл ———
@@ -262,8 +328,8 @@ export class TowerRun {
     this.lastNow = now;
     if (this.playing) this.clock += dt;
     this.watchLoad(raw);
-    const settled = this.update(dt, now);
-    this.draw(now);
+    const settled = this.update(dt);
+    this.draw();
     if (this.playing || !settled) this.raf = requestAnimationFrame(this.frame);
     else this.running = false;
   };
@@ -279,8 +345,8 @@ export class TowerRun {
     }
   }
 
-  /** сдвинуть камеру и куски; true — всё улеглось, кадры больше не нужны */
-  private update(dt: number, now: number): boolean {
+  /** сдвинуть камеру и эффекты; true — всё улеглось, кадры больше не нужны */
+  private update(dt: number): boolean {
     const target = this.camTarget();
     if (this.reduced) this.cam = target;
     else this.cam += (target - this.cam) * (1 - Math.exp(-dt / 120));
@@ -298,12 +364,32 @@ export class TowerRun {
       this.pieces = this.pieces.filter((p) => p.age < PIECE_MS && p.y > this.cam - CONFIG.BLOCK_H * 2);
       if (this.pieces.length) moving = true;
     }
-    if (this.flash && now - this.flash.t0 < BLINK_MS) moving = true;
-    else this.flash = null;
+    if (this.rings.length) {
+      for (const r of this.rings) r.age += dt;
+      this.rings = this.rings.filter((r) => r.age < RING_MS + 120);
+      if (this.rings.length) moving = true;
+    }
+    if (this.sparks.length) {
+      let n = 0;
+      for (const p of this.sparks) {
+        p.age += dt;
+        p.vy -= 900 * s;
+        p.x += p.vx * s;
+        p.y += p.vy * s;
+        if (p.age < p.life) this.sparks[n++] = p;
+      }
+      this.sparks.length = n;
+      if (n) moving = true;
+    }
+    if (this.grow) {
+      this.grow.age += dt;
+      if (this.grow.age >= GROW_MS) this.grow = null;
+      else moving = true;
+    }
     return !moving;
   }
 
-  // ——— размер ———
+  // ——— размер и заготовки ———
 
   private resize(w: number, h: number) {
     if (w < 2 || h < 2) return;
@@ -314,13 +400,19 @@ export class TowerRun {
     const ph = Math.round(h * this.dpr);
     if (this.canvas.width !== pw) this.canvas.width = pw;
     if (this.canvas.height !== ph) this.canvas.height = ph;
-    this.sky = null;
+    this.invalidate();
     this.paintIdle();
+  }
+
+  /** размер или тема сменились — заготовки перерисуются при ближайшем кадре */
+  private invalidate() {
+    this.spr = null;
+    this.bg = null;
   }
 
   /** перерисовать один кадр, если цикл стоит */
   private paintIdle() {
-    if (!this.running && !this.disposed && this.cssW) this.draw(performance.now());
+    if (!this.running && !this.disposed && this.cssW) this.draw();
   }
 
   // ——— мир → экран ———
@@ -339,39 +431,58 @@ export class TowerRun {
     return this.sheetUp ? Math.max(-0.52 * v, n - 0.62 * v) : Math.max(-0.1 * v, n - 0.4 * v);
   }
 
-  private draw(now: number) {
+  private draw() {
     const { ctx, pal } = this;
+    const dark = pal.dark;
     const W = this.canvas.width;
     const H = this.canvas.height;
     const k = this.k;
     const cam = this.cam;
+    const d = this.dpr;
     const sy = (y: number) => H - (y - cam) * k;
+    const bh = CONFIG.BLOCK_H * k;
 
-    if (!this.sky) {
-      this.sky = ctx.createLinearGradient(0, 0, 0, H);
-      this.sky.addColorStop(0, pal.skyTop);
-      this.sky.addColorStop(1, pal.skyBottom);
+    const spr = (this.spr ??= new Sprites(dark, d, bh));
+    const bg = (this.bg ??= new Background(W, H, d, dark, !this.lite));
+    // части фона собираются по одной за кадр; в простое дорисуем сами
+    if ((bg.step() || spr.warm()) && !this.running && !this.rebuild) {
+      this.rebuild = true;
+      requestAnimationFrame(() => {
+        this.rebuild = false;
+        this.paintIdle();
+      });
     }
+
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = this.sky;
-    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.imageSmoothingEnabled = true;
 
-    // фон: звёзды (ночью, с параллаксом) и линии каждые 10 блоков
-    if (pal.dark && !this.lite) {
-      ctx.fillStyle = pal.star;
-      ctx.globalAlpha = 0.45;
-      const loop = H * 1.4;
-      for (let i = 0; i < STARS.length; i += 2) {
-        const y = (((STARS[i + 1] * loop - cam * k * 0.12) % loop) + loop) % loop;
-        if (y > H) continue;
-        const r = (i % 3 === 0 ? 1.6 : 1) * this.dpr;
-        ctx.fillRect(STARS[i] * W, y, r, r);
-      }
-      ctx.globalAlpha = 1;
+    // небо: по мере подъёма окно сдвигается вверх по высокой текстуре — от закатной дымки к глубокому космосу
+    if (bg.sky) {
+      const srcY = Math.max(0, Math.min(bg.sky.h - H, bg.sky.h - H - Math.max(0, cam) * k * 0.2));
+      const K = bg.sky.k;
+      ctx.drawImage(bg.sky.c, 0, srcY * K, W * K, H * K, 0, 0, W, H);
+    } else {
+      ctx.fillStyle = dark ? "#03040a" : "#c9b8ff";
+      ctx.fillRect(0, 0, W, H);
     }
+
+    // город: два слоя с параллаксом, уезжают вниз, когда башня вырастает
+    const gy = sy(0);
+    if (bg.cityFar) {
+      const y = Math.round(H + cam * k * 0.28);
+      if (y - bg.cityFar.height < H) ctx.drawImage(bg.cityFar, 0, y - bg.cityFar.height);
+    }
+    if (bg.cityNear) {
+      const y = Math.round(H + cam * k * 0.55);
+      if (y - bg.cityNear.height < H) ctx.drawImage(bg.cityNear, 0, y - bg.cityNear.height);
+    }
+
+    // линии высоты каждые 10 блоков
     ctx.strokeStyle = pal.line;
-    ctx.lineWidth = this.dpr;
-    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = d;
+    ctx.globalAlpha = 0.5;
     const step = CONFIG.BLOCK_H * 10;
     ctx.beginPath();
     for (let y = Math.max(step, Math.ceil(cam / step) * step); y < cam + H / k; y += step) {
@@ -383,20 +494,31 @@ export class TowerRun {
     ctx.globalAlpha = 1;
 
     // земля
-    const gy = sy(0);
-    if (gy < H) {
-      ctx.fillStyle = pal.skyTop;
-      ctx.fillRect(0, gy, W, H - gy);
-      ctx.fillStyle = pal.line;
-      ctx.fillRect(0, gy, W, Math.max(1, this.dpr));
+    if (gy < H && bg.ground) {
+      const y = Math.round(gy);
+      ctx.drawImage(bg.ground.c, 0, y);
+      const end = y + bg.ground.c.height;
+      if (end < H) {
+        ctx.fillStyle = bg.ground.bottom;
+        ctx.fillRect(0, end, W, H - end);
+      }
     }
 
     // башня (только видимые слои)
-    const bh = CONFIG.BLOCK_H * k;
     const blocks = this.g.blocks;
     const first = Math.max(0, Math.floor(cam / CONFIG.BLOCK_H) - 1);
     const last = Math.min(blocks.length - 1, Math.ceil((cam + H / k) / CONFIG.BLOCK_H));
-    for (let i = first; i <= last; i++) this.block(blocks[i], i, sy((i + 1) * CONFIG.BLOCK_H), k, bh);
+    const gr = this.grow;
+    for (let i = first; i <= last; i++) {
+      let b = blocks[i];
+      if (gr && gr.level === i) {
+        // «вырост»: ширина плавно доезжает с небольшим перелётом
+        const e = easeOutBack(Math.min(1, gr.age / GROW_ANIM_MS));
+        const w = gr.fromW + (gr.toW - gr.fromW) * e;
+        b = { x: gr.toX + gr.toW / 2 - w / 2, w };
+      }
+      this.block(spr, b, stepOf(i), Math.round(sy((i + 1) * CONFIG.BLOCK_H)), k);
+    }
 
     // скользящий блок + направляющие по краям верха башни
     if (this.playing && !this.g.over) {
@@ -405,49 +527,127 @@ export class TowerRun {
       const cur: Block = { x: sliderX(g, this.clock), w: g.w };
       const base = top(g);
       const y0 = sy(lvl * CONFIG.BLOCK_H);
-      ctx.strokeStyle = layerColors(lvl, pal.dark).edge;
-      ctx.globalAlpha = 0.22;
-      ctx.lineWidth = this.dpr;
+      const st = stepOf(lvl);
+      ctx.strokeStyle = lineColor(st, dark);
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = d;
       ctx.beginPath();
       for (const x of [base.x, base.x + base.w]) {
         const xx = Math.round(x * k) + 0.5;
         ctx.moveTo(xx, y0);
-        ctx.lineTo(xx, y0 + CONFIG.BLOCK_H * k * 1.1);
+        ctx.lineTo(xx, y0 + bh * 1.1);
       }
       ctx.stroke();
       ctx.globalAlpha = 1;
       // бустер «Прицел»: тонкая линия на идеальной точке первые AIM_BLOCKS блоков (только картинка, на счёт не влияет)
       if (g.booster === "aim" && lvl - 1 < CONFIG.AIM_BLOCKS) {
         const xx = Math.round(base.x * k) + 0.5;
-        ctx.strokeStyle = layerColors(lvl, pal.dark).top;
-        ctx.globalAlpha = 0.85;
-        ctx.lineWidth = Math.max(1, this.dpr);
+        ctx.strokeStyle = lineColor(st, dark);
+        ctx.globalAlpha = 0.9;
+        ctx.lineWidth = Math.max(1, d);
         ctx.beginPath();
-        ctx.moveTo(xx, y0 - CONFIG.BLOCK_H * k * 1.6);
-        ctx.lineTo(xx, y0 + CONFIG.BLOCK_H * k * 1.1);
+        ctx.moveTo(xx, y0 - bh * 1.6);
+        ctx.lineTo(xx, y0 + bh * 1.1);
         ctx.stroke();
         ctx.globalAlpha = 1;
       }
-      this.block(cur, lvl, sy((lvl + 1) * CONFIG.BLOCK_H), k, bh);
+      // аура серии: статичное пятно света за скользящим блоком, сильнее с комбо
+      if (g.combo >= 2 && !this.reduced) {
+        const lv = Math.min(g.combo, 6);
+        const gl = spr.glow(lv >= 5 ? GOLD_KEY : st);
+        const bx = cur.x * k;
+        const bw = cur.w * k;
+        const padx = bh * 0.9;
+        ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
+        ctx.globalAlpha = Math.min(0.55, 0.12 + 0.07 * lv) * (dark ? 1 : 0.8);
+        ctx.drawImage(gl, bx - padx, y0 - bh * 0.45, bw + padx * 2, bh * 1.9);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
+      }
+      this.block(spr, cur, st, Math.round(sy((lvl + 1) * CONFIG.BLOCK_H)), k);
     }
 
-    // вспышка идеального: один раз гаснет
-    const f = this.flash;
-    if (f) {
-      const p = (now - f.t0) / BLINK_MS;
-      if (p >= 0 && p < 1) {
-        const c = layerColors(f.hue, pal.dark);
-        const y = sy((f.level + 1) * CONFIG.BLOCK_H);
-        const grow = p * 10 * k;
-        ctx.globalAlpha = (1 - p) * (1 - p) * 0.9;
-        ctx.strokeStyle = c.top;
-        ctx.lineWidth = 2 * this.dpr;
-        ctx.strokeRect(f.x * k - grow, y - grow, f.w * k + grow * 2, bh + grow * 2);
+    this.drawFx(spr, sy, k, bh);
+  }
+
+  /** кольца, блик по кромке, искры, шевроны «выроста», падающие куски */
+  private drawFx(spr: Sprites, sy: (y: number) => number, k: number, bh: number) {
+    const { ctx } = this;
+    const dark = this.pal.dark;
+    const d = this.dpr;
+
+    for (const r of this.rings) {
+      const p = r.age / RING_MS;
+      const hot = r.lv >= 5 ? GOLD_KEY : r.step;
+      const y = sy((r.level + 1) * CONFIG.BLOCK_H);
+      // два кольца при сильном комбо: второе идёт следом и шире
+      const passes = r.lv >= 4 ? 2 : 1;
+      for (let n = 0; n < passes; n++) {
+        const pp = p - n * 0.22;
+        if (pp <= 0 || pp >= 1) continue;
+        const grow = easeOutCubic(pp) * (7 + 3 * r.lv + n * 6) * k;
+        const a = (1 - pp) * (1 - pp);
+        ctx.strokeStyle = lineColor(hot, dark, 0.2 * a);
+        ctx.lineWidth = (2.5 + r.lv * 0.4) * d;
+        ctx.strokeRect(r.x * k - grow, y - grow, r.w * k + grow * 2, bh + grow * 2);
+        ctx.strokeStyle = lineColor(hot, dark, 0.95 * a);
+        ctx.lineWidth = (1.4 + r.lv * 0.2) * d;
+        ctx.strokeRect(r.x * k - grow, y - grow, r.w * k + grow * 2, bh + grow * 2);
+      }
+      // блик пробегает по верхней кромке слева направо
+      const u = r.age / SWEEP_MS;
+      if (u < 1) {
+        const gl = spr.glow(hot);
+        const seg = (r.w * 0.38 + 26) * k;
+        const cx = r.x * k + r.w * k * u;
+        ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
+        ctx.globalAlpha = Math.sin(Math.PI * u) * (0.55 + 0.07 * r.lv);
+        ctx.drawImage(gl, cx - seg, y - bh * 0.55, seg * 2, bh * 1.1);
         ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
       }
     }
 
-    // отрезанные куски
+    // искры: мягкие пятна, угасают за 0,4–0,7 с
+    if (this.sparks.length) {
+      ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
+      for (const p of this.sparks) {
+        const a = 1 - p.age / p.life;
+        const sz = p.size * d * (0.55 + 0.45 * a);
+        ctx.globalAlpha = a * a * (dark ? 1 : 0.9);
+        ctx.drawImage(spr.glow(p.key), p.x * k - sz / 2, sy(p.y) - sz / 2, sz, sz);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    // «вырост»: шевроны ‹ › у концов блока расходятся и гаснут
+    const gr = this.grow;
+    if (gr) {
+      const p = gr.age / GROW_MS;
+      const e = easeOutCubic(p);
+      const y = sy((gr.level + 1) * CONFIG.BLOCK_H) + bh / 2;
+      const s = bh * 0.2;
+      const off = (6 + 14 * e) * k;
+      ctx.strokeStyle = lineColor(gr.step, dark, 1);
+      ctx.globalAlpha = (1 - p) * (1 - p);
+      ctx.lineWidth = 2 * d;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      const lx = gr.toX * k - off;
+      const rx = (gr.toX + gr.toW) * k + off;
+      ctx.moveTo(lx + s, y - s);
+      ctx.lineTo(lx, y);
+      ctx.lineTo(lx + s, y + s);
+      ctx.moveTo(rx - s, y - s);
+      ctx.lineTo(rx, y);
+      ctx.lineTo(rx - s, y + s);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // отрезанные куски: падают, вращаются и гаснут
     for (const p of this.pieces) {
       const a = 1 - p.age / PIECE_MS;
       ctx.globalAlpha = Math.max(0, Math.min(1, a * 1.6));
@@ -456,31 +656,16 @@ export class TowerRun {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(-p.rot);
-      this.block({ x: -p.w / 2, w: p.w }, p.hue, 0, k, bh, true);
+      this.block(spr, { x: -p.w / 2, w: p.w }, p.step, -Math.round(spr.bodyH / 2), k, true);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
   }
 
-  /** один блок: тёмное тело, двойной неоновый контур, яркая верхняя кромка */
-  private block(b: Block, i: number, yTop: number, k: number, bh: number, centered = false) {
-    const { ctx } = this;
-    const c = layerColors(i, this.pal.dark);
-    const x = centered ? b.x * k : Math.round(b.x * k);
-    const y = centered ? -bh / 2 : Math.round(yTop);
+  /** один блок: спрайт «стекло + неоновая кромка + свечение», растянутый по ширине (три части) */
+  private block(spr: Sprites, b: Block, step: number, yTop: number, k: number, centered = false) {
+    const x = centered ? Math.round(b.x * k) : Math.round(b.x * k);
     const w = Math.max(1, Math.round(b.w * k));
-    const h = Math.round(bh) - Math.max(1, Math.round(this.dpr));
-    ctx.fillStyle = c.fill;
-    ctx.fillRect(x, y, w, h);
-    if (!this.lite) {
-      ctx.strokeStyle = c.soft;
-      ctx.lineWidth = 3.5 * this.dpr;
-      ctx.strokeRect(x, y, w, h);
-    }
-    ctx.strokeStyle = c.edge;
-    ctx.lineWidth = 1.5 * this.dpr;
-    ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = c.top;
-    ctx.fillRect(x, y, w, Math.max(1, Math.round(1.5 * this.dpr)));
+    spr.blit(this.ctx, spr.block(step), x, yTop, w);
   }
 }
