@@ -22,7 +22,9 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail || JSON.stringify(body);
+      // detail бывает строкой или объектом ({code, message, ...}) — объект отдаём как JSON, его разбирает вызывающий
+      const d = body.detail ?? body;
+      detail = typeof d === "string" ? d || res.statusText : JSON.stringify(d);
     } catch {
       /* */
     }
