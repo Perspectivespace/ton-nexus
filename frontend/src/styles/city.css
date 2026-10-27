@@ -165,7 +165,7 @@
 @keyframes cv2-beam { from { transform: rotate(-16deg) } to { transform: rotate(4deg) } }
 
 html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::after { animation-play-state: paused; }
-html.low-end .cv2-life > :not(.fog):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.tw-press) { display: none; }
+html.low-end .cv2-life > :not(.fog):not(.sign):not(.win):not(.bcn):not(.tw-scr) { display: none; }
 html.low-end .cv2 .win, html.low-end .cv2 .bcn, html.low-end .cv2 .sign.cut { animation: none; opacity: .5; }
 html.low-end .cv2 .sign::after { animation: none; display: none; }
 html.low-end .cv2-back { display: none; }
@@ -250,6 +250,5 @@ html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
 .cv2 .ltn-bolt .g1 { stroke: rgba(190, 220, 255, .45); stroke-width: 6; }
 .cv2 .ltn-bolt .core { stroke: #F4F8FF; stroke-width: 2.4; }
 .cv2.t3 .ltn-bolt .g1, .cv2.t4 .ltn-bolt .g1 { stroke: rgba(170, 236, 255, .5); }
-html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn,
-html.bz-hide .cv2 .ltn, html.bz-in .cv2 .ltn, html.bz-fade .cv2 .ltn, html.bz-back .cv2 .ltn { display: none; }
+html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn { display: none; }
 @media (prefers-reduced-motion: reduce) { .cv2 .ltn { display: none; } }

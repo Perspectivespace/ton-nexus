@@ -3,9 +3,8 @@
  *   FPS текущий · ср средний · мин худшая секунда
  *   долгих задач N · макс — самая долгая (> 50 мс; где браузер отдаёт — Android/Chrome, в iOS «—») и где была
  *   худший кадр — самый длинный промежуток между кадрами, на каком экране и сколько секунд назад
- *   вход: — последний тап по башне → «Майнер»: во сколько мс от тапа что случилось (lib/entryTrace.ts)
  *   кнопка «копировать отчёт» — всё то же подробно + что делал худший кадр (Long Animation Frames, где браузер отдаёт),
- *   какие файлы качались при входе и сколько тянулись мост Telegram (вибро, «Назад»): текст можно вставить в чат
+ *   и сведения об устройстве: текст можно вставить в чат
  * Чтобы цифры не врали:
  *   — первую секунду после включения и после возврата в приложение не считаем (там идёт отрисовка самого экрана);
  *   — промежуток между кадрами > 1 с — это пауза (WebView Telegram останавливает кадры без visibilitychange,
@@ -14,8 +13,6 @@
  * Раз в 10 с — сводка в консоль и window.__fps. Сам счётчик — один requestAnimationFrame и textContent раз в 500 мс,
  * без CSS-анимаций и без влияния на вёрстку (pointer-events: none).
  */
-import { entries, type Entry } from "./entryTrace";
-
 type Sum = { frames: number; ms: number; worst: number; janks: number; long: number; minFps: number };
 type Spot = { ms: number; at: number; path: string };
 /** кадр, который тянулся долго (Long Animation Frames): что в нём исполнялось */
@@ -148,30 +145,8 @@ export function startFpsMeter() {
   let lastPaint = 0;
   let lastLog = performance.now();
 
-
-  /** короткая строка про последний вход: ключевые метки от тапа */
-  const entryLine = () => {
-    const e = entries()[entries().length - 1];
-    if (!e) return "";
-    // короткие подписи, чтобы строка влезала в узкий экран; полные названия — в отчёте
-    const short: Array<[string, string]> = [["готово", "гот"], ["маршрут", "мар"], ["экран", "экр"], ["ответ", "отв"], ["отрисован", "кадр"]];
-    const pick = short
-      .map(([n, k]) => ({ k, m: e.marks.find((x) => x.name === n) }))
-      .filter((x): x is { k: string; m: NonNullable<typeof x.m> } => !!x.m);
-    if (pick.length < 2) return `\nвход: ждём…`;
-    return `\nвход, мс: ${pick.map((x) => `${x.k} ${x.m.at}${x.m.note ? "!" : ""}`).join(" · ")}`;
-  };
-
-  const marksText = (e: Entry) =>
-    e.marks
-      .slice()
-      .sort((a, b) => a.at - b.at)
-      .map((m) => `${m.name} ${m.at}${m.dur !== undefined ? ` (${m.dur} мс)` : ""}${m.note ? ` (${m.note})` : ""}`)
-      .join(" · ");
-
-  const loafText = (l: Loaf, base = 0) =>
-    `  кадр ${l.dur.toFixed(0)} мс` +
-    `${base ? ` с +${Math.round(l.at - base)}` : ""} · блок ${l.block.toFixed(0)}` +
+  const loafText = (l: Loaf) =>
+    `  кадр ${l.dur.toFixed(0)} мс · блок ${l.block.toFixed(0)}` +
     `${l.layout ? ` · стиль+раскладка с +${l.layout.toFixed(0)}` : ""}${l.render ? ` · отрисовка с +${l.render.toFixed(0)}` : ""}` +
     l.scripts.map((x) => `\n    ${x}`).join("");
 
@@ -207,19 +182,6 @@ export function startFpsMeter() {
               ? "  Long Animation Frames: в этом кадре долгих скриптов нет (ждал не JS: отрисовка, мост Telegram, сеть)"
               : "  Long Animation Frames этим браузером не отдаются",
       );
-    }
-    const log = entries();
-    if (!log.length) out.push("входов в здание ещё не было (тап по башне на главной)");
-    for (const e of log.slice(-3)) {
-      out.push(`вход #${e.n} с ${e.path}: ${marksText(e)}`);
-      const win = (t: number) => t >= e.t0 - 100 && t <= e.t0 + 4000;
-      const res = (performance.getEntriesByType("resource") as PerformanceResourceTiming[])
-        .filter((r) => win(r.startTime))
-        .slice(0, 10)
-        .map((r) => `  файл +${Math.round(r.startTime - e.t0)} ${r.duration.toFixed(0)} мс ${r.transferSize ? `${(r.transferSize / 1024).toFixed(0)} кБ` : "из кэша"} ${r.name.split("/").pop()?.split("?")[0]}`);
-      out.push(...(res.length ? res : ["  файлов при входе не качалось"]));
-      const lf = loafs.filter((l) => win(l.at) && l.dur >= 50).sort((a, b) => a.at - b.at).slice(0, 5);
-      if (lf.length) out.push(...lf.map((l) => loafText(l, e.t0)));
     }
     return out.join("\n");
   };
@@ -276,7 +238,7 @@ export function startFpsMeter() {
     const lt = !longSupported ? "долгих задач —" : `долгих задач ${long}${longMax ? ` · макс ${longMax.ms.toFixed(0)} мс ${longMax.path}` : ""}`;
     const wf = worst ? `худший кадр ${worst.ms.toFixed(0)} мс · ${worst.path} · ${ago(now, worst.at)}` : "худший кадр —";
     const pz = pauseMax ? `\nпауз ${pauses} · макс ${(pauseMax.ms / 1000).toFixed(1)} с · ${pauseMax.path} · ${ago(now, pauseMax.at)}` : "";
-    txt.textContent = `FPS ${cur.toFixed(0).padStart(3)}  ср ${avg.toFixed(0)}  мин ${min}\n${lt}\n${wf}${pz}${entryLine()}`;
+    txt.textContent = `FPS ${cur.toFixed(0).padStart(3)}  ср ${avg.toFixed(0)}  мин ${min}\n${lt}\n${wf}${pz}`;
   };
 
   const log = (now: number) => {

@@ -7,8 +7,7 @@ import { warmFonts } from "@/lib/fontWarm";
 /**
  * Разделы грузятся отдельными чанками (главная — в стартовом). Чтобы раздел открывался без задержки:
  * — после загрузки главной в простое подтягиваются вероятные следующие разделы (prefetchLikely);
- * — при наведении / касании ссылки — её раздел (prefetchOnIntent);
- * — при тапе по башне — «Майнер» ещё до старта наезда (CityBuildings).
+ * — при наведении / касании ссылки — её раздел (prefetchOnIntent).
  * Уже загруженный раздел рендерится синхронно, без Suspense — без кадра-заглушки.
  */
 type Loader = () => Promise<ComponentType>;
@@ -145,7 +144,7 @@ export function initRoutePrefetch() {
   for (const t of ["pointerover", "touchstart", "focusin"] as const) document.addEventListener(t, intent, { passive: true, capture: true });
 }
 
-// фоновая подгрузка — только вне перехода (lib/quiet.ts): иначе чанки Wheel/Upgrade грузятся и исполняются посреди наезда
+// фоновая подгрузка — только вне окна смены экрана (lib/quiet.ts): иначе чанки Wheel/Upgrade исполняются посреди первых кадров
 const idle = idleWhenQuiet;
 
 /**
@@ -154,7 +153,7 @@ const idle = idleWhenQuiet;
  * В режиме экономии трафика — тоже только по намерению.
  */
 let likelyStarted = false;
-export function prefetchLikely(extra: Array<() => Promise<unknown>> = []) {
+export function prefetchLikely() {
   if (likelyStarted) return;
   likelyStarted = true;
   if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
@@ -162,11 +161,9 @@ export function prefetchLikely(extra: Array<() => Promise<unknown>> = []) {
   const next = () => {
     const k = queue.shift();
     if (!k) return;
-    // вместе с чанком майнера — его начертания шрифта (иначе они качаются и перекладывают страницу во время наезда)
+    // вместе с чанком майнера — его начертания шрифта (иначе они качаются и перекладывают экран при первом входе)
     if (k === "miner") void warmFonts();
-    // вместе с чанком майнера — то, что он тянет на тапе по башне (кадр интерьера): иначе он качается уже при входе
-    const more = k === "miner" ? extra.map((f) => f().catch(() => undefined)) : [];
-    Promise.all([load(k), ...more]).then(() => idle(next), () => undefined);
+    load(k).then(() => idle(next), () => undefined);
   };
   if (document.readyState === "complete") idle(next);
   else window.addEventListener("load", () => idle(next), { once: true });

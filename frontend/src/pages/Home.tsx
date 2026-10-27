@@ -1,11 +1,9 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { prefetchLikely } from "@/lib/routes";
-import { prefetchInterior } from "@/components/CityBuildings";
 import { Link } from "react-router-dom";
 import { useMe, useMiner } from "@/api/hooks";
 import { useDaily } from "@/lib/useDaily";
 import { haptic } from "@/lib/haptics";
-import { reactorLevel } from "@/lib/reactorTiers";
 import { WorkArea } from "@/components/WorkArea";
 import { CityWindow } from "@/components/CityV2";
 import {
@@ -66,18 +64,7 @@ export function Home() {
   first.current ??= (["head", me && "hero", "spill", "more", me && "work"] as const).filter(Boolean) as Rise[];
   const r = (k: Rise) => rise(first.current!, k);
   // главная показана — в простое подтягиваем разделы, куда обычно идут дальше
-  // вместе с майнером — кадр его интерьера (иначе он качается на тапе по башне и вход ждёт сеть)
-  // и невидимый прогрев тяжёлых блоков Майнера (облик берём по последним данным), чтобы первый вход не был дороже повторных
-  const level = useRef(1);
-  level.current = miner ? reactorLevel(miner) : 1;
-  useEffect(
-    () =>
-      prefetchLikely([
-        () => prefetchInterior("reactor"),
-        () => import("@/lib/warmMiner").then((w) => w.warmMinerView(level.current)),
-      ]),
-    [],
-  );
+  useEffect(() => prefetchLikely(), []);
 
   return (
     <div className="home-in space-y-5">

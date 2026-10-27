@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { WebApp } from "@/lib/telegram";
-import { entryTime } from "@/lib/entryTrace";
 
 /**
  * Системная кнопка «Назад» Telegram — одна на всё приложение, поэтому обработчики складываются в стек:
@@ -35,7 +34,7 @@ export function pushBack(handler: () => void): () => void {
       b.onClick(fire);
       bound = true;
     }
-    entryTime("«Назад»", () => b.show());
+    b.show();
   }
   return () => {
     const i = stack.lastIndexOf(handler);
