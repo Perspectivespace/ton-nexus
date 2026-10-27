@@ -64,14 +64,22 @@
 
 
 /* ── базовая жизнь (на всех обликах) ── */
-/* дождь: тонкие косые штрихи; на T1 гуще, на T4 реже */
-.cv2 .rain { left: 0; top: -20%; width: 100%; height: 140%; opacity: .3; will-change: transform;
-  background: repeating-linear-gradient(104deg, transparent 0 22px, rgba(170,210,255,.5) 22px 23px, transparent 23px 61px);
-  -webkit-mask: repeating-linear-gradient(180deg, #000 0 26px, transparent 26px 70px); mask: repeating-linear-gradient(180deg, #000 0 26px, transparent 26px 70px);
-  animation: cv2-rain .9s linear infinite; }
-.cv2.t1 .rain { opacity: .42; }
-.cv2.t4 .rain { opacity: .2; }
-@keyframes cv2-rain { from { transform: translate3d(0, 0, 0) } to { transform: translate3d(-16px, 70px, 0) } }
+/* дождь (п. 12.1): три глубины в canvas-спрайтах, ОДНА анимация. .rain повёрнут на ветер (~12°) и задаёт
+ * перспективу; .rain-mv едет вниз на период ближнего слоя (480 px); слои на разной глубине (CityRain.tsx) —
+ * дальние капли проецируются медленнее. На T1 гуще, на T4 реже. */
+.cv2 .rain { left: -20%; top: -7%; width: 140%; height: 114%; opacity: .62; pointer-events: none;
+  transform: rotate(12deg); perspective: 1000px; perspective-origin: 50% 50%; }
+.cv2 .rain-mv { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform;
+  animation: cv2-rain .44s linear infinite; }
+.cv2 .rl { position: absolute; left: 0; display: block; backface-visibility: hidden; }
+.cv2.t1 .rain { opacity: .8; }
+.cv2.t4 .rain { opacity: .45; }
+@keyframes cv2-rain { from { transform: translate3d(0, 0, 0) } to { transform: translate3d(0, 480px, 0) } }
+/* брызги на мокрой площади (T1–T3): лист из 20 кадров, steps() по transform — одна анимация */
+.cv2 .puddle { left: 0; top: 81.25%; width: 100%; height: 18.75%; overflow: hidden; pointer-events: none; opacity: .85; }
+.cv2 .puddle canvas { display: block; width: 100%; height: 2000%; will-change: transform;
+  animation: cv2-splash 1.6s steps(20) infinite; }
+@keyframes cv2-splash { from { transform: translate3d(0, 0, 0) } to { transform: translate3d(0, -100%, 0) } }
 /* окна: тёплый свет включается и выключается (opacity, ступенькой) */
 .cv2 .win { background: #FFC56E; box-shadow: 0 0 6px 1px rgba(255,190,100,.55); opacity: 0;
   animation: cv2-win var(--d, 5s) steps(1, end) var(--dl, 0s) infinite; }
@@ -171,7 +179,7 @@ html.low-end .cv2 .sign::after { animation: none; display: none; }
 html.low-end .cv2-back { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .cv2 *, .cv2 *::before, .cv2 *::after { animation: none !important; }
-  .cv2 .craft, .cv2 .drone, .cv2 .rain, .cv2 .steam, .cv2 .ripple { display: none; }
+  .cv2 .craft, .cv2 .drone, .cv2 .rain, .cv2 .puddle, .cv2 .steam { display: none; }
   .city .c-stage { transition: none; }
   .cv2 .win, .cv2 .bcn { opacity: .5; }
 }
@@ -183,25 +191,18 @@ html.low-end .cv2-back { display: none; }
 html.cv2-home .city .c-stage { transform: translate3d(-50%, -120px, 0); }
 .city .c-stage { transition: transform .6s var(--ease-out, ease); }
 
-/* круги на лужах (T1–T2): эллипс расходится и тает */
-.cv2 .ripple { width: 9%; aspect-ratio: 3; margin: -1.5% 0 0 -4.5%; border-radius: 50%; opacity: 0;
-  border: 1px solid rgba(190, 220, 255, .55); animation: cv2-ripple 2.8s ease-out -.6s infinite; will-change: transform, opacity; }
-@keyframes cv2-ripple { 0% { opacity: 0; transform: scale(.2) } 12% { opacity: .9 } 100% { opacity: 0; transform: scale(1.6) } }
-html.low-end .cv2 .ripple { display: none; }
 
 /* ── Смена суток по МСК (п. 3.8.2): класс фазы на .cv2 — ph-dawn / ph-day / ph-dusk / ph-night ──
  * Сцена не зависит от темы интерфейса (светлая/тёмная — только панели и текст). Кадры заранее
  * перекрашены под фазу, во время работы ничего не фильтруется; слой жизни подстраивается:
  * ночь и вечер — окна, маячки, прожектор и неон в полную силу; рассвет и день — вывески на светлом
  * стекле, окна тёплые (днём не мигают), днём лёгкий дождь, прожектора нет. Число анимаций днём только меньше. */
-:is(.ph-dawn,.ph-day).cv2 .rain { opacity: .45;
-  background: repeating-linear-gradient(104deg, transparent 0 22px, rgba(255,240,250,.5) 22px 23px, transparent 23px 61px); }
+:is(.ph-dawn,.ph-day).cv2 .rain { opacity: .7; }
 :is(.ph-dawn,.ph-day).cv2 .fog { opacity: .45; }
 :is(.ph-dawn,.ph-day).cv2 .f-far { background: radial-gradient(50% 50% at 30% 50%, rgba(255,226,222,.55), transparent 70%), radial-gradient(40% 45% at 75% 55%, rgba(255,236,232,.45), transparent 70%); }
 :is(.ph-dawn,.ph-day).cv2 .f-near { background: radial-gradient(45% 50% at 40% 50%, rgba(255,240,236,.5), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(236,248,255,.4), transparent 70%); }
 :is(.ph-dawn,.ph-day).cv2 .win { background: #FFC266; }
 :is(.ph-dawn,.ph-day).cv2 .steam { background: radial-gradient(closest-side, rgba(255,255,255,.85), rgba(255,255,255,0)); }
-:is(.ph-dawn,.ph-day).cv2 .ripple { border-color: rgba(255,255,255,.7); }
 :is(.ph-dawn,.ph-day).cv2 .sign { padding: 3px; color: #00788C; text-shadow: 0 0 6px rgba(43,245,255,.55);
   background: linear-gradient(180deg, rgba(240,253,255,.72), rgba(214,246,252,.58));
   box-shadow: inset 0 0 0 1px rgba(0,150,175,.38), 0 2px 10px rgba(30,40,90,.18); }
@@ -218,14 +219,13 @@ html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
 
 /* день: окна в солнце не мигают, прожектора нет; дождь тоньше и реже, дымка голубая */
 .cv2.ph-day .win, .cv2.ph-day .beam { display: none; }
-.cv2.ph-day .rain { opacity: .32;
-  background: repeating-linear-gradient(104deg, transparent 0 30px, rgba(240,250,255,.6) 30px 31px, transparent 31px 83px); }
+.cv2.ph-day .rain { opacity: .65; }
 .cv2.ph-day .f-far { background: radial-gradient(50% 50% at 30% 50%, rgba(226,242,255,.5), transparent 70%), radial-gradient(40% 45% at 75% 55%, rgba(236,248,255,.4), transparent 70%); }
 .cv2.ph-day .bcn { transform: scale(.75); }
 
 /* вечер: огни сильнее — окна крупнее и теплее, дождь реже; неон и прожектор как ночью */
 .cv2.ph-dusk .win { background: #FFB347; box-shadow: 0 0 10px 2px rgba(255,170,70,.55); }
-.cv2.ph-dusk .rain { opacity: .6; }
+.cv2.ph-dusk .rain { opacity: .75; }
 .cv2.ph-dusk .f-far { background: radial-gradient(50% 50% at 30% 50%, rgba(255,120,140,.22), transparent 70%), radial-gradient(40% 45% at 75% 55%, rgba(160,80,200,.2), transparent 70%); }
 
 /* ночь — исходные правила выше; окна чуть ярче */
