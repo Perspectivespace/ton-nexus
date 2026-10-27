@@ -5,6 +5,7 @@ import { IconBack } from "@/components/icons";
 import { hasBackButton, pushBack } from "@/lib/backButton";
 import { prefetchRoute } from "@/lib/routes";
 import { warmFonts } from "@/lib/fontWarm";
+import { entryMark, entryStart, entryTime } from "@/lib/entryTrace";
 import {
   BUILDINGS,
   FADE_MS,
@@ -35,22 +36,37 @@ export const msToArrive = () => Math.max(0, arriveAt - performance.now());
 export function enterBuilding(b: Building, tier: number, navigate: NavigateFunction) {
   const root = document.documentElement;
   if (root.classList.contains("bz-hide")) return; // двойной тап во время наезда
-  haptic.tap();
-  const go = () => navigate(b.route, { state: { bld: b.id } });
+  entryStart(location.pathname);
+  // вибро — мост Telegram, вызов синхронный: в кадре тапа он задержал бы старт наезда, поэтому после первого кадра наезда
+  const buzz = () => entryTime("вибро", () => haptic.tap());
+  const go = () => {
+    entryMark("маршрут");
+    navigate(b.route, { state: { bld: b.id } });
+  };
   const mode = motionMode();
   if (mode === "none") {
     arriveAt = 0;
+    buzz();
     return go();
   }
   setZoomVars(b, tier);
   arriveAt = performance.now() + (mode === "zoom" ? ZOOM_MS : FADE_MS);
   root.classList.add("bz-hide", mode === "zoom" ? "bz-in" : "bz-fade");
+  requestAnimationFrame(() => window.setTimeout(buzz, 0));
   // маршрут — когда кадр интерьера раскодирован и чанк раздела загружен (обычно оба готовы уже к касанию:
   // чанк подтянут в простое главной и ещё раз запрошен на pointerdown), но не раньше NAV_AT и не позже конца наезда +0,5 с
   const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
   const end = mode === "zoom" ? ZOOM_MS : FADE_MS;
-  const ready = Promise.all([prefetchInterior(b.id), prefetchRoute(b.route), warmFonts()]);
-  Promise.all([wait(NAV_AT[mode]), Promise.race([ready, wait(end + 500)])]).then(go);
+  const seen = (name: string) => () => entryMark(name);
+  const ready = Promise.all([
+    prefetchInterior(b.id).then(seen("картинка")),
+    prefetchRoute(b.route).then(seen("чанк")),
+    warmFonts().then(seen("шрифты")),
+  ]);
+  Promise.all([
+    wait(NAV_AT[mode]),
+    Promise.race([ready.then(() => entryMark("готово")), wait(end + 500).then(() => entryMark("готово", "по таймауту"))]),
+  ]).then(go);
 }
 
 /** отклик нажатия рисует сама башня в слое города (экран «МАЙНЕР» + подсветка): кнопка лишь ставит класс на <html> */

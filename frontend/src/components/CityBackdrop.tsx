@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { CityV2, useCityTier } from "./CityV2";
 import { Interior, msToArrive, setZoomVars, type InteriorAnim } from "./CityBuildings";
+import { entryMark } from "@/lib/entryTrace";
 import { BUILDINGS, FADE_MS, ZOOM_MS, buildingAt, motionMode, type BuildingId } from "@/lib/buildings";
 
 /** Состояние «вошли через здание» лежит в history.state маршрута */
@@ -36,6 +37,10 @@ export function CityBackdrop() {
       const delay = Math.max(0, left - 80);
       setEnter({ anim: !p ? "still" : mode === "none" ? "still" : via ? mode : "dock", delay: Math.max(0, left - 150) });
       root.classList.add("in-bld");
+      if (via) {
+        entryMark("в здании");
+        requestAnimationFrame(() => requestAnimationFrame(() => entryMark("отрисован")));
+      }
       const arrive = () => {
         // контент уже отрисован под opacity 0 на своём слое — к концу наезда меняется только opacity
         root.classList.replace("bz-hide", "bz-show");

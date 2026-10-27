@@ -153,7 +153,7 @@ const idle = (cb: () => void) => {
  * В режиме экономии трафика — тоже только по намерению.
  */
 let likelyStarted = false;
-export function prefetchLikely() {
+export function prefetchLikely(extra: Array<() => Promise<unknown>> = []) {
   if (likelyStarted) return;
   likelyStarted = true;
   if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
@@ -163,7 +163,9 @@ export function prefetchLikely() {
     if (!k) return;
     // вместе с чанком майнера — его начертания шрифта (иначе они качаются и перекладывают страницу во время наезда)
     if (k === "miner") void warmFonts();
-    load(k).then(() => idle(next), () => undefined);
+    // вместе с чанком майнера — то, что он тянет на тапе по башне (кадр интерьера): иначе он качается уже при входе
+    const more = k === "miner" ? extra.map((f) => f().catch(() => undefined)) : [];
+    Promise.all([load(k), ...more]).then(() => idle(next), () => undefined);
   };
   if (document.readyState === "complete") idle(next);
   else window.addEventListener("load", () => idle(next), { once: true });
