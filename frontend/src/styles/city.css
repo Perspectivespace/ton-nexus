@@ -266,4 +266,6 @@ html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn { display: none; }
 .ph-dawn.cv2 .neon .lt { opacity: .5; }
 .ph-dawn.cv2 .holo-w { opacity: .5; }
 .ph-day.cv2 .neon .lt { opacity: .14; }
+.ph-day.cv2 .neon .off { opacity: .35; } /* днём тёмное стекло панелей не «дырявит» небо */
+.ph-dawn.cv2 .neon .off { opacity: .7; }
 .ph-day.cv2 .holo-w { opacity: .24; }

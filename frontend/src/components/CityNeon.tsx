@@ -3,8 +3,8 @@ import type { CityPhase } from "@/lib/cityPhase";
 
 /**
  * Неоновые вывески и голограмма над крышами (DESIGN.md п. 12.1, «Неон»).
- * - Вывески — «трубки»: штриховые глифы (свой мини-шрифт из путей SVG, без шрифтов и без tofu),
- *   ореол из нескольких мазков разной ширины, белое ядро. Рисуются в canvas ОДИН раз (смена размера),
+ * - Вывески — тонкие LED-линии: геометричные глифы (свой мини-шрифт из путей SVG), голо-панели
+ *   с тёмным стеклом и угловой разметкой, LED-рёбра зданий; мягкий ореол из нескольких мазков. Рисуются в canvas ОДИН раз (смена размера),
  *   по частям в простое браузера. Под светом — тёмная стеклянная трубка: днём вывески «выключены» и видны.
  * - Голограмма — оригинальная стилизованная девушка в профиль (каре, высокий воротник), полупрозрачная
  *   бирюза/маджента, статичные сканлайны, луч проектора с крыши.
@@ -24,50 +24,55 @@ type Sign = {
   y: number;
   s: number; // масштаб глифа: ячейка 10 × 14 → s px кадра на единицу
   v?: boolean; // вертикальная
-  glyphs: string[];
+  glyphs: string[]; // ключи шрифта G
+  paths?: string[]; // вместо глифов: свои пути (LED-полоса по ребру здания), единица = 1 px кадра
+  pw?: number; // размер области путей
+  ph?: number;
   c: Rgb;
   kind: Kind;
-  frame?: boolean; // трубка-рамка вокруг
+  frame?: boolean; // тонкий LED-контур панели
+  panel?: boolean; // тёмная стеклянная подложка (голо-панель)
   buzz?: number; // какая буква «больная»
 };
 
-// штриховой мини-шрифт: ячейка 10 × 14, пути SVG (трубки — линии, концы скруглены)
+// тонкий «LED»-шрифт: ячейка 10 × 14, пути SVG, геометричные латинские буквы + знаки
 const G: Record<string, string> = {
-  О: "M5 1C9 1 9.5 4 9.5 7S9 13 5 13 .5 10 .5 7 1 1 5 1Z",
-  Т: "M.5 1H9.5M5 1V13",
-  Е: "M9 1H1.5V13H9M1.5 7H7",
-  Л: "M1 13C2.6 12 3.2 9 3.2 1H9V13",
-  Ь: "M1.8 1V13H6C9.6 13 9.6 7 6 7H1.8",
-  Б: "M9 1H1.8V13H6C9.6 13 9.6 7 6 7H1.8",
-  А: "M.6 13 5 1l4.4 12M2.3 8.6h5.4",
-  Р: "M1.8 13V1H6c3.6 0 3.6 6.6 0 6.6H1.8",
-  "2": "M1.2 4C1.4 .6 8.6.6 8.6 4.2 8.6 7 1.2 9.6 1.2 13H8.8",
-  "4": "M7 13V1L.8 9.4H9.2",
-  // катакана ラーメン (вертикально: «ー» — вертикальная черта)
-  ラ: "M2.4 1.6H7.6M1.2 5H8.8C8.6 9.2 6.4 12 2.2 13.4",
-  ー: "M5 1.2V12.8",
-  メ: "M7.6 1.4C6.8 7 4.6 10.6 1 13M3 5.6l5.6 6",
+  H: "M1.5 1V13M8.5 1V13M1.5 7H8.5",
+  O: "M3 1H7C8.6 1 9 2 9 3.6V10.4C9 12 8.6 13 7 13H3C1.4 13 1 12 1 10.4V3.6C1 2 1.4 1 3 1Z",
+  T: "M.8 1H9.2M5 1V13",
+  E: "M8.6 1H1.5V13H8.6M1.5 7H6.8",
+  L: "M1.5 1V13H8.6",
+  B: "M1.5 7V13H6.4C9.2 13 9.2 7 6.4 7H1.5V1H6C8.6 1 8.6 7 6 7",
+  A: "M.8 13 5 1l4.2 12M2.6 8.4h4.8",
+  R: "M1.5 13V1H6.2C9 1 9 7 6.2 7H1.5M5.8 7 9 13",
+  N: "M1.5 13V1L8.5 13V1",
+  X: "M1.2 1 8.8 13M8.8 1 1.2 13",
+  U: "M1.5 1V9.6C1.5 12 3 13 5 13S8.5 12 8.5 9.6V1",
+  S: "M8.6 2.4C7.8 1.4 6.6 1 5 1 2.6 1 1.4 2.2 1.4 3.8 1.4 7.6 8.6 6 8.6 10.2 8.6 12 7.2 13 5 13 3.2 13 2 12.4 1.2 11.4",
+  // ромб-логотип (в духе знака TON): грань и ось
+  "◇": "M1 2.4H9L5 12.6ZM5 2.4V12.6",
+  // катакана-акцент ネオン
+  ネ: "M5 .8V2.6M1.4 2.8H8.4L2 8.8M5 6.4V13.4M5.8 8.8 8.8 11",
+  オ: "M1 4.4H9M6.4 1V12.6C6.4 13.4 5.6 13.6 4.4 13.2M6 5 1.4 11",
   ン: "M2 2.4 4.2 4.6M1.4 12.6C5 11.6 7.6 9 9 3.4",
-  // кандзи 光 — «свет»
-  光: "M5 .8V6.2M2 2.2l1.2 2.8M8 2.2 6.8 5M.8 7.2h8.4M3.8 7.2C3.8 11 3 12.6.8 13.4M6.2 7.2V12c0 1.2.6 1.4 2.8 1.4V11.8",
-  // абстракция: шеврон и крест
-  "›": "M1.4 2 5 5.4 8.6 2",
-  "+": "M5 2.5V11.5M.5 7H9.5",
 };
 
 export const SIGNS: Sign[] = [
-  // ОТЕЛЬ — вертикаль на дальнем левом корпусе, загорается по букве
-  { id: "hotel", from: 1, x: 14, y: 602, s: 1.9, v: true, glyphs: ["О", "Т", "Е", "Л", "Ь"], c: [255, 74, 92], kind: "seq" },
-  // БАР — над крышей низкого дома, «А» — больная трубка: жужжит и сбоит
-  { id: "bar", from: 1, x: 204, y: 648, s: 1.35, glyphs: ["Б", "А", "Р"], c: [255, 66, 206], kind: "buzz", buzz: 1 },
-  // ラーメン — вертикаль на узком доме справа от башни, изредка моргает
-  { id: "ramen", from: 2, x: 529, y: 690, s: 1.55, v: true, glyphs: ["ラ", "ー", "メ", "ン"], c: [70, 236, 255], kind: "flick" },
-  // 光 в рамке — на углу правого корпуса
-  { id: "hikari", from: 2, x: 658, y: 640, s: 2.4, glyphs: ["光"], c: [196, 120, 255], kind: "flick", frame: true },
-  // шевроны — бегущая стрелка вниз (раз в несколько секунд), абстракция
-  { id: "chev", from: 3, x: 697, y: 706, s: 1.25, v: true, glyphs: ["›", "›", "›", "›"], c: [255, 186, 64], kind: "chase" },
-  // аптечный крест и «24» — ровный зелёный свет
-  { id: "cross", from: 2, x: 150, y: 728, s: 1.5, glyphs: ["+", "2", "4"], c: [70, 255, 150], kind: "still" },
+  // HOTEL — узкая вертикальная голо-панель на фасаде башни слева, загорается по букве
+  { id: "hotel", from: 1, x: 126, y: 540, s: 0.85, v: true, glyphs: ["H", "O", "T", "E", "L"], c: [255, 92, 170], kind: "seq", panel: true, frame: true },
+  // BAR — тонкие буквы под крышей низкого дома (с проектором голограммы); «A» — сбоящий диод
+  { id: "bar", from: 1, x: 217, y: 640, s: 0.95, glyphs: ["B", "A", "R"], c: [255, 70, 210], kind: "buzz", buzz: 1 },
+  // LED-полоса по фасаду низкого дома под BAR — ровный холодный свет
+  { id: "edge-c", from: 1, x: 214, y: 662, s: 1, glyphs: [], paths: ["M0 0H42"], pw: 42, ph: 0, c: [80, 230, 255], kind: "still" },
+  // NEXUS — горизонтальная строка на правом корпусе, изредка моргает
+  { id: "nexus", from: 2, x: 617, y: 664, s: 0.9, glyphs: ["N", "E", "X", "U", "S"], c: [150, 240, 255], kind: "flick" },
+  // узкая панель: ромб-логотип + катакана ネオン
+  { id: "panel", from: 2, x: 529, y: 684, s: 0.72, v: true, glyphs: ["◇", "ネ", "オ", "ン"], c: [176, 132, 255], kind: "flick", panel: true, frame: true },
+  // LED-линия под NEXUS: бегущий огонь сегментами слева направо
+  {
+    id: "edge-d", from: 3, x: 618, y: 684, s: 1, glyphs: [], pw: 54, ph: 0, c: [255, 178, 80], kind: "chase",
+    paths: [0, 1, 2, 3, 4].map((i) => `M${i * 11} 0H${i * 11 + 9}`),
+  },
 ];
 
 // голограмма: коробка в кадре и проектор на крыше низкого дома
@@ -89,27 +94,28 @@ const GAP = 3.4; // зазор между ячейками, в единицах 
 const PAD = 5; // поле под ореол, в единицах шрифта
 /** размер вывески в единицах шрифта */
 function signUnits(s: Sign) {
+  if (s.paths) return { fw: (s.pw ?? 0) + PAD * 2, fh: (s.ph ?? 0) + PAD * 2 };
   const n = s.glyphs.length;
   const fw = s.v ? 10 : n * 10 + (n - 1) * GAP;
   const fh = s.v ? n * 14 + (n - 1) * GAP : 14;
-  return { fw: fw + PAD * 2 + (s.frame ? 6 : 0), fh: fh + PAD * 2 + (s.frame ? 6 : 0) };
+  return { fw: fw + PAD * 2 + (s.frame ? 5 : 0), fh: fh + PAD * 2 + (s.frame ? 5 : 0) };
 }
 const cellAt = (s: Sign, i: number) => {
-  const o = PAD + (s.frame ? 3 : 0);
+  if (s.paths) return [PAD, PAD];
+  const o = PAD + (s.frame ? 2.5 : 0);
   return s.v ? [o, o + i * (14 + GAP)] : [o + i * (10 + GAP), o];
 };
 
-/** неоновая трубка: ореол из широких бледных мазков, цветное тело, белое ядро */
+/** LED-линия: мягкий ореол (несколько бледных мазков), тонкое цветное тело, почти белое ядро */
 function tube(g: CanvasRenderingContext2D, p: Path2D, c: Rgb, lw: number) {
   g.lineCap = "round";
   g.lineJoin = "round";
   const passes: [number, number, Rgb][] = [
-    [lw * 8, 0.05, c],
-    [lw * 5, 0.09, c],
-    [lw * 3, 0.2, c],
-    [lw * 1.7, 0.7, c],
-    [lw * 0.9, 0.95, mix(c, 0.55)],
-    [lw * 0.4, 1, mix(c, 0.9)],
+    [lw * 7, 0.035, c],
+    [lw * 3.6, 0.09, c],
+    [lw * 1.8, 0.3, c],
+    [lw, 0.95, mix(c, 0.35)],
+    [lw * 0.45, 1, mix(c, 0.85)],
   ];
   for (const [w, a, col] of passes) {
     g.lineWidth = w;
@@ -117,18 +123,18 @@ function tube(g: CanvasRenderingContext2D, p: Path2D, c: Rgb, lw: number) {
     g.stroke(p);
   }
 }
-/** выключенная трубка: тёмное стекло с тонким бликом — видна днём */
+/** выключенный диод: тонкая тёмная линия с бликом — днём видна разметка вывески */
 function glass(g: CanvasRenderingContext2D, p: Path2D, lw: number) {
   g.lineCap = "round";
   g.lineJoin = "round";
-  g.lineWidth = lw * 1.25;
-  g.strokeStyle = "rgba(24,30,44,.55)";
+  g.lineWidth = lw * 1.1;
+  g.strokeStyle = "rgba(24,30,44,.45)";
   g.stroke(p);
   g.lineWidth = lw * 0.35;
-  g.strokeStyle = "rgba(210,222,240,.32)";
+  g.strokeStyle = "rgba(210,222,240,.26)";
   g.stroke(p);
 }
-const LW = 1.25; // толщина трубки в единицах шрифта
+const LW = 0.8; // толщина диодной линии в единицах шрифта
 
 function prep(cv: HTMLCanvasElement, wCss: number, hCss: number, k: number) {
   cv.width = Math.max(1, Math.round(wCss * k));
@@ -144,25 +150,44 @@ function paintSign(cv: HTMLCanvasElement, s: Sign, wCss: number, hCss: number, k
   const { fw } = signUnits(s);
   const u = (wCss * k) / fw; // px canvas на единицу шрифта
   g.scale(u, u);
-  const idx = part === "off" || part === "all" ? s.glyphs.map((_, i) => i) : [part];
+  if (s.panel && part === "off") {
+    // тёмная стеклянная подложка голо-панели с тонкой гранью
+    const { fw: w, fh: h } = signUnits(s);
+    const m = PAD - 1;
+    g.beginPath();
+    g.roundRect(m, m, w - m * 2, h - m * 2, 0.8);
+    g.fillStyle = "rgba(6,12,26,.5)";
+    g.fill();
+    g.lineWidth = 0.3;
+    g.strokeStyle = rgba(s.c, 0.22);
+    g.stroke();
+  }
+  const idx = part === "off" || part === "all" ? items(s).map((_, i) => i) : [part];
   for (const i of idx) {
     const [x, y] = cellAt(s, i);
     const p = new Path2D();
-    p.addPath(new Path2D(G[s.glyphs[i]] ?? ""), new DOMMatrix([1, 0, 0, 1, x, y]));
-    if (part === "off") glass(g, p, LW);
-    else tube(g, p, s.c, LW);
+    p.addPath(new Path2D((s.paths ? s.paths[i] : G[s.glyphs[i]]) ?? ""), new DOMMatrix([1, 0, 0, 1, x, y]));
+    const lw = s.paths ? LW * 1.6 : LW; // LED-полосы чуть толще букв
+    if (part === "off") glass(g, p, lw);
+    else tube(g, p, s.c, lw);
   }
   if (s.frame && (part === "off" || part === "all" || part === 0)) {
     const { fw: w, fh: h } = signUnits(s);
     const fr = new Path2D();
     const m = PAD - 1;
-    fr.roundRect(m, m, w - m * 2, h - m * 2, 2.2);
-    if (part === "off") glass(g, fr, LW * 0.8);
-    else tube(g, fr, s.c, LW * 0.8);
+    // контур панели: углы-скобки, а не сплошная рамка — «хай-тек» разметка
+    const x0 = m, y0 = m, x1 = w - m, y1 = h - m, t = 3;
+    fr.moveTo(x0, y0 + t); fr.lineTo(x0, y0); fr.lineTo(x0 + t, y0);
+    fr.moveTo(x1 - t, y0); fr.lineTo(x1, y0); fr.lineTo(x1, y0 + t);
+    fr.moveTo(x1, y1 - t); fr.lineTo(x1, y1); fr.lineTo(x1 - t, y1);
+    fr.moveTo(x0 + t, y1); fr.lineTo(x0, y1); fr.lineTo(x0, y1 - t);
+    if (part === "off") glass(g, fr, LW * 0.5);
+    else tube(g, fr, s.c, LW * 0.5);
   }
 }
 /** части вывески, которыми управляет таймер */
-const partsOf = (s: Sign) => (s.kind === "seq" || s.kind === "buzz" || s.kind === "chase" ? s.glyphs.map((_, i) => i) : ["all" as const]);
+const items = (s: Sign) => s.paths ?? s.glyphs;
+const partsOf = (s: Sign) => (s.kind === "seq" || s.kind === "buzz" || s.kind === "chase" ? items(s).map((_, i) => i) : ["all" as const]);
 
 // ── голограмма: оригинальная стилизованная фигура, координаты в коробке 160 × 320 ──
 const FACE =
