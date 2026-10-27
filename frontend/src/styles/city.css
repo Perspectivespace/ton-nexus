@@ -259,9 +259,10 @@ html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn { display: none; }
 .cv2 .neon > span, .cv2 .neon .lt { position: absolute; }
 .cv2 .neon .lt { inset: 0; }
 .cv2 .neon canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
-.cv2 .neon .lit, .cv2 .neon .hf { will-change: opacity; }
+.cv2 .neon .lit { will-change: opacity; }
+.cv2 .neon .hf { will-change: opacity, transform; transform-origin: 50% 100%; }
 .cv2 .neon .hg { opacity: 0; will-change: transform, opacity; }
-.cv2 .holo-w { opacity: .9; }
+.cv2 .holo-w { opacity: .92; mix-blend-mode: screen; } /* свет голограммы складывается с ночью */
 .ph-dusk.cv2 .neon .lt { opacity: .92; }
 .ph-dawn.cv2 .neon .lt { opacity: .5; }
 .ph-dawn.cv2 .holo-w { opacity: .5; }

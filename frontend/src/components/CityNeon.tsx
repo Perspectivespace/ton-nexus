@@ -189,83 +189,126 @@ function paintSign(cv: HTMLCanvasElement, s: Sign, wCss: number, hCss: number, k
 const items = (s: Sign) => s.paths ?? s.glyphs;
 const partsOf = (s: Sign) => (s.kind === "seq" || s.kind === "buzz" || s.kind === "chase" ? items(s).map((_, i) => i) : ["all" as const]);
 
-// ── голограмма: оригинальная стилизованная фигура, координаты в коробке 160 × 320 ──
-const FACE =
-  "M100 58C105 64 107 74 107 84C107 87 105 89 106 92C109 97 114 101 115 104C116 107 112 108 109 108C110 110 111 112 111 114C111 116 107 116 107 117C107 118 110 119 110 121C110 123 106 124 106 125C107 127 108 129 108 132C108 136 105 139 100 140C98 145 96 152 97 162L61 162C62 152 61 140 60 128C60 104 70 62 100 58Z";
-const HAIR =
-  "M110 84C112 60 102 40 80 38C58 36 40 50 38 74C36 96 38 116 44 130C56 136 70 140 86 148C82 134 80 118 82 104C84 96 92 90 102 88Z";
-const STRANDS = ["M100 48C78 50 60 72 58 132", "M106 70C92 72 84 86 83 104"];
+// ── голограмма: оригинальная стилизованная женщина, 3/4 вправо, по пояс; коробка 200 × 400 ──
+// Вектор + градиенты, рисуется в разрешении экрана (k = DPR, ≤ 3) — края гладкие.
+const HEAD =
+  "M126 60C131 66 134 74 134 81C136 86 140 92 141 97C141 100 138 101 135 102C136 105 137 107 136 109C135 110 134 111 135 112C136 114 135 116 133 117C133 120 131 123 127 125C120 128 110 125 103 118C99 112 98 104 99 96C100 82 110 64 126 60Z";
+const NECK = "M103 116C106 124 105 138 99 150L125 150C121 140 121 130 124 125C117 127 109 123 103 116Z";
 const BODY =
-  "M61 162L97 162L99 172C106 176 116 186 121 202C125 216 125 230 119 242C116 256 116 284 118 320L22 320C20 290 20 262 22 236C22 214 24 198 32 190C40 182 50 179 58 176Z";
-const DETAIL = [
-  "M60 168C72 172 88 172 98 168", // ворот
-  "M58 176C72 181 90 181 100 174",
-  "M34 192C46 186 58 190 62 202C68 236 68 276 64 320", // рука
-  "M98 92C101 90 104 91 106 93", // глаз
-  "M109 118L106 118", // губы
+  "M100 146C88 154 72 158 62 166C52 174 49 190 50 210C51 240 55 270 59 296C61 330 60 370 60 400L142 400C144 370 142 340 136 314C132 298 132 286 135 272C142 254 148 236 148 216C149 192 144 170 134 158C130 153 127 149 125 146C118 150 106 150 100 146Z";
+const HAIR =
+  "M128 62C124 46 108 38 92 40C74 42 62 56 60 76C58 96 62 114 64 132C66 156 58 180 52 204C48 222 50 244 60 262C62 246 68 232 74 218C80 202 88 182 92 162C96 144 96 126 96 112C96 100 98 88 104 78C110 70 118 66 128 62Z";
+// тонкие пряди: от темени по массе волос вниз
+const STRANDS = Array.from({ length: 14 }, (_, i) => {
+  const t = i / 13;
+  const f = (n: number) => n.toFixed(1);
+  return `M${f(124 - t * 50)} ${f(56 - t * 6 + t * t * 20)}C${f(100 - t * 30)} ${f(56 + t * 8)} ${f(90 - t * 26)} ${f(90 + t * 10)} ${f(90 - t * 22)} ${f(132 + t * 6)}S${f(80 - t * 22)} ${f(200 + t * 10)} ${f(70 - t * 12)} ${f(240 + t * 14)}`;
+});
+const FRINGE = "M128 62C120 64 112 70 107 80C104 87 103 94 104 100C108 88 116 76 129 67Z";
+const FACE_D = [
+  "M117 80C121 77 127 77 131 79", // бровь
+  "M119 87C122 85 126 85 129 87C126 89 122 89 119 87Z", // глаз
+  "M131 84C134 89 137 94 139 97", // спинка носа (блик)
+  "M130 110C132 109 134 109 135 110", // губы
+  "M130 112.5C132 113.6 134 113.6 135 112.5",
 ];
-const EAR = "M84 149V160";
+const COAT_D = [
+  "M97 140C104 152 118 154 128 142", // высокий ворот
+  "M95 146C104 160 122 160 132 148",
+  "M122 156C116 210 110 300 106 400", // борт пальто
+  "M68 196C72 240 74 290 74 330", // внутренний край руки
+  "M66 170C74 178 76 192 72 206", // плечевой шов
+  "M76 300C94 306 116 306 134 298", // пояс
+  "M88 220C92 250 92 270 90 290", // складки
+  "M128 204C126 232 125 256 127 278",
+];
 
 function paintHolo(cv: HTMLCanvasElement, wCss: number, hCss: number, k: number, tint?: Rgb) {
   const g = prep(cv, wCss, hCss, k);
   if (!g) return;
-  const u = (wCss * k) / 160;
+  const u = (wCss * k) / 200;
   g.save();
   g.scale(u, u);
-  const cy: Rgb = [90, 236, 255];
-  const mg: Rgb = [255, 84, 206];
-  const face = new Path2D(FACE);
-  const hair = new Path2D(HAIR);
-  const body = new Path2D(BODY);
-  const fill = (p: Path2D, c: Rgb, a0: number, a1: number, y0: number, y1: number) => {
+  const cy: Rgb = [96, 238, 255];
+  const mg: Rgb = [255, 92, 214];
+  const vi: Rgb = [176, 140, 255];
+  /** объём: базовая заливка, внутренний ореол у края (френель), двухцветный боковой свет, тонкий контур */
+  const shape = (p: Path2D, c: Rgb, a0: number, a1: number, y0: number, y1: number, rim: number) => {
     const gr = g.createLinearGradient(0, y0, 0, y1);
     gr.addColorStop(0, rgba(c, a0));
     gr.addColorStop(1, rgba(c, a1));
     g.fillStyle = gr;
     g.fill(p);
-  };
-  const aura = g.createRadialGradient(78, 150, 4, 78, 160, 76);
-  aura.addColorStop(0, rgba(cy, 0.12));
-  aura.addColorStop(1, rgba(cy, 0));
-  g.fillStyle = aura;
-  g.fillRect(0, 0, 160, 320);
-  fill(body, cy, 0.2, 0.03, 165, 320);
-  fill(face, cy, 0.26, 0.16, 56, 162);
-  fill(hair, mg, 0.36, 0.2, 30, 142);
-  const edge = (p: Path2D, c: Rgb, lw: number) => {
+    g.save();
+    g.clip(p);
     g.lineJoin = "round";
-    g.lineCap = "round";
     for (const [w, a] of [
-      [lw * 5, 0.07],
-      [lw * 2.6, 0.18],
-      [lw, 0.85],
+      [16, 0.06],
+      [8, 0.1],
+      [3.5, 0.18],
     ] as const) {
       g.lineWidth = w;
-      g.strokeStyle = rgba(c, a);
+      g.strokeStyle = rgba(mix(c, 0.2), a * rim);
       g.stroke(p);
     }
+    // ключевой свет: маджента слева, бирюза справа — складываются (additive)
+    g.globalCompositeOperation = "lighter";
+    const side = g.createLinearGradient(30, 0, 160, 0);
+    side.addColorStop(0, rgba(mg, 0.16));
+    side.addColorStop(0.45, rgba(mg, 0));
+    side.addColorStop(0.62, rgba(cy, 0));
+    side.addColorStop(1, rgba(cy, 0.2));
+    g.fillStyle = side;
+    g.fillRect(0, 0, 200, 400);
+    g.restore();
+    g.lineWidth = 0.9;
+    g.strokeStyle = rgba(mix(c, 0.45), 0.85);
+    g.stroke(p);
   };
-  edge(body, cy, 1.1);
-  edge(face, mix(cy, 0.35), 1.1);
-  edge(hair, mg, 1.1);
-  for (const d of DETAIL) edge(new Path2D(d), mix(cy, 0.2), 0.7);
-  for (const d of STRANDS) edge(new Path2D(d), mix(mg, 0.3), 0.55);
-  edge(new Path2D(EAR), mg, 1.1);
-  g.fillStyle = rgba(mix(mg, 0.4), 0.95);
-  g.beginPath();
-  g.arc(84, 162, 1.8, 0, Math.PI * 2);
-  g.fill();
+  const line = (d: string, c: Rgb, w: number, a: number) => {
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    const p = new Path2D(d);
+    g.lineWidth = w * 3;
+    g.strokeStyle = rgba(c, a * 0.15);
+    g.stroke(p);
+    g.lineWidth = w;
+    g.strokeStyle = rgba(c, a);
+    g.stroke(p);
+  };
+  // мягкое свечение вокруг фигуры
+  const aura = g.createRadialGradient(100, 170, 6, 100, 190, 98);
+  aura.addColorStop(0, rgba(cy, 0.1));
+  aura.addColorStop(1, rgba(cy, 0));
+  g.fillStyle = aura;
+  g.fillRect(0, 0, 200, 400);
+  shape(new Path2D(BODY), cy, 0.2, 0.04, 150, 400, 1);
+  for (const d of COAT_D) line(d, mix(cy, 0.25), 0.55, 0.55);
+  shape(new Path2D(NECK), cy, 0.22, 0.16, 116, 150, 0.8);
+  shape(new Path2D(HEAD), mix(cy, 0.15), 0.3, 0.2, 60, 126, 1);
+  for (const d of FACE_D) line(d, mix(cy, 0.6), 0.5, 0.85);
+  shape(new Path2D(HAIR), vi, 0.26, 0.06, 40, 262, 1.1);
+  shape(new Path2D(FRINGE), mix(vi, 0.2), 0.3, 0.2, 62, 100, 0.8);
+  STRANDS.forEach((d, i) => line(d, mix(i % 3 ? mg : vi, 0.25), 0.32, 0.5));
+  // серьга-капля
+  line("M101 116V125", mix(mg, 0.4), 0.6, 0.9);
+  const ear = g.createRadialGradient(101, 127, 0, 101, 127, 4);
+  ear.addColorStop(0, "rgba(255,230,250,.95)");
+  ear.addColorStop(1, rgba(mg, 0));
+  g.fillStyle = ear;
+  g.fillRect(95, 121, 12, 12);
   g.restore();
-  // сканлайны: каждая третья CSS-строка гасится наполовину; низ растворяется в луче
+  // тонкие сканлайны (в пикселях экрана) и растворение низа в луче
   g.globalCompositeOperation = "destination-out";
-  g.fillStyle = "rgba(0,0,0,.5)";
-  const step = 3 * k;
-  for (let y = 0; y < cv.height; y += step) g.fillRect(0, y, cv.width, Math.max(1, k * 1.1));
-  const fade = g.createLinearGradient(0, cv.height * 0.72, 0, cv.height);
+  g.fillStyle = "rgba(0,0,0,.3)";
+  const step = Math.max(3, Math.round(1.7 * k));
+  const lh = Math.max(1, Math.round(0.55 * k));
+  for (let y = 0; y < cv.height; y += step) g.fillRect(0, y, cv.width, lh);
+  const fade = g.createLinearGradient(0, cv.height * 0.66, 0, cv.height);
   fade.addColorStop(0, "rgba(0,0,0,0)");
   fade.addColorStop(1, "rgba(0,0,0,1)");
   g.fillStyle = fade;
-  g.fillRect(0, cv.height * 0.72, cv.width, cv.height * 0.28);
+  g.fillRect(0, cv.height * 0.66, cv.width, cv.height * 0.34);
   if (tint) {
     // копия для глитча — подкрашенный срез
     g.globalCompositeOperation = "source-atop";
@@ -275,25 +318,45 @@ function paintHolo(cv: HTMLCanvasElement, wCss: number, hCss: number, k: number,
   g.globalCompositeOperation = "source-over";
 }
 
-/** луч проектора: конус от крыши вверх, ярче у источника */
+/** луч проектора: мягкий конус от крыши вверх (широкий бледный + узкое ядро) и пылинки в свете */
 function paintBeam(cv: HTMLCanvasElement, wCss: number, hCss: number, k: number) {
   const g = prep(cv, wCss, hCss, k);
   if (!g) return;
   const w = cv.width;
   const h = cv.height;
   const sx = ((HOLO.px - HOLO.x) / HOLO.w) * w;
-  const gr = g.createLinearGradient(0, h, 0, 0);
-  gr.addColorStop(0, "rgba(120,240,255,.42)");
-  gr.addColorStop(0.35, "rgba(120,240,255,.12)");
-  gr.addColorStop(1, "rgba(120,240,255,0)");
-  g.fillStyle = gr;
-  g.beginPath();
-  g.moveTo(sx - w * 0.015, h);
-  g.lineTo(w * 0.06, 0);
-  g.lineTo(w * 0.9, 0);
-  g.lineTo(sx + w * 0.015, h);
-  g.closePath();
-  g.fill();
+  const cone = (spread: number, a: number) => {
+    const gr = g.createLinearGradient(0, h, 0, 0);
+    gr.addColorStop(0, `rgba(120,240,255,${a})`);
+    gr.addColorStop(0.4, `rgba(120,240,255,${a * 0.3})`);
+    gr.addColorStop(1, "rgba(120,240,255,0)");
+    g.fillStyle = gr;
+    g.beginPath();
+    g.moveTo(sx - w * 0.012, h);
+    g.lineTo(sx - w * spread, 0);
+    g.lineTo(sx + w * spread, 0);
+    g.lineTo(sx + w * 0.012, h);
+    g.closePath();
+    g.fill();
+  };
+  cone(0.42, 0.22);
+  cone(0.16, 0.3);
+  // пылинки: детерминированная раскладка внутри конуса
+  let seed = 7;
+  const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 34; i++) {
+    const t = r();
+    const y = h * (0.08 + t * 0.86);
+    const half = w * 0.012 + (w * 0.4 - w * 0.012) * (1 - y / h);
+    const x = sx + (r() * 2 - 1) * half * 0.9;
+    const rad = (0.22 + r() * 0.4) * k;
+    const d = g.createRadialGradient(x, y, 0, x, y, rad * 2.2);
+    const a = 0.3 + r() * 0.45;
+    d.addColorStop(0, `rgba(220,252,255,${a})`);
+    d.addColorStop(1, "rgba(160,240,255,0)");
+    g.fillStyle = d;
+    g.fillRect(x - rad * 2.2, y - rad * 2.2, rad * 4.4, rad * 4.4);
+  }
   const dot = g.createRadialGradient(sx, h - 2 * k, 0, sx, h - 2 * k, 9 * k);
   dot.addColorStop(0, "rgba(230,255,255,.95)");
   dot.addColorStop(0.3, "rgba(120,240,255,.5)");
@@ -344,10 +407,11 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
         const w = HOLO.w * fx;
         const h = HOLO.h * fy;
         const [beam, fig, g1, g2] = Array.from(hn.querySelectorAll("canvas"));
-        jobs.push(() => paintHolo(fig, w, h, k));
+        const kh = Math.min(window.devicePixelRatio || 1, 3); // голограмма — в разрешении экрана
+        jobs.push(() => paintHolo(fig, w, h, kh));
         jobs.push(() => {
-          paintHolo(g1, w, h, k, [255, 70, 200]);
-          paintHolo(g2, w, h, k, [150, 255, 255]);
+          paintHolo(g1, w, h, kh, [255, 70, 200]);
+          paintHolo(g2, w, h, kh, [150, 255, 255]);
           paintBeam(beam, w, (BEAM_H + 8) * fy, k);
         });
       }
@@ -463,15 +527,15 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
       const slice = (n: HTMLElement) => {
         const top = rnd(5, 70);
         n.style.clipPath = `inset(${top.toFixed(1)}% 0 ${(100 - top - rnd(4, 14)).toFixed(1)}% 0)`;
-        n.style.transform = `translate3d(${rnd(-7, 7).toFixed(1)}px,0,0)`;
+        n.style.transform = `translate3d(${rnd(-5, 5).toFixed(1)}px,0,0)`;
         n.style.opacity = "1";
       };
       const hide = () => [g1, g2].forEach((n) => set(n, 0));
       loop(
-        () => rnd(3500, 9000),
+        () => rnd(6000, 14000),
         (next) => {
           let t = 0;
-          for (let i = 0, n = 2 + Math.floor(Math.random() * 3); i < n; i++) {
+          for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) {
             after(t, () => {
               slice(g1);
               if (Math.random() < 0.6) slice(g2);
@@ -491,9 +555,21 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
           after(t + 80, next);
         },
       );
+      // редкий «вдох»: конечная WAAPI-анимация 4.6 с, не бесконечная петля
+      loop(
+        () => rnd(9000, 16000),
+        (next) => {
+          fig.animate?.(
+            [{ transform: "none" }, { transform: "translate3d(0,-0.4%,0) scale(1.006,1.01)" }, { transform: "none" }],
+            { duration: 4600, easing: "ease-in-out" },
+          );
+          after(4700, next);
+        },
+      );
     }
     return () => {
       timers.forEach((t) => clearTimeout(t));
+      el.querySelectorAll<HTMLElement>(".holo-w canvas").forEach((n) => n.getAnimations?.().forEach((a) => a.cancel()));
       el.querySelectorAll<HTMLElement>("canvas").forEach((n) => {
         n.style.opacity = "";
         n.style.transform = "";
