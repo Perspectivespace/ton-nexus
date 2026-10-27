@@ -173,7 +173,7 @@
 @keyframes cv2-beam { from { transform: rotate(-16deg) } to { transform: rotate(4deg) } }
 
 html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::after { animation-play-state: paused; }
-html.low-end .cv2-life > :not(.fog):not(.sign):not(.win):not(.bcn):not(.tw-scr) { display: none; }
+html.low-end .cv2-life > :not(.fog):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon) { display: none; }
 html.low-end .cv2 .win, html.low-end .cv2 .bcn, html.low-end .cv2 .sign.cut { animation: none; opacity: .5; }
 html.low-end .cv2 .sign::after { animation: none; display: none; }
 html.low-end .cv2-back { display: none; }
@@ -252,3 +252,18 @@ html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
 .cv2.t3 .ltn-bolt .g1, .cv2.t4 .ltn-bolt .g1 { stroke: rgba(170, 236, 255, .5); }
 html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn { display: none; }
 @media (prefers-reduced-motion: reduce) { .cv2 .ltn { display: none; } }
+
+/* ── Неон (п. 12.1): вывески-трубки и голограмма. Всё нарисовано в canvas один раз; без CSS-анимаций —
+ * редкие смены opacity/transform по таймеру (CityNeon.tsx). Днём трубки выключены (видно стекло), голограмма бледная. */
+.cv2 .neon { inset: 0; pointer-events: none; }
+.cv2 .neon > span, .cv2 .neon .lt { position: absolute; }
+.cv2 .neon .lt { inset: 0; }
+.cv2 .neon canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+.cv2 .neon .lit, .cv2 .neon .hf { will-change: opacity; }
+.cv2 .neon .hg { opacity: 0; will-change: transform, opacity; }
+.cv2 .holo-w { opacity: .9; }
+.ph-dusk.cv2 .neon .lt { opacity: .92; }
+.ph-dawn.cv2 .neon .lt { opacity: .5; }
+.ph-dawn.cv2 .holo-w { opacity: .5; }
+.ph-day.cv2 .neon .lt { opacity: .14; }
+.ph-day.cv2 .holo-w { opacity: .24; }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useMe } from "@/api/hooks";
 import { CityLightning } from "./CityLightning";
+import { CityNeon } from "./CityNeon";
 import { CityRain } from "./CityRain";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
@@ -140,6 +141,7 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (10 анимаций + дрон в заднем слое) ── */}
         <i className="fog f-far" />
         <i className="fog f-near" />
+        <CityNeon phase={phase} tier={tier} />
         <CityRain phase={phase} tier={tier} />
         {WIN.map(([x, y, d, dl], n) => (
           <i key={`w${n}`} className="win" style={{ ...box(x, y, 7, 8), "--d": `${d}s`, "--dl": `-${dl}s` } as Vars} />
