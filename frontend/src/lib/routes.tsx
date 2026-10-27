@@ -1,3 +1,4 @@
+import { idleWhenQuiet } from "@/lib/quiet";
 import { Component, lazy, Suspense, createElement, type ComponentType, type ReactNode } from "react";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { ErrorState } from "@/components/ui/States";
@@ -142,10 +143,8 @@ export function initRoutePrefetch() {
   for (const t of ["pointerover", "touchstart", "focusin"] as const) document.addEventListener(t, intent, { passive: true, capture: true });
 }
 
-const idle = (cb: () => void) => {
-  if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(cb, { timeout: 2500 });
-  else setTimeout(cb, 1200);
-};
+// фоновая подгрузка — только вне перехода (lib/quiet.ts): иначе чанки Wheel/Upgrade грузятся и исполняются посреди наезда
+const idle = idleWhenQuiet;
 
 /**
  * После первой отрисовки главной: когда страница догрузилась (событие load — город и шрифты уже не делят канал)

@@ -1,3 +1,4 @@
+import { markBusy } from "@/lib/quiet";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { CityV2, useCityTier } from "./CityV2";
@@ -27,6 +28,7 @@ export function CityBackdrop() {
     const p = prev.current;
     prev.current = { id: inside?.id, via };
     const timers: number[] = [];
+    if (p) markBusy(1000); // первая секунда нового экрана (не первой загрузки) — без фоновой подгрузки чанков
     if (inside) {
       setLeaving(null);
       const mode = motionMode();
