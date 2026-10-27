@@ -262,11 +262,11 @@ html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn { display: none; }
 .cv2 .neon .lit { will-change: opacity; }
 .cv2 .neon .hf { will-change: opacity, transform; transform-origin: 50% 100%; }
 .cv2 .neon .hg { opacity: 0; will-change: transform, opacity; }
-.cv2 .holo-w { opacity: .92; mix-blend-mode: screen; } /* свет голограммы складывается с ночью */
+.cv2 .holo-w { opacity: .8; mix-blend-mode: screen; } /* чёрный фон изображения исчезает, свет складывается с ночью */
 .ph-dusk.cv2 .neon .lt { opacity: .92; }
 .ph-dawn.cv2 .neon .lt { opacity: .5; }
 .ph-dawn.cv2 .holo-w { opacity: .5; }
 .ph-day.cv2 .neon .lt { opacity: .14; }
 .ph-day.cv2 .neon .off { opacity: .35; } /* днём тёмное стекло панелей не «дырявит» небо */
 .ph-dawn.cv2 .neon .off { opacity: .7; }
-.ph-day.cv2 .holo-w { opacity: .24; }
+.ph-day.cv2 .holo-w { opacity: .16; }

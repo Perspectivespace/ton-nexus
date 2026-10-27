@@ -1,13 +1,14 @@
 import { useEffect, useRef } from "react";
 import type { CityPhase } from "@/lib/cityPhase";
+import holoUrl from "@/assets/city/holo-v3.webp"; // ~13 KB, грузится в простое после первого кадра
 
 /**
  * Неоновые вывески и голограмма над крышами (DESIGN.md п. 12.1, «Неон»).
  * - Вывески — тонкие LED-линии: геометричные глифы (свой мини-шрифт из путей SVG), голо-панели
  *   с тёмным стеклом и угловой разметкой, LED-рёбра зданий; мягкий ореол из нескольких мазков. Рисуются в canvas ОДИН раз (смена размера),
  *   по частям в простое браузера. Под светом — тёмная стеклянная трубка: днём вывески «выключены» и видны.
- * - Голограмма — оригинальная стилизованная девушка в профиль (каре, высокий воротник), полупрозрачная
- *   бирюза/маджента, статичные сканлайны, луч проектора с крыши.
+ * - Голограмма — оригинальное полуреалистичное изображение девушки в неоне (webp на чёрном фоне),
+ *   экран-смешение (чёрное исчезает), тонкие сканлайны, хроматический край, луч проектора с крыши.
  * - Жизнь — без CSS-анимаций: редкие короткие смены состояния (opacity / transform) по таймерам:
  *   мигание, «больная» жужжащая трубка, вывеска, загорающаяся по букве, глитч голограммы.
  *   Бюджет бесконечных анимаций не меняется. Пауза, когда приложение скрыто; «уменьшить движение» и
@@ -76,7 +77,7 @@ export const SIGNS: Sign[] = [
 ];
 
 // голограмма: коробка в кадре и проектор на крыше низкого дома
-export const HOLO = { x: 164, y: 338, w: 140, h: 280, px: 233, py: 612 };
+export const HOLO = { x: 174, y: 314, w: 168, h: 298, px: 248, py: 612 };
 
 const lowEnd = () => document.documentElement.classList.contains("low-end");
 const reduced = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -189,131 +190,63 @@ function paintSign(cv: HTMLCanvasElement, s: Sign, wCss: number, hCss: number, k
 const items = (s: Sign) => s.paths ?? s.glyphs;
 const partsOf = (s: Sign) => (s.kind === "seq" || s.kind === "buzz" || s.kind === "chase" ? items(s).map((_, i) => i) : ["all" as const]);
 
-// ── голограмма: оригинальная стилизованная женщина, 3/4 вправо, по пояс; коробка 200 × 400 ──
-// Вектор + градиенты, рисуется в разрешении экрана (k = DPR, ≤ 3) — края гладкие.
-const HEAD =
-  "M126 60C131 66 134 74 134 81C136 86 140 92 141 97C141 100 138 101 135 102C136 105 137 107 136 109C135 110 134 111 135 112C136 114 135 116 133 117C133 120 131 123 127 125C120 128 110 125 103 118C99 112 98 104 99 96C100 82 110 64 126 60Z";
-const NECK = "M103 116C106 124 105 138 99 150L125 150C121 140 121 130 124 125C117 127 109 123 103 116Z";
-const BODY =
-  "M100 146C88 154 72 158 62 166C52 174 49 190 50 210C51 240 55 270 59 296C61 330 60 370 60 400L142 400C144 370 142 340 136 314C132 298 132 286 135 272C142 254 148 236 148 216C149 192 144 170 134 158C130 153 127 149 125 146C118 150 106 150 100 146Z";
-const HAIR =
-  "M128 62C124 46 108 38 92 40C74 42 62 56 60 76C58 96 62 114 64 132C66 156 58 180 52 204C48 222 50 244 60 262C62 246 68 232 74 218C80 202 88 182 92 162C96 144 96 126 96 112C96 100 98 88 104 78C110 70 118 66 128 62Z";
-// тонкие пряди: от темени по массе волос вниз
-const STRANDS = Array.from({ length: 14 }, (_, i) => {
-  const t = i / 13;
-  const f = (n: number) => n.toFixed(1);
-  return `M${f(124 - t * 50)} ${f(56 - t * 6 + t * t * 20)}C${f(100 - t * 30)} ${f(56 + t * 8)} ${f(90 - t * 26)} ${f(90 + t * 10)} ${f(90 - t * 22)} ${f(132 + t * 6)}S${f(80 - t * 22)} ${f(200 + t * 10)} ${f(70 - t * 12)} ${f(240 + t * 14)}`;
-});
-const FRINGE = "M128 62C120 64 112 70 107 80C104 87 103 94 104 100C108 88 116 76 129 67Z";
-const FACE_D = [
-  "M117 80C121 77 127 77 131 79", // бровь
-  "M119 87C122 85 126 85 129 87C126 89 122 89 119 87Z", // глаз
-  "M131 84C134 89 137 94 139 97", // спинка носа (блик)
-  "M130 110C132 109 134 109 135 110", // губы
-  "M130 112.5C132 113.6 134 113.6 135 112.5",
-];
-const COAT_D = [
-  "M97 140C104 152 118 154 128 142", // высокий ворот
-  "M95 146C104 160 122 160 132 148",
-  "M122 156C116 210 110 300 106 400", // борт пальто
-  "M68 196C72 240 74 290 74 330", // внутренний край руки
-  "M66 170C74 178 76 192 72 206", // плечевой шов
-  "M76 300C94 306 116 306 134 298", // пояс
-  "M88 220C92 250 92 270 90 290", // складки
-  "M128 204C126 232 125 256 127 278",
-];
+// ── голограмма v3: растровое изображение (чёрный фон исчезает при mix-blend-mode: screen) ──
+let holoImg: Promise<HTMLImageElement> | null = null;
+const loadHolo = () =>
+  (holoImg ??= new Promise((res, rej) => {
+    const i = new Image();
+    i.decoding = "async";
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = holoUrl;
+  }));
 
-function paintHolo(cv: HTMLCanvasElement, wCss: number, hCss: number, k: number, tint?: Rgb) {
+/** цветная копия изображения: умножение на цвет оставляет один «канал» света */
+function tinted(img: HTMLImageElement, w: number, h: number, c: Rgb) {
+  const t = document.createElement("canvas");
+  t.width = w;
+  t.height = h;
+  const g = t.getContext("2d");
+  if (!g) return t;
+  g.drawImage(img, 0, 0, w, h);
+  g.globalCompositeOperation = "multiply";
+  g.fillStyle = rgba(c, 1);
+  g.fillRect(0, 0, w, h);
+  return t;
+}
+
+function paintHolo(cv: HTMLCanvasElement, img: HTMLImageElement, wCss: number, hCss: number, k: number, tint?: Rgb) {
   const g = prep(cv, wCss, hCss, k);
   if (!g) return;
-  const u = (wCss * k) / 200;
-  g.save();
-  g.scale(u, u);
-  const cy: Rgb = [96, 238, 255];
-  const mg: Rgb = [255, 92, 214];
-  const vi: Rgb = [176, 140, 255];
-  /** объём: базовая заливка, внутренний ореол у края (френель), двухцветный боковой свет, тонкий контур */
-  const shape = (p: Path2D, c: Rgb, a0: number, a1: number, y0: number, y1: number, rim: number) => {
-    const gr = g.createLinearGradient(0, y0, 0, y1);
-    gr.addColorStop(0, rgba(c, a0));
-    gr.addColorStop(1, rgba(c, a1));
-    g.fillStyle = gr;
-    g.fill(p);
-    g.save();
-    g.clip(p);
-    g.lineJoin = "round";
-    for (const [w, a] of [
-      [16, 0.06],
-      [8, 0.1],
-      [3.5, 0.18],
-    ] as const) {
-      g.lineWidth = w;
-      g.strokeStyle = rgba(mix(c, 0.2), a * rim);
-      g.stroke(p);
-    }
-    // ключевой свет: маджента слева, бирюза справа — складываются (additive)
+  const w = cv.width;
+  const h = cv.height;
+  g.imageSmoothingQuality = "high";
+  g.drawImage(img, 0, 0, w, h);
+  if (!tint) {
+    // тонкий хроматический край: маджента влево, бирюза вправо, складываются со светом
+    const d = Math.max(1, Math.round(0.7 * k));
     g.globalCompositeOperation = "lighter";
-    const side = g.createLinearGradient(30, 0, 160, 0);
-    side.addColorStop(0, rgba(mg, 0.16));
-    side.addColorStop(0.45, rgba(mg, 0));
-    side.addColorStop(0.62, rgba(cy, 0));
-    side.addColorStop(1, rgba(cy, 0.2));
-    g.fillStyle = side;
-    g.fillRect(0, 0, 200, 400);
-    g.restore();
-    g.lineWidth = 0.9;
-    g.strokeStyle = rgba(mix(c, 0.45), 0.85);
-    g.stroke(p);
-  };
-  const line = (d: string, c: Rgb, w: number, a: number) => {
-    g.lineCap = "round";
-    g.lineJoin = "round";
-    const p = new Path2D(d);
-    g.lineWidth = w * 3;
-    g.strokeStyle = rgba(c, a * 0.15);
-    g.stroke(p);
-    g.lineWidth = w;
-    g.strokeStyle = rgba(c, a);
-    g.stroke(p);
-  };
-  // мягкое свечение вокруг фигуры
-  const aura = g.createRadialGradient(100, 170, 6, 100, 190, 98);
-  aura.addColorStop(0, rgba(cy, 0.1));
-  aura.addColorStop(1, rgba(cy, 0));
-  g.fillStyle = aura;
-  g.fillRect(0, 0, 200, 400);
-  shape(new Path2D(BODY), cy, 0.2, 0.04, 150, 400, 1);
-  for (const d of COAT_D) line(d, mix(cy, 0.25), 0.55, 0.55);
-  shape(new Path2D(NECK), cy, 0.22, 0.16, 116, 150, 0.8);
-  shape(new Path2D(HEAD), mix(cy, 0.15), 0.3, 0.2, 60, 126, 1);
-  for (const d of FACE_D) line(d, mix(cy, 0.6), 0.5, 0.85);
-  shape(new Path2D(HAIR), vi, 0.26, 0.06, 40, 262, 1.1);
-  shape(new Path2D(FRINGE), mix(vi, 0.2), 0.3, 0.2, 62, 100, 0.8);
-  STRANDS.forEach((d, i) => line(d, mix(i % 3 ? mg : vi, 0.25), 0.32, 0.5));
-  // серьга-капля
-  line("M101 116V125", mix(mg, 0.4), 0.6, 0.9);
-  const ear = g.createRadialGradient(101, 127, 0, 101, 127, 4);
-  ear.addColorStop(0, "rgba(255,230,250,.95)");
-  ear.addColorStop(1, rgba(mg, 0));
-  g.fillStyle = ear;
-  g.fillRect(95, 121, 12, 12);
-  g.restore();
+    g.globalAlpha = 0.32;
+    g.drawImage(tinted(img, w, h, [255, 40, 200]), -d, 0);
+    g.drawImage(tinted(img, w, h, [40, 230, 255]), d, 0);
+    g.globalAlpha = 1;
+  }
   // тонкие сканлайны (в пикселях экрана) и растворение низа в луче
   g.globalCompositeOperation = "destination-out";
-  g.fillStyle = "rgba(0,0,0,.3)";
+  g.fillStyle = "rgba(0,0,0,.28)";
   const step = Math.max(3, Math.round(1.7 * k));
   const lh = Math.max(1, Math.round(0.55 * k));
-  for (let y = 0; y < cv.height; y += step) g.fillRect(0, y, cv.width, lh);
-  const fade = g.createLinearGradient(0, cv.height * 0.66, 0, cv.height);
+  for (let y = 0; y < h; y += step) g.fillRect(0, y, w, lh);
+  const fade = g.createLinearGradient(0, h * 0.62, 0, h);
   fade.addColorStop(0, "rgba(0,0,0,0)");
   fade.addColorStop(1, "rgba(0,0,0,1)");
   g.fillStyle = fade;
-  g.fillRect(0, cv.height * 0.66, cv.width, cv.height * 0.34);
+  g.fillRect(0, h * 0.62, w, h * 0.38);
   if (tint) {
     // копия для глитча — подкрашенный срез
     g.globalCompositeOperation = "source-atop";
-    g.fillStyle = rgba(tint, 0.7);
-    g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = rgba(tint, 0.6);
+    g.fillRect(0, 0, w, h);
   }
   g.globalCompositeOperation = "source-over";
 }
@@ -408,12 +341,21 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
         const h = HOLO.h * fy;
         const [beam, fig, g1, g2] = Array.from(hn.querySelectorAll("canvas"));
         const kh = Math.min(window.devicePixelRatio || 1, 3); // голограмма — в разрешении экрана
-        jobs.push(() => paintHolo(fig, w, h, kh));
-        jobs.push(() => {
-          paintHolo(g1, w, h, kh, [255, 70, 200]);
-          paintHolo(g2, w, h, kh, [150, 255, 255]);
-          paintBeam(beam, w, (BEAM_H + 8) * fy, k);
-        });
+        jobs.push(() => paintBeam(beam, w, (BEAM_H + 8) * fy, k));
+        // изображение запрашивается только в простое — не в начальном JS и не блокирует первый кадр
+        jobs.push(() =>
+          loadHolo()
+            .then((img) => {
+              if (dead || last !== sz) return;
+              paintHolo(fig, img, w, h, kh);
+              idle(() => {
+                if (dead || last !== sz) return;
+                paintHolo(g1, img, w, h, kh, [255, 70, 200]);
+                paintHolo(g2, img, w, h, kh, [150, 255, 255]);
+              });
+            })
+            .catch(() => {}),
+        );
       }
       const run = () => {
         const job = jobs.shift();
