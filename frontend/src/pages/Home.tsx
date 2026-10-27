@@ -13,6 +13,7 @@ import {
   IconCheck,
   IconChevron,
   IconReactor,
+  IconTower,
   IconUp,
   IconWheel,
 } from "@/components/icons";
@@ -36,6 +37,7 @@ import {
 const more = [
   { to: "/wheel", title: "Колесо удачи", sub: "Вращение и ежедневная отметка", Icon: IconWheel },
   { to: "/upgrade", title: "Усиление", sub: "Прокачка параметров реактора", Icon: IconUp },
+  { to: "/tower", title: "Башня", sub: "Игра: сложи башню без промаха", Icon: IconTower },
 ] as const;
 
 const MINER_RU: Record<string, string> = {
