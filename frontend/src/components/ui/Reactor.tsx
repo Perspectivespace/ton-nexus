@@ -22,12 +22,41 @@ type Props = {
   reveal?: boolean;
 };
 
-const TICKS = Array.from({ length: 60 }, (_, i) => i);
 const PARTICLES: [number, number][] = [[38, 30], [66, 22], [72, 64], [28, 70], [56, 78]];
 const C1 = 2 * Math.PI * 78;
 const C2 = 2 * Math.PI * 59;
 const PLATES = Array.from({ length: 8 }, (_, i) => i);
-const HUD = Array.from({ length: 120 }, (_, i) => i);
+/** отрезок «M x1 y1 L x2 y2» — координаты как у прежних <line> (без округления: рисунок пиксель в пиксель) */
+const seg = (x1: number, y1: number, x2: number, y2: number) => `M${x1} ${y1}L${x2} ${y2}`;
+const TICK_KINDS: [boolean, boolean][] = [
+  [false, false],
+  [false, true],
+  [true, false],
+  [true, true],
+];
+/** деления шкалы одного вида: горящие (i/60 < pct) или нет, длинные (каждое пятое) или короткие */
+function ticksPath(pct: number, on: boolean, long: boolean) {
+  let d = "";
+  for (let i = 0; i < 60; i++) {
+    if (i / 60 < pct !== on || (i % 5 === 0) !== long) continue;
+    const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
+    const r2 = long ? 84 : 87;
+    d += seg(105 + 90 * Math.cos(a), 105 + 90 * Math.sin(a), 105 + r2 * Math.cos(a), 105 + r2 * Math.sin(a));
+  }
+  return d;
+}
+function hudPath(long: boolean) {
+  let d = "";
+  for (let i = 0; i < 120; i++) {
+    if ((i % 10 === 0) !== long) continue;
+    const a = (i / 120) * Math.PI * 2;
+    const r2 = long ? 98 : 101.5;
+    d += seg(105 + 104 * Math.cos(a), 105 + 104 * Math.sin(a), 105 + r2 * Math.cos(a), 105 + r2 * Math.sin(a));
+  }
+  return d;
+}
+const HUD_SHORT = hudPath(false);
+const HUD_LONG = hudPath(true);
 const COILS = Array.from({ length: 10 }, (_, i) => i);
 /** дуга-сегмент кольца: центр 105,105, радиус r, от a0 до a1 (градусы, 0 — сверху) */
 function arcPath(r: number, a0: number, a1: number) {
@@ -88,21 +117,19 @@ export function Reactor({ fill, state, size = 204, plate = true, draining, ignit
         <circle cx="105" cy="105" r="104" fill="none" strokeWidth="1" style={{ stroke: "var(--rx-outer)" }} />
         <circle cx="105" cy="105" r="99" strokeWidth="8" fill={`url(#${u}d)`} stroke={`url(#${u}m)`} />
         <circle cx="105" cy="105" r="94.5" fill="none" strokeWidth="1" style={{ stroke: "var(--rx-inner)" }} />
-        {TICKS.map((i) => {
-          const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
-          const r2 = i % 5 ? 87 : 84;
-          const on = i / 60 < pct;
-          return (
-            <line
-              key={i}
-              x1={105 + 90 * Math.cos(a)}
-              y1={105 + 90 * Math.sin(a)}
-              x2={105 + r2 * Math.cos(a)}
-              y2={105 + r2 * Math.sin(a)}
-              strokeWidth={i % 5 ? 1 : 1.8}
+        {/* 60 делений — четырьмя path (горит/нет × короткое/длинное), а не 60 <line>: тот же рисунок,
+            но в разы меньше узлов SVG — дешевле первая раскладка экрана (вход в майнер из города) */}
+        {TICK_KINDS.map(([on, long]) => {
+          const d = ticksPath(pct, on, long);
+          return d ? (
+            <path
+              key={`${+on}${+long}`}
+              d={d}
+              fill="none"
+              strokeWidth={long ? 1.8 : 1}
               style={{ stroke: on ? "var(--rx-tick-on)" : "var(--rx-tick)" }}
             />
-          );
+          ) : null;
         })}
         <circle cx="105" cy="105" r="78" fill="none" strokeWidth="6" style={{ stroke: "var(--rx-track)" }} />
         {(pct > 0 || draining) && (
@@ -158,13 +185,9 @@ export function Reactor({ fill, state, size = 204, plate = true, draining, ignit
       {tier >= 1 && (
         <div className="rx-ring c" aria-hidden>
           <svg viewBox="0 0 210 210">
-            {HUD.map((i) => {
-              const a = (i / 120) * Math.PI * 2;
-              const long = i % 10 === 0;
-              const r1 = 104;
-              const r2 = long ? 98 : 101.5;
-              return <line key={i} x1={105 + r1 * Math.cos(a)} y1={105 + r1 * Math.sin(a)} x2={105 + r2 * Math.cos(a)} y2={105 + r2 * Math.sin(a)} strokeWidth={long ? 1 : 0.5} style={{ stroke: "var(--rx-hud)" }} />;
-            })}
+            {/* 120 штрихов HUD — двумя path (длинные/короткие) вместо 120 <line> */}
+            <path d={HUD_SHORT} fill="none" strokeWidth={0.5} style={{ stroke: "var(--rx-hud)" }} />
+            <path d={HUD_LONG} fill="none" strokeWidth={1} style={{ stroke: "var(--rx-hud)" }} />
             {[0, 120, 240].map((a) => (
               <path key={a} d={arcPath(107.5, a + 10, a + 34)} fill="none" strokeWidth="1.6" style={{ stroke: "var(--rx-hud-b)" }} />
             ))}

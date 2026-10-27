@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, createElement, type ComponentType, type ReactNode } from "react";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { ErrorState } from "@/components/ui/States";
+import { warmFonts } from "@/lib/fontWarm";
 
 /**
  * Разделы грузятся отдельными чанками (главная — в стартовом). Чтобы раздел открывался без задержки:
@@ -160,6 +161,8 @@ export function prefetchLikely() {
   const next = () => {
     const k = queue.shift();
     if (!k) return;
+    // вместе с чанком майнера — его начертания шрифта (иначе они качаются и перекладывают страницу во время наезда)
+    if (k === "miner") void warmFonts();
     load(k).then(() => idle(next), () => undefined);
   };
   if (document.readyState === "complete") idle(next);
