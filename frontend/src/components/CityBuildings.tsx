@@ -1,3 +1,4 @@
+import { markBusy } from "@/lib/quiet";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import { haptic } from "@/lib/haptics";
@@ -37,6 +38,7 @@ export function enterBuilding(b: Building, tier: number, navigate: NavigateFunct
   const root = document.documentElement;
   if (root.classList.contains("bz-hide")) return; // двойной тап во время наезда
   entryStart(location.pathname);
+  markBusy(ZOOM_MS + 1200); // фоновая подгрузка разделов ждёт конца наезда и ~1 с после него
   // вибро — мост Telegram, вызов синхронный: в кадре тапа он задержал бы старт наезда, поэтому после первого кадра наезда
   const buzz = () => entryTime("вибро", () => haptic.tap());
   const go = () => {
