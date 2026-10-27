@@ -44,7 +44,18 @@ export const CONFIG = {
   /** очки: идеальный = PTS_PERFECT + min(combo - 1, COMBO_CAP), combo считается с 1 */
   PTS_PERFECT: 2,
   COMBO_CAP: 4,
+  /** бустер «Замедление»: первые SLOW_BLOCKS блоков едут со скоростью SLOW_PCT % от обычной (целое, округление вниз) */
+  SLOW_BLOCKS: 10,
+  SLOW_PCT: 85,
+  /** бустер «Прицел»: тонкая линия на идеальной точке первые AIM_BLOCKS блоков. Только картинка — на счёт не влияет */
+  AIM_BLOCKS: 5,
 } as const;
+
+/**
+ * Бустер забега (не больше одного за игру). «slow» меняет скорость — поэтому входит в replay, и сервер проверяет
+ * забег с тем же флагом. «aim» рисуется только на экране: replay с ним и без него даёт одно и то же.
+ */
+export type Booster = "slow" | "aim";
 
 /** длина хода левого края скользящего блока (константа: ход считается по центру блока) */
 export const SPAN = CONFIG.RANGE * 2;
@@ -76,6 +87,8 @@ export interface DropResult {
 
 export interface Game {
   readonly seed: number;
+  /** бустер забега или null */
+  readonly booster: Booster | null;
   /** состояние mulberry32 (uint32) */
   rng: number;
   /** башня снизу вверх; blocks[0] — опора */
@@ -111,9 +124,10 @@ function spawn(g: Game, t: number) {
   g.phase = r % (SPAN * 2);
 }
 
-export function newGame(seed: number): Game {
+export function newGame(seed: number, booster: Booster | null = null): Game {
   const g: Game = {
     seed: seed >>> 0,
+    booster,
     rng: seed >>> 0,
     blocks: [{ x: (CONFIG.FIELD - CONFIG.W0) / 2, w: CONFIG.W0 }],
     score: 0,
@@ -130,9 +144,10 @@ export function newGame(seed: number): Game {
   return g;
 }
 
-/** скорость скольжения текущего блока, ед./с (зависит от числа уже поставленных блоков) */
-export function speedFor(placed: number): number {
-  return Math.min(CONFIG.VMAX, CONFIG.V0 + CONFIG.DV * placed);
+/** скорость скольжения текущего блока, ед./с (зависит от числа уже поставленных блоков и от бустера «slow») */
+export function speedFor(placed: number, booster: Booster | null = null): number {
+  const v = Math.min(CONFIG.VMAX, CONFIG.V0 + CONFIG.DV * placed);
+  return booster === "slow" && placed < CONFIG.SLOW_BLOCKS ? Math.floor((v * CONFIG.SLOW_PCT) / 100) : v;
 }
 
 /** позиция по треугольной волне: целое от 0 до SPAN */
@@ -144,7 +159,7 @@ function tri(d: number): number {
 /** левый край скользящего блока в игровое время t (мс); до появления блока стоит на месте */
 export function sliderX(g: Game, t: number): number {
   const dt = Math.max(0, t - g.spawnT);
-  const d = Math.floor((speedFor(g.blocks.length - 1) * dt) / 1000) + g.phase;
+  const d = Math.floor((speedFor(g.blocks.length - 1, g.booster) * dt) / 1000) + g.phase;
   return CONFIG.FIELD / 2 - CONFIG.RANGE - (g.w >> 1) + tri(d);
 }
 
@@ -209,9 +224,9 @@ export interface ReplayResult {
   accepted: number;
 }
 
-/** Проиграть забег заново по seed и журналу тапов — то же, что сделает сервер при проверке */
-export function replay(seed: number, taps: readonly number[]): ReplayResult {
-  const g = newGame(seed);
+/** Проиграть забег заново по seed, бустеру и журналу тапов — то же, что делает сервер при проверке */
+export function replay(seed: number, taps: readonly number[], booster: Booster | null = null): ReplayResult {
+  const g = newGame(seed, booster);
   for (const t of taps) if (drop(g, t) === null) break;
   return { score: g.score, height: g.blocks.length - 1, perfects: g.perfects, bestCombo: g.bestCombo, over: g.over, accepted: g.taps.length };
 }
