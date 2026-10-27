@@ -1,0 +1,655 @@
+"""«Башня»: попытки (сброс 00:00 МСК), старт, проверка забега, лучший счёт месяца, топ, API.
+
+На SQLite в памяти (всегда). Запуск из backend: python -m unittest discover -s tests
+"""
+
+import asyncio
+import json
+import os
+import re
+import unittest
+import warnings
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import httpx
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
+
+from app.db.base import Base
+from app.models import TowerDailyAttempts, TowerGame, TowerMonthlyBest, User  # noqa: F401 — регистрирует таблицы
+from app.services import gameday
+from app.services import tower as tw
+from app.services import tower_engine as eng
+
+warnings.filterwarnings("ignore", message=".*Decimal objects natively.*")
+
+UTC = timezone.utc
+VECTORS = json.loads((Path(__file__).resolve().parents[2] / "shared" / "tower-vectors.json").read_text(encoding="utf-8"))
+
+# 27 окт 2026, 12:00 МСК = 09:00 UTC
+NOON = datetime(2026, 10, 27, 9, 0, tzinfo=UTC)
+
+
+def run_db(fn):
+    async def main():
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        try:
+            async with async_sessionmaker(engine, expire_on_commit=False, autoflush=False)() as s:
+                await fn(s)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(main())
+
+
+async def make_user(s, n, **kw) -> User:
+    u = User(telegram_id=1000 + n, first_name=kw.pop("first_name", f"P{n}"), **kw)
+    s.add(u)
+    await s.flush()
+    return u
+
+
+def play_taps(seed, booster=None, plan=(), end_with_miss=True, gap=120, jitter=0):
+    """Журнал бота: план — отступы от верха (0 — идеально), потом промах. Возвращает (taps, итог движка)."""
+    g = eng.new_game(seed, booster)
+
+    def find(want):
+        for t in range(g.spawn_t + gap, g.spawn_t + gap + 30000):
+            if want(eng.slider_x(g, t)):
+                return t
+        raise AssertionError("момент не найден")
+
+    for step in plan:
+        bx, bw = g.blocks[-1]
+        if step == 0:
+            t = find(lambda x: abs(x - bx) <= eng.PERFECT_TOL)
+        else:
+            t = find(lambda x: step <= x - bx <= step + 8 and abs(x - bx) > eng.PERFECT_TOL)
+        eng.drop(g, t + jitter)
+        if g.over:
+            break
+    if end_with_miss and not g.over:
+        bx, bw = g.blocks[-1]
+        eng.drop(g, find(lambda x: x >= bx + bw or x + g.w <= bx))
+    return list(g.taps), eng.replay(seed, g.taps, booster)
+
+
+async def finish_ok(s, user, game, plan=(0, 0, 0, 60, 0), at=None):
+    taps, res = play_taps(game.seed, game.booster, plan)
+    at = at or (gameday._aware(game.started_at) + timedelta(milliseconds=taps[-1] + 500))
+    r = await tw.finish_game(s, user=user, game_id=game.id, taps=taps, claimed_score=res.score, now=at)
+    return r, taps, res
+
+
+class AttemptsTest(unittest.TestCase):
+    def test_three_free_attempts_then_no_more(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            seeds = set()
+            for i in range(3):
+                g = await tw.start_game(s, user=u, now=NOON + timedelta(minutes=i))
+                self.assertGreater(g.id, 0)
+                self.assertTrue(0 <= g.seed < 2**32)
+                seeds.add(g.seed)
+            self.assertEqual(len(seeds), 3)
+            with self.assertRaises(tw.NoAttemptsError) as cm:
+                await tw.start_game(s, user=u, now=NOON + timedelta(minutes=5))
+            self.assertEqual(cm.exception.status, 409)
+            st = await tw.my_status(s, user_id=u.id, now=NOON + timedelta(minutes=5))
+            self.assertEqual((st["used_today"], st["left_today"], st["free_per_day"]), (3, 0, 3))
+            # отказ не создал лишнюю игру и не сдвинул счётчик
+            games = (await s.scalars(select(TowerGame).where(TowerGame.user_id == u.id))).all()
+            self.assertEqual(len(games), 3)
+
+        run_db(body)
+
+    def test_attempt_is_charged_at_start_not_at_finish(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            await tw.start_game(s, user=u, now=NOON)
+            st = await tw.my_status(s, user_id=u.id, now=NOON)
+            self.assertEqual(st["left_today"], 2)  # забег брошен, не завершён — попытка всё равно потрачена
+
+        run_db(body)
+
+    def test_reset_at_moscow_midnight(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            # 23:59:59 МСК (20:59:59 UTC) 27 октября — день ещё тот же
+            late = datetime(2026, 10, 27, 20, 59, 59, tzinfo=UTC)
+            for _ in range(3):
+                await tw.start_game(s, user=u, now=late - timedelta(minutes=10))
+            with self.assertRaises(tw.NoAttemptsError):
+                await tw.start_game(s, user=u, now=late)
+            st = await tw.my_status(s, user_id=u.id, now=late)
+            self.assertEqual(st["left_today"], 0)
+            self.assertEqual(datetime.fromisoformat(st["next_reset_at"]), datetime(2026, 10, 27, 21, 0, tzinfo=UTC))
+            # 00:00:00 МСК (21:00:00 UTC) 28 октября — снова 3 попытки
+            midnight = datetime(2026, 10, 27, 21, 0, 0, tzinfo=UTC)
+            st = await tw.my_status(s, user_id=u.id, now=midnight)
+            self.assertEqual((st["used_today"], st["left_today"]), (0, 3))
+            for _ in range(3):
+                await tw.start_game(s, user=u, now=midnight)
+            with self.assertRaises(tw.NoAttemptsError):
+                await tw.start_game(s, user=u, now=midnight + timedelta(hours=1))
+
+        run_db(body)
+
+    def test_utc_midnight_does_not_reset(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            before = datetime(2026, 10, 27, 20, 0, tzinfo=UTC)  # 23:00 МСК
+            for _ in range(3):
+                await tw.start_game(s, user=u, now=before)
+            # 00:00 UTC = 03:00 МСК того же дня... но уже следующего по Москве? нет: 23:00 МСК → 00:30 UTC = 03:30 МСК 28-го
+            utc_midnight = datetime(2026, 10, 28, 0, 0, tzinfo=UTC)  # 03:00 МСК 28 октября: новый игровой день
+            self.assertEqual(gameday.game_day(utc_midnight).isoformat(), "2026-10-28")
+            st = await tw.my_status(s, user_id=u.id, now=utc_midnight)
+            self.assertEqual(st["left_today"], 3)
+            # а 00:00 UTC *до* московской полуночи — тот же день, сброса нет
+            same_day = datetime(2026, 10, 27, 0, 0, tzinfo=UTC)  # 03:00 МСК 27-го
+            self.assertEqual(gameday.game_day(same_day).isoformat(), "2026-10-27")
+            st = await tw.my_status(s, user_id=u.id, now=same_day)
+            self.assertEqual(st["left_today"], 0)
+
+        run_db(body)
+
+    def test_attempts_are_per_user(self):
+        async def body(s):
+            a, b = await make_user(s, 1), await make_user(s, 2)
+            for _ in range(3):
+                await tw.start_game(s, user=a, now=NOON)
+            g = await tw.start_game(s, user=b, now=NOON)
+            self.assertEqual(g.user_id, b.id)
+
+        run_db(body)
+
+    def test_booster_not_available_yet(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            for b in ("slow", "aim", "x"):
+                with self.assertRaises(tw.TowerError) as cm:
+                    await tw.start_game(s, user=u, booster=b, now=NOON)
+                self.assertEqual(cm.exception.code, "booster_unavailable")
+            self.assertEqual((await tw.my_status(s, user_id=u.id, now=NOON))["left_today"], 3)  # попытка не списана
+
+        run_db(body)
+
+
+class FinishTest(unittest.TestCase):
+    def test_valid_run_is_stored_with_server_score(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            r, taps, res = await finish_ok(s, u, g, plan=(0, 0, 0, 60, 0, 25, 0))
+            self.assertEqual(r.game.status, "finished")
+            self.assertEqual((r.game.score, r.game.height, r.game.perfects), (res.score, res.height, res.perfects))
+            self.assertGreater(res.score, 5)
+            self.assertTrue(r.new_best)
+            self.assertEqual((r.best_month, r.rank), (res.score, 1))
+            self.assertEqual(r.game.taps, taps)
+
+        run_db(body)
+
+    def test_one_finish_per_game(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            _, taps, res = await finish_ok(s, u, g)
+            with self.assertRaises(tw.TowerError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=taps, claimed_score=res.score, now=NOON + timedelta(minutes=2))
+            self.assertEqual((cm.exception.code, cm.exception.status), ("already_finished", 409))
+
+        run_db(body)
+
+    def test_other_users_game_is_not_found(self):
+        async def body(s):
+            a, b = await make_user(s, 1), await make_user(s, 2)
+            g = await tw.start_game(s, user=a, now=NOON)
+            taps, res = play_taps(g.seed, None, (0, 0))
+            with self.assertRaises(tw.TowerError) as cm:
+                await tw.finish_game(s, user=b, game_id=g.id, taps=taps, claimed_score=res.score, now=NOON + timedelta(minutes=1))
+            self.assertEqual(cm.exception.status, 404)
+            with self.assertRaises(tw.TowerError) as cm:
+                await tw.finish_game(s, user=a, game_id=999, taps=taps, claimed_score=res.score, now=NOON)
+            self.assertEqual(cm.exception.status, 404)
+
+        run_db(body)
+
+    def test_wrong_claimed_score_is_rejected_and_game_closed(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            taps, res = play_taps(g.seed, None, (0, 0, 0))
+            at = NOON + timedelta(seconds=60)
+            with self.assertRaises(tw.RejectedError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=taps, claimed_score=res.score + 5, now=at)
+            self.assertEqual(cm.exception.code, "replay_mismatch")
+            self.assertEqual((g.status, g.reject_reason, g.score), ("rejected", "replay_mismatch", 0))
+            # второй заход с правильным счётом уже не пройдёт: одна попытка финиша на игру
+            with self.assertRaises(tw.TowerError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=taps, claimed_score=res.score, now=at)
+            self.assertEqual(cm.exception.status, 409)
+            self.assertIsNone(await s.scalar(select(TowerMonthlyBest).where(TowerMonthlyBest.user_id == u.id)))
+
+        run_db(body)
+
+    def test_log_for_another_seed_is_a_mismatch(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            # идеальная партия, подобранная под чужой seed, на этом seed не даст заявленного счёта
+            taps, res = play_taps((g.seed + 1) & 0xFFFFFFFF, None, (0,) * 12)
+            self.assertGreater(res.score, 20)
+            with self.assertRaises(tw.RejectedError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=taps, claimed_score=res.score, now=NOON + timedelta(minutes=5))
+            self.assertIn(cm.exception.code, ("replay_mismatch", "bad_taps"))
+
+        run_db(body)
+
+    def test_impossibly_fast_taps_rejected(self):
+        async def body(s):
+            for n, taps in enumerate(([200, 230], [150, 150], [200, 400, 460], [200, 269]), start=1):
+                u = await make_user(s, n)
+                g = await tw.start_game(s, user=u, now=NOON)
+                with self.assertRaises(tw.RejectedError, msg=str(taps)) as cm:
+                    await tw.finish_game(s, user=u, game_id=g.id, taps=taps, claimed_score=0, now=NOON + timedelta(minutes=1))
+                self.assertEqual(cm.exception.code, "taps_too_fast")
+                self.assertEqual(g.status, "rejected")
+            # ровно на пределе (100 мс до первого тапа, 70 мс между тапами) — ещё можно, на 1 мс меньше — нельзя
+            tw._check_taps([100, 170, 240], 10**6)
+            for bad in ([99], [100, 169], [100, 170, 239]):
+                with self.assertRaises(tw.RejectedError):
+                    tw._check_taps(bad, 10**6)
+
+        run_db(body)
+
+    def test_fast_first_tap_rejected(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            with self.assertRaises(tw.RejectedError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=[40], claimed_score=0, now=NOON + timedelta(minutes=1))
+            self.assertEqual(cm.exception.code, "taps_too_fast")
+
+        run_db(body)
+
+    def test_game_clock_cannot_outrun_wall_clock(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            taps, res = play_taps(g.seed, None, (0,) * 25)
+            self.assertGreater(taps[-1], 15_000)
+            # финиш через 5 секунд после старта, а в журнале 15+ секунд игры
+            with self.assertRaises(tw.RejectedError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=taps, claimed_score=res.score, now=NOON + timedelta(seconds=5))
+            self.assertEqual(cm.exception.code, "bad_duration")
+
+        run_db(body)
+
+    def test_duration_slack_allows_small_lag(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            taps, res = play_taps(g.seed, None, (0, 0, 0))
+            # финиш на 1 с «раньше» последнего тапа по игровым часам — в пределах запаса
+            at = NOON + timedelta(milliseconds=taps[-1] - 1000)
+            r = await tw.finish_game(s, user=u, game_id=g.id, taps=taps, claimed_score=res.score, now=at)
+            self.assertEqual(r.game.status, "finished")
+
+        run_db(body)
+
+    def test_taps_after_game_over_rejected(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            taps, res = play_taps(g.seed, None, (0, 0))
+            self.assertTrue(res.over)
+            with self.assertRaises(tw.RejectedError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=taps + [taps[-1] + 500], claimed_score=res.score, now=NOON + timedelta(minutes=2))
+            self.assertEqual(cm.exception.code, "bad_taps")
+
+        run_db(body)
+
+    def test_expired_game_closed(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            taps, res = play_taps(g.seed, None, (0, 0))
+            with self.assertRaises(tw.RejectedError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=taps, claimed_score=res.score, now=NOON + timedelta(hours=3))
+            self.assertEqual(cm.exception.code, "expired")
+
+        run_db(body)
+
+    def test_too_many_taps_and_negative(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            with self.assertRaises(tw.RejectedError) as cm:
+                await tw.finish_game(s, user=u, game_id=g.id, taps=list(range(200, 200 + 80 * 3001, 80)), claimed_score=0, now=NOON + timedelta(hours=1))
+            self.assertEqual(cm.exception.code, "too_many_taps")
+            g2 = await tw.start_game(s, user=u, now=NOON)
+            with self.assertRaises(tw.RejectedError) as cm:
+                await tw.finish_game(s, user=u, game_id=g2.id, taps=[-5], claimed_score=0, now=NOON + timedelta(minutes=1))
+            self.assertEqual(cm.exception.code, "bad_taps")
+
+        run_db(body)
+
+    def test_empty_log_is_a_zero_game(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=NOON)
+            r = await tw.finish_game(s, user=u, game_id=g.id, taps=[], claimed_score=0, now=NOON + timedelta(seconds=3))
+            self.assertEqual((r.game.status, r.game.score, r.new_best, r.rank), ("finished", 0, False, None))
+
+        run_db(body)
+
+    def test_limits_match_js(self):
+        self.assertEqual(VECTORS["limits"]["MIN_FIRST_TAP_MS"], tw.MIN_FIRST_TAP_MS)
+        self.assertEqual(VECTORS["limits"]["MIN_TAP_GAP_MS"], tw.MIN_TAP_GAP_MS)
+
+
+class MonthlyBestTest(unittest.TestCase):
+    def test_keeps_max_not_sum_and_ignores_lower_score(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            scores = []
+            for plan in ((0, 0, 0, 0, 0, 0), (0,), (0, 0, 0, 0, 0, 0, 0, 0)):
+                g = await tw.start_game(s, user=u, now=NOON)
+                r, _, res = await finish_ok(s, u, g, plan=plan, at=NOON + timedelta(minutes=3))
+                scores.append(res.score)
+            self.assertEqual(len(set(scores)), 3)
+            row = await s.scalar(select(TowerMonthlyBest).where(TowerMonthlyBest.user_id == u.id))
+            self.assertEqual(row.best_score, max(scores))
+            self.assertNotEqual(row.best_score, sum(scores))
+            self.assertEqual(row.month.isoformat(), "2026-10-01")
+
+        run_db(body)
+
+    def test_month_changes_at_moscow_midnight(self):
+        async def body(s):
+            u = await make_user(s, 1)
+            g = await tw.start_game(s, user=u, now=datetime(2026, 10, 31, 20, 0, tzinfo=UTC))
+            # 31 окт 23:59:30 МСК — ещё октябрь
+            r, _, res1 = await finish_ok(s, u, g, plan=(0, 0), at=datetime(2026, 10, 31, 20, 59, 30, tzinfo=UTC))
+            g = await tw.start_game(s, user=u, now=datetime(2026, 10, 31, 21, 0, tzinfo=UTC))
+            # 1 ноя 00:00:10 МСК — ноябрь, и это другой игровой день: попытки снова 3
+            r2, _, res2 = await finish_ok(s, u, g, plan=(0, 0, 0), at=datetime(2026, 10, 31, 21, 0, 10, tzinfo=UTC))
+            rows = (await s.scalars(select(TowerMonthlyBest).where(TowerMonthlyBest.user_id == u.id).order_by(TowerMonthlyBest.month))).all()
+            self.assertEqual([r.month.isoformat() for r in rows], ["2026-10-01", "2026-11-01"])
+            self.assertEqual([r.best_score for r in rows], [res1.score, res2.score])
+
+        run_db(body)
+
+
+class LeaderboardTest(unittest.TestCase):
+    async def _set(self, s, user, score, minute, month="2026-10-01"):
+        from datetime import date
+
+        s.add(TowerMonthlyBest(user_id=user.id, month=date.fromisoformat(month), best_score=score,
+                               achieved_at=NOON + timedelta(minutes=minute)))
+        await s.flush()
+
+    def test_order_ties_and_me(self):
+        async def body(s):
+            us = [await make_user(s, i, first_name=f"Игрок{i}") for i in range(1, 7)]
+            # счёт, минута набора
+            await self._set(s, us[0], 50, 10)
+            await self._set(s, us[1], 90, 30)
+            await self._set(s, us[2], 90, 20)  # тот же счёт, набран раньше → выше
+            await self._set(s, us[3], 10, 1)
+            await self._set(s, us[4], 70, 5)
+            # шестой без результата
+            lb = await tw.leaderboard(s, user_id=us[0].id, limit=10, now=NOON)
+            self.assertEqual([e["name"] for e in lb["entries"]], ["Игрок3", "Игрок2", "Игрок5", "Игрок1", "Игрок4"])
+            self.assertEqual([e["rank"] for e in lb["entries"]], [1, 2, 3, 4, 5])
+            self.assertEqual([e["score"] for e in lb["entries"]], [90, 90, 70, 50, 10])
+            self.assertEqual([e["is_me"] for e in lb["entries"]], [False, False, False, True, False])
+            self.assertEqual(lb["me"], {"rank": 4, "score": 50})
+            self.assertEqual((lb["total_players"], lb["month"]), (5, "2026-10"))
+            # игрок без счёта: места нет
+            lb6 = await tw.leaderboard(s, user_id=us[5].id, limit=10, now=NOON)
+            self.assertIsNone(lb6["me"])
+
+        run_db(body)
+
+    def test_me_rank_outside_top_n(self):
+        async def body(s):
+            us = [await make_user(s, i) for i in range(1, 8)]
+            for i, u in enumerate(us):
+                await self._set(s, u, 100 - i * 10, i)
+            lb = await tw.leaderboard(s, user_id=us[6].id, limit=3, now=NOON)
+            self.assertEqual(len(lb["entries"]), 3)
+            self.assertFalse(any(e["is_me"] for e in lb["entries"]))
+            self.assertEqual(lb["me"], {"rank": 7, "score": 40})
+            self.assertEqual(lb["total_players"], 7)
+
+        run_db(body)
+
+    def test_equal_score_and_time_falls_back_to_user_id(self):
+        async def body(s):
+            a, b = await make_user(s, 1), await make_user(s, 2)
+            await self._set(s, b, 30, 5)
+            await self._set(s, a, 30, 5)
+            lb = await tw.leaderboard(s, user_id=b.id, limit=10, now=NOON)
+            self.assertEqual([e["is_me"] for e in lb["entries"]], [False, True])  # a (меньший id) выше
+            self.assertEqual(lb["me"]["rank"], 2)
+
+        run_db(body)
+
+    def test_month_filter_and_banned_hidden(self):
+        async def body(s):
+            a = await make_user(s, 1)
+            cheat = await make_user(s, 2, is_banned=True)
+            await self._set(s, a, 20, 1)
+            await self._set(s, cheat, 999, 1)
+            await self._set(s, a, 500, 1, month="2026-09-01")
+            lb = await tw.leaderboard(s, user_id=a.id, limit=10, now=NOON)
+            self.assertEqual([(e["score"]) for e in lb["entries"]], [20])
+            old = await tw.leaderboard(s, user_id=a.id, month=tw.parse_month("2026-09"), limit=10)
+            self.assertEqual([(e["score"]) for e in old["entries"]], [500])
+            with self.assertRaises(tw.TowerError):
+                tw.parse_month("октябрь")
+
+        run_db(body)
+
+    def test_leaderboard_after_real_runs(self):
+        async def body(s):
+            a, b = await make_user(s, 1), await make_user(s, 2)
+            ga = await tw.start_game(s, user=a, now=NOON)
+            gb = await tw.start_game(s, user=b, now=NOON)
+            _, _, ra = await finish_ok(s, a, ga, plan=(0,) * 3, at=NOON + timedelta(minutes=2))
+            _, _, rb = await finish_ok(s, b, gb, plan=(0,) * 9, at=NOON + timedelta(minutes=2))
+            lb = await tw.leaderboard(s, user_id=a.id, now=NOON)
+            self.assertEqual([e["score"] for e in lb["entries"]], [rb.score, ra.score])
+            self.assertEqual(lb["me"]["rank"], 2)
+
+        run_db(body)
+
+
+class ApiTest(unittest.TestCase):
+    """Через HTTP: подмена БД и авторизации, ответы и коды."""
+
+    def test_flow(self):
+        from app.api.deps import get_current_user
+        from app.db.session import get_db
+        from app.main import app
+
+        async def main():
+            engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            maker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+            async with maker() as s:
+                me = await make_user(s, 1, first_name="Сергей")
+                other = await make_user(s, 2, first_name="Аня")
+                await s.commit()
+                me_id, other_id = me.id, other.id
+            who = {"id": me_id}
+
+            async def db_dep():
+                async with maker() as session:
+                    yield session
+
+            async def user_dep():
+                async with maker() as session:
+                    return await session.get(User, who["id"])
+
+            app.dependency_overrides[get_db] = db_dep
+            app.dependency_overrides[get_current_user] = user_dep
+            try:
+                async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+                    r = await c.get("/api/v1/tower/me")
+                    self.assertEqual(r.status_code, 200, r.text)
+                    j = r.json()
+                    self.assertEqual((j["free_per_day"], j["left_today"], j["best_month"], j["rank"]), (3, 3, None, None))
+                    self.assertTrue(re.match(r"^\d{4}-\d{2}$", j["month"]))
+                    self.assertTrue(j["next_reset_at"].endswith("+00:00"))
+
+                    r = await c.post("/api/v1/tower/start", json={"booster": "slow"})
+                    self.assertEqual((r.status_code, r.json()["detail"]["code"]), (400, "booster_unavailable"))
+
+                    r = await c.post("/api/v1/tower/start")
+                    self.assertEqual(r.status_code, 200, r.text)
+                    g = r.json()
+                    self.assertEqual(g["status"]["left_today"], 2)
+                    self.assertIsNone(g["booster"])
+
+                    taps, res = play_taps(g["seed"], None, (0, 0, 0, 60, 0))
+                    # настенные часы тестов: игра «длилась» дольше нуля мс, подвинем старт назад
+                    async with maker() as s:
+                        gm = await s.get(TowerGame, g["game_id"])
+                        gm.started_at = gameday.now_utc() - timedelta(milliseconds=taps[-1] + 1000)
+                        await s.commit()
+
+                    bad = await c.post("/api/v1/tower/finish", json={"game_id": g["game_id"], "taps": taps, "score": res.score + 1})
+                    self.assertEqual((bad.status_code, bad.json()["detail"]["code"]), (422, "replay_mismatch"))
+                    again = await c.post("/api/v1/tower/finish", json={"game_id": g["game_id"], "taps": taps, "score": res.score})
+                    self.assertEqual((again.status_code, again.json()["detail"]["code"]), (409, "already_finished"))
+
+                    # новая игра, теперь честно
+                    g = (await c.post("/api/v1/tower/start")).json()
+                    taps, res = play_taps(g["seed"], None, (0, 0, 0, 60, 0))
+                    async with maker() as s:
+                        gm = await s.get(TowerGame, g["game_id"])
+                        gm.started_at = gameday.now_utc() - timedelta(milliseconds=taps[-1] + 1000)
+                        await s.commit()
+                    r = await c.post("/api/v1/tower/finish", json={"game_id": g["game_id"], "taps": taps, "score": res.score})
+                    self.assertEqual(r.status_code, 200, r.text)
+                    f = r.json()
+                    self.assertEqual((f["score"], f["best_month"], f["rank"], f["new_best"], f["over"]), (res.score, res.score, 1, True, True))
+                    self.assertEqual(f["status"]["left_today"], 1)
+
+                    # нецелые тапы не принимаются схемой
+                    g = (await c.post("/api/v1/tower/start")).json()
+                    r = await c.post("/api/v1/tower/finish", json={"game_id": g["game_id"], "taps": [200.5], "score": 0})
+                    self.assertEqual(r.status_code, 422)
+
+                    # попытки кончились: 409 с кодом и временем сброса
+                    r = await c.post("/api/v1/tower/start")
+                    self.assertEqual(r.status_code, 409)
+                    d = r.json()["detail"]
+                    self.assertEqual(d["code"], "no_attempts")
+                    self.assertTrue(d["next_reset_at"])
+
+                    lb = (await c.get("/api/v1/tower/leaderboard", params={"limit": 5})).json()
+                    self.assertEqual([(e["name"], e["score"], e["is_me"]) for e in lb["entries"]], [("Сергей", res.score, True)])
+                    self.assertEqual(lb["me"]["rank"], 1)
+                    self.assertEqual((await c.get("/api/v1/tower/leaderboard", params={"month": "xx"})).status_code, 400)
+                    self.assertEqual((await c.get("/api/v1/tower/leaderboard", params={"limit": 0})).status_code, 422)
+
+                    # чужой игрок не видит мою игру
+                    who["id"] = other_id
+                    r = await c.post("/api/v1/tower/finish", json={"game_id": g["game_id"], "taps": [], "score": 0})
+                    self.assertEqual(r.status_code, 404)
+            finally:
+                app.dependency_overrides.clear()
+                await engine.dispose()
+
+        asyncio.run(main())
+
+
+PG_URL = os.environ.get("TEST_PG_URL")
+
+
+@unittest.skipUnless(PG_URL, "нужен TEST_PG_URL (локальная пустая тестовая база Postgres: таблицы пересоздаются)")
+class PostgresConcurrencyTest(unittest.TestCase):
+    """Параллельные запросы на настоящем Postgres: лимит попыток и один финиш не обходятся гонкой."""
+
+    def _run(self, fn):
+        async def main():
+            engine = create_async_engine(PG_URL)
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.drop_all)
+                await conn.run_sync(Base.metadata.create_all)
+            maker = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+            try:
+                await fn(maker)
+            finally:
+                await engine.dispose()
+
+        asyncio.run(main())
+
+    def test_parallel_starts_never_exceed_three(self):
+        async def body(maker):
+            async with maker() as s:
+                u = await make_user(s, 1)
+                await s.commit()
+                uid = u.id
+
+            async def one():
+                async with maker() as s:
+                    user = await s.get(User, uid)
+                    try:
+                        await tw.start_game(s, user=user, now=NOON)
+                        await s.commit()
+                        return True
+                    except tw.NoAttemptsError:
+                        await s.rollback()
+                        return False
+
+            got = await asyncio.gather(*[one() for _ in range(8)])
+            self.assertEqual(sum(got), 3)
+            async with maker() as s:
+                self.assertEqual(await tw.used_today(s, uid, NOON), 3)
+                self.assertEqual(len((await s.scalars(select(TowerGame))).all()), 3)
+
+        self._run(body)
+
+    def test_parallel_finish_counts_once(self):
+        async def body(maker):
+            async with maker() as s:
+                u = await make_user(s, 1)
+                g = await tw.start_game(s, user=u, now=NOON)
+                await s.commit()
+                uid, gid, seed = u.id, g.id, g.seed
+            taps, res = play_taps(seed, None, (0, 0, 0, 60, 0))
+            at = NOON + timedelta(milliseconds=taps[-1] + 500)
+
+            async def one():
+                async with maker() as s:
+                    user = await s.get(User, uid)
+                    try:
+                        await tw.finish_game(s, user=user, game_id=gid, taps=taps, claimed_score=res.score, now=at)
+                        await s.commit()
+                        return "ok"
+                    except tw.TowerError as e:
+                        await s.rollback()
+                        return e.code
+
+            got = await asyncio.gather(*[one() for _ in range(5)])
+            self.assertEqual(sorted(got), ["already_finished"] * 4 + ["ok"])
+            async with maker() as s:
+                rows = (await s.scalars(select(TowerMonthlyBest))).all()
+                self.assertEqual([(r.user_id, r.best_score) for r in rows], [(uid, res.score)])
+
+        self._run(body)
+
+
+if __name__ == "__main__":
+    unittest.main()
