@@ -3,6 +3,7 @@ from app.models.economy import EconomySetting
 from app.models.miner import Miner, MinerUpgradeLog
 from app.models.promo import DailyCheckIn, PromoCode, PromoRedemption
 from app.models.task import Task, TaskSubmission
+from app.models.tower import TowerDailyAttempts, TowerGame, TowerMonthlyBest
 from app.models.user import User
 from app.models.withdraw import WithdrawRequest
 
@@ -13,6 +14,9 @@ __all__ = [
     "MinerUpgradeLog",
     "Task",
     "TaskSubmission",
+    "TowerGame",
+    "TowerDailyAttempts",
+    "TowerMonthlyBest",
     "EconomySetting",
     "PromoCode",
     "PromoRedemption",

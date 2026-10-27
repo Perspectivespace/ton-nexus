@@ -7,6 +7,9 @@ import type {
   MeOut,
   MinerOut,
   TaskOut,
+  TowerFinish,
+  TowerStart,
+  TowerStatus,
 } from "./types";
 
 export function useMe() {
@@ -562,5 +565,36 @@ export function useSetDeployer() {
     mutationFn: (body: { telegram_id: number; is_deployer: boolean }) =>
       api("/api/v1/admin/roles", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["deploy", "deployers"] }),
+  });
+}
+
+// ── «Башня» ──
+export function useTowerMe() {
+  return useQuery({
+    queryKey: ["tower", "me"],
+    queryFn: () => api<TowerStatus>("/api/v1/tower/me"),
+    // попытки могли смениться (полночь по Москве, игра с другого устройства) — смотрим заново при каждом открытии
+    refetchOnMount: "always",
+  });
+}
+
+export function useTowerStart() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<TowerStart>("/api/v1/tower/start", { method: "POST", body: JSON.stringify({}) }),
+    onSuccess: (r) => qc.setQueryData(["tower", "me"], r.status),
+    // 409 «попыток нет» — подтянуть актуальный статус, экран покажет сообщение
+    onError: () => qc.invalidateQueries({ queryKey: ["tower", "me"] }),
+  });
+}
+
+export function useTowerFinish() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { game_id: number; taps: number[]; score: number }) =>
+      api<TowerFinish>("/api/v1/tower/finish", { method: "POST", body: JSON.stringify(v) }),
+    onSuccess: (r) => {
+      qc.setQueryData(["tower", "me"], r.status);
+    },
   });
 }

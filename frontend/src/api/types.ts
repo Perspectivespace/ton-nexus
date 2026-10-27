@@ -112,3 +112,35 @@ export type DeployerOut = {
   /** из TELEGRAM_DEPLOYER_IDS на сервере — в приложении не снимается */
   from_env?: boolean;
 };
+
+// ── «Башня» ──
+export type TowerStatus = {
+  free_per_day: number;
+  used_today: number;
+  left_today: number;
+  /** ближайшие 00:00 МСК (ISO, UTC) — когда вернутся попытки */
+  next_reset_at: string;
+  month: string;
+  best_month: number | null;
+  rank: number | null;
+};
+
+export type TowerStart = {
+  game_id: number;
+  seed: number;
+  booster: string | null;
+  status: TowerStatus;
+};
+
+export type TowerFinish = {
+  game_id: number;
+  score: number;
+  height: number;
+  perfects: number;
+  best_combo: number;
+  over: boolean;
+  new_best: boolean;
+  best_month: number;
+  rank: number | null;
+  status: TowerStatus;
+};

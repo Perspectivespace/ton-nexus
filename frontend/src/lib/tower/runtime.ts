@@ -13,7 +13,7 @@
  * Игровые часы идут только в кадрах (не больше 50 мс за кадр) — пауза и свёрнутое приложение их не двигают.
  * Тап оценивается в момент события (event.timeStamp), а не кадра, и пишется в журнал целыми мс (engine.ts).
  */
-import { CONFIG, drop, newGame, sliderX, top, type Block, type DropResult, type Game } from "./engine";
+import { CONFIG, LIMITS, drop, newGame, sliderX, top, type Block, type Booster, type DropResult, type Game } from "./engine";
 
 export interface RunCallbacks {
   /** бросок принят (идеальный, обычный или промах) */
@@ -152,9 +152,9 @@ export class TowerRun {
     }
   }
 
-  /** новый забег с этим seed */
-  start(seed: number) {
-    this.g = newGame(seed);
+  /** новый забег с этим seed и (необязательно) бустером — их выдаёт сервер */
+  start(seed: number, booster: Booster | null = null) {
+    this.g = newGame(seed, booster);
     this.pieces = [];
     this.flash = null;
     this.clock = 0;
@@ -193,6 +193,8 @@ export class TowerRun {
     if (!this.playing || this.g.over) return;
     if (ts < this.ignoreUntil) return;
     const t = Math.max(this.g.spawnT, Math.floor(this.clock + Math.min(Math.max(ts - this.lastNow, 0), MAX_DT)));
+    // слишком быстрый тап (двойное касание) не принимаем: сервер такой журнал всё равно отклонил бы
+    if (t - this.g.spawnT < (this.g.taps.length ? LIMITS.MIN_TAP_GAP_MS : LIMITS.MIN_FIRST_TAP_MS)) return;
     const r = drop(this.g, t);
     if (!r) return;
     const hue = r.level;
@@ -414,6 +416,18 @@ export class TowerRun {
       }
       ctx.stroke();
       ctx.globalAlpha = 1;
+      // бустер «Прицел»: тонкая линия на идеальной точке первые AIM_BLOCKS блоков (только картинка, на счёт не влияет)
+      if (g.booster === "aim" && lvl - 1 < CONFIG.AIM_BLOCKS) {
+        const xx = Math.round(base.x * k) + 0.5;
+        ctx.strokeStyle = layerColors(lvl, pal.dark).top;
+        ctx.globalAlpha = 0.85;
+        ctx.lineWidth = Math.max(1, this.dpr);
+        ctx.beginPath();
+        ctx.moveTo(xx, y0 - CONFIG.BLOCK_H * k * 1.6);
+        ctx.lineTo(xx, y0 + CONFIG.BLOCK_H * k * 1.1);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       this.block(cur, lvl, sy((lvl + 1) * CONFIG.BLOCK_H), k, bh);
     }
 
