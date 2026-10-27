@@ -36,6 +36,7 @@ export const IconTasks = make("Tasks", <>{p("M5 3h11l3 3v15H5z")}{p("M8.5 9h7M8.
 export const IconWallet = make("Wallet", <>{p("M3 7h15l3 3v10H6l-3-3z")}{p("M15 13.5h3")}{p("M6 7l8-3 2 3")}</>);
 export const IconGift = make("Gift", <>{p("M3 7h18v3H3z")}{p("M4 10h16v8l-2 2H4z")}{p("M12 7v13M12 7L9 4M12 7l3-3")}</>);
 export const IconWheel = make("Wheel", <>{p("M8.5 3.5h7l5 5v7l-5 5h-7l-5-5v-7z")}{p("M12 3.5v6M12 14.5v6M3.5 12h6M14.5 12h6")}{p("M10.5 10.5h3v3h-3z")}</>);
+export const IconTower = make("Tower", <>{p("M9 3h6v5H9z")}{p("M6 8h12v6H6z")}{p("M4 14h16v6H4z")}</>);
 export const IconUp = make("Up", <>{p("M12 18V6M7 11l5-5 5 5")}{p("M5 20h14")}</>);
 export const IconOut = make("Out", <>{p("M12 15V4M7.5 8.5L12 4l4.5 4.5")}{p("M4 13v7h14l2-2v-5")}</>);
 export const IconIn = make("In", <>{p("M12 4v11M7.5 10.5L12 15l4.5-4.5")}{p("M4 13v7h14l2-2v-5")}</>);

@@ -25,6 +25,7 @@ export default function App() {
           <Route path="/inbox" element={route("inbox")} />
           <Route path="/withdraws" element={route("withdraws")} />
           <Route path="/deploy" element={route("deploy")} />
+          <Route path="/tower" element={route("tower")} />
           {Kit && (
             <Route
               path="/kit"
