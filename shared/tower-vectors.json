@@ -19,6 +19,10 @@
   "AIM_BLOCKS": 5,
   "SPAN": 880
  },
+ "limits": {
+  "MIN_FIRST_TAP_MS": 100,
+  "MIN_TAP_GAP_MS": 70
+ },
  "cases": [
   {
    "name": "s1-perfect-30",

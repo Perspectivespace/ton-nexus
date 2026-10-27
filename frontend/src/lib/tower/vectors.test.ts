@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CONFIG, SPAN, drop, newGame, replay, sliderX, speedFor, top, type Booster, type Game } from "./engine";
+import { CONFIG, LIMITS, SPAN, drop, newGame, replay, sliderX, speedFor, top, type Booster, type Game } from "./engine";
 
 /**
  * Общие векторы для движка на JS и его порта на Python (backend/app/services/tower_engine.py).
@@ -94,7 +94,7 @@ function cases(): Case[] {
 describe("общие векторы JS ↔ Python", () => {
   it("shared/tower-vectors.json совпадает с движком (обновить: npx vitest run -u)", async () => {
     const list = cases().map((c) => ({ ...c, expected: replay(c.seed, c.taps, c.booster) }));
-    await expect(JSON.stringify({ version: 1, config: { ...CONFIG, SPAN }, cases: list }, null, 1) + "\n").toMatchFileSnapshot(
+    await expect(JSON.stringify({ version: 1, config: { ...CONFIG, SPAN }, limits: LIMITS, cases: list }, null, 1) + "\n").toMatchFileSnapshot(
       "../../../../shared/tower-vectors.json",
     );
   });
