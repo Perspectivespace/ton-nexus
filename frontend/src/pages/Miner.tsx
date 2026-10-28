@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { entryMark } from "@/lib/entryTrace";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMe, useMiner, useMinerStart, useMinerClaim } from "@/api/hooks";
 import {
@@ -42,13 +41,6 @@ export function Miner() {
   const start = useMinerStart();
   const claim = useMinerClaim();
   const toast = useToast();
-
-  // метки входа для счётчика FPS: экран смонтирован; пришёл свежий ответ сервера (лишняя перерисовка реактора)
-  useLayoutEffect(() => entryMark("экран"), []);
-  const firstData = useRef(dataUpdatedAt);
-  useEffect(() => {
-    if (dataUpdatedAt !== firstData.current) entryMark("ответ");
-  }, [dataUpdatedAt]);
 
   const accrued = Number(m?.accrued_now ?? m?.pending_reward ?? 0);
   const cap = Number(m?.storage_cap ?? m?.estimated_reward ?? 0);

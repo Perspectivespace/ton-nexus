@@ -1,39 +1,13 @@
 /*
- * Интерактивные здания (DESIGN.md п. 3.8.3): в продукте — только реакторная башня → «Майнер».
- * Только transform / opacity, свечение статичное, бесконечных анимаций нет.
- * «Уменьшить движение» — без наезда; слабое устройство — простое растворение.
+ * Разделы-здания (DESIGN.md п. 3.8.3): в продукте — только реакторная башня → «Майнер» (вход — через док).
+ * Экран «МАЙНЕР» на башне — декор, не кнопка. Только opacity, свечение статичное, бесконечных анимаций нет.
+ * «Уменьшить движение» — интерьер без проявления.
  */
 
-/* камера: наезд на здание — центр здания в центр экрана, масштаб вокруг него */
-.city .c-zoom { position: absolute; inset: 0; transform-origin: var(--bz-ox, 50%) var(--bz-oy, 50%);
-  transition: transform .45s cubic-bezier(.55, 0, .25, 1); will-change: auto; }
-html.bz-in .city .c-zoom { transform: translate3d(var(--bz-dx, 0), var(--bz-dy, 0), 0) scale(var(--bz-s, 2.3)); will-change: transform; }
-/* раздел монтируется ещё во время наезда (главная уже ушла): сцена держит позицию главной, улица видна до конца наезда */
-html.bz-in .city .c-stage { transform: translate3d(-50%, -120px, 0); }
-html.bz-in .city.inside .c-stage { visibility: visible; }
-/* растушёвка краёв сцены не масштабируется — на время наезда убираем её, иначе виден «шов» */
-.city .c-stage::after { transition: opacity .25s ease-out; }
-html.bz-in .city .c-stage::after { opacity: 0; }
-html.bz-snap .city .c-zoom, html.bz-snap .city .c-stage::after, html.bz-back .city .c-stage { transition: none; }
-html.bz-back .city .c-zoom { will-change: transform; }
 /* внутри здания улица скрыта под интерьером: не рисуется и не анимируется */
 .city.inside .c-stage { visibility: hidden; }
-.city.inside .c-zoom { transition: none; }
 .city.inside .cv2 *, .city.inside .cv2 *::before, .city.inside .cv2 *::after { animation-play-state: paused; }
 
-/* контент растворяется на время наезда (интерфейс «остаётся на улице») */
-.app-stage { transition: opacity .28s ease-out; }
-html.bz-hide .app-stage { opacity: 0; }
-/* пока экран раздела скрыт и проявляется — свой слой: проявление не перерисовывает страницу */
-html:is(.bz-hide, .bz-show) .app-stage { will-change: opacity; }
-html.bz-fade .city .c-stage { opacity: .35; transition: opacity .22s ease-out; }
-
-/* ── точка входа: невидимая кнопка в «окне в город», каждый кадр прокрутки ставится по сцене города (CityBuildings → TowerHotspot).
- * .bh-clip — область, где башню видно: окно (без полосы чипа «Район» снизу) и шапка над ним; ниже — карточки, тап у них. */
-.cv2-window { position: relative; }
-.cv2-window .bh-clip { position: absolute; top: -100vh; bottom: 34px; left: 0; right: 0; overflow: hidden; pointer-events: none; }
-.cv2-window .bh { position: absolute; left: 0; top: 0; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto;
-  -webkit-tap-highlight-color: transparent; }
 /* экран «МАЙНЕР» — встроенный дисплей башни в слое города (CityV2 → TowerScreen), в координатах кадра:
  * сцена фиксирована под страницей, поэтому экран стоит на башне при любой прокрутке. Лёгкий: тонкие моноширинные буквы
  * с разрядкой, полупрозрачное стекло + тонкая кромка, статичная строчная развёртка (LED-матрица). Свечение статичное. */
@@ -41,8 +15,7 @@ html.bz-fade .city .c-stage { opacity: .35; transition: opacity .22s ease-out; }
   font: 500 clamp(6.5px, 1.85vw, 9.5px)/1 var(--font-mono, monospace); letter-spacing: .34em; color: #CFFCFF; white-space: nowrap;
   text-shadow: 0 0 3px rgba(43, 245, 255, .9), 0 0 9px rgba(43, 245, 255, .35);
   background: linear-gradient(180deg, rgba(10, 52, 74, .6), rgba(4, 26, 42, .52));
-  box-shadow: inset 0 0 0 1px rgba(125, 249, 255, .2), inset 0 1px 0 rgba(125, 249, 255, .5), 0 0 10px rgba(43, 245, 255, .16);
-  transition: transform .12s ease-out; }
+  box-shadow: inset 0 0 0 1px rgba(125, 249, 255, .2), inset 0 1px 0 rgba(125, 249, 255, .5), 0 0 10px rgba(43, 245, 255, .16); }
 .cv2 .tw-scr span { margin-right: -.34em; }
 /* развёртка: статичные строки поверх букв — «пиксели» экрана */
 .cv2 .tw-scr::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(2, 16, 28, .32) 0 1px, transparent 1px 2px); }
@@ -73,25 +46,14 @@ html:not(.cv2-home) .cv2:is(.ph-dawn, .ph-day) .tw-scr { opacity: .75; }
   background: linear-gradient(90deg, transparent, rgba(0, 150, 180, .45) 25%, rgba(0, 150, 180, .45) 75%, transparent) top / 100% 1px no-repeat,
     linear-gradient(90deg, transparent, rgba(255, 255, 255, .7) 25%, rgba(255, 255, 255, .7) 75%, transparent) bottom / 100% 1px no-repeat; }
 
-/* нажатие: башня коротко «отзывается» — подсветка по башне и экран чуть сжимается (только opacity / transform) */
-.cv2 .tw-press { position: absolute; pointer-events: none; opacity: 0; transition: opacity .18s ease-out;
-  background: radial-gradient(55% 40% at 52% 40%, rgba(125, 249, 255, .2), rgba(125, 249, 255, 0) 100%); }
-html.bh-down .cv2 .tw-press { opacity: 1; transition-duration: .05s; }
-html.bh-down .cv2 .tw-scr { transform: scale(.94); }
-/* фокус с клавиатуры: подсветка башни в слое города (clip-path обрезал бы обводку) */
-html:has(.cv2-window .bh:focus-visible) .cv2 .tw-press { opacity: .7; }
-
 /* ── интерьер раздела: один нарисованный кадр на тему, поверх — обычные панели раздела ── */
 .city .bi { position: absolute; inset: 0; overflow: hidden; background: #061a2c; }
 [data-theme="light"] .city .bi { background: #8fd0ee; }
 .bi img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
 @media (min-width: 561px) { .bi img { width: 560px; left: 50%; transform: translateX(-50%); } }
-.bi.a-zoom { animation: bi-in .4s cubic-bezier(.2, .8, .2, 1) both; }
-.bi.a-fade, .bi.a-dock { animation: bi-fade .26s ease-out both; }
-.bi.a-out { animation: bi-out .3s cubic-bezier(.4, 0, .8, .4) both; }
-.bi.a-out-fade { animation: bi-fade .22s ease-in reverse both; }
-@keyframes bi-in { from { opacity: 0; transform: scale(1.16) } to { opacity: 1; transform: none } }
-@keyframes bi-out { from { opacity: 1; transform: none } to { opacity: 0; transform: scale(.88) } }
+.bi.a-dock { animation: bi-fade .26s ease-out both; }
+/* кадр зала качается только при входе — пришёл позже проявления фона, тоже проявляется, а не «выскакивает» */
+.bi img { animation: bi-fade .3s ease-out both; }
 @keyframes bi-fade { from { opacity: 0 } to { opacity: 1 } }
 
 /* зал читается вокруг реактора: у героя «Майнера» верх (кольцо реактора) почти прозрачный,
@@ -107,6 +69,5 @@ html[data-theme="light"].in-bld { --scrim-top: linear-gradient(180deg, rgba(238,
   --scrim-bottom: linear-gradient(0deg, rgba(238, 246, 252, .88), rgba(238, 246, 252, 0) 110px); }
 
 @media (prefers-reduced-motion: reduce) {
-  .city .c-zoom, .app-stage, .cv2 .tw-scr, .cv2 .tw-press { transition: none; }
-  .bi.a-zoom, .bi.a-fade, .bi.a-dock, .bi.a-out, .bi.a-out-fade { animation: none; }
+  .bi.a-dock, .bi img { animation: none; }
 }

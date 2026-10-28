@@ -1,7 +1,7 @@
 /**
- * «Тишина» для фоновой подгрузки: пока идёт наезд на здание и ~1 с после смены экрана, главный поток и
- * компоновщик заняты кадрами перехода — чанки разделов (загрузка, разбор, исполнение модуля) в это окно
- * добавляют остановки кадров. Фоновое — только когда окно закрылось; по намерению (касание ссылки) — как раньше.
+ * «Тишина» для фоновой подгрузки: ~1 с после смены экрана главный поток и компоновщик заняты первыми кадрами
+ * нового экрана — чанки разделов (загрузка, разбор, исполнение модуля) в это окно добавляют остановки кадров.
+ * Фоновое — только когда окно закрылось; по намерению (касание ссылки) — как раньше.
  */
 let until = 0;
 
@@ -10,12 +10,7 @@ export const markBusy = (ms: number) => {
   until = Math.max(until, performance.now() + ms);
 };
 
-const transitioning = () => {
-  const c = document.documentElement.classList;
-  return c.contains("bz-hide") || c.contains("bz-in") || c.contains("bz-fade") || c.contains("bz-show") || c.contains("bz-back");
-};
-
-export const isBusy = () => performance.now() < until || transitioning();
+export const isBusy = () => performance.now() < until;
 
 /** Выполнить cb в простое, но не раньше конца окна «занято» (проверка раз в 250 мс). */
 export function idleWhenQuiet(cb: () => void) {

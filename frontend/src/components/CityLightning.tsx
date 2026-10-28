@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
  * Выключено:
  * - при «уменьшить движение» и на слабом устройстве;
  * - пока приложение скрыто;
- * - во время наезда на здание и внутри здания;
+ * - внутри здания;
  * - в любой фазе, кроме ночи (компонент рисуется только ночью).
  *
  * ?lightning=now — первый разряд через ~1.5 с (для проверки; потом обычный ритм).
@@ -79,7 +79,6 @@ function newStrike(): Strike {
 function blocked(): boolean {
   const c = document.documentElement.classList;
   if (document.hidden || c.contains("app-hidden") || c.contains("low-end") || c.contains("in-bld")) return true;
-  if (["bz-hide", "bz-in", "bz-fade", "bz-back", "bz-snap"].some((k) => c.contains(k))) return true;
   try {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   } catch {
