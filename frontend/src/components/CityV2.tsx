@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useMe } from "@/api/hooks";
 import { CityLightning } from "./CityLightning";
+import { CityRain } from "./CityRain";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
@@ -139,7 +140,7 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (10 анимаций + дрон в заднем слое) ── */}
         <i className="fog f-far" />
         <i className="fog f-near" />
-        <i className="rain" />
+        <CityRain phase={phase} tier={tier} />
         {WIN.map(([x, y, d, dl], n) => (
           <i key={`w${n}`} className="win" style={{ ...box(x, y, 7, 8), "--d": `${d}s`, "--dl": `-${dl}s` } as Vars} />
         ))}
@@ -148,9 +149,6 @@ export function CityV2({ tier }: { tier: number }) {
         ))}
         <i className="steam" style={{ left: pc(598, W), top: pc(628, H) }} />
         <i className="steam s2" style={{ left: pc(612, W), top: pc(630, H) }} />
-
-        {/* ── T1–T2: круги на лужах (город ещё спит, дождь слышнее) ── */}
-        {tier <= 2 && <i className="ripple" style={{ left: pc(250, W), top: pc(1090, H) }} />}
 
         {/* ── T2+: вывески зажглись (одна иногда «моргает»); единственный борт ПЕРЕД башней ── */}
         {tier >= 2 && (
