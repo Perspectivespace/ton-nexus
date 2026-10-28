@@ -3,6 +3,7 @@ import { useMe } from "@/api/hooks";
 import { CityLightning } from "./CityLightning";
 import { CityNeon } from "./CityNeon";
 import { CityRain } from "./CityRain";
+import { CityGlint, CitySky } from "./CityDaySky";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
@@ -90,6 +91,7 @@ export function CityV2({ tier }: { tier: number }) {
 
   const { phase, upcoming } = useCityPhase();
   const occ = TOWER_SILHOUETTE[tier] ?? TOWER_SILHOUETTE[1];
+  const light = phase === "dawn" || phase === "day"; // небо и блики — только при свете
   // за полторы минуты до смены фазы кадр следующей фазы (для текущего облика) уходит в кэш браузера
   useEffect(() => {
     if (upcoming) preload(tier, upcoming);
@@ -134,6 +136,7 @@ export function CityV2({ tier }: { tier: number }) {
           </>
         )}
         {tier >= 4 && <i className="craft c3 flip" />}
+        {light && <CitySky />}
       </div>
       {/* ── СВЕТ (рассвет/день, daycity шаг 2): лучи солнца и тёплая кромка — за копией башни, она их режет.
           Статичные градиенты; одна медленная анимация лучей; ночью и вечером слой погашен. ── */}
@@ -146,6 +149,7 @@ export function CityV2({ tier }: { tier: number }) {
       <div className="cv2-tone" aria-hidden>
         <i className="face" style={{ clipPath: occ }} />
         <i className="grade" />
+        {light && <CityGlint clip={occ} />}
       </div>
       <div className="cv2-life">
         {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (10 анимаций + дрон в заднем слое) ── */}
