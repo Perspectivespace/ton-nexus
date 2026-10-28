@@ -39,6 +39,18 @@
   --onbg-tick: var(--neon-dim);
 }
 
+/* светлая тема: шапка приложения и экрана лежат прямо на (всегда тёмном) городе — для них «ночные» чернила (п. 3.8).
+ * Внутри здания (.in-bld) у светлой темы свой светлый скрим интерьера — там остаются обычные светлые чернила. */
+html[data-theme="light"]:not(.in-bld) .on-city {
+  --text: #E6EBF5; --text-2: #9AA4BA; --text-3: #8F99B0; --text-shade: 0 1px 2px rgba(0, 0, 0, .9);
+  --neon: #2BF5FF; --neon-soft: rgba(43,245,255,.12); --neon-dim: rgba(43,245,255,.35);
+  --ok: #5DFFB0; --ok-soft: rgba(93,255,176,.11); --amber: #FFB547; --amber-soft: rgba(255,181,71,.13);
+  --magenta: #FF2E7E; --magenta-soft: rgba(255,46,126,.13); --warn: #FFE066; --warn-soft: rgba(255,224,102,.11);
+  --surface-3: #181C2A; --onbg-plate: rgba(6, 8, 14, .86);
+}
+html[data-theme="light"]:not(.in-bld) .on-city .brand-pair > .b-dark { display: block; }
+html[data-theme="light"]:not(.in-bld) .on-city .brand-pair > .b-light { display: none; }
+
 /* —— Форма: срезанный угол + кромка 1 px + материал (п. 3.1–3.4) —— */
 .ui-cut {
   --c: var(--cut-m); --edge: var(--edge-1); --fill: var(--mat-1); --bevel: var(--bevel-1);
@@ -647,6 +659,17 @@ button.ui-stat.scan:disabled { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .ui-roll, .ui-burn, .ui-burn::after { animation: none !important; } .dial.is-run .dl-needle { transition: none; } }
 
 /* Главная: строка реактора внизу героя (вход в майнер без дубля дока) */
+/* панель баланса на главной (п. 3.8): свёрнута — тонкая полоса «баланс · уровень»; касание раскрывает подробности */
+.home-bar { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px 12px 20px;
+  background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.home-bar:focus-visible { outline: 2px solid var(--neon); outline-offset: -4px; }
+.home-grab { position: absolute; top: 5px; left: 50%; width: 32px; height: 3px; margin-left: -16px; border-radius: 2px; background: var(--line-strong); }
+.home-lv { flex: none; }
+.home-chev { flex: none; color: var(--text-3); transform: rotate(90deg); transition: transform .3s cubic-bezier(.22,1,.36,1); }
+.home-bar[aria-expanded="true"] .home-chev { transform: rotate(-90deg); }
+.home-xp { position: absolute; left: 20px; right: 16px; bottom: 0; height: 2px; background: var(--line); overflow: hidden; }
+.home-xp::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--xp, 0%); background: var(--neon); }
+@media (prefers-reduced-motion: reduce) { .home-chev { transition: none; } }
 .home-rx { display: flex; align-items: center; gap: 12px; min-height: 44px; color: var(--text); }
 .home-rx > svg:first-child { color: var(--neon); flex: none; }
 .home-rx > svg:last-child { color: var(--text-3); flex: none; }

@@ -42,19 +42,30 @@ function tokenColor(name: string, fallback: `#${string}`): `#${string}` {
   return /^#[0-9a-fA-F]{6}$/.test(v) ? (v as `#${string}`) : fallback;
 }
 
+/**
+ * Цвет шапки и фона Telegram — под то, что лежит сразу под шапкой: город (а он тёмный в любой теме, п. 3.8),
+ * поэтому по умолчанию «пол» города. Исключение — светлая тема внутри здания: там светлый скрим интерьера.
+ * Зовётся при смене темы и при входе/выходе из здания (CityBackdrop).
+ */
+export function syncChrome() {
+  const root = document.documentElement;
+  const light = root.dataset.theme === "light";
+  const color = light && root.classList.contains("in-bld") ? tokenColor("--bg", "#EEF1F6") : tokenColor("--city-floor", "#04050A");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
+  if (!insideTelegram()) return;
+  try {
+    WebApp.setHeaderColor(color);
+    WebApp.setBackgroundColor(color);
+  } catch {
+    /* старые клиенты Telegram */
+  }
+}
+
 export function applyTheme(theme: Theme = currentTheme()) {
   const root = document.documentElement;
   root.dataset.theme = theme;
   root.style.colorScheme = theme;
-  const bg = tokenColor("--bg", theme === "light" ? "#EEF1F6" : "#06070C");
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg);
-  if (!insideTelegram()) return;
-  try {
-    WebApp.setHeaderColor(bg);
-    WebApp.setBackgroundColor(bg);
-  } catch {
-    /* старые клиенты Telegram */
-  }
+  syncChrome();
 }
 
 /**

@@ -29,7 +29,7 @@ export function BrandWordmark({ height = 12, className = "" }: { height?: number
 /** Шапка приложения (п. 9.5): знак 28 px + надпись. */
 export function AppHeader() {
   return (
-    <header className="app-brand mx-auto flex w-full max-w-lg items-center gap-2.5 px-4 pt-3">
+    <header className="app-brand on-city mx-auto flex w-full max-w-lg items-center gap-2.5 px-4 pt-3">
       <BrandMark size={28} />
       <BrandWordmark height={12} />
       <span className="sr-only">TON Nexus</span>

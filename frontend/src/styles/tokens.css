@@ -90,15 +90,9 @@
   --scrim-bottom: linear-gradient(0deg, rgba(4,5,10,.85) 0, rgba(4,5,10,.35) 110px, transparent 190px);
   --city-floor: #04050A;
 }
-[data-theme="light"] {
-  --scrim-top: linear-gradient(180deg, rgba(238,241,246,.85), rgba(238,241,246,0) 120px);
-  --scrim-bottom: linear-gradient(0deg, rgba(238,241,246,.95), transparent 260px);
-  --city-floor: var(--bg);
-}
-/* светлая тема над вечерним/ночным городом: светлая шапка короче и плотнее — без молочной дымки на полнеба */
-html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"]) {
-  --scrim-top: linear-gradient(180deg, rgba(238,241,246,.94) 0, rgba(238,241,246,.7) 52px, rgba(238,241,246,0) 104px);
-}
+/* Город — ночная (или по фазе суток) сцена в любой теме интерфейса (п. 3.8): «пол», растворение краёв и скрим
+ * всегда тёмные. Раньше в светлой теме они были светлыми (#EEF1F6) — над тёмным кадром это давало белую
+ * «штору» сверху и молочную дымку по краям. Текст на скриме в светлой теме держит .on-city (components.css). */
 
 /*
  * Tailwind 4: токены доступны как классы — bg-surface-1, text-neon, text-text-2, border-line,
