@@ -4,10 +4,11 @@ import { CityLightning } from "./CityLightning";
 import { CityNeon } from "./CityNeon";
 import { CityRain } from "./CityRain";
 import { CityGlint, CitySky } from "./CityDaySky";
-import { CityDuskGlass, CityDuskLights, CityDuskSun, district, CityDuskStars, CityDuskTraffic, CityDuskWet } from "./CityDusk";
+import { CityDuskGlass, CityDuskLights, CityDuskSun, district, CityDuskStars, CityDuskWet } from "./CityDusk";
 import { CityClouds, CityCloudShade, CityMorningFog } from "./CityDayAir";
 import { CityAds, CityPuddles } from "./CityDayAds";
 import { isClearSky } from "@/lib/cityWeather";
+import { CityTrain } from "./CityTrain";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
@@ -135,6 +136,8 @@ export function CityV2({ tier }: { tier: number }) {
       {/* ── ГЛУБИНА: задние борта летят за башней (п. 12.1). Над ними — копия кадра, вырезанная по силуэту
           башни: она закрывает борта, пока те за башней. Копия повторяет смену кадра (те же классы). ── */}
       <div className="cv2-back">
+        {/* вечер и ночь: изредка поезд-маглев проходит между кварталом и башней (уходит за башню) */}
+        {(phase === "dusk" || phase === "night") && <CityTrain tier={tier} phase={phase} />}
         <i className="drone flip" />
         {tier >= 3 && (
           <>
@@ -173,8 +176,6 @@ export function CityV2({ tier }: { tier: number }) {
         <CityNeon phase={phase} tier={tier} />
         {/* вечер: город зажигается волной по районам (окна, вывески, неон) */}
         {phase === "dusk" && <CityDuskLights tier={tier} />}
-        {/* вечер: час пик — фары и стоп-огни на дальних эстакадах */}
-        {phase === "dusk" && <CityDuskTraffic />}
         {!clear && <CityRain phase={phase} tier={tier} />}
         {clear && <CityPuddles />}
         {/* вечер (dusk, шаг 4): мокрая площадь отражает закат и неон — в дождь и в ясный вечер */}
