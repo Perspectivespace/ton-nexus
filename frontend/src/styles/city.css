@@ -224,6 +224,24 @@ html.low-end .cv2-back { display: none; }
     radial-gradient(60% 30% at 30% 50%, rgba(255,200,120,.34), rgba(255,170,130,.12) 55%, transparent 80%),
     linear-gradient(180deg, transparent 30%, rgba(255,190,130,.1) 48%, transparent 64%); }
 .ph-day.cv2 .grade { background: linear-gradient(180deg, rgba(90,180,255,.16) 0%, rgba(160,220,255,.08) 45%, transparent 70%); }
+/* ── Жизнь светлого неба (daycity, шаг 3): редкие конечные проходы по таймеру (CityDaySky.tsx) ──
+ * блик по стеклу башни, стайка птиц или курьерский дрон. Бесконечных анимаций нет. */
+.cv2 .glint { overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, transparent 10%, #000 22%, #000 46%, transparent 62%);
+  mask-image: linear-gradient(180deg, transparent 10%, #000 22%, #000 46%, transparent 62%); }
+.cv2 .glint b { position: absolute; top: 0; bottom: 0; left: 0; width: 16%; opacity: 0; will-change: transform, opacity;
+  background: linear-gradient(90deg, transparent 0, rgba(255,226,180,.32) 30%, rgba(255,246,226,.85) 50%, rgba(255,226,180,.32) 70%, transparent 100%); }
+.ph-day.cv2 .glint b { background: linear-gradient(90deg, transparent 0, rgba(225,245,255,.3) 30%, rgba(255,255,255,.85) 50%, rgba(225,245,255,.3) 70%, transparent 100%); }
+.cv2-back .sky { inset: 0; pointer-events: none; }
+.cv2 .fly { position: absolute; left: 0; will-change: transform; }
+.cv2 .fly.birds { width: 9%; aspect-ratio: 64 / 40; }
+.cv2 .fly svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.cv2 .fly path { fill: none; stroke: #4A3550; stroke-linecap: round; stroke-linejoin: round; }
+.ph-day.cv2 .fly path { stroke: #1F3E5C; }
+.cv2 .fly.drone { width: 4.6%; aspect-ratio: 3; opacity: .85; }
+.cv2 .fly.drone i { position: absolute; inset: 0; background: url("../assets/craft/drone-day.svg") center / contain no-repeat; }
+.cv2 .fly.drone i::after { content: ""; position: absolute; left: 40%; top: 92%; width: 20%; height: 45%; border-radius: 1px;
+  background: #C9925A; box-shadow: inset 0 -1px 0 rgba(0,0,0,.25); } /* посылка */
 /* полдень без тёплой розовой дымки — ближний туман холодно-белый */
 .ph-day.cv2 .f-near { background: radial-gradient(45% 50% at 40% 50%, rgba(236,248,255,.45), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(236,248,255,.4), transparent 70%); }
 html.low-end .cv2 .rays::before { animation: none !important; }
