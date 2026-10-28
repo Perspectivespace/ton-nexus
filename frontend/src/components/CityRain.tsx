@@ -11,7 +11,8 @@ import type { CityPhase } from "@/lib/cityPhase";
  *    смещение родителя проецируется на них с коэффициентом 1 / 0.6 / 0.4 — дальние капли медленнее
  *    (параллакс) без лишних анимаций. Период узора каждого слоя = его доле смещения → петля бесшовная.
  *  - капли — штрихи с градиентным «хвостом» (размытие движения): дальние тонкие, бледные и короткие,
- *    ближние длиннее и ярче; часть ближних ловит неон (бирюза / маджента).
+ *    ближние длиннее и ярче; часть ближних ловит неон (бирюза / маджента). Вечером (dusk, шаг 4) капли
+ *    тёплые, каждая четвёртая горит оранжевым отблеском заката, брызги тоже ловят закат.
  * Брызги — лист кадров (20 × 80 мс) в окне над площадью, `steps()` по transform: короткая «корона» и
  * расходящийся эллипс в перспективе. Тоже одна анимация (на T1–T3; на T4 бюджет занят).
  *
@@ -31,7 +32,7 @@ const SPLASH_FRAMES = 20;
 type Rgb = [number, number, number];
 const TINT: Record<CityPhase, Rgb> = {
   night: [176, 212, 255],
-  dusk: [255, 214, 232],
+  dusk: [255, 196, 150], // вечер: капли тёплые — подсвечены закатом (dusk, шаг 4)
   dawn: [255, 240, 248],
   day: [236, 246, 255],
 };
@@ -39,6 +40,8 @@ const NEON: Rgb[] = [
   [120, 244, 255],
   [255, 120, 214],
 ];
+/** вечер: часть капель горит оранжевым отблеском солнца, часть — розовым неоном */
+const DUSK_GLINT: Rgb = [255, 150, 72];
 
 /** детерминированный ГСЧ: один и тот же узор при каждой перерисовке */
 function rng(seed: number) {
@@ -98,7 +101,8 @@ function drawLayer(cv: HTMLCanvasElement, wCss: number, hCss: number, li: number
   const g = cv.getContext("2d");
   if (!g) return;
   const day = phase === "day" || phase === "dawn";
-  const colors = day || li === 0 ? [TINT[phase]] : [TINT[phase], ...NEON];
+  const dusk = phase === "dusk";
+  const colors = dusk ? (li === 0 ? [TINT.dusk, DUSK_GLINT] : [TINT.dusk, DUSK_GLINT, NEON[1]]) : day || li === 0 ? [TINT[phase]] : [TINT[phase], ...NEON];
   const sprites = colors.map((c) => dropSprite(c, L.w, L.len[1], k));
   const r = rng(7 + li * 101);
   const n = Math.round((wCss / 100) * L.dens * (L.per / 192));
@@ -107,15 +111,23 @@ function drawLayer(cv: HTMLCanvasElement, wCss: number, hCss: number, li: number
     const y0 = r() * L.per; // голова капли внутри периода
     const len = L.len[0] + r() * (L.len[1] - L.len[0]);
     const a = L.a * (0.55 + r() * 0.45) * (day ? 1.15 : 1);
-    const ci = colors.length > 1 && r() < 0.1 ? 1 + Math.floor(r() * 2) : 0; // часть капель ловит неон
+    // часть капель ловит неон; вечером — каждая четвёртая ловит закат (оранжевый отблеск), немного неона
+    const ci = dusk ? duskColor(r(), colors.length) : colors.length > 1 && r() < 0.1 ? 1 + Math.floor(r() * 2) : 0;
     const sp = sprites[ci];
     const sw = sp.width * (0.8 + r() * 0.4);
-    g.globalAlpha = Math.min(1, a);
+    g.globalAlpha = Math.min(1, ci === 1 && dusk ? a * 1.35 : a);
     // повторяем каплю с периодом по всей высоте (плюс период сверху — хвосты на стыке)
     for (let y = y0 - L.per; y < hCss + L.len[1]; y += L.per) {
       g.drawImage(sp, x * k - sw / 2, (y - len) * k, sw, len * k);
     }
   }
+}
+
+/** вечер: индекс цвета капли — 0 тёплый, 1 оранжевый отблеск заката (~24 %), 2 розовый неон (~6 %) */
+function duskColor(v: number, n: number) {
+  if (v < 0.24) return 1;
+  if (n > 2 && v < 0.3) return 2;
+  return 0;
 }
 
 /** лист кадров брызг: кадры друг под другом, каждый — окно wCss × hCss над площадью */
@@ -127,7 +139,9 @@ function drawSplashes(cv: HTMLCanvasElement, wCss: number, hCss: number, phase: 
   if (!g) return;
   const fh = cv.height / SPLASH_FRAMES;
   const day = phase === "day" || phase === "dawn";
-  const c: Rgb = day ? [255, 255, 255] : [190, 222, 255];
+  const dusk = phase === "dusk";
+  const c: Rgb = day ? [255, 255, 255] : dusk ? [255, 204, 160] : [190, 222, 255];
+  const glow: Rgb[] = dusk ? [DUSK_GLINT, NEON[1]] : NEON; // вечером брызги ловят закат и розовый неон
   const r = rng(4242);
   const LIFE = 5;
   const COUNT = 36;
@@ -138,7 +152,7 @@ function drawSplashes(cv: HTMLCanvasElement, wCss: number, hCss: number, phase: 
     const y = (0.06 + v * 0.86) * fh;
     const size = (2.5 + v * 8) * k * (0.7 + r() * 0.6);
     const start = Math.floor(r() * SPLASH_FRAMES);
-    const near = !day && r() < 0.2 ? NEON[Math.floor(r() * 2)] : c;
+    const near = !day && r() < (dusk ? 0.35 : 0.2) ? glow[Math.floor(r() * 2)] : c;
     for (let t = 0; t < LIFE; t++) {
       const fr = (start + t) % SPLASH_FRAMES;
       const cy = fr * fh + y;
