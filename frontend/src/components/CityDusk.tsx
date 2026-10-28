@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
-import { blocked } from "./CityDaySky";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { blocked, rnd, useRare } from "./CityDaySky";
 import sky1 from "../assets/city/v2/dusk-sky-t1.webp";
 import sky2 from "../assets/city/v2/dusk-sky-t2.webp";
 import sky3 from "../assets/city/v2/dusk-sky-t3.webp";
@@ -12,6 +12,10 @@ import sky4 from "../assets/city/v2/dusk-sky-t4.webp";
  * - CityDuskLights — город зажигается волной по районам (с запада к закату): тёплые окна, вывески и неон
  *   района включаются разом с небольшим разбросом. Только таймеры и CSS-переходы, бесконечных анимаций нет.
  *   Скрытое приложение, слабое устройство, «уменьшить движение» — сразу всё горит, без волны.
+ * Шаг 3 (dusk): CityDuskStars — первые звёзды и тонкий серп луны (медленное разовое проявление, редкие мерцания);
+ *   CityDuskTraffic — час пик: потоки белых фар и красных стоп-огней по дальним эстакадам. Каждая машина —
+ *   разовая WAAPI-анимация, следующую запускает таймер; бесконечных анимаций нет. Слабое устройство и
+ *   «уменьшить движение» — огни стоят на месте; скрытое приложение — новые машины не выезжают.
  */
 
 const SKY: Record<number, string> = { 1: sky1, 2: sky2, 3: sky3, 4: sky4 };
@@ -98,5 +102,136 @@ export function CityDuskLights({ tier }: { tier: number }) {
         )),
       )}
     </svg>
+  );
+}
+
+const W = 720;
+const H = 1280;
+const pc = (v: number, of: number) => `${((v / of) * 100).toFixed(2)}%`;
+const still = () =>
+  document.documentElement.classList.contains("low-end") ||
+  (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+
+/** звёзды: "x,y,размер" в кадре 720×1280 — только верх неба (у всех обликов там небо), за облаками и башней */
+const STARS = "327,139,2 327,204,1 143,129,3 438,58,2 225,38,3 453,147,2 680,160,2 588,32,1 37,119,2 19,36,3 207,234,1 503,86,1 369,24,2 97,71,1 16,206,2 85,233,1 420,199,1 663,61,2 306,41,1 655,230,1 156,22,1 262,86,1"
+  .split(" ")
+  .map((t) => t.split(",").map(Number));
+const MOON = { x: 600, y: 140, d: 22 };
+
+export function CityDuskStars() {
+  const host = useRef<HTMLDivElement>(null);
+  // вечер наступил / приложение открыли вечером: звёзды проступают за ~10 с (разово)
+  useEffect(() => {
+    const h = host.current;
+    if (!h || blocked()) return;
+    const a = h.animate([{ opacity: 0 }, { opacity: 0.35, offset: 0.5 }, { opacity: 1 }], { duration: 10000, easing: "ease-in" });
+    return () => a.cancel();
+  }, []);
+  // редкое мерцание одной звезды (разовое)
+  useRare([5000, 10000], [6000, 14000], () => {
+    const st = host.current?.querySelectorAll<HTMLElement>(".st");
+    if (!st?.length) return;
+    const e = st[Math.floor(Math.random() * st.length)];
+    e.animate(
+      [{ transform: "scale(1)" }, { transform: "scale(2.1)", opacity: 1, offset: 0.35 }, { transform: "scale(1)" }],
+      { duration: 1100, easing: "ease-in-out" },
+    );
+  });
+  return (
+    <div ref={host} className="dk-stars" aria-hidden>
+      {STARS.map(([x, y, k], i) => (
+        <i key={i} className={`st s${k}`} style={{ left: pc(x, W), top: pc(y, H) }} />
+      ))}
+      <i className="moon" style={{ left: pc(MOON.x - MOON.d / 2, W), top: pc(MOON.y - MOON.d / 2, H), width: pc(MOON.d, W) }}>
+        <b />
+      </i>
+    </div>
+  );
+}
+
+/** дальние эстакады: [x1, y1, x2, y2] в кадре 720×1280 — в просвете между левым кварталом и башней */
+const DECKS: [number, number, number, number][] = [
+  [178, 842, 314, 827],
+  [212, 914, 304, 905],
+];
+const POOL = 8; // машин на полосу
+type Lane = "hd" | "tl";
+
+export function CityDuskTraffic() {
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = host.current;
+    if (!h) return;
+    const timers: number[] = [];
+    const anims = new Set<Animation>();
+    let frozen = false;
+    const cars = (d: number, l: Lane) => Array.from(h.querySelectorAll<HTMLElement>(`.dk-road[data-k="${d}"] .car.${l}`));
+    // статичная картинка: машины расставлены по полосе
+    const freeze = (on: boolean) => {
+      if (frozen === on) return;
+      frozen = on;
+      h.classList.toggle("still", on);
+      DECKS.forEach((_, d) =>
+        (["hd", "tl"] as Lane[]).forEach((l, li) =>
+          cars(d, l).forEach((c, i) => {
+            c.style.transform = on ? `translate3d(${(((i + li * 0.5) / POOL) * 100 - 4).toFixed(1)}%,0,0)` : "";
+          }),
+        ),
+      );
+    };
+    const lane = (d: number, l: Lane) => {
+      const len = Math.hypot(DECKS[d][2] - DECKS[d][0], DECKS[d][3] - DECKS[d][1]);
+      const tick = () => {
+        if (still()) {
+          freeze(true);
+          return void timers.push(window.setTimeout(tick, 3000));
+        }
+        freeze(false);
+        if (blocked()) return void timers.push(window.setTimeout(tick, 2000)); // скрыто — новые не выезжают
+        const c = cars(d, l).find((e) => !e.getAnimations().length);
+        if (c) {
+          const [a, b] = l === "hd" ? ["100%", "-12%"] : ["-12%", "100%"];
+          const an = c.animate(
+            [
+              { transform: `translate3d(${a},0,0)`, opacity: 0 },
+              { opacity: 1, offset: 0.08 },
+              { opacity: 1, offset: 0.92 },
+              { transform: `translate3d(${b},0,0)`, opacity: 0 },
+            ],
+            { duration: (len / rnd(30, 44)) * 1000, easing: "linear" },
+          );
+          anims.add(an);
+          an.onfinish = () => anims.delete(an);
+        }
+        timers.push(window.setTimeout(tick, rnd(300, 850)));
+      };
+      timers.push(window.setTimeout(tick, rnd(200, 900)));
+    };
+    DECKS.forEach((_, d) => (["hd", "tl"] as Lane[]).forEach((l) => lane(d, l)));
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+      anims.forEach((a) => a.cancel());
+    };
+  }, []);
+  return (
+    <div ref={host} className="dk-traffic" aria-hidden>
+      {DECKS.map(([x1, y1, x2, y2], d) => {
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+        return (
+          <div
+            key={d}
+            className="dk-road"
+            data-k={d}
+            style={{ left: pc(x1, W), top: pc(y1 - 5, H), width: pc(len, W), transform: `rotate(${ang.toFixed(2)}deg)`, ["--a" as string]: `${ang.toFixed(2)}deg` }}
+          >
+            <i className="pil" style={{ left: "26%" }} />
+            <i className="pil" style={{ left: "70%" }} />
+            <i className="deck" />
+            {(["hd", "tl"] as Lane[]).flatMap((l) => Array.from({ length: POOL }, (_, i) => <i key={l + i} className={`car ${l}`} />))}
+          </div>
+        );
+      })}
+    </div>
   );
 }

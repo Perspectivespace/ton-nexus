@@ -173,7 +173,7 @@
 @keyframes cv2-beam { from { transform: rotate(-16deg) } to { transform: rotate(4deg) } }
 
 html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::after { animation-play-state: paused; }
-html.low-end .cv2-life > :not(.fog):not(.mfog):not(.ad):not(.pdl):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon):not(.dk-win) { display: none; }
+html.low-end .cv2-life > :not(.fog):not(.mfog):not(.ad):not(.pdl):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon):not(.dk-win):not(.dk-traffic) { display: none; }
 html.low-end .cv2 .win, html.low-end .cv2 .bcn, html.low-end .cv2 .sign.cut { animation: none; opacity: .5; }
 html.low-end .cv2 .sign::after { animation: none; display: none; }
 html.low-end .cv2-back { display: none; }
@@ -393,6 +393,42 @@ html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
 .ph-dusk.cv2[data-lit="3"] .sign:is([data-d="3"],[data-d="4"]),
 .ph-dusk.cv2[data-lit="4"] .sign[data-d="4"] { clip-path: inset(50% -40px 50% -40px); }
 
+/* ── Вечер (dusk, шаг 3; CityDusk.tsx): первые звёзды и серп луны, час пик на дальних эстакадах.
+ * Только градиенты и box-shadow, без filter. Проявление звёзд, мерцания и машины — разовые WAAPI, петель нет. */
+.cv2-sun .dk-stars { inset: 0; pointer-events: none; }
+.cv2 .dk-stars .st { position: absolute; width: 2px; height: 2px; margin: -1px 0 0 -1px; border-radius: 50%; opacity: .7;
+  background: #FFF6FB; box-shadow: 0 0 3px 1px rgba(255,226,248,.45); }
+.cv2 .dk-stars .st.s1 { width: 1.4px; height: 1.4px; opacity: .5; }
+.cv2 .dk-stars .st.s3 { width: 2.6px; height: 2.6px; opacity: .95; box-shadow: 0 0 5px 1.5px rgba(255,232,250,.55); }
+.cv2 .dk-stars .moon { position: absolute; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255,214,236,.28), rgba(255,200,230,.1) 60%, transparent); transform: scale(2.4); }
+.cv2 .dk-stars .moon b { position: absolute; inset: 29%; border-radius: 50%;
+  background: radial-gradient(70% 70% at 30% 72%, #FFF4E6, #FFE0E6);
+  box-shadow: 0 0 4px 1px rgba(255,226,236,.5);
+  -webkit-mask-image: radial-gradient(52% 52% at 66% 30%, transparent 97%, #000 100%);
+  mask-image: radial-gradient(52% 52% at 66% 30%, transparent 97%, #000 100%); }
+.cv2-life .dk-traffic { inset: 0; pointer-events: none; }
+.cv2 .dk-road { position: absolute; height: .9%; transform-origin: 0 50%; pointer-events: none; }
+.cv2 .dk-road .deck { position: absolute; left: 0; right: 0; bottom: 0; height: 62%;
+  background: linear-gradient(180deg, rgba(150,120,190,.45) 0 10%, rgba(30,22,58,.8) 10%);
+  box-shadow: 0 1px 3px rgba(255,120,110,.22); }
+.cv2 .dk-road .deck::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 1px;
+  background: repeating-linear-gradient(90deg, rgba(255,226,190,.55) 0 1px, transparent 1px 14px); }
+.cv2 .dk-road .pil { position: absolute; top: 100%; width: 2%; height: 300%; transform-origin: 50% 0; transform: rotate(calc(-1 * var(--a)));
+  background: linear-gradient(180deg, rgba(34,26,66,.75), rgba(34,26,66,.25) 70%, transparent); }
+.cv2 .dk-road .car { position: absolute; left: 0; width: 100%; height: 22%; opacity: 0; will-change: transform, opacity; }
+.cv2 .dk-road .car.hd { top: 44%; }
+.cv2 .dk-road .car.tl { top: 70%; }
+.cv2 .dk-road .car::before, .cv2 .dk-road .car::after { content: ""; position: absolute; top: 0; height: 100%; border-radius: 1px; }
+/* фары едут влево: яркий нос слева, шлейф вправо; за машиной — ещё пара огней следующей */
+.cv2 .dk-road .car.hd::before { left: 0; width: 9%; background: linear-gradient(90deg, #FFFFFF, rgba(255,250,232,.8) 30%, transparent);
+  box-shadow: -1px 0 5px 2px rgba(255,250,232,.65); }
+.cv2 .dk-road .car.hd::after { left: 13%; width: 4%; background: linear-gradient(90deg, rgba(255,250,240,.9), transparent); }
+/* стоп-огни едут вправо: красный нос справа */
+.cv2 .dk-road .car.tl::before { left: 0; width: 8%; background: linear-gradient(90deg, transparent, rgba(255,60,70,.7) 70%, #FF4A4A);
+  box-shadow: 1px 0 3px 1px rgba(255,50,60,.4); }
+.cv2 .dk-road .car.tl::after { left: -6%; width: 3.5%; background: linear-gradient(90deg, transparent, rgba(255,70,80,.85)); }
+.cv2 .dk-traffic.still .car { opacity: .85; }
 /* ночь — исходные правила выше; окна чуть ярче */
 .cv2.ph-night .win { box-shadow: 0 0 8px 1px rgba(255,190,110,.45); }
 
