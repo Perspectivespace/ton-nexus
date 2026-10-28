@@ -173,7 +173,7 @@
 @keyframes cv2-beam { from { transform: rotate(-16deg) } to { transform: rotate(4deg) } }
 
 html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::after { animation-play-state: paused; }
-html.low-end .cv2-life > :not(.fog):not(.mfog):not(.ad):not(.pdl):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon):not(.dk-win):not(.dk-traffic):not(.dk-wet) { display: none; }
+html.low-end .cv2-life > :not(.fog):not(.mfog):not(.ad):not(.pdl):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon):not(.dk-win):not(.dk-wet) { display: none; }
 html.low-end .cv2 .win, html.low-end .cv2 .bcn, html.low-end .cv2 .sign.cut { animation: none; opacity: .5; }
 html.low-end .cv2 .sign::after { animation: none; display: none; }
 html.low-end .cv2-back { display: none; }
@@ -393,8 +393,8 @@ html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
 .ph-dusk.cv2[data-lit="3"] .sign:is([data-d="3"],[data-d="4"]),
 .ph-dusk.cv2[data-lit="4"] .sign[data-d="4"] { clip-path: inset(50% -40px 50% -40px); }
 
-/* ── Вечер (dusk, шаг 3; CityDusk.tsx): первые звёзды и серп луны, час пик на дальних эстакадах.
- * Только градиенты и box-shadow, без filter. Проявление звёзд, мерцания и машины — разовые WAAPI, петель нет. */
+/* ── Вечер (dusk, шаг 3; CityDusk.tsx): первые звёзды и серп луны.
+ * Только градиенты и box-shadow, без filter. Проявление звёзд и мерцания — разовые WAAPI, петель нет. */
 .cv2-sun .dk-stars { inset: 0; pointer-events: none; }
 .cv2 .dk-stars .st { position: absolute; width: 2px; height: 2px; margin: -1px 0 0 -1px; border-radius: 50%; opacity: .7;
   background: #FFF6FB; box-shadow: 0 0 3px 1px rgba(255,226,248,.45); }
@@ -407,28 +407,38 @@ html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
   box-shadow: 0 0 4px 1px rgba(255,226,236,.5);
   -webkit-mask-image: radial-gradient(52% 52% at 66% 30%, transparent 97%, #000 100%);
   mask-image: radial-gradient(52% 52% at 66% 30%, transparent 97%, #000 100%); }
-.cv2-life .dk-traffic { inset: 0; pointer-events: none; }
-.cv2 .dk-road { position: absolute; height: .9%; transform-origin: 0 50%; pointer-events: none; }
-.cv2 .dk-road .deck { position: absolute; left: 0; right: 0; bottom: 0; height: 62%;
-  background: linear-gradient(180deg, rgba(150,120,190,.45) 0 10%, rgba(30,22,58,.8) 10%);
-  box-shadow: 0 1px 3px rgba(255,120,110,.22); }
-.cv2 .dk-road .deck::before { content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 1px;
-  background: repeating-linear-gradient(90deg, rgba(255,226,190,.55) 0 1px, transparent 1px 14px); }
-.cv2 .dk-road .pil { position: absolute; top: 100%; width: 2%; height: 300%; transform-origin: 50% 0; transform: rotate(calc(-1 * var(--a)));
-  background: linear-gradient(180deg, rgba(34,26,66,.75), rgba(34,26,66,.25) 70%, transparent); }
-.cv2 .dk-road .car { position: absolute; left: 0; width: 100%; height: 22%; opacity: 0; will-change: transform, opacity; }
-.cv2 .dk-road .car.hd { top: 44%; }
-.cv2 .dk-road .car.tl { top: 70%; }
-.cv2 .dk-road .car::before, .cv2 .dk-road .car::after { content: ""; position: absolute; top: 0; height: 100%; border-radius: 1px; }
-/* фары едут влево: яркий нос слева, шлейф вправо; за машиной — ещё пара огней следующей */
-.cv2 .dk-road .car.hd::before { left: 0; width: 9%; background: linear-gradient(90deg, #FFFFFF, rgba(255,250,232,.8) 30%, transparent);
-  box-shadow: -1px 0 5px 2px rgba(255,250,232,.65); }
-.cv2 .dk-road .car.hd::after { left: 13%; width: 4%; background: linear-gradient(90deg, rgba(255,250,240,.9), transparent); }
-/* стоп-огни едут вправо: красный нос справа */
-.cv2 .dk-road .car.tl::before { left: 0; width: 8%; background: linear-gradient(90deg, transparent, rgba(255,60,70,.7) 70%, #FF4A4A);
-  box-shadow: 1px 0 3px 1px rgba(255,50,60,.4); }
-.cv2 .dk-road .car.tl::after { left: -6%; width: 3.5%; background: linear-gradient(90deg, transparent, rgba(255,70,80,.85)); }
-.cv2 .dk-traffic.still .car { opacity: .85; }
+/* ── Поезд-маглев (вечер и ночь; CityTrain.tsx): изредка пересекает просвет между левым кварталом и башней
+ * на средней глубине, в слое .cv2-back (за копией башни). Проход — разовая WAAPI-анимация transform, петель нет.
+ * Обтекаемый корпус, ряд горящих окон (три вагона), мягкая фара, подсветка подвеса и короткий светящийся след.
+ * Рельс — тонкая, почти невидимая линия. Только градиенты и box-shadow, без filter. */
+.cv2-back .trn-wrap { inset: 0; pointer-events: none;
+  --hi: rgba(255,176,150,.85); --w: rgba(255,226,176,.95); --w2: rgba(150,236,255,.9); --tr: 255,150,130; --rl: rgba(255,190,205,.16); }
+.cv2-back .trn-wrap.night { --hi: rgba(150,226,255,.7); --w: rgba(214,246,255,.95); --w2: rgba(255,214,150,.9); --tr: 110,232,255; --rl: rgba(140,210,255,.13); }
+.cv2-back .trn-wrap > * { position: absolute; display: block; }
+.cv2-back .trn-rail { height: .09%; background: linear-gradient(180deg, var(--rl) 0 45%, rgba(18,14,40,.45) 45%); }
+.cv2-back .trn { will-change: transform; }
+.cv2-back .trn .tb { position: absolute; inset: 0; }
+.cv2-back .trn.rtl .tb { transform: scaleX(-1); }
+.cv2-back .trn .tb > i { position: absolute; display: block; }
+.cv2-back .trn .body { inset: 0; border-radius: 2px 14% 8% 2px / 2px 100% 70% 2px;
+  background: linear-gradient(180deg, var(--hi) 0 13%, #3B3354 13%, #221C3A 62%, #130F25);
+  -webkit-mask-image: linear-gradient(90deg, #000 0 32.6%, transparent 32.6% 33.6%, #000 33.6% 65.6%, transparent 65.6% 66.6%, #000 66.6%);
+  mask-image: linear-gradient(90deg, #000 0 32.6%, transparent 32.6% 33.6%, #000 33.6% 65.6%, transparent 65.6% 66.6%, #000 66.6%); }
+.cv2-back .trn .wins { left: 3%; right: 13%; top: 27%; height: 34%;
+  background: repeating-linear-gradient(90deg, var(--w) 0 2.1%, transparent 2.1% 3.3%), linear-gradient(90deg, transparent 0 40%, var(--w2) 40% 46%, transparent 46%);
+  box-shadow: 0 0 4px 1px rgba(var(--tr),.35);
+  -webkit-mask-image: linear-gradient(90deg, #000 0 33%, transparent 33% 37%, #000 37% 71%, transparent 71% 75%, #000 75%);
+  mask-image: linear-gradient(90deg, #000 0 33%, transparent 33% 37%, #000 37% 71%, transparent 71% 75%, #000 75%); }
+.cv2-back .trn .hl { left: 97%; top: -160%; width: 75%; height: 420%;
+  background: radial-gradient(60% 46% at 0 50%, rgba(255,253,244,1) 0, rgba(255,246,226,.55) 9%, rgba(255,238,214,.16) 40%, transparent 100%); }
+.cv2-back .trn .hl::before { content: ""; position: absolute; left: -3%; top: 46%; width: 6%; height: 8%; border-radius: 50%;
+  background: #FFFDF4; box-shadow: 0 0 4px 2px rgba(255,248,228,.85), 0 0 10px 4px rgba(255,240,214,.35); }
+.cv2-back .trn .lev { left: 5%; right: 8%; top: 96%; height: 34%; border-radius: 50%;
+  background: linear-gradient(90deg, transparent, rgba(120,240,255,.75) 18%, rgba(255,120,214,.6) 82%, transparent);
+  box-shadow: 0 1px 5px 1px rgba(150,230,255,.45); }
+.cv2-back .trn .trail { right: 98%; top: 18%; width: 85%; height: 64%; border-radius: 50% 0 0 50%;
+  background: linear-gradient(270deg, rgba(var(--tr),.34), rgba(var(--tr),.1) 45%, transparent); }
+
 /* ── Мокрая площадь вечером (dusk, шаг 4): CityDuskWet — статичные дорожки отражений под солнцем, вывесками
  * и окнами; маска режет их на горизонтальную рябь и гасит к зрителю. В дождь рябь крупнее и бледнее, в ясный
  * вечер (wx-clear) ровнее и ярче; лужи CityPuddles вечером тёплые. Только градиенты, без filter. */

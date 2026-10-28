@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { blocked, rnd, useRare } from "./CityDaySky";
+import { blocked, useRare } from "./CityDaySky";
 import sky1 from "../assets/city/v2/dusk-sky-t1.webp";
 import sky2 from "../assets/city/v2/dusk-sky-t2.webp";
 import sky3 from "../assets/city/v2/dusk-sky-t3.webp";
@@ -12,10 +12,8 @@ import sky4 from "../assets/city/v2/dusk-sky-t4.webp";
  * - CityDuskLights — город зажигается волной по районам (с запада к закату): тёплые окна, вывески и неон
  *   района включаются разом с небольшим разбросом. Только таймеры и CSS-переходы, бесконечных анимаций нет.
  *   Скрытое приложение, слабое устройство, «уменьшить движение» — сразу всё горит, без волны.
- * Шаг 3 (dusk): CityDuskStars — первые звёзды и тонкий серп луны (медленное разовое проявление, редкие мерцания);
- *   CityDuskTraffic — час пик: потоки белых фар и красных стоп-огней по дальним эстакадам. Каждая машина —
- *   разовая WAAPI-анимация, следующую запускает таймер; бесконечных анимаций нет. Слабое устройство и
- *   «уменьшить движение» — огни стоят на месте; скрытое приложение — новые машины не выезжают.
+ * Шаг 3 (dusk): CityDuskStars — первые звёзды и тонкий серп луны (медленное разовое проявление, редкие мерцания).
+ *   Час пик на эстакадах убран: вместо него редкий поезд-маглев (CityTrain.tsx, вечер и ночь).
  * Шаг 4 (dusk): CityDuskWet — мокрая площадь отражает закат, вывески и окна (статично, редкое разовое «дрожание»).
  */
 
@@ -109,7 +107,8 @@ export function CityDuskLights({ tier }: { tier: number }) {
 const W = 720;
 const H = 1280;
 const pc = (v: number, of: number) => `${((v / of) * 100).toFixed(2)}%`;
-const still = () =>
+/** слабое устройство или «уменьшить движение» — без движения */
+export const still = () =>
   document.documentElement.classList.contains("low-end") ||
   (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
 
@@ -146,93 +145,6 @@ export function CityDuskStars() {
       <i className="moon" style={{ left: pc(MOON.x - MOON.d / 2, W), top: pc(MOON.y - MOON.d / 2, H), width: pc(MOON.d, W) }}>
         <b />
       </i>
-    </div>
-  );
-}
-
-/** дальние эстакады: [x1, y1, x2, y2] в кадре 720×1280 — в просвете между левым кварталом и башней */
-const DECKS: [number, number, number, number][] = [
-  [178, 842, 314, 827],
-  [212, 914, 304, 905],
-];
-const POOL = 8; // машин на полосу
-type Lane = "hd" | "tl";
-
-export function CityDuskTraffic() {
-  const host = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = host.current;
-    if (!h) return;
-    const timers: number[] = [];
-    const anims = new Set<Animation>();
-    let frozen = false;
-    const cars = (d: number, l: Lane) => Array.from(h.querySelectorAll<HTMLElement>(`.dk-road[data-k="${d}"] .car.${l}`));
-    // статичная картинка: машины расставлены по полосе
-    const freeze = (on: boolean) => {
-      if (frozen === on) return;
-      frozen = on;
-      h.classList.toggle("still", on);
-      DECKS.forEach((_, d) =>
-        (["hd", "tl"] as Lane[]).forEach((l, li) =>
-          cars(d, l).forEach((c, i) => {
-            c.style.transform = on ? `translate3d(${(((i + li * 0.5) / POOL) * 100 - 4).toFixed(1)}%,0,0)` : "";
-          }),
-        ),
-      );
-    };
-    const lane = (d: number, l: Lane) => {
-      const len = Math.hypot(DECKS[d][2] - DECKS[d][0], DECKS[d][3] - DECKS[d][1]);
-      const tick = () => {
-        if (still()) {
-          freeze(true);
-          return void timers.push(window.setTimeout(tick, 3000));
-        }
-        freeze(false);
-        if (blocked()) return void timers.push(window.setTimeout(tick, 2000)); // скрыто — новые не выезжают
-        const c = cars(d, l).find((e) => !e.getAnimations().length);
-        if (c) {
-          const [a, b] = l === "hd" ? ["100%", "-12%"] : ["-12%", "100%"];
-          const an = c.animate(
-            [
-              { transform: `translate3d(${a},0,0)`, opacity: 0 },
-              { opacity: 1, offset: 0.08 },
-              { opacity: 1, offset: 0.92 },
-              { transform: `translate3d(${b},0,0)`, opacity: 0 },
-            ],
-            { duration: (len / rnd(30, 44)) * 1000, easing: "linear" },
-          );
-          anims.add(an);
-          an.onfinish = () => anims.delete(an);
-        }
-        timers.push(window.setTimeout(tick, rnd(300, 850)));
-      };
-      timers.push(window.setTimeout(tick, rnd(200, 900)));
-    };
-    DECKS.forEach((_, d) => (["hd", "tl"] as Lane[]).forEach((l) => lane(d, l)));
-    return () => {
-      timers.forEach((t) => window.clearTimeout(t));
-      anims.forEach((a) => a.cancel());
-    };
-  }, []);
-  return (
-    <div ref={host} className="dk-traffic" aria-hidden>
-      {DECKS.map(([x1, y1, x2, y2], d) => {
-        const len = Math.hypot(x2 - x1, y2 - y1);
-        const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
-        return (
-          <div
-            key={d}
-            className="dk-road"
-            data-k={d}
-            style={{ left: pc(x1, W), top: pc(y1 - 5, H), width: pc(len, W), transform: `rotate(${ang.toFixed(2)}deg)`, ["--a" as string]: `${ang.toFixed(2)}deg` }}
-          >
-            <i className="pil" style={{ left: "26%" }} />
-            <i className="pil" style={{ left: "70%" }} />
-            <i className="deck" />
-            {(["hd", "tl"] as Lane[]).flatMap((l) => Array.from({ length: POOL }, (_, i) => <i key={l + i} className={`car ${l}`} />))}
-          </div>
-        );
-      })}
     </div>
   );
 }
