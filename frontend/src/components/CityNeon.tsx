@@ -356,6 +356,8 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
             .then((img) => {
               if (dead || last !== sz) return;
               paintHolo(fig, img, w, h, kh);
+              hn.dataset.ready = "1"; // фигура нарисована — вечером можно «собирать» (см. ниже)
+              hn.dispatchEvent(new Event("holo-ready"));
               idle(() => {
                 if (dead || last !== sz) return;
                 paintHolo(g1, img, w, h, kh, [255, 70, 200]);
@@ -528,6 +530,88 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
     };
   }, [key, phase, armed]);
 
+  // вечер (dusk, шаг 2): голограмма «собирается» при наступлении вечера или открытии приложения вечером —
+  // сначала луч проектора, затем развёртка снизу вверх со светлой строкой, мерцание и 2–3 сдвига срезов.
+  // Разовые WAAPI-анимации (2.6 с) и таймеры; слабое устройство, «уменьшить движение», скрытое приложение — сразу на месте.
+  useEffect(() => {
+    const hn = host.current?.querySelector<HTMLElement>(".holo-w");
+    if (!hn || phase !== "dusk" || reduced() || lowEnd() || quiet()) return;
+    const [, , g1, g2] = Array.from(hn.querySelectorAll<HTMLElement>("canvas"));
+    const scan = hn.querySelector<HTMLElement>(".hscan");
+    const timers: number[] = [];
+    const anims: Animation[] = [];
+    const after = (ms: number, f: () => void) => timers.push(window.setTimeout(f, ms));
+    let started = false;
+    hn.style.opacity = "0";
+    const start = () => {
+      if (started) return;
+      started = true;
+      if (quiet() || !hn.animate) return void (hn.style.opacity = "");
+      const D = 2600;
+      const c = (top: number) => `inset(${top}% 0 -4% 0)`;
+      anims.push(
+        hn.animate(
+          [
+            { opacity: 0, clipPath: c(100) },
+            { opacity: 0.5, clipPath: c(78), offset: 0.08 },
+            { opacity: 0.1, clipPath: c(74), offset: 0.12 },
+            { opacity: 0.6, clipPath: c(66), offset: 0.16 },
+            { opacity: 0.5, clipPath: c(30), offset: 0.36 },
+            { opacity: 0.62, clipPath: c(0), offset: 0.5 },
+            { opacity: 0.2, clipPath: c(0), offset: 0.56 },
+            { opacity: 0.75, clipPath: c(0), offset: 0.6 },
+            { opacity: 0.35, clipPath: c(0), offset: 0.66 },
+            { opacity: 0.8, clipPath: c(0), offset: 0.72 },
+            { opacity: 0.8, clipPath: c(0) },
+          ],
+          { duration: D, easing: "linear" },
+        ),
+      );
+      hn.style.opacity = ""; // дальше ведёт анимация, в конце — обычные .8 из CSS
+      if (scan)
+        anims.push(
+          scan.animate(
+            [
+              { transform: "translate3d(0,100%,0)", opacity: 1 },
+              { transform: "translate3d(0,78%,0)", opacity: 1, offset: 0.08 },
+              { transform: "translate3d(0,66%,0)", opacity: 1, offset: 0.16 },
+              { transform: "translate3d(0,30%,0)", opacity: 1, offset: 0.36 },
+              { transform: "translate3d(0,0,0)", opacity: 1, offset: 0.5 },
+              { transform: "translate3d(0,0,0)", opacity: 0, offset: 0.6 },
+              { transform: "translate3d(0,0,0)", opacity: 0 },
+            ],
+            { duration: D, easing: "linear" },
+          ),
+        );
+      const slice = (n: HTMLElement | undefined) => {
+        if (!n) return;
+        const top = 10 + Math.random() * 55;
+        n.style.clipPath = `inset(${top.toFixed(1)}% 0 ${(90 - top - Math.random() * 8).toFixed(1)}% 0)`;
+        n.style.transform = `translate3d(${(Math.random() * 10 - 5).toFixed(1)}px,0,0)`;
+        n.style.opacity = "1";
+      };
+      const hide = () => [g1, g2].forEach((n) => n && (n.style.opacity = "0"));
+      for (const t of [700, 1150, 1700]) {
+        after(t, () => {
+          slice(g1);
+          if (Math.random() < 0.7) slice(g2);
+        });
+        after(t + 70 + Math.random() * 50, hide);
+      }
+    };
+    const ready = () => after(900, start);
+    if (hn.dataset.ready) ready();
+    else hn.addEventListener("holo-ready", ready, { once: true });
+    after(6000, () => !started && ((started = true), (hn.style.opacity = ""))); // фигура так и не нарисовалась
+    return () => {
+      hn.removeEventListener("holo-ready", ready);
+      timers.forEach((t) => window.clearTimeout(t));
+      anims.forEach((a) => a.cancel());
+      hn.style.opacity = "";
+      [g1, g2].forEach((n) => n && (n.style.opacity = ""));
+    };
+  }, [phase, armed]);
+
   return (
     <div ref={host} className="neon" aria-hidden>
       {armed && (
@@ -539,6 +623,7 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
         <canvas className="hf" />
         <canvas className="hg" />
         <canvas className="hg" />
+        <i className="hscan" />
       </span>
       )}
       {armed && signs.map((s) => {
