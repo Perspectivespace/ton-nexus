@@ -16,6 +16,7 @@ import sky4 from "../assets/city/v2/dusk-sky-t4.webp";
  *   CityDuskTraffic — час пик: потоки белых фар и красных стоп-огней по дальним эстакадам. Каждая машина —
  *   разовая WAAPI-анимация, следующую запускает таймер; бесконечных анимаций нет. Слабое устройство и
  *   «уменьшить движение» — огни стоят на месте; скрытое приложение — новые машины не выезжают.
+ * Шаг 4 (dusk): CityDuskWet — мокрая площадь отражает закат, вывески и окна (статично, редкое разовое «дрожание»).
  */
 
 const SKY: Record<number, string> = { 1: sky1, 2: sky2, 3: sky3, 4: sky4 };
@@ -232,6 +233,56 @@ export function CityDuskTraffic() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** отражения на мокрой площади: x центра, ширина (кадр 720×1280), цвет, с какого облика */
+type Refl = { x: number; w: number; c: "sun" | "cy" | "mg" | "am"; from: number };
+const REFL: Refl[] = [
+  { x: 545, w: 96, c: "sun", from: 1 }, // дорожка заходящего солнца
+  { x: 150, w: 26, c: "am", from: 1 }, // тёплые окна
+  { x: 300, w: 22, c: "mg", from: 1 },
+  { x: 655, w: 22, c: "am", from: 1 },
+  { x: 92, w: 34, c: "cy", from: 2 }, // «ОБМЕН»
+  { x: 466, w: 34, c: "cy", from: 2 }, // «TON»
+  { x: 612, w: 46, c: "mg", from: 4 }, // «РЕАКТОР»
+];
+const WET_TOP = 1008;
+const WET_H = 236;
+
+/**
+ * Шаг 4 (dusk): мокрая площадь отражает закат и неон. Статичные градиенты-дорожки под солнцем, вывесками и
+ * окнами, разбитые на рябь маской; в дождь рябь крупнее и дорожки бледнее, в ясный вечер (без дождя) —
+ * ровнее и ярче. Редко одна дорожка разово «дрожит» (WAAPI, 1.8 с, таймер); бесконечных анимаций нет.
+ * Слабое устройство, «уменьшить движение», скрытое приложение — только статичные отражения.
+ */
+export function CityDuskWet({ tier }: { tier: number }) {
+  const host = useRef<HTMLDivElement>(null);
+  useRare([4000, 8000], [5000, 11000], () => {
+    const all = host.current?.querySelectorAll<HTMLElement>(".rf");
+    if (!all?.length) return;
+    const el = all[Math.floor(Math.random() * all.length)];
+    if (el.getAnimations().length) return;
+    el.animate(
+      [
+        { transform: "scaleX(1)", opacity: 1 },
+        { transform: "scaleX(1.18) translateX(1%)", opacity: 0.72, offset: 0.35 },
+        { transform: "scaleX(.94)", opacity: 0.9, offset: 0.7 },
+        { transform: "scaleX(1)", opacity: 1 },
+      ],
+      { duration: 1800, easing: "ease-in-out" },
+    );
+  });
+  return (
+    <div ref={host} className="dk-wet" aria-hidden>
+      {REFL.filter((r) => tier >= r.from).map((r, i) => (
+        <i
+          key={i}
+          className={`rf ${r.c}`}
+          style={{ left: pc(r.x - r.w / 2, W), top: pc(WET_TOP, H), width: pc(r.w, W), height: pc(WET_H, H) }}
+        />
+      ))}
     </div>
   );
 }

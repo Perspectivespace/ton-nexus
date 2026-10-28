@@ -4,7 +4,7 @@ import { CityLightning } from "./CityLightning";
 import { CityNeon } from "./CityNeon";
 import { CityRain } from "./CityRain";
 import { CityGlint, CitySky } from "./CityDaySky";
-import { CityDuskGlass, CityDuskLights, CityDuskSun, district, CityDuskStars, CityDuskTraffic } from "./CityDusk";
+import { CityDuskGlass, CityDuskLights, CityDuskSun, district, CityDuskStars, CityDuskTraffic, CityDuskWet } from "./CityDusk";
 import { CityClouds, CityCloudShade, CityMorningFog } from "./CityDayAir";
 import { CityAds, CityPuddles } from "./CityDayAds";
 import { isClearSky } from "@/lib/cityWeather";
@@ -96,8 +96,9 @@ export function CityV2({ tier }: { tier: number }) {
   const { phase, upcoming } = useCityPhase();
   const occ = TOWER_SILHOUETTE[tier] ?? TOWER_SILHOUETTE[1];
   const light = phase === "dawn" || phase === "day"; // небо и блики — только при свете
-  // ясный день (шаг 5): примерно каждый третий день по МСК на рассвете и днём — без дождя, блики в лужах
-  const clear = light && isClearSky();
+  // ясный день (шаг 5): примерно каждый третий день по МСК на рассвете, днём и вечером (dusk, шаг 4) —
+  // без дождя, блики в лужах. Ночь всегда дождливая.
+  const clear = (light || phase === "dusk") && isClearSky();
   // за полторы минуты до смены фазы кадр следующей фазы (для текущего облика) уходит в кэш браузера
   useEffect(() => {
     if (upcoming) preload(tier, upcoming);
@@ -176,6 +177,8 @@ export function CityV2({ tier }: { tier: number }) {
         {phase === "dusk" && <CityDuskTraffic />}
         {!clear && <CityRain phase={phase} tier={tier} />}
         {clear && <CityPuddles />}
+        {/* вечер (dusk, шаг 4): мокрая площадь отражает закат и неон — в дождь и в ясный вечер */}
+        {phase === "dusk" && <CityDuskWet tier={tier} />}
         {WIN.map(([x, y, d, dl], n) => (
           <i key={`w${n}`} className="win" style={{ ...box(x, y, 7, 8), "--d": `${d}s`, "--dl": `-${dl}s` } as Vars} />
         ))}
