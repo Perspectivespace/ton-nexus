@@ -4,7 +4,7 @@ import { CityLightning } from "./CityLightning";
 import { CityNeon } from "./CityNeon";
 import { CityRain } from "./CityRain";
 import { CityGlint, CitySky } from "./CityDaySky";
-import { CityDuskGlass, CityDuskLights, CityDuskSun, district } from "./CityDusk";
+import { CityDuskGlass, CityDuskLights, CityDuskSun, district, CityDuskStars, CityDuskTraffic } from "./CityDusk";
 import { CityClouds, CityCloudShade, CityMorningFog } from "./CityDayAir";
 import { CityAds, CityPuddles } from "./CityDayAds";
 import { isClearSky } from "@/lib/cityWeather";
@@ -148,6 +148,8 @@ export function CityV2({ tier }: { tier: number }) {
           Статичные градиенты; одна медленная анимация лучей; ночью и вечером слой погашен. ── */}
       <div className="cv2-sun" aria-hidden>
         <i className="rays" />
+        {/* вечер (dusk, шаг 3): первые звёзды и серп луны — за облаками и копией башни */}
+        {phase === "dusk" && <CityDuskStars />}
         {(light || phase === "dusk") && <CityClouds />}
         <i className="rim" style={{ clipPath: occ }} />
         {/* вечер (dusk, шаг 1): низкое солнце за крышами и тёплая кромка — только вечером */}
@@ -170,6 +172,8 @@ export function CityV2({ tier }: { tier: number }) {
         <CityNeon phase={phase} tier={tier} />
         {/* вечер: город зажигается волной по районам (окна, вывески, неон) */}
         {phase === "dusk" && <CityDuskLights tier={tier} />}
+        {/* вечер: час пик — фары и стоп-огни на дальних эстакадах */}
+        {phase === "dusk" && <CityDuskTraffic />}
         {!clear && <CityRain phase={phase} tier={tier} />}
         {clear && <CityPuddles />}
         {WIN.map(([x, y, d, dl], n) => (
