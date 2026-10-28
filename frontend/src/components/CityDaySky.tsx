@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
  * `?sky=now` — частые проходы для проверки.
  */
 
-function blocked(): boolean {
+export function blocked(): boolean {
   const c = document.documentElement.classList;
   if (document.hidden || c.contains("app-hidden") || c.contains("low-end") || c.contains("in-bld")) return true;
   try {
@@ -19,11 +19,11 @@ function blocked(): boolean {
   }
 }
 
-const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+export const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const testing = () => new URLSearchParams(location.search).get("sky") === "now";
 
 /** Цикл редких событий: первое через first, дальше через every; пропускает ход, если сейчас нельзя. */
-function useRare(first: [number, number], every: [number, number], fire: () => void) {
+export function useRare(first: [number, number], every: [number, number], fire: () => void) {
   const f = useRef(fire);
   f.current = fire;
   useEffect(() => {

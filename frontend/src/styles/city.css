@@ -173,7 +173,7 @@
 @keyframes cv2-beam { from { transform: rotate(-16deg) } to { transform: rotate(4deg) } }
 
 html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::after { animation-play-state: paused; }
-html.low-end .cv2-life > :not(.fog):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon) { display: none; }
+html.low-end .cv2-life > :not(.fog):not(.mfog):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon) { display: none; }
 html.low-end .cv2 .win, html.low-end .cv2 .bcn, html.low-end .cv2 .sign.cut { animation: none; opacity: .5; }
 html.low-end .cv2 .sign::after { animation: none; display: none; }
 html.low-end .cv2-back { display: none; }
@@ -238,10 +238,36 @@ html.low-end .cv2-back { display: none; }
 .cv2 .fly svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .cv2 .fly path { fill: none; stroke: #4A3550; stroke-linecap: round; stroke-linejoin: round; }
 .ph-day.cv2 .fly path { stroke: #1F3E5C; }
-.cv2 .fly.drone { width: 4.6%; aspect-ratio: 3; opacity: .85; }
+.cv2 .fly.drone { width: 4.6%; aspect-ratio: 3; opacity: .85; animation: none; } /* не наследовать петлю заднего дрона .cv2-back .drone */
 .cv2 .fly.drone i { position: absolute; inset: 0; background: url("../assets/craft/drone-day.svg") center / contain no-repeat; }
 .cv2 .fly.drone i::after { content: ""; position: absolute; left: 40%; top: 92%; width: 20%; height: 45%; border-radius: 1px;
   background: #C9925A; box-shadow: inset 0 -1px 0 rgba(0,0,0,.25); } /* посылка */
+/* ── Воздух светлого неба (daycity, шаг 4; CityDayAir.tsx): облака, тени облаков, утренний туман.
+ * Только градиенты, без картинок и filter. Облака и тени — конечные WAAPI-проходы, бесконечных анимаций нет. */
+.cv2-sun .clouds { inset: 0; overflow: hidden; }
+.cv2 .cloud { position: absolute; aspect-ratio: 3.2; will-change: transform; opacity: .9;
+  background:
+    radial-gradient(32% 46% at 30% 58%, rgba(255,236,230,.75), transparent 72%),
+    radial-gradient(30% 52% at 52% 44%, rgba(255,244,240,.85), transparent 72%),
+    radial-gradient(28% 42% at 72% 60%, rgba(255,232,226,.7), transparent 72%),
+    radial-gradient(50% 30% at 50% 72%, rgba(232,196,214,.45), transparent 75%); }
+.cv2 .cloud.k1 { opacity: .75; }
+.cv2 .cloud.k2 { opacity: .6; }
+.ph-day.cv2 .cloud { background:
+    radial-gradient(32% 46% at 30% 58%, rgba(255,255,255,.8), transparent 72%),
+    radial-gradient(30% 52% at 52% 44%, rgba(255,255,255,.92), transparent 72%),
+    radial-gradient(28% 42% at 72% 60%, rgba(250,253,255,.75), transparent 72%),
+    radial-gradient(50% 30% at 50% 72%, rgba(196,222,244,.5), transparent 75%); }
+.cv2-tone .shade { inset: auto; top: 46%; left: 0; width: 80%; height: 40%; opacity: 0; will-change: transform, opacity;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(52,34,82,.36), rgba(52,34,82,.18) 50%, transparent 72%); }
+.ph-day.cv2 .shade { background: radial-gradient(50% 50% at 50% 50%, rgba(16,44,84,.32), rgba(16,44,84,.15) 50%, transparent 72%); }
+.cv2 .mfog { left: -10%; width: 120%; top: 56%; height: 34%; pointer-events: none; opacity: .32; will-change: opacity, transform;
+  transition: opacity 6s ease-in-out;
+  background:
+    radial-gradient(40% 40% at 25% 55%, rgba(255,238,236,.75), transparent 72%),
+    radial-gradient(36% 38% at 70% 50%, rgba(255,242,240,.7), transparent 72%),
+    linear-gradient(180deg, transparent 0, rgba(250,232,236,.6) 35%, rgba(244,226,236,.55) 70%, transparent 100%); }
+.ph-day.cv2 .mfog { opacity: 0; } /* рассвет перешёл в день — туман растаял */
 /* полдень без тёплой розовой дымки — ближний туман холодно-белый */
 .ph-day.cv2 .f-near { background: radial-gradient(45% 50% at 40% 50%, rgba(236,248,255,.45), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(236,248,255,.4), transparent 70%); }
 html.low-end .cv2 .rays::before { animation: none !important; }

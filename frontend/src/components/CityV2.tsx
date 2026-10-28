@@ -4,6 +4,7 @@ import { CityLightning } from "./CityLightning";
 import { CityNeon } from "./CityNeon";
 import { CityRain } from "./CityRain";
 import { CityGlint, CitySky } from "./CityDaySky";
+import { CityClouds, CityCloudShade, CityMorningFog } from "./CityDayAir";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
@@ -142,6 +143,7 @@ export function CityV2({ tier }: { tier: number }) {
           Статичные градиенты; одна медленная анимация лучей; ночью и вечером слой погашен. ── */}
       <div className="cv2-sun" aria-hidden>
         <i className="rays" />
+        {light && <CityClouds />}
         <i className="rim" style={{ clipPath: occ }} />
       </div>
       {prev && prev !== src && <img className="cv2-img prev cv2-occ" src={prev} alt="" style={{ clipPath: occ }} />}
@@ -150,11 +152,13 @@ export function CityV2({ tier }: { tier: number }) {
         <i className="face" style={{ clipPath: occ }} />
         <i className="grade" />
         {light && <CityGlint clip={occ} />}
+        {light && <CityCloudShade />}
       </div>
       <div className="cv2-life">
         {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (10 анимаций + дрон в заднем слое) ── */}
         <i className="fog f-far" />
         <i className="fog f-near" />
+        {light && <CityMorningFog phase={phase} />}
         <CityNeon phase={phase} tier={tier} />
         <CityRain phase={phase} tier={tier} />
         {WIN.map(([x, y, d, dl], n) => (
