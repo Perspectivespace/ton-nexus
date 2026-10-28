@@ -4,6 +4,7 @@ import { CityLightning } from "./CityLightning";
 import { CityNeon } from "./CityNeon";
 import { CityRain } from "./CityRain";
 import { CityGlint, CitySky } from "./CityDaySky";
+import { CityDuskGlass, CityDuskLights, CityDuskSun, district } from "./CityDusk";
 import { CityClouds, CityCloudShade, CityMorningFog } from "./CityDayAir";
 import { CityAds, CityPuddles } from "./CityDayAds";
 import { isClearSky } from "@/lib/cityWeather";
@@ -149,13 +150,16 @@ export function CityV2({ tier }: { tier: number }) {
         <i className="rays" />
         {light && <CityClouds />}
         <i className="rim" style={{ clipPath: occ }} />
+        {/* вечер (dusk, шаг 1): низкое солнце за крышами и тёплая кромка — только вечером */}
+        <CityDuskSun tier={tier} clip={occ} />
       </div>
       {prev && prev !== src && <img className="cv2-img prev cv2-occ" src={prev} alt="" style={{ clipPath: occ }} />}
       {src && <img key={`o${src}`} className={`cv2-img cv2-occ${slow ? " slow" : ""}`} src={src} alt="" decoding="async" style={{ clipPath: occ }} />}
       <div className="cv2-tone" aria-hidden>
         <i className="face" style={{ clipPath: occ }} />
         <i className="grade" />
-        {light && <CityGlint clip={occ} />}
+        <CityDuskGlass clip={occ} />
+        {(light || phase === "dusk") && <CityGlint clip={occ} />}
         {light && <CityCloudShade />}
       </div>
       <div className="cv2-life">
@@ -164,6 +168,8 @@ export function CityV2({ tier }: { tier: number }) {
         <i className="fog f-near" />
         {light && <CityMorningFog phase={phase} />}
         <CityNeon phase={phase} tier={tier} />
+        {/* вечер: город зажигается волной по районам (окна, вывески, неон) */}
+        {phase === "dusk" && <CityDuskLights tier={tier} />}
         {!clear && <CityRain phase={phase} tier={tier} />}
         {clear && <CityPuddles />}
         {WIN.map(([x, y, d, dl], n) => (
@@ -178,8 +184,8 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── T2+: вывески зажглись (одна иногда «моргает»); единственный борт ПЕРЕД башней ── */}
         {tier >= 2 && (
           <>
-            <b className={`sign v ${tier >= 4 ? "holo" : "quiet cut"}`} style={box(72, 578, 40, 170)}>ОБМЕН</b>
-            <b className={`sign ${tier >= 4 ? "holo" : "quiet"}`} style={box(444, 808, 44, 52)}>TON</b>
+            <b className={`sign v ${tier >= 4 ? "holo" : "quiet cut"}`} style={box(72, 578, 40, 170)} data-d={district(72)}>ОБМЕН</b>
+            <b className={`sign ${tier >= 4 ? "holo" : "quiet"}`} style={box(444, 808, 44, 52)} data-d={district(444)}>TON</b>
             <i className="craft c0 front" />
           </>
         )}
@@ -192,7 +198,7 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── T4: голо-«РЕАКТОР» с развёрткой, прожектор (третий борт — в заднем слое) ── */}
         {tier >= 4 && (
           <>
-            <b className="sign holo wide scan" style={box(543, 705, 112, 86)}>
+            <b className="sign holo wide scan" style={box(543, 705, 112, 86)} data-d={district(543)}>
               РЕАКТОР<small>MK IV · ОНЛАЙН</small>
             </b>
             <i className="beam" style={{ left: pc(600, W), top: pc(1000, H) }} />
