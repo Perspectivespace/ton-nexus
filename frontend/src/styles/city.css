@@ -258,6 +258,15 @@ html.low-end .cv2-back { display: none; }
     radial-gradient(30% 52% at 52% 44%, rgba(255,255,255,.92), transparent 72%),
     radial-gradient(28% 42% at 72% 60%, rgba(250,253,255,.75), transparent 72%),
     radial-gradient(50% 30% at 50% 72%, rgba(196,222,244,.5), transparent 75%); }
+/* вечер (dusk, шаг 2): те же облака, но розово-фиолетовые и подсвечены снизу закатом — тёплое брюхо, холодный верх */
+.ph-dusk.cv2 .cloud { opacity: .9; background:
+    radial-gradient(20% 30% at 50% 74%, rgba(255,214,176,.55), transparent 80%),
+    radial-gradient(44% 20% at 50% 76%, rgba(255,160,130,.7), rgba(255,118,160,.28) 55%, transparent 80%),
+    radial-gradient(32% 44% at 30% 56%, rgba(250,150,222,.6), rgba(214,120,214,.25) 55%, transparent 74%),
+    radial-gradient(30% 50% at 52% 42%, rgba(236,156,236,.62), rgba(196,120,220,.22) 55%, transparent 74%),
+    radial-gradient(28% 40% at 72% 58%, rgba(255,160,214,.55), rgba(220,120,200,.2) 55%, transparent 74%); }
+.ph-dusk.cv2 .cloud.k1 { opacity: .72; }
+.ph-dusk.cv2 .cloud.k2 { opacity: .6; }
 .cv2-tone .shade { inset: auto; top: 46%; left: 0; width: 80%; height: 40%; opacity: 0; will-change: transform, opacity;
   background: radial-gradient(50% 50% at 50% 50%, rgba(52,34,82,.36), rgba(52,34,82,.18) 50%, transparent 72%); }
 .ph-day.cv2 .shade { background: radial-gradient(50% 50% at 50% 50%, rgba(16,44,84,.32), rgba(16,44,84,.15) 50%, transparent 72%); }
@@ -420,6 +429,12 @@ html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn { display: none; }
 .cv2 .neon .hg { opacity: 0; will-change: transform, opacity; }
 .cv2 .holo-w { opacity: .8; mix-blend-mode: screen; } /* чёрный фон изображения исчезает, свет складывается с ночью */
 .ph-dusk.cv2 .neon .lt { opacity: .92; }
+/* вечер (dusk, шаг 2): светлая строка развёртки при «сборке» голограммы (ведёт CityNeon, разовая WAAPI) */
+.cv2 .holo-w .hscan { position: absolute; inset: 0; opacity: 0; pointer-events: none; will-change: transform, opacity;
+  background:
+    linear-gradient(180deg, rgba(200,252,255,.95) 0, rgba(130,236,255,.55) .7%, rgba(90,220,255,.12) 2.4%, transparent 4%),
+    repeating-linear-gradient(180deg, rgba(140,240,255,.22) 0 1px, transparent 1px 4px);
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 3%, rgba(0,0,0,.4) 6%, transparent 14%); mask-image: linear-gradient(180deg, #000 0, #000 3%, rgba(0,0,0,.4) 6%, transparent 14%); }
 /* Рассвет и день — свой город, не «ночь-лайт»: неон, стекло панелей и голограмма гаснут целиком.
  * Переход мягкий (2.5 с); после него слой скрыт (visibility) — не участвует в композиции. */
 .cv2 .neon { transition: opacity 2.5s ease, visibility 0s linear 0s; }

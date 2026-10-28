@@ -148,7 +148,7 @@ export function CityV2({ tier }: { tier: number }) {
           Статичные градиенты; одна медленная анимация лучей; ночью и вечером слой погашен. ── */}
       <div className="cv2-sun" aria-hidden>
         <i className="rays" />
-        {light && <CityClouds />}
+        {(light || phase === "dusk") && <CityClouds />}
         <i className="rim" style={{ clipPath: occ }} />
         {/* вечер (dusk, шаг 1): низкое солнце за крышами и тёплая кромка — только вечером */}
         <CityDuskSun tier={tier} clip={occ} />
