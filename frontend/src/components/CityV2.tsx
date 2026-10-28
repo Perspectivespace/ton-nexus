@@ -135,8 +135,18 @@ export function CityV2({ tier }: { tier: number }) {
         )}
         {tier >= 4 && <i className="craft c3 flip" />}
       </div>
+      {/* ── СВЕТ (рассвет/день, daycity шаг 2): лучи солнца и тёплая кромка — за копией башни, она их режет.
+          Статичные градиенты; одна медленная анимация лучей; ночью и вечером слой погашен. ── */}
+      <div className="cv2-sun" aria-hidden>
+        <i className="rays" />
+        <i className="rim" style={{ clipPath: occ }} />
+      </div>
       {prev && prev !== src && <img className="cv2-img prev cv2-occ" src={prev} alt="" style={{ clipPath: occ }} />}
       {src && <img key={`o${src}`} className={`cv2-img cv2-occ${slow ? " slow" : ""}`} src={src} alt="" decoding="async" style={{ clipPath: occ }} />}
+      <div className="cv2-tone" aria-hidden>
+        <i className="face" style={{ clipPath: occ }} />
+        <i className="grade" />
+      </div>
       <div className="cv2-life">
         {/* ── БАЗОВАЯ ЖИЗНЬ: на каждом облике, включая T1 (10 анимаций + дрон в заднем слое) ── */}
         <i className="fog f-far" />

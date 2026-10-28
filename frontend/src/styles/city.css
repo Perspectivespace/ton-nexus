@@ -184,6 +184,50 @@ html.low-end .cv2-back { display: none; }
   .cv2 .win, .cv2 .bcn { opacity: .5; }
 }
 
+/* ── Свет рассвета и дня (daycity, шаг 2): своя палитра, не «ночь-лайт» ──
+ * Рассвет — тёплый розово-золотой: солнце низко слева, тёплая кромка и тёплая грань башни.
+ * Полдень — чистый голубой: солнце высоко справа, холодная светлая кромка, без тёплой вуали.
+ * Только статичные градиенты + одна медленная анимация лучей (на рассвете/днём); без filter и backdrop-filter.
+ * Ночью и вечером слои погашены (opacity 0 → visibility hidden), переход 2.4 с — как смена кадра. */
+.cv2-sun, .cv2-tone { position: absolute; inset: 0; pointer-events: none; opacity: 0; visibility: hidden;
+  transition: opacity 2.4s ease-in-out, visibility 0s linear 2.4s; }
+.cv2-sun > *, .cv2-tone > * { position: absolute; inset: 0; display: block; }
+:is(.ph-dawn,.ph-day).cv2 :is(.cv2-sun,.cv2-tone) { opacity: 1; visibility: visible; transition: opacity 2.4s ease-in-out, visibility 0s; }
+/* лучи: мягкие клинья из точки солнца, гаснут к краям и книзу; лежат за башней — видны между корпусами.
+ * Обычное наложение (без blend) — дешевле при анимации поворота */
+.cv2 .rays { --sx: 30%; --sy: 50%; inset: -10%; opacity: .75;
+  -webkit-mask-image: radial-gradient(circle at var(--sx) var(--sy), #000 0, rgba(0,0,0,.45) 22%, transparent 52%), linear-gradient(180deg, #000 52%, transparent 74%);
+  mask-image: radial-gradient(circle at var(--sx) var(--sy), #000 0, rgba(0,0,0,.45) 22%, transparent 52%), linear-gradient(180deg, #000 52%, transparent 74%);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }
+.cv2 .rays::before { content: ""; position: absolute; inset: 0; transform-origin: var(--sx) var(--sy); will-change: transform;
+  background:
+    radial-gradient(circle at var(--sx) var(--sy), rgba(255,232,190,.85) 0, rgba(255,205,160,.4) 7%, rgba(255,190,160,.12) 20%, transparent 34%),
+    repeating-conic-gradient(from 8deg at var(--sx) var(--sy), rgba(255,222,175,0) 0deg, rgba(255,222,175,.3) 4deg, rgba(255,222,175,0) 10deg, rgba(255,236,210,.16) 16deg, rgba(255,236,210,0) 22deg); }
+:is(.ph-dawn,.ph-day).cv2 .rays::before { animation: cv2-rays 26s ease-in-out infinite alternate; } /* ночью анимации нет */
+@keyframes cv2-rays { from { transform: rotate(-2.5deg) } to { transform: rotate(2.5deg) } }
+.ph-day.cv2 .rays { --sx: 74%; --sy: 10%; opacity: .7; }
+.ph-day.cv2 .rays::before { background:
+    radial-gradient(circle at var(--sx) var(--sy), rgba(255,255,255,.85) 0, rgba(230,246,255,.35) 7%, transparent 22%),
+    repeating-conic-gradient(from 4deg at var(--sx) var(--sy), rgba(245,252,255,0) 0deg, rgba(245,252,255,.26) 5deg, rgba(245,252,255,0) 12deg, rgba(255,255,255,.14) 18deg, rgba(255,255,255,0) 25deg); }
+/* кромка: силуэт башни чуть сдвинут к солнцу и лежит под копией — выглядывает тонкой светлой линией по боку */
+.cv2 .rim { transform: translateX(-2px);
+  background: linear-gradient(180deg, #FFE0A8 0%, #FFB98A 38%, rgba(255,160,130,.4) 50%, transparent 60%); }
+.ph-day.cv2 .rim { transform: translateX(1.4px); opacity: .5;
+  background: linear-gradient(180deg, #F4FBFF 0%, #CFEFFF 40%, transparent 60%); }
+/* грань башни, обращённая к солнцу: мягкий свет поверх кадра */
+.cv2 .face { mix-blend-mode: soft-light;
+  -webkit-mask-image: linear-gradient(180deg, transparent 14%, #000 30%, #000 48%, transparent 66%); mask-image: linear-gradient(180deg, transparent 14%, #000 30%, #000 48%, transparent 66%);
+  background: linear-gradient(90deg, rgba(255,190,120,.85) 0%, rgba(255,170,130,.35) 46%, transparent 58%); }
+.ph-day.cv2 .face { background: linear-gradient(270deg, rgba(235,248,255,.55) 0%, rgba(220,240,255,.2) 48%, transparent 58%); }
+/* общий тон кадра: рассвет — золото у солнца и розово-персиковое небо, полдень — чистый голубой */
+.cv2 .grade { background:
+    radial-gradient(60% 30% at 30% 50%, rgba(255,200,120,.34), rgba(255,170,130,.12) 55%, transparent 80%),
+    linear-gradient(180deg, transparent 30%, rgba(255,190,130,.1) 48%, transparent 64%); }
+.ph-day.cv2 .grade { background: linear-gradient(180deg, rgba(90,180,255,.16) 0%, rgba(160,220,255,.08) 45%, transparent 70%); }
+/* полдень без тёплой розовой дымки — ближний туман холодно-белый */
+.ph-day.cv2 .f-near { background: radial-gradient(45% 50% at 40% 50%, rgba(236,248,255,.45), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(236,248,255,.4), transparent 70%); }
+html.low-end .cv2 .rays::before { animation: none !important; }
+
 /* «окно в город» на главной: город сдвинут вверх, чтобы башня и вывески попали в окно */
 .cv2-window { height: 236px; display: flex; align-items: flex-end; justify-content: flex-start; }
 .cv2-chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 5px 10px; font-size: 12px; color: #D5E6F2;
