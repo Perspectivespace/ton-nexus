@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { CityV2, useCityTier } from "./CityV2";
 import { Interior, type InteriorAnim } from "./CityBuildings";
 import { buildingAt, motionMode } from "@/lib/buildings";
+import { syncChrome } from "@/lib/theme";
 
 /**
  * Фоновый город под всем приложением (п. 3.10–3.11); внутри раздела-здания (сейчас только «Майнер») —
@@ -27,6 +28,7 @@ export function CityBackdrop() {
     } else {
       root.classList.remove("in-bld");
     }
+    syncChrome();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loc.key]);
 

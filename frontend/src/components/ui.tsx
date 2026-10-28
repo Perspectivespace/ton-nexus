@@ -88,7 +88,7 @@ export function Gauge({ value, max = 100, label, sub }: { value: number; max?: n
  */
 export function ScreenHeader({ eyebrow, title, action }: { eyebrow?: string; title: string; action?: ReactNode }) {
   return (
-    <header className={`flex justify-between gap-3 ${eyebrow ? "items-start" : "min-h-[40px] items-center"}`}>
+    <header className={`on-city flex justify-between gap-3 ${eyebrow ? "items-start" : "min-h-[40px] items-center"}`}>
       <div className="min-w-0">
         {eyebrow && <p className="ui-label">{eyebrow}</p>}
         <h1 className={`ui-title ui-shade truncate ${eyebrow ? "mt-1" : ""}`}>{title}</h1>
