@@ -173,7 +173,7 @@
 @keyframes cv2-beam { from { transform: rotate(-16deg) } to { transform: rotate(4deg) } }
 
 html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::after { animation-play-state: paused; }
-html.low-end .cv2-life > :not(.fog):not(.mfog):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon) { display: none; }
+html.low-end .cv2-life > :not(.fog):not(.mfog):not(.ad):not(.pdl):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon) { display: none; }
 html.low-end .cv2 .win, html.low-end .cv2 .bcn, html.low-end .cv2 .sign.cut { animation: none; opacity: .5; }
 html.low-end .cv2 .sign::after { animation: none; display: none; }
 html.low-end .cv2-back { display: none; }
@@ -268,6 +268,31 @@ html.low-end .cv2-back { display: none; }
     radial-gradient(36% 38% at 70% 50%, rgba(255,242,240,.7), transparent 72%),
     linear-gradient(180deg, transparent 0, rgba(250,232,236,.6) 35%, rgba(244,226,236,.55) 70%, transparent 100%); }
 .ph-day.cv2 .mfog { opacity: 0; } /* рассвет перешёл в день — туман растаял */
+/* ── Дневная голо-реклама и ясная погода (daycity, шаг 5; CityDayAds.tsx). Светлые чистые панели без filter;
+ * слайды меняются по JS-таймеру (CSS transition opacity). Ясный день: дождя нет, лужи отражают небо, редкие блики. */
+.cv2 .ad { overflow: hidden; pointer-events: none; border-radius: 3px; opacity: .92;
+  background: linear-gradient(160deg, rgba(255,255,255,.62), rgba(214,242,255,.42) 60%, rgba(190,232,255,.34));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), 0 0 10px rgba(150,225,255,.35);
+  font: 700 clamp(5px, 1.6vw, 9px)/1.1 var(--font-mono, monospace); letter-spacing: .08em; color: #0A5A72; }
+.cv2 .ad::before { content: ""; position: absolute; left: 0; top: 18%; bottom: 18%; width: 2px; background: #2BC8E8; border-radius: 1px; }
+.cv2 .ad span { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding-left: 10%;
+  opacity: 0; transform: translateY(12%); transition: opacity .9s ease-in-out, transform .9s ease-in-out; white-space: nowrap; }
+.cv2 .ad span.on { opacity: 1; transform: none; }
+.cv2 .ad small { display: block; margin-top: 2px; font-weight: 500; font-size: .78em; letter-spacing: .04em; color: #3F7487; }
+.ph-dawn.cv2 .ad { color: #6A2A55; background: linear-gradient(160deg, rgba(255,250,248,.62), rgba(255,226,232,.44) 60%, rgba(255,214,200,.34));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), 0 0 10px rgba(255,190,200,.35); }
+.ph-dawn.cv2 .ad::before { background: #F07AA6; }
+.ph-dawn.cv2 .ad small { color: #8A5070; }
+html:not(.cv2-home) .cv2 .ad { opacity: .8; }
+.cv2 .pdl { inset: 0; pointer-events: none; }
+.cv2 .pdl > i { position: absolute; display: block; }
+.cv2 .pool { border-radius: 50%; opacity: .55;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(214,238,255,.7), rgba(190,226,255,.25) 55%, transparent 72%); }
+.ph-dawn.cv2 .pool { background: radial-gradient(50% 50% at 50% 50%, rgba(255,226,214,.7), rgba(255,206,196,.25) 55%, transparent 72%); }
+.cv2 .pg { aspect-ratio: 3; margin: -0.9% 0 0 -2.8%; opacity: .4; will-change: transform, opacity;
+  background: radial-gradient(50% 50% at 50% 50%, #fff 0, rgba(255,255,255,.85) 10%, rgba(255,250,235,.3) 34%, transparent 70%); }
+.ph-dawn.cv2 .pg { background: radial-gradient(50% 50% at 50% 50%, #fff 0, rgba(255,240,214,.75) 14%, rgba(255,214,170,.2) 40%, transparent 70%); }
+html.low-end .cv2 .pg { opacity: .55; }
 /* полдень без тёплой розовой дымки — ближний туман холодно-белый */
 .ph-day.cv2 .f-near { background: radial-gradient(45% 50% at 40% 50%, rgba(236,248,255,.45), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(236,248,255,.4), transparent 70%); }
 html.low-end .cv2 .rays::before { animation: none !important; }
