@@ -201,7 +201,8 @@ html.cv2-home .city .c-stage { transform: translate3d(-50%, -120px, 0); }
 :is(.ph-dawn,.ph-day).cv2 .fog { opacity: .45; }
 :is(.ph-dawn,.ph-day).cv2 .f-far { background: radial-gradient(50% 50% at 30% 50%, rgba(255,226,222,.55), transparent 70%), radial-gradient(40% 45% at 75% 55%, rgba(255,236,232,.45), transparent 70%); }
 :is(.ph-dawn,.ph-day).cv2 .f-near { background: radial-gradient(45% 50% at 40% 50%, rgba(255,240,236,.5), transparent 70%), radial-gradient(35% 50% at 85% 45%, rgba(236,248,255,.4), transparent 70%); }
-:is(.ph-dawn,.ph-day).cv2 .win { background: #FFC266; }
+:is(.ph-dawn,.ph-day).cv2 .win { background: #FFC266; box-shadow: none; } /* при свете окна не светятся ореолом */
+:is(.ph-dawn,.ph-day).cv2 .puddle { opacity: .45; } /* брызги — без ночного блеска мокрой площади */
 :is(.ph-dawn,.ph-day).cv2 .steam { background: radial-gradient(closest-side, rgba(255,255,255,.85), rgba(255,255,255,0)); }
 :is(.ph-dawn,.ph-day).cv2 .sign { padding: 3px; color: #00788C; text-shadow: 0 0 6px rgba(43,245,255,.55);
   background: linear-gradient(180deg, rgba(240,253,255,.72), rgba(214,246,252,.58));
@@ -212,13 +213,12 @@ html.cv2-home .city .c-stage { transform: translate3d(-50%, -120px, 0); }
   box-shadow: inset 0 0 0 1px rgba(200,16,90,.32), 0 2px 10px rgba(60,20,70,.18); }
 :is(.ph-dawn,.ph-day).cv2 .sign small { color: #00788C; }
 :is(.ph-dawn,.ph-day).cv2 .sign.scan::after { background: linear-gradient(180deg, transparent, rgba(255,255,255,.55), transparent); }
-:is(.ph-dawn,.ph-day).cv2 .beam { opacity: .3; background: linear-gradient(0deg, rgba(255,255,255,.9), rgba(255,255,255,0) 85%); }
 [data-theme="light"] .cv2-chip { color: var(--text); background: rgba(255,255,255,.9); border-color: var(--line-strong); }
 /* вне главной вывески на светлом стекле чуть тише, чтобы не спорить с цифрами панелей */
 html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
 
 /* день: окна в солнце не мигают, прожектора нет; дождь тоньше и реже, дымка голубая */
-.cv2.ph-day .win, .cv2.ph-day .beam { display: none; }
+.cv2.ph-day .win, :is(.ph-dawn,.ph-day).cv2 .beam { display: none; } /* прожектор — только вечером и ночью */
 .cv2.ph-day .rain { opacity: .65; }
 .cv2.ph-day .f-far { background: radial-gradient(50% 50% at 30% 50%, rgba(226,242,255,.5), transparent 70%), radial-gradient(40% 45% at 75% 55%, rgba(236,248,255,.4), transparent 70%); }
 .cv2.ph-day .bcn { transform: scale(.75); }
@@ -254,7 +254,7 @@ html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn { display: none; }
 @media (prefers-reduced-motion: reduce) { .cv2 .ltn { display: none; } }
 
 /* ── Неон (п. 12.1): вывески-трубки и голограмма. Всё нарисовано в canvas один раз; без CSS-анимаций —
- * редкие смены opacity/transform по таймеру (CityNeon.tsx). Днём трубки выключены (видно стекло), голограмма бледная. */
+ * редкие смены opacity/transform по таймеру (CityNeon.tsx). На рассвете и днём слой погашен; голограмма до первых сумерек не рисуется и не грузится. */
 .cv2 .neon { inset: 0; pointer-events: none; }
 .cv2 .neon > span, .cv2 .neon .lt { position: absolute; }
 .cv2 .neon .lt { inset: 0; }
@@ -264,9 +264,7 @@ html.low-end .cv2 .ltn, html.in-bld .cv2 .ltn { display: none; }
 .cv2 .neon .hg { opacity: 0; will-change: transform, opacity; }
 .cv2 .holo-w { opacity: .8; mix-blend-mode: screen; } /* чёрный фон изображения исчезает, свет складывается с ночью */
 .ph-dusk.cv2 .neon .lt { opacity: .92; }
-.ph-dawn.cv2 .neon .lt { opacity: .5; }
-.ph-dawn.cv2 .holo-w { opacity: .5; }
-.ph-day.cv2 .neon .lt { opacity: .14; }
-.ph-day.cv2 .neon .off { opacity: .35; } /* днём тёмное стекло панелей не «дырявит» небо */
-.ph-dawn.cv2 .neon .off { opacity: .7; }
-.ph-day.cv2 .holo-w { opacity: .16; }
+/* Рассвет и день — свой город, не «ночь-лайт»: неон, стекло панелей и голограмма гаснут целиком.
+ * Переход мягкий (2.5 с); после него слой скрыт (visibility) — не участвует в композиции. */
+.cv2 .neon { transition: opacity 2.5s ease, visibility 0s linear 0s; }
+:is(.ph-dawn,.ph-day).cv2 .neon { opacity: 0; visibility: hidden; transition: opacity 2.5s ease, visibility 0s linear 2.5s; }

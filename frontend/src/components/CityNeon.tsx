@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CityPhase } from "@/lib/cityPhase";
 import holoUrl from "@/assets/city/holo-v3.webp"; // ~13 KB, грузится в простое после первого кадра
 
@@ -304,12 +304,19 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
   const host = useRef<HTMLDivElement>(null);
   const signs = SIGNS.filter((s) => tier >= s.from);
   const key = signs.map((s) => s.id).join();
+  // на рассвете и днём неон и голограмма не нужны: ничего не рисуем и не грузим, пока не стемнеет;
+  // после первого вечера слой остаётся смонтированным — на рассвете он гаснет переходом в CSS
+  const dark = phase === "dusk" || phase === "night";
+  const [armed, setArmed] = useState(dark);
+  useEffect(() => {
+    if (dark) setArmed(true);
+  }, [dark]);
 
   // рисуем один раз на размер сцены (фаза меняет только прозрачность в CSS)
   useEffect(() => {
     const el = host.current;
     const stage = el?.parentElement;
-    if (!el || !stage) return;
+    if (!el || !stage || !armed) return;
     let last = "";
     let dead = false;
     const paint = () => {
@@ -372,12 +379,12 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
       dead = true;
       ro.disconnect();
     };
-  }, [key]);
+  }, [key, armed]);
 
   // редкие смены состояния: только ночью, вечером и на рассвете; не при «уменьшить движение» и на слабых
   useEffect(() => {
     const el = host.current;
-    if (!el || phase === "day" || reduced() || lowEnd()) return;
+    if (!el || !dark || reduced() || lowEnd()) return;
     const timers = new Set<number>();
     const after = (ms: number, f: () => void) => {
       const t = window.setTimeout(() => {
@@ -518,10 +525,11 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
         n.style.clipPath = "";
       });
     };
-  }, [key, phase]);
+  }, [key, phase, armed]);
 
   return (
     <div ref={host} className="neon" aria-hidden>
+      {armed && (
       <span className="holo-w" style={{ left: pc(HOLO.x, W), top: pc(HOLO.y, H), width: pc(HOLO.w, W), height: pc(HOLO.h, H) }}>
         <canvas
           className="hb"
@@ -531,7 +539,8 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
         <canvas className="hg" />
         <canvas className="hg" />
       </span>
-      {signs.map((s) => {
+      )}
+      {armed && signs.map((s) => {
         const { fw, fh } = signUnits(s);
         return (
           <span
