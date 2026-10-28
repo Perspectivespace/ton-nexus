@@ -5,6 +5,8 @@ import { CityNeon } from "./CityNeon";
 import { CityRain } from "./CityRain";
 import { CityGlint, CitySky } from "./CityDaySky";
 import { CityClouds, CityCloudShade, CityMorningFog } from "./CityDayAir";
+import { CityAds, CityPuddles } from "./CityDayAds";
+import { isClearSky } from "@/lib/cityWeather";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
@@ -93,6 +95,8 @@ export function CityV2({ tier }: { tier: number }) {
   const { phase, upcoming } = useCityPhase();
   const occ = TOWER_SILHOUETTE[tier] ?? TOWER_SILHOUETTE[1];
   const light = phase === "dawn" || phase === "day"; // небо и блики — только при свете
+  // ясный день (шаг 5): примерно каждый третий день по МСК на рассвете и днём — без дождя, блики в лужах
+  const clear = light && isClearSky();
   // за полторы минуты до смены фазы кадр следующей фазы (для текущего облика) уходит в кэш браузера
   useEffect(() => {
     if (upcoming) preload(tier, upcoming);
@@ -123,7 +127,7 @@ export function CityV2({ tier }: { tier: number }) {
   }, [tier, phase]);
 
   return (
-    <div className={`cv2 t${tier} ph-${phase}`}>
+    <div className={`cv2 t${tier} ph-${phase}${clear ? " wx-clear" : ""}`}>
       {prev && prev !== src && <img className="cv2-img prev" src={prev} alt="" />}
       {src && <img key={src} className={`cv2-img${slow ? " slow" : ""}`} src={src} alt="" decoding="async" />}
       {/* ── ГЛУБИНА: задние борта летят за башней (п. 12.1). Над ними — копия кадра, вырезанная по силуэту
@@ -160,7 +164,8 @@ export function CityV2({ tier }: { tier: number }) {
         <i className="fog f-near" />
         {light && <CityMorningFog phase={phase} />}
         <CityNeon phase={phase} tier={tier} />
-        <CityRain phase={phase} tier={tier} />
+        {!clear && <CityRain phase={phase} tier={tier} />}
+        {clear && <CityPuddles />}
         {WIN.map(([x, y, d, dl], n) => (
           <i key={`w${n}`} className="win" style={{ ...box(x, y, 7, 8), "--d": `${d}s`, "--dl": `-${dl}s` } as Vars} />
         ))}
@@ -193,6 +198,8 @@ export function CityV2({ tier }: { tier: number }) {
             <i className="beam" style={{ left: pc(600, W), top: pc(1000, H) }} />
           </>
         )}
+        {/* ── днём: две небольшие светлые голо-панели со сменой слайдов (шаг 5) ── */}
+        {light && <CityAds />}
         {/* ── экран раздела «Майнер» на реакторной башне (на всех обликах, статичный) ── */}
         <TowerScreen />
       </div>
