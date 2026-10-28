@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CityPhase } from "@/lib/cityPhase";
 import holoUrl from "@/assets/city/holo-v3.webp"; // ~13 KB, грузится в простое после первого кадра
+import { district } from "./CityDusk";
 
 /**
  * Неоновые вывески и голограмма над крышами (DESIGN.md п. 12.1, «Неон»).
@@ -546,6 +547,7 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
           <span
             key={s.id}
             data-s={s.id}
+            data-d={district(s.x)}
             className={`ns ns-${s.id}`}
             style={{ left: pc(s.x - PAD * s.s, W), top: pc(s.y - PAD * s.s, H), width: pc(fw * s.s, W), height: pc(fh * s.s, H) }}
           >
