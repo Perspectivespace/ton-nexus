@@ -58,6 +58,11 @@ export const IconChevron = make("Chevron", p("M9 6l6 6-6 6"));
 /** Назад — зеркало шеврона; в счёт 24 не входит */
 export const IconBack = make("Back", p("M15 6l-6 6 6 6"));
 
+/** Игры — центральная кнопка дока (вне набора 24, как Башня); корпус по центру сетки */
+export const IconGamepad = make("Gamepad", <>{p("M7 7h10l4 4v4l-2 2h-2l-2-2H9l-2 2H5l-2-2v-4z")}{p("M7.5 10v4M5.5 12h4")}{p("M15.6 10.6h.8M17.6 13.4h.8")}</>);
+/** Заработок — стопка монет (вне набора 24) */
+export const IconCoins = make("Coins", <>{p("M5 6l3-2h8l3 2-3 2H8z")}{p("M5 6v4l3 2h8l3-2V6")}{p("M5 10v4l3 2h8l3-2v-4")}{p("M5 14v4l3 2h8l3-2v-4")}</>);
+
 /** Полный список — для витрины /kit и проверки «ровно 24» */
 export const ICONS = {
   home: IconHome, reactor: IconReactor, tasks: IconTasks, wallet: IconWallet, gift: IconGift, wheel: IconWheel,

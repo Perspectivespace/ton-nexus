@@ -10,8 +10,10 @@ import {
   Panel,
   Bar,
   Tag,
+  SectionLabel,
 } from "@/components/ui";
 import { haptic } from "@/lib/haptics";
+import { DailyCheckIn } from "@/components/DailyCheckIn";
 
 export function Tasks() {
   const { data: me } = useMe();
@@ -21,67 +23,77 @@ export function Tasks() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        title="Задания"
+        title="Заработок"
         action={
-          <div className="flex items-center gap-2">
-            {canCreate && (
-              <Link to="/tasks/new" className="ui-btn ghost sm" onClick={() => haptic.tap()}>
-                + Создать
-              </Link>
-            )}
-            <StatusPill tone={isFetching ? "live" : "neutral"}>
-              {isFetching ? "синхр." : `${data?.length ?? 0} активных`}
-            </StatusPill>
-          </div>
+          canCreate ? (
+            <Link to="/tasks/new" className="ui-btn ghost sm" onClick={() => haptic.tap()}>
+              + Создать
+            </Link>
+          ) : undefined
         }
       />
 
-      {isLoading && <LoadingPanel label="Загрузка ленты заданий…" />}
-      {error && <ErrorPanel message="Канал заданий недоступен" />}
+      <DailyCheckIn />
 
-      {!isLoading && !error && data?.length === 0 && (
-        <EmptyPanel
-          title="Заданий пока нет"
-          body="Активных заданий пока нет. Амбассадоры и админы публикуют их в разделе «Управление» на «Контуре»."
-        />
-      )}
+      <section className="space-y-2.5">
+        {/* счётчик ленты — у подписи раздела, чтобы заголовок «Заработок» не обрезался на узких экранах */}
+        <SectionLabel
+          action={
+            <StatusPill tone={isFetching ? "live" : "neutral"}>
+              {isFetching ? "синхр." : `${data?.length ?? 0} активных`}
+            </StatusPill>
+          }
+        >
+          Задания
+        </SectionLabel>
 
-      <ul className="space-y-3">
-        {(data || []).map((t, i) => {
-          const slotsLeft = t.total_slots - t.filled_slots;
-          const fillPct =
-            t.total_slots > 0 ? Math.round((t.filled_slots / t.total_slots) * 100) : 0;
-          return (
-            <motion.li
-              key={t.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-            >
-              <Link to={`/tasks/${t.id}`} className="block no-underline text-inherit" onClick={() => haptic.tap()}>
-                <Panel className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <h2 className="ui-h !text-[15px] !leading-[20px] !font-medium">{t.title}</h2>
-                    <span className="ui-num s-m !font-bold !text-[var(--neon)] shrink-0">
-                      {Number(t.reward).toFixed(4)}
-                      <span className="unit">TON</span>
-                    </span>
-                  </div>
-                  <p className="ui-sec mt-2 line-clamp-2">{t.description}</p>
-                  <Bar value={fillPct / 100} className="mt-3" label="Занято мест" />
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Tag tone="neutral" dot={false}>
-                      {slotsLeft} {plural(slotsLeft, "место", "места", "мест")}
-                    </Tag>
-                    <Tag tone="neutral" dot={false}>ур. {t.min_level}+</Tag>
-                    <Tag tone="amber" dot={false}>+{t.xp_reward} XP</Tag>
-                  </div>
-                </Panel>
-              </Link>
-            </motion.li>
-          );
-        })}
-      </ul>
+        {isLoading && <LoadingPanel label="Загрузка ленты заданий…" />}
+        {error && <ErrorPanel message="Канал заданий недоступен" />}
+
+        {!isLoading && !error && data?.length === 0 && (
+          <EmptyPanel
+            title="Заданий пока нет"
+            body="Активных заданий пока нет. Амбассадоры и админы публикуют их в разделе «Управление» в «Профиле»."
+          />
+        )}
+
+        <ul className="space-y-3">
+          {(data || []).map((t, i) => {
+            const slotsLeft = t.total_slots - t.filled_slots;
+            const fillPct =
+              t.total_slots > 0 ? Math.round((t.filled_slots / t.total_slots) * 100) : 0;
+            return (
+              <motion.li
+                key={t.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+              >
+                <Link to={`/tasks/${t.id}`} className="block no-underline text-inherit" onClick={() => haptic.tap()}>
+                  <Panel className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h2 className="ui-h !text-[15px] !leading-[20px] !font-medium">{t.title}</h2>
+                      <span className="ui-num s-m !font-bold !text-[var(--neon)] shrink-0">
+                        {Number(t.reward).toFixed(4)}
+                        <span className="unit">TON</span>
+                      </span>
+                    </div>
+                    <p className="ui-sec mt-2 line-clamp-2">{t.description}</p>
+                    <Bar value={fillPct / 100} className="mt-3" label="Занято мест" />
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Tag tone="neutral" dot={false}>
+                        {slotsLeft} {plural(slotsLeft, "место", "места", "мест")}
+                      </Tag>
+                      <Tag tone="neutral" dot={false}>ур. {t.min_level}+</Tag>
+                      <Tag tone="amber" dot={false}>+{t.xp_reward} XP</Tag>
+                    </div>
+                  </Panel>
+                </Link>
+              </motion.li>
+            );
+          })}
+        </ul>
+      </section>
     </div>
   );
 }

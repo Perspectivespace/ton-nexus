@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { haptic } from "@/lib/haptics";
 import { pushBack } from "@/lib/backButton";
+import { SheetHeader } from "./SheetHeader";
 
 /**
  * Нижняя шторка: срез сверху с обеих сторон, неоновая ручка, выезд 260 мс, подложка 72 %.
- * Закрывается свайпом вниз за ручку, тапом по подложке, Esc и системной кнопкой «Назад» Telegram.
+ * Закрывается свайпом вниз за ручку, крестиком в общей шапке (SheetHeader), тапом по подложке, Esc и «Назад» Telegram.
  * Высота — не больше 85 % экрана. Открытие — мягкая вибрация (п. 7, 11.2).
  */
 export function Sheet({
@@ -27,6 +28,7 @@ export function Sheet({
   const [drag, setDrag] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startY = useRef<number | null>(null);
+  const titleId = useId();
   const closeRef = useRef(onClose);
   useEffect(() => {
     closeRef.current = onClose;
@@ -70,7 +72,7 @@ export function Sheet({
       style={{ ["--drag" as string]: `${drag}px` }}
     >
       <div className="ui-sheet-scrim" onClick={() => closeRef.current()} aria-hidden />
-      <div className="ui-sheet" role="dialog" aria-modal="true">
+      <div className="ui-sheet" role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined}>
         <div
           className="grab-zone"
           onPointerDown={(e) => {
@@ -100,7 +102,7 @@ export function Sheet({
         </div>
         {title ? (
           <div className="s-head">
-            <h2 className="ui-title">{title}</h2>
+            <SheetHeader title={title} id={titleId} onClose={() => closeRef.current()} />
           </div>
         ) : null}
         <div className="s-body">{children}</div>

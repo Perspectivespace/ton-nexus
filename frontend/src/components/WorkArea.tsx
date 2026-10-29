@@ -11,7 +11,7 @@ function Count({ n }: { n: number }) {
 }
 
 /**
- * «Управление» — единственный вход в инструменты команды на «Контуре» (DESIGN.md §14.1).
+ * «Управление» — единственный вход в инструменты команды; временно вверху «Профиля» (/wallet), DESIGN.md §14.1.
  * Строки показываются по роли; доступ всё равно проверяет сервер, здесь только видимость.
  * Сначала очереди со счётчиками, потом создание, потом кабинет и деплой.
  */
@@ -19,7 +19,7 @@ export function WorkArea() {
   const { data: me } = useMe();
   const moderator = !!(me?.is_owner || me?.is_admin || me?.is_ambassador);
   const staff = !!(me?.is_owner || me?.is_admin);
-  // Пока открыт «Контур», счётчики обновляются раз в минуту (вкладка в фоне — не опрашиваем).
+  // Пока открыт «Профиль», счётчики обновляются раз в минуту (вкладка в фоне — не опрашиваем).
   const subs = usePendingSubmissions(moderator, POLL_MS);
   const approvals = usePendingTaskApprovals(staff, POLL_MS);
   const withdraws = usePendingWithdrawals(staff, POLL_MS);

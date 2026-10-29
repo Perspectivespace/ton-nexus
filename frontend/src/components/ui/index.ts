@@ -9,6 +9,7 @@ export { Tabs, type TabItem } from "./Tabs";
 export { Dock, type DockItem } from "./Dock";
 export { ToastProvider, ToastView, useToast, type ToastKind, type ToastInput } from "./Toast";
 export { Sheet } from "./Sheet";
+export { SheetHeader, CloseButton } from "./SheetHeader";
 export { SyncLine, Skeleton, SkeletonCard, EmptyState, ErrorState } from "./States";
 export { Num, Bar, useDecode } from "./Num";
 export { cx, usePressed } from "./press";

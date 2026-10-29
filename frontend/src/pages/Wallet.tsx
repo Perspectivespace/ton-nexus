@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useMe, useMyWithdrawals, useWithdrawLimits } from "@/api/hooks";
 import { PromoPanel } from "@/components/PromoPanel";
+import { WorkArea } from "@/components/WorkArea";
 import { api } from "@/api/client";
 import { IconOut } from "@/components/icons";
 import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Sheet, Tag, useToast, type Tone } from "@/components/ui";
@@ -78,7 +79,10 @@ export function Wallet() {
 
   return (
     <div className="space-y-5">
-      <ScreenHeader title="Баланс" />
+      <ScreenHeader title="Профиль" />
+
+      {/* «Управление» команды — временно вверху «Профиля» (до PR «б»); для обычного игрока не рендерится */}
+      <WorkArea />
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <Panel level="hero" see cut="l" lift="l2" className="p-5">

@@ -2,20 +2,11 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSPrope
 import { idleWhenQuiet } from "@/lib/quiet";
 import { prefetchLikely } from "@/lib/routes";
 import { Link } from "react-router-dom";
-import { useMe, useMiner } from "@/api/hooks";
-import { useDaily } from "@/lib/useDaily";
+import { useDailyStatus, useMe, useMiner } from "@/api/hooks";
+import { setServerClock } from "@/lib/cityPhase";
 import { haptic } from "@/lib/haptics";
-import { WorkArea } from "@/components/WorkArea";
 import { CityWindow } from "@/components/CityV2";
-import {
-  IconBolt,
-  IconCheck,
-  IconChevron,
-  IconReactor,
-  IconTower,
-  IconUp,
-  IconWheel,
-} from "@/components/icons";
+import { IconChevron, IconReactor, IconUp } from "@/components/icons";
 import {
   ScreenHeader,
   StatusPill,
@@ -26,18 +17,7 @@ import {
   Num,
   Bar,
   Chip,
-  List,
-  ListRow,
-  Button,
-  SectionLabel,
 } from "@/components/ui";
-
-/** Нижний док уже ведёт на Майнер, Задания и Баланс — здесь только то, чего в доке нет */
-const more = [
-  { to: "/wheel", title: "Колесо удачи", sub: "Вращение и ежедневная отметка", Icon: IconWheel },
-  { to: "/upgrade", title: "Усиление", sub: "Прокачка параметров реактора", Icon: IconUp },
-  { to: "/tower", title: "Башня", sub: "Игра: сложи башню без промаха", Icon: IconTower },
-] as const;
 
 const MINER_RU: Record<string, string> = {
   idle: "остановлен — запустите цикл",
@@ -91,7 +71,7 @@ function usePanelOpen() {
  * Повторяет прежний рисунок: контейнер проявляется за 0,3 с; блоки, что есть при первом кадре, — по очереди
  * (0,1 с + 0,08 с на каждый), поднимаясь на 16 px за 0,45 с; блоки, пришедшие позже с данными, — сразу.
  */
-type Rise = "head" | "hero" | "spill" | "more" | "work";
+type Rise = "head" | "hero";
 const rise = (order: Rise[], k: Rise): { className: string; style?: CSSProperties } => {
   const i = order.indexOf(k);
   return { className: "home-rise", style: i >= 0 ? ({ "--rise-d": `${100 + i * 80}ms` } as CSSProperties) : undefined };
@@ -100,10 +80,12 @@ const rise = (order: Rise[], k: Rise): { className: string; style?: CSSPropertie
 export function Home() {
   const { data: me, isLoading, error, isFetching } = useMe();
   const { data: miner } = useMiner();
-  const daily = useDaily();
+  // часы сервера поправляют смену суток в городе (раньше это делала кнопка отметки — она теперь в «Заработке»)
+  const daily = useDailyStatus();
+  useEffect(() => setServerClock(daily.data?.server_time), [daily.data?.server_time]);
   // порядок блоков первого кадра — фиксируется один раз, как стаггер у framer-motion
   const first = useRef<Rise[] | null>(null);
-  first.current ??= (["head", me && "hero", "spill", "more", me && "work"] as const).filter(Boolean) as Rise[];
+  first.current ??= (["head", me && "hero"] as const).filter(Boolean) as Rise[];
   const r = (k: Rise) => rise(first.current!, k);
   // главная показана — в простое подтягиваем разделы, куда обычно идут дальше
   useEffect(() => prefetchLikely(), []);
@@ -226,53 +208,6 @@ export function Home() {
             )}
           </Panel>
         </section>
-      )}
-
-      <div className={`${r("spill").className} ui-spill`} style={r("spill").style}>
-        <Button
-          kind="primary"
-          size="lg"
-          block
-          className="!h-[60px] !justify-between !px-4 text-left"
-          disabled={!daily.ready}
-          aria-label={daily.countdown ? `Отметка получена. Следующая награда через ${daily.countdown}` : undefined}
-          onClick={daily.claimNow}
-        >
-          <span className="flex items-center gap-3">
-            {daily.waiting ? <IconCheck size={22} /> : <IconBolt size={22} />}
-            <span>
-              <span className="block text-[15px] leading-[20px]">
-                {daily.pending ? "Начисление…" : daily.waiting ? "Отметка получена" : "Ежедневная отметка"}
-              </span>
-              <span className="block text-[11px] leading-[16px] tracking-[0.14em] opacity-80">
-                {daily.countdown ? (
-                  <>
-                    Следующая награда через <span className="ui-num">{daily.countdown}</span>
-                  </>
-                ) : (
-                  "Серия · награда · XP"
-                )}
-              </span>
-            </span>
-          </span>
-          {!daily.waiting && <IconChevron size={20} />}
-        </Button>
-      </div>
-
-      <div className={`${r("more").className} space-y-2.5`} style={r("more").style}>
-        <SectionLabel>Ещё</SectionLabel>
-        <List>
-          {more.map((m) => {
-            const Icon = m.Icon;
-            return <ListRow key={m.to} to={m.to} icon={<Icon size={20} />} title={m.title} sub={m.sub} />;
-          })}
-        </List>
-      </div>
-
-      {me && (
-        <div {...r("work")}>
-          <WorkArea />
-        </div>
       )}
     </div>
   );
