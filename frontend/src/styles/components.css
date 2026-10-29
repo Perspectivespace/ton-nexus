@@ -246,17 +246,118 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 [data-theme="light"] .ui-segline button[aria-selected="true"]::after { background: var(--neon); box-shadow: none; }
 
 /* —— Нижний док (п. 7, слой 2) —— */
-.ui-dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 0 10px calc(14px + var(--safe-b, 0px)); pointer-events: none; }
+.ui-dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 0 8px calc(14px + var(--safe-b, 0px)); pointer-events: none; }
 .ui-dock .ui-lift { max-width: 28rem; margin: 0 auto; pointer-events: auto; }
 .ui-dock .ui-cut { --c: var(--cut-dock); height: 66px; display: flex; padding: 0 4px; }
-.ui-dock a { flex: 1; display: grid; justify-items: center; align-content: center; gap: 4px; text-decoration: none; position: relative;
-  font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+.ui-dock a { flex: 1; min-width: 0; display: grid; justify-items: center; align-content: center; gap: 4px; text-decoration: none; position: relative;
+  font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.ui-dock a span { white-space: nowrap; }
 .ui-dock a.active { color: var(--neon); text-shadow: var(--halo-neon); background: radial-gradient(60% 70% at 50% 0%, rgba(43,245,255,.20), transparent 75%); }
 .ui-dock a.active::before { content: ""; position: absolute; top: 0; left: 50%; width: 28px; margin-left: -14px; height: 2px; background: var(--neon-core); box-shadow: 0 0 8px var(--neon), 0 0 16px var(--neon); }
 .ui-dock a.active svg { filter: drop-shadow(0 0 4px var(--neon)); }
 [data-theme="light"] .ui-dock a.active { background: none; }
 [data-theme="light"] .ui-dock a.active::before { background: var(--neon); box-shadow: none; }
 [data-theme="light"] .ui-dock a.active svg { filter: none; }
+
+/* —— Док из пяти мест: две равные группы по бокам, средний слот 48 px под приподнятой кнопкой «Игры» (п. 14.2) —— */
+.app-shell > .dock-layer { position: relative; z-index: 20; }
+.ui-dock .dg { flex: 1 1 0; min-width: 0; display: flex; }
+.dock-mid { flex: 0 0 48px; display: grid; justify-items: center; align-content: center; gap: 4px; pointer-events: none;
+  font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.dock-mid i { display: block; width: 22px; height: 22px; }
+.dock-mid span { white-space: nowrap; }
+.dock-mid.on { color: var(--neon); }
+@media (max-width: 374px) { .ui-dock a, .dock-mid { letter-spacing: .02em; } }
+/* затемнение под доком: контент уходит в темноту, а не под кнопку; на экранах с лентой — выше (150 px) */
+.ui-dock::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 40px; z-index: -1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(5,7,12,0), #05070c 60%); }
+.ui-dock.deep::after { height: 150px; background: linear-gradient(180deg, rgba(5,7,12,0) 0, rgba(5,7,12,.92) 40%, #05070c 60%); }
+[data-theme="light"] .ui-dock::after { background: linear-gradient(180deg, rgba(238,241,246,0), var(--bg) 60%); }
+[data-theme="light"] .ui-dock.deep::after { background: linear-gradient(180deg, rgba(238,241,246,0) 0, rgba(238,241,246,.92) 40%, var(--bg) 60%); }
+/* кнопка «Игры»: круг 62 над средним слотом, низ круга на 10 px выше подписи (тёмное кольцо 4 px → 6 px зазора).
+   Касание — круг и подпись под ним (62 × 92). */
+.dock-games { position: fixed; z-index: 32; left: 50%; bottom: calc(22px + var(--safe-b, 0px)); width: 62px; height: 92px; margin-left: -31px;
+  padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dock-games .orb { position: absolute; left: 0; top: 0; width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; color: var(--neon-core);
+  background: radial-gradient(circle at 50% 28%, rgba(43,245,255,.38), rgba(8,36,48,.98) 64%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 5px rgba(0,0,0,.7), 0 0 0 2px rgba(43,245,255,.8), 0 0 16px rgba(43,245,255,.45), 0 0 0 4px rgba(6,8,14,.95), 0 10px 20px rgba(0,0,0,.7);
+  transition: transform 120ms var(--ease-out, ease-out); }
+.dock-games .orb svg { filter: drop-shadow(0 0 4px var(--neon)); }
+.dock-games.on .orb { background: radial-gradient(circle at 50% 28%, rgba(43,245,255,.6), rgba(10,60,76,.98) 66%); }
+.dock-games:active .orb { transform: scale(.96); }
+.dock-games:focus-visible { outline: none; }
+.dock-games:focus-visible .orb { outline: 2px solid var(--neon); outline-offset: 6px; }
+.dock-games .dot { position: absolute; top: 2px; right: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 2.5px #070910, 0 0 8px var(--amber); }
+[data-theme="light"] .dock-games .orb svg { filter: none; }
+
+/* —— Общая шапка шторки и крестик: касание 44, круг 36, крестик 16 (п. 7, «Шторка») —— */
+.ui-sh-hd { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.ui-sh-hd .t { flex: 1; min-width: 0; }
+.ui-sh-hd .tt { margin: 0; font: 600 17px/24px var(--f-sans); color: var(--text); }
+.ui-sh-hd .ts { margin: 0; font: 400 12px/16px var(--f-sans); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-x { width: 44px; height: 44px; flex: none; position: relative; display: grid; place-items: center; border: 0; padding: 0; margin: 0 -4px 0 0;
+  background: none; color: #dff9ff; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ui-x::before { content: ""; position: absolute; inset: 4px; border-radius: 50%;
+  background: radial-gradient(circle closest-side, #111824 0 72%, transparent 74%),
+    conic-gradient(from 200deg, #4a515d, #cfd5de 12%, #6c7482 25%, #2b3039 40%, #9aa3b0 56%, #3b414c 70%, #d5dbe3 82%, #5f6775 94%, #4a515d);
+  box-shadow: 0 4px 10px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.3); }
+.ui-x::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(43,245,255,.75), 0 0 8px rgba(43,245,255,.25); }
+.ui-x svg { position: relative; z-index: 1; display: block; filter: drop-shadow(0 0 2px rgba(43,245,255,.55)); }
+.ui-x:active::before { filter: brightness(.85); }
+.ui-x:focus-visible { outline: none; }
+.ui-x:focus-visible::after { box-shadow: 0 0 0 2px var(--neon); }
+[data-theme="light"] .ui-x { color: var(--text); }
+[data-theme="light"] .ui-x::before { background: radial-gradient(circle closest-side, #fff 0 72%, transparent 74%),
+    conic-gradient(from 200deg, #9aa3b0, #eef1f5 12%, #b4bcc8 25%, #8a929e 40%, #dde2e9 56%, #959daa 70%, #f2f4f7 82%, #a8b0bc 94%, #9aa3b0); box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+[data-theme="light"] .ui-x::after { box-shadow: 0 0 0 1px var(--neon); }
+[data-theme="light"] .ui-x svg { filter: none; }
+
+/* —— Шторка «Игры»: плавает над кнопкой (низ — на 12 px выше круга), поля 8, срез 16, без backdrop-filter (п. 14.2) —— */
+.gs-dim { position: fixed; inset: 0; z-index: 30; background: linear-gradient(0deg, rgba(3,4,8,.92), rgba(3,4,8,.55)); }
+.gs-sheet { position: fixed; z-index: 31; left: 8px; right: 8px; max-width: 28rem; margin: 0 auto; bottom: calc(126px + var(--safe-b, 0px));
+  max-height: calc(100% - 142px - var(--safe-b, 0px) - var(--tg-content-safe-area-inset-top, 0px)); overflow-y: auto; overscroll-behavior: contain;
+  padding: 24px 16px 16px; display: flex; flex-direction: column; gap: 12px;
+  background: linear-gradient(180deg, #131a26, #0a0e16 55%, #080b12); box-shadow: inset 0 1px 0 rgba(255,255,255,.1);
+  clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%, 0 16px); }
+.gs-sheet::before { content: ""; position: absolute; left: 25%; right: 25%; top: 0; height: 1.5px; background: linear-gradient(90deg, transparent, var(--neon), transparent); }
+.gs-grab-zone { position: absolute; left: 0; right: 0; top: 0; height: 24px; touch-action: none; cursor: grab; }
+.gs-grab { position: absolute; top: 8px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255,255,255,.24); }
+.gs-head { touch-action: none; }
+.gs-card { display: flex; align-items: stretch; position: relative; text-decoration: none; color: inherit; flex: none;
+  --rim: rgba(43,245,255,.9); --rim-g: rgba(43,245,255,.28); --art-g: rgba(43,245,255,.30);
+  background: linear-gradient(180deg, #1a2130, #10151f); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 0 1px rgba(255,255,255,.04);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%); -webkit-tap-highlight-color: transparent; transition: filter 120ms ease-out; }
+.gs-card.amber { --rim: rgba(255,181,71,.95); --rim-g: rgba(255,181,71,.26); --art-g: rgba(255,181,71,.26); }
+.gs-card:active { filter: brightness(1.12); }
+.gs-card:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
+.gs-art { width: 112px; height: 104px; flex: none; display: grid; place-items: center; position: relative; overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, var(--art-g) 0, transparent 62%), repeating-linear-gradient(115deg, rgba(255,255,255,.035) 0 2px, transparent 2px 9px), linear-gradient(135deg, #0d1b2b, #05070d); }
+.gs-art::after { content: ""; position: absolute; right: 0; top: 10px; bottom: 10px; width: 1px; background: linear-gradient(180deg, transparent, var(--rim), transparent); }
+/* медальон: металлический ободок, тёмная чаша, цветное кольцо (как у реактора) */
+.gs-med { width: 76px; height: 76px; border-radius: 50%; position: relative; display: grid; place-items: center; color: var(--neon-core);
+  background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.05) 0deg 1.2deg, rgba(0,0,0,.06) 1.2deg 2.4deg),
+    conic-gradient(from 200deg, #4a515d, #d9dfe8 10%, #727b88 22%, #2b3039 38%, #a7b0bd 54%, #3b414c 68%, #e3e8ef 80%, #6c7482 92%, #4a515d);
+  box-shadow: 0 10px 18px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.5); }
+.gs-card.amber .gs-med { color: var(--amber-core); }
+.gs-med::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #1c2738 0%, #0b111c 55%, #05070c 100%);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.8), 0 0 0 2.5px var(--rim), 0 0 12px var(--rim-g), inset 0 0 16px var(--rim-g); }
+.gs-ico { position: relative; z-index: 1; display: block; filter: drop-shadow(0 0 3px var(--rim-g)) drop-shadow(0 0 1px var(--rim)); }
+.gs-body { flex: 1; min-width: 0; padding: 16px 12px 12px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
+.gs-txt { display: block; min-width: 0; }
+.gs-name { display: block; font: 700 13px/18px var(--f-display); font-stretch: 80%; letter-spacing: .14em; text-transform: uppercase; color: var(--text); }
+.gs-st { display: flex; align-items: center; gap: 6px; margin-top: 4px; font: 500 12px/16px var(--f-mono); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gs-st.hot { color: var(--amber); }
+.gs-st i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.gs-go { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px 0 12px; font: 700 11px/16px var(--f-display); letter-spacing: .14em;
+  text-transform: uppercase; color: #041016; background: linear-gradient(180deg, #7ff9ff, var(--neon)); clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%); }
+.gs-go .ui-icon { stroke-width: 2; }
+.gs-card.amber .gs-go { background: linear-gradient(180deg, #ffd690, var(--amber)); color: #1a1000; }
+[data-theme="light"] .gs-dim { background: linear-gradient(0deg, rgba(11,15,26,.55), rgba(11,15,26,.3)); }
+[data-theme="light"] .gs-sheet { background: var(--mat-2); }
+[data-theme="light"] .gs-grab { background: rgba(11,15,26,.2); }
+[data-theme="light"] .gs-card { background: var(--mat-1); box-shadow: inset 0 0 0 1px var(--line); }
+@media (prefers-reduced-motion: reduce) { .dock-games .orb, .gs-card { transition: none; } }
+html.low-end .dock-games .orb svg, html.low-end .gs-ico { filter: none; }
 
 /* —— Тост (п. 7) —— */
 .ui-toast-wrap { position: fixed; left: 0; right: 0; top: 0; z-index: 40; padding: calc(8px + var(--tg-content-safe-area-inset-top, 0px)) 16px 0; pointer-events: none; display: flex; justify-content: center; }

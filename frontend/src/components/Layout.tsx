@@ -17,7 +17,7 @@ export function Layout() {
   const [onboarding, setOnboarding] = useState(shouldShowOnboarding);
   const endSplash = useCallback(() => setSplash(false), []);
   const endOnboarding = useCallback(() => setOnboarding(false), []);
-  // DESIGN п. 14.3: док только на четырёх разделах; на вложенных экранах — «Назад» (Telegram или ссылка)
+  // DESIGN п. 14.2: док только на четырёх разделах; на вложенных экранах — «Назад» (Telegram или ссылка)
   const loc = useLocation();
   const dock = isDockRoute(loc.pathname);
   return (

@@ -67,7 +67,7 @@ export function TaskCreate() {
   if (!canCreate) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Задания" title="Новое задание" />
+        <ScreenHeader eyebrow="Заработок" title="Новое задание" />
         <ErrorPanel message="Создание доступно амбассадору, админу и владельцу." />
         <BackLink to="/tasks" label="Лента" />
       </div>
@@ -81,7 +81,7 @@ export function TaskCreate() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Задания"
+        eyebrow="Заработок"
         title="Новое задание"
         action={
           <StatusPill tone={me?.is_ambassador && !canDirectPublish ? "warn" : "live"}>
