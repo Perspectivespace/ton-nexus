@@ -5,13 +5,16 @@ import { List, ListRow, SectionLabel, StatusPill } from "@/components/ui";
 
 const POLL_MS = 60_000;
 
+/** Подпись под разделом: кто его видит (видимость та же, что и раньше — по ролям) */
+export const WORK_NOTE = "Видно только команде: владельцу, админам, амбассадорам и деплоерам. Игроки этот раздел не видят.";
+
 /** Счётчик «ждёт решения» справа в строке — только когда есть что разбирать. */
 function Count({ n }: { n: number }) {
   return n > 0 ? <StatusPill tone="warn">{n}</StatusPill> : null;
 }
 
 /**
- * «Управление» — единственный вход в инструменты команды; временно вверху «Профиля» (/wallet), DESIGN.md §14.1.
+ * «Управление» — единственный вход в инструменты команды; последний раздел «Профиля» (/wallet), DESIGN.md §14.1.
  * Строки показываются по роли; доступ всё равно проверяет сервер, здесь только видимость.
  * Сначала очереди со счётчиками, потом создание, потом кабинет и деплой.
  */
@@ -84,11 +87,12 @@ export function WorkArea() {
   }
 
   return (
-    <div className="space-y-2.5 pt-3">
+    <section className="space-y-2.5 pt-1" aria-label="Управление">
       <SectionLabel action={total > 0 ? <StatusPill tone="warn">{total} ждут</StatusPill> : undefined}>
         Управление
       </SectionLabel>
       <List>{rows}</List>
-    </div>
+      <p className="ui-sec px-1 !text-[12px] !leading-[16px]">{WORK_NOTE}</p>
+    </section>
   );
 }

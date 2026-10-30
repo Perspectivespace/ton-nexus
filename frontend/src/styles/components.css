@@ -148,7 +148,7 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 .ui-btn.secondary::before { background: var(--spec), var(--toplight), var(--metal); box-shadow: inset 0 -2px 0 rgba(0,0,0,.5); }
 .ui-btn.danger { background: linear-gradient(180deg, rgba(255,46,126,.9), rgba(255,46,126,.35) 55%, rgba(0,0,0,.6)); color: var(--danger-text); }
 .ui-btn.danger::before { background: var(--toplight), var(--danger-fill); }
-.ui-btn.ghost { background: transparent; color: var(--neon); height: 40px; padding: 0 10px; font-size: 14px; }
+.ui-btn.ghost { background: transparent; color: var(--neon); height: 44px; padding: 0 10px; font-size: 14px; }
 .ui-btn[disabled], .ui-btn[aria-disabled="true"] { background: var(--metal-off); color: var(--text-3); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); cursor: not-allowed; }
 .ui-btn[disabled]::before, .ui-btn[disabled]::after { display: none; }
 .ui-btn.ghost[disabled] { background: transparent; box-shadow: none; }
@@ -209,7 +209,7 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 
 /* —— Строки списка —— */
 .ui-list { padding: 0; }
-.ui-row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 16px; position: relative; color: inherit; text-decoration: none; width: 100%; background: none; border: 0; text-align: left; font: inherit; cursor: pointer; }
+.ui-row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 12px 16px; position: relative; color: inherit; text-decoration: none; width: 100%; background: none; border: 0; text-align: left; font: inherit; cursor: pointer; }
 .ui-row.static { cursor: default; }
 .ui-row + .ui-row::before { content: ""; position: absolute; left: 64px; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, var(--line-strong), var(--line) 60%, transparent); }
 .ui-row.noicon + .ui-row.noicon::before { left: 16px; }
@@ -225,7 +225,7 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 [data-theme="light"] .ui-row .ic.muted { background: var(--surface-3); }
 .ui-row .main { flex: 1; min-width: 0; }
 .ui-row .ttl { font: 500 15px/20px var(--f-sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; }
-.ui-row .sub { font: 400 13px/20px var(--f-sans); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-row .sub { font: 400 13px/18px var(--f-sans); color: var(--text-2); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .ui-row .val { font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); text-align: right; white-space: nowrap; }
 .ui-row .val.neon { color: var(--neon); } .ui-row .val.amber { color: var(--amber); } .ui-row .val.magenta { color: var(--magenta); }
 .ui-row .chev { color: var(--text-3); flex: none; }
@@ -233,7 +233,7 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 /* —— Вкладки (п. 7) —— */
 .ui-tabs { --c: 10px; display: flex; gap: 4px; padding: 4px; position: relative; isolation: isolate; background: var(--edge-0); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
 .ui-tabs::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--mat-0); box-shadow: var(--bevel-0); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
-.ui-tab { --c: 7px; flex: 1; min-width: 0; height: 36px; padding: 0 6px; display: grid; place-items: center; border: 0; background: none; cursor: pointer; white-space: nowrap;
+.ui-tab { --c: 7px; flex: 1; min-width: 0; height: 44px; padding: 0 6px; display: grid; place-items: center; border: 0; background: none; cursor: pointer; white-space: nowrap;
   font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; }
 .ui-tab[aria-selected="true"] { color: var(--neon-ink); background: var(--btn-primary); box-shadow: var(--btn-primary-bevel); }
 .ui-tab:focus-visible, .ui-segline button:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
@@ -840,3 +840,38 @@ button.ui-stat.scan:disabled { opacity: 1; }
 [data-theme="light"] .dw-day.got { background: linear-gradient(180deg, var(--ok), rgba(14,138,85,.35)); }
 [data-theme="light"] .dw-fill { background: linear-gradient(90deg, var(--ok), var(--amber)); }
 @media (prefers-reduced-motion: reduce) { .dw-fill { transition: none; } }
+
+/* ── PR «б»: Майнер · Заработок · Профиль (DESIGN.md §14.1) ── */
+/* Шторка «Усиление реактора»: выше обычной, циферблат 220 px */
+.ui-sheet.us-sheet { max-height: 92%; }
+.us-dial { display: block; width: 100%; max-width: 220px; margin: 0 auto; }
+.ui-chip.is-off { opacity: .55; }
+/* строка «Усиление» на Майнере: значения подписи — моно */
+.mn-up .sub b { font-weight: 600; }
+/* Карточка ежедневной отметки «Заработка» */
+.dc-card .dc-t { font: 600 15px/20px var(--f-sans); color: var(--text); display: block; }
+.dc-card .dc-s { font: 400 12px/16px var(--f-sans); color: var(--text-2); display: block; margin-top: 2px; }
+.dc-ic { --c: 7px; width: 36px; height: 36px; flex: none; display: grid; place-items: center; color: var(--amber);
+  background: linear-gradient(180deg, rgba(255,181,71,.22), rgba(255,181,71,.06)); box-shadow: inset 0 1px 0 rgba(255,231,194,.25);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.dc-ic.ok { color: var(--ok); background: linear-gradient(180deg, var(--ok-soft), transparent); box-shadow: none; }
+.dc-ic.muted { color: var(--text-2); background: var(--tile-muted); box-shadow: none; }
+[data-theme="light"] .dc-ic { background: var(--amber-soft); box-shadow: none; }
+[data-theme="light"] .dc-ic.muted { background: var(--surface-3); }
+.dc-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 12px 16px; background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.dc-row[disabled] { cursor: default; }
+.dc-row:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
+.dc-chev { color: var(--text-3); flex: none; transform: rotate(90deg); transition: transform .2s var(--ease-out); }
+.dc-chev.open { transform: rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) { .dc-chev { transition: none; } }
+/* Майнер без прокрутки: реактор, «Собрать» и «Усиление» помещаются над доком на 390×844 и 360×780 */
+@media (max-height: 860px) { .mn-hero .rx { width: 184px !important; height: 184px !important; } }
+@media (max-height: 800px) {
+  .mn-page.space-y-4 > :not(:last-child) { margin-bottom: 12px; }
+  .mn-page.space-y-4 > * + * { margin-top: 0; }
+  .mn-hero .rx { width: 152px !important; height: 152px !important; }
+  .mn-hero .mn-acc { margin-top: 12px; }
+  .mn-hero .mn-scrim { margin-top: 12px; }
+}
+/* стрелка IconUp несимметрична по вертикали (штрих снизу) — оптически центрируем в плитке строки «Усиление» */
+.mn-up .ic svg { transform: translateY(-1px); }

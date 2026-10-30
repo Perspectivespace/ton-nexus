@@ -13,12 +13,18 @@ export function Sheet({
   open,
   onClose,
   title,
+  sub,
   children,
   footer,
+  className,
 }: {
   open: boolean;
   onClose: () => void;
   title?: ReactNode;
+  /** подзаголовок общей шапки (12/16, одна строка) */
+  sub?: ReactNode;
+  /** доп. класс панели шторки */
+  className?: string;
   children: ReactNode;
   /** закреплённый низ шторки (главная кнопка формы) — не уезжает при прокрутке */
   footer?: ReactNode;
@@ -72,7 +78,7 @@ export function Sheet({
       style={{ ["--drag" as string]: `${drag}px` }}
     >
       <div className="ui-sheet-scrim" onClick={() => closeRef.current()} aria-hidden />
-      <div className="ui-sheet" role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined}>
+      <div className={className ? `ui-sheet ${className}` : "ui-sheet"} role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined}>
         <div
           className="grab-zone"
           onPointerDown={(e) => {
@@ -102,7 +108,7 @@ export function Sheet({
         </div>
         {title ? (
           <div className="s-head">
-            <SheetHeader title={title} id={titleId} onClose={() => closeRef.current()} />
+            <SheetHeader title={title} sub={sub} id={titleId} onClose={() => closeRef.current()} />
           </div>
         ) : null}
         <div className="s-body">{children}</div>

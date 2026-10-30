@@ -12,7 +12,7 @@ function rewardLine(r: PromoRedeemOut) {
     .join(" · ");
 }
 
-/** Ввод промокода. Живёт в «Балансе»: код начисляет TON, опыт или фокус. */
+/** Ввод промокода — вкладка «Промокод» в «Заработке» (/tasks?tab=promo): код начисляет TON, опыт или фокус. */
 export function PromoPanel() {
   const promo = usePromoRedeem();
   const toast = useToast();
