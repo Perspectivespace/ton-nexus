@@ -1,7 +1,9 @@
 /**
  * Месяц топа «Башни» по Москве (UTC+3 без летнего времени, как `gameday.py` на сервере)
  * и обратный отсчёт до 00:00 МСК 1-го числа — когда топ закрывается.
+ * «Сейчас» — по часам сервера (`serverNow`): у телефона с неверными часами отсчёт и месяц не съезжают.
  */
+import { serverNow } from "@/lib/cityPhase";
 
 const MSK_MS = 3 * 3600_000;
 
@@ -19,7 +21,7 @@ function parse(key: string): [number, number] | null {
 }
 
 /** «2026-10» — месяц по Москве для момента `now` */
-export function mskMonth(now = Date.now()): string {
+export function mskMonth(now = serverNow()): string {
   const d = new Date(now + MSK_MS);
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`;
 }
@@ -41,7 +43,7 @@ export function monthEnd(key: string): number {
 }
 
 /** «Октябрь» (или «Октябрь 2025», если год не текущий) */
-export function monthTitle(key: string, now = Date.now()): string {
+export function monthTitle(key: string, now = serverNow()): string {
   const p = parse(key);
   if (!p) return key;
   const [y, m] = p;
@@ -68,7 +70,7 @@ export function closesOn(key: string): string {
 export type Countdown = { days: number; h: number; m: number; s: number; over: boolean };
 
 /** Сколько осталось до `endsAt` (ISO или мс). Неверная дата или прошедшая — нули и `over`. */
-export function countdown(endsAt: string | number | undefined, now = Date.now()): Countdown {
+export function countdown(endsAt: string | number | undefined, now = serverNow()): Countdown {
   const t = typeof endsAt === "number" ? endsAt : endsAt ? Date.parse(endsAt) : NaN;
   const left = Number.isFinite(t) ? Math.max(0, Math.floor((t - now) / 1000)) : 0;
   return {

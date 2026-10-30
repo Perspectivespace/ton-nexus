@@ -10,7 +10,7 @@ vi.hoisted(() => {
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import TowerTop, { pinGapText, placesWord } from "./TowerTop";
+import TowerTop, { closedLines, pinGapText, placesWord } from "./TowerTop";
 import { TOWER_TOP_LIMIT } from "@/api/hooks";
 import type { TowerLeaderboard, TowerLeaderEntry } from "@/api/types";
 
@@ -231,5 +231,84 @@ describe("экран «Топ месяца»", () => {
     expect(css).not.toMatch(/infinite/);
     expect(css).toMatch(/prefers-reduced-motion[^}]*\.tt-step \{ animation: none/);
     expect(css).toContain("html.low-end .tt-step { animation: none; }");
+  });
+});
+
+describe("закрытый месяц (вкладка «Прошлый»)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const P3 = [
+    { from_place: 1, to_place: 1, ton: "5.4545" },
+    { from_place: 2, to_place: 2, ton: "2.7272" },
+    { from_place: 3, to_place: 3, ton: "1.8181" },
+  ];
+  const closed = (over: Partial<TowerLeaderboard> = {}): TowerLeaderboard => {
+    const es = entries(12, 2);
+    es[0] = { ...es[0], prize_ton: "5.4545", prize_status: "paid" };
+    es[1] = { ...es[1], prize_ton: "2.7272", prize_status: "awaiting" };
+    es[2] = { ...es[2], prize_ton: "1.8181", prize_status: "voided" };
+    return board({
+      month: "2026-09",
+      month_ends_at: "2026-09-30T21:00:00+00:00",
+      entries: es,
+      total_players: 20,
+      participants: 20,
+      me: { rank: 2, score: 990, prize_ton: "2.7272", prize_status: "awaiting" },
+      prizes: P3,
+      prize_places: 3,
+      prize_budget_ton: "10",
+      prize_total_ton: "9.9998",
+      prize_paid_ton: "5.4545",
+      prize_awaiting_ton: "2.7272",
+      closed: true,
+      close_reason: null,
+      ...over,
+    });
+  };
+
+  it("у призов — статус выплаты; места замороженные", () => {
+    const html = render(closed(), "/tower/top?m=prev");
+    expect(html).toContain("закрыт 1 октября");
+    expect(html).toContain('class="tt-prize paid"');
+    expect(html).toContain('class="tt-prize awaiting"');
+    expect(html).toContain('class="tt-prize voided"');
+    expect(html).toContain(", выплачено");
+    expect(html).toContain(", ждёт выплаты");
+    expect(html).toContain(", аннулирован");
+    expect(html).toContain("Фонд 10 TON · 3 призовых места");
+    expect(html).toContain("Выплачено 5,4545 TON · ждут выплаты 2,7272 TON");
+    // легенда вместо правил; отсчёта нет
+    expect(html).toContain("tt-legend");
+    expect(html).not.toContain("До итогов");
+  });
+
+  it("без призов — причина закрытия", () => {
+    const few = closed({ prizes: null, prize_places: 0, prize_budget_ton: null, close_reason: "few_participants", entries: entries(7), me: null });
+    expect(closedLines(few).main).toBe("Призов не было: меньше 10 игроков");
+    const html = render(few, "/tower/top?m=prev");
+    expect(html).toContain("Призов не было: меньше 10 игроков");
+    expect(html).not.toContain("tt-prize");
+    expect(closedLines(closed({ prizes: null, prize_places: 0, close_reason: "disabled" })).main).toBe("Призы в этом месяце не разыгрывались");
+  });
+
+  it("всё решено — «Призы выплачены»; моё место вне топа — приз со статусом", () => {
+    expect(closedLines(closed({ prize_awaiting_ton: "0" })).sub).toBe("Призы выплачены · 5,4545 TON");
+    expect(closedLines(closed({ prize_awaiting_ton: "0", prize_paid_ton: "0" })).sub).toBe("Призы аннулированы");
+    expect(closedLines(closed({ prize_paid_ton: "0", prize_awaiting_ton: "9.9998" })).sub).toBe("9,9998 TON ждут выплаты");
+    const html = render(
+      closed({ entries: closed().entries.map((e) => ({ ...e, is_me: false })), me: { rank: 70, score: 10 } }),
+      "/tower/top?m=prev",
+    );
+    expect(html).toMatch(/tt-row me"><span class="tt-rank">70<\/span>/);
+  });
+
+  it("текущий месяц не показывает статусы, даже если они пришли", () => {
+    const html = render(closed({ month: "2026-10", month_ends_at: "2026-10-31T21:00:00+00:00", closed: false }));
+    expect(html).not.toContain("tt-prize paid");
+    expect(html).toContain("До итогов");
   });
 });

@@ -123,9 +123,22 @@ export type TowerStatus = {
   month: string;
   best_month: number | null;
   rank: number | null;
+  /** часы сервера (ISO) — отсчёты «Башни» идут по ним */
+  server_time?: string;
 };
 
-export type TowerLeaderEntry = { rank: number; name: string; score: number; is_me: boolean };
+/** статус приза закрытого месяца для игроков: выплачен · ждёт выплаты (в т. ч. на проверке) · аннулирован */
+export type TowerPrizeStatus = "paid" | "awaiting" | "voided";
+
+export type TowerLeaderEntry = {
+  rank: number;
+  name: string;
+  score: number;
+  is_me: boolean;
+  /** только у закрытого месяца и только у призового места */
+  prize_ton?: string;
+  prize_status?: TowerPrizeStatus;
+};
 
 /** места с from_place по to_place (одно место — равны); каждому — ton */
 export type TowerPrize = { from_place: number; to_place: number; ton: string };
@@ -137,7 +150,17 @@ export type TowerLeaderboard = {
   entries: TowerLeaderEntry[];
   total_players: number;
   /** null — в этом месяце у меня нет результата */
-  me: { rank: number | null; score: number | null } | null;
+  me: { rank: number | null; score: number | null; prize_ton?: string; prize_status?: TowerPrizeStatus } | null;
+  /** часы сервера (ISO) — по ним идёт отсчёт до итогов */
+  server_time?: string;
+  /** месяц закрыт: места и призы — из замороженных итогов */
+  closed?: boolean;
+  /** почему призов не было: disabled · few_participants · no_budget · no_players */
+  close_reason?: string | null;
+  /** сколько TON уже выплачено по итогам месяца */
+  prize_paid_ton?: string | null;
+  /** сколько TON ещё ждёт выплаты (вместе с призами на проверке) */
+  prize_awaiting_ton?: string | null;
   /** 00:00 МСК 1-го числа следующего месяца (ISO, UTC) */
   month_ends_at: string;
   /** призы платятся, если в месяце не меньше стольких игроков */
@@ -160,6 +183,55 @@ export type TowerLeaderboard = {
   prize_cutoff_score?: number | null;
   /** группы мест → TON по текущему числу участников (сумма ≤ бюджета); [] — ниже минимума; null — выключено */
   prizes: TowerPrize[] | null;
+};
+
+// ── «Призы Башни» (только владелец) ──
+/** pending — ждёт выплаты · paid · flagged — повторная проверка забега не сошлась · voided — аннулирован */
+export type TowerPrizeRowStatus = "pending" | "paid" | "flagged" | "voided";
+
+export type TowerPrizeResult = {
+  id: number;
+  place: number;
+  user_id: number;
+  name: string;
+  username: string | null;
+  score: number;
+  game_id: number | null;
+  booster: string | null;
+  amount_ton: string;
+  status: TowerPrizeRowStatus;
+  /** replay_mismatch, no_game, banned, owner, approved:… */
+  note: string | null;
+  paid_at: string | null;
+  banned: boolean;
+};
+
+export type TowerPrizeMonth = {
+  id: number;
+  month: string;
+  /** no_prizes · payout (есть нерешённые) · settled */
+  status: "no_prizes" | "payout" | "settled";
+  reason: string | null;
+  total_players: number;
+  participants: number;
+  min_participants: number | null;
+  places: number;
+  budget_ton: string;
+  planned_ton: string;
+  paid_ton: string;
+  pending_ton: string;
+  closed_at: string;
+  closed_auto: boolean;
+  counts: { pending: number; paid: number; flagged: number; voided: number };
+  results: TowerPrizeResult[];
+};
+
+export type TowerPrizesAdmin = {
+  months: TowerPrizeMonth[];
+  /** прошедшие месяцы с игроками без итогов («2026-10») */
+  unclosed: string[];
+  server_time: string;
+  done?: Record<string, number | string> | null;
 };
 
 export type TowerStart = {

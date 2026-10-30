@@ -1,4 +1,5 @@
 import { ApiError } from "@/api/client";
+import { serverNow } from "@/lib/cityPhase";
 
 /** Ошибка API «Башни»: сервер отдаёт detail = {code, message[, next_reset_at]} */
 export interface TowerErr {
@@ -29,7 +30,7 @@ export function isFinal(e: TowerErr): boolean {
 }
 
 /** «через 5 ч 12 мин» до сброса попыток; меньше минуты — «меньше минуты» */
-export function untilReset(iso: string | undefined, now = Date.now()): string {
+export function untilReset(iso: string | undefined, now = serverNow()): string {
   const t = iso ? Date.parse(iso) : NaN;
   if (!Number.isFinite(t)) return "в 00:00 по Москве";
   const min = Math.max(0, Math.ceil((t - now) / 60000));
