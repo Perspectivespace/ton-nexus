@@ -3,8 +3,8 @@
  * (derived from backend services), field labels, units and validation.
  */
 
-/** bool — «Вкл/Выкл»; pct_list — массив целых процентов одной строкой «50 30 20» (сумма 100) */
-export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "pct_list";
+/** bool — «Вкл/Выкл»; int_list — возрастающие целые одной строкой «20 50 100 200» */
+export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "int_list";
 
 export type FieldMeta = {
   label: string;
@@ -245,7 +245,7 @@ export const SETTINGS: Record<string, SettingMeta> = {
     title: "Призы топа «Башни»",
     short: "Бюджет TON на лучших игроков месяца",
     about:
-      "Бюджет на месяц делится между призовыми местами топа «Башни»: 3 места — 50/30/20 %, с 21 игрока 4 места — 40/27/20/13 %, с 41 — 5 мест — 35/25/18/13/9 %. Меньше «Мин. игроков» — призов нет, бюджет не тратится. Суммы округляются вниз до 0.0001 TON, поэтому выплаты не превышают бюджет. Пока выключено, игроки видят «Призы пока не назначены». Деньги не начисляются сами: после 00:00 МСК 1-го числа владелец проверяет итоги и платит вручную.",
+      "Бюджет делится между призовыми местами месяца. Меньше «Мин. игроков» — призов нет. Мест — больше из лесенки (3, с 21 игрока 4, с 41 — 5) и «% от игроков», но не больше «Макс. мест». Доля места — 1/место: 1-е вдвое больше 2-го. До «Своя сумма» у каждого места своя сумма, дальше группы с одним призом. Каждому — не меньше «Мин. приза», иначе мест меньше. Суммы вниз до 0.0001 TON, остаток не тратится. Платит владелец вручную после 00:00 МСК 1-го.",
     fields: {
       enabled: { label: "Призы", kind: "bool" },
       budget_ton: {
@@ -257,21 +257,18 @@ export const SETTINGS: Record<string, SettingMeta> = {
         hint: "Остаток не тратится",
       },
       min_participants: { label: "Мин. игроков", kind: "int", min: 1, max: 100000, hint: "Меньше — призов нет" },
-      base_places: { label: "Призовых мест", kind: "int", min: 1, max: 10 },
-      extra_place_every: { label: "+1 место за каждые", kind: "int", unit: "игроков", min: 0, max: 100000, hint: "0 — мест не прибавляется" },
-      max_places: { label: "Макс. мест", kind: "int", min: 1, max: 10 },
-      shares: { label: "Доли бюджета по местам" },
-      ...Object.fromEntries(
-        Array.from({ length: 10 }, (_, i) => [
-          String(i + 1),
-          {
-            label: `${i + 1} ${i === 0 ? "место" : i < 4 ? "места" : "мест"}`,
-            kind: "pct_list" as const,
-            unit: "%",
-            hint: "С 1-го места через пробел, сумма 100",
-          },
-        ]),
-      ),
+      base_places: { label: "Мест сначала", kind: "int", min: 1, max: 10, hint: "Меньше не бывает" },
+      extra_place_every: { label: "+1 место за каждые", kind: "int", unit: "игроков", min: 0, max: 100000, hint: "Лесенка; 0 — без неё" },
+      ladder_max_places: { label: "Лесенка до", kind: "int", unit: "мест", min: 1, max: 100 },
+      places_percent: { label: "Мест от игроков", kind: "int", unit: "%", min: 0, max: 100, hint: "500 игроков × 5 % = 25 мест" },
+      max_places: { label: "Макс. мест", kind: "int", min: 1, max: 1000 },
+      min_prize_ton: { label: "Мин. приз", kind: "ton", unit: "TON", min: 0.0001, max: 100000, hint: "Не хватает — мест меньше" },
+      individual_places: { label: "Своя сумма", kind: "int", unit: "мест", min: 1, max: 1000, hint: "Дальше — группы" },
+      bands: {
+        label: "Группы мест — верхние границы",
+        kind: "int_list",
+        hint: "20 50 100 200 → 11–20, 21–50, 51–100, 101–200",
+      },
       min_score: { label: "Мин. счёт", kind: "int", min: 1, max: 1000000000, hint: "Кто набрал меньше, не считается" },
     },
     summary: (v) => {
@@ -320,7 +317,7 @@ export function shiftDecimal(s: string, places: number): string {
 /** Value → input string. */
 export function toInput(m: FieldMeta, v: unknown): string {
   if (m.kind === "bool") return v ? "1" : "0";
-  if (m.kind === "pct_list") return Array.isArray(v) ? v.map(String).join(" ") : "";
+  if (m.kind === "int_list") return Array.isArray(v) ? v.map(String).join(" ") : "";
   if (v == null) return "";
   if (m.kind === "pct_bp") return String(Number(v) / 100);
   if (m.kind === "pct_frac") return shiftDecimal(String(v), 2);
@@ -339,8 +336,8 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
   switch (m.kind) {
     case "bool":
       return raw === "1" || raw === "true";
-    case "pct_list":
-      return parsePctList(raw, Array.isArray(original) ? original.length : undefined);
+    case "int_list":
+      return parseIntList(raw, m.min, m.max);
     case "text":
       if (!s) throw new Error("не может быть пустым");
       return raw.trim();
@@ -379,22 +376,35 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
   }
 }
 
-/** «50 30 20» → [50, 30, 20]: целые проценты ≥ 1, не растут, сумма ровно 100, столько долей, сколько мест. */
-export function parsePctList(raw: string, places?: number): number[] {
+/** «20 50 100 200» → [20, 50, 100, 200]: целые, строго по возрастанию; пусто — []. */
+export function parseIntList(raw: string, min = 1, max = 1000): number[] {
   const parts = raw.trim().split(/[\s;,/]+/).filter(Boolean);
-  if (places != null && parts.length !== places) throw new Error(`нужно ${places} ${places < 5 ? "доли" : "долей"}`);
-  let prev = Infinity;
-  const out = parts.map((p, i) => {
-    if (!/^\d+$/.test(p)) throw new Error(`место ${i + 1}: целое число процентов`);
+  if (parts.length > 20) throw new Error("не больше 20 чисел");
+  let prev = -Infinity;
+  return parts.map((p) => {
+    if (!/^\d+$/.test(p)) throw new Error(`«${p}»: нужно целое число`);
     const n = Number(p);
-    if (n < 1) throw new Error(`место ${i + 1}: не меньше 1%`);
-    if (n > prev) throw new Error(`место ${i + 1}: не больше, чем за место ${i}`);
+    if (n < min || n > max) throw new Error(`«${p}»: от ${min} до ${max}`);
+    if (n <= prev) throw new Error(`по возрастанию: ${n} после ${prev}`);
     prev = n;
     return n;
   });
-  const sum = out.reduce((a, b) => a + b, 0);
-  if (sum !== 100) throw new Error(`сумма ${sum}%, нужно 100%`);
-  return out;
+}
+
+/** Гармоническое число H(n) = 1 + 1/2 + … + 1/n. */
+const harmonic = (n: number) => Array.from({ length: n }, (_, i) => 1 / (i + 1)).reduce((a, b) => a + b, 0);
+
+/**
+ * Минимальный бюджет призов «Башни», при котором первые base_places мест получают не меньше мин. приза
+ * (как на сервере: доля места — 1/место; если base_places больше «Своя сумма», хвост — одна группа).
+ */
+export function towerMinBudget(v: { base_places?: unknown; individual_places?: unknown; min_prize_ton?: unknown }): number {
+  const n = Number(v.base_places ?? 3);
+  const ind = Number(v.individual_places ?? 10);
+  const m = Number(v.min_prize_ton ?? 0.1);
+  const a = n <= ind ? n : ind + 1;
+  const share = (harmonic(n) - harmonic(a - 1)) / (n - a + 1);
+  return Math.ceil(((m * harmonic(n)) / share) * 10000 - 1e-6) / 10000;
 }
 
 export function formatField(m: FieldMeta, v: unknown): string {
@@ -418,7 +428,7 @@ export function summarize(key: string, v: unknown): string {
   if (!entries.length) return "—";
   return entries
     .map(([k, x]) => {
-      if (x !== null && typeof x === "object" && fieldMeta(key, k, x).kind !== "pct_list") return `${fieldMeta(key, k, x).label}: …`;
+      if (x !== null && typeof x === "object" && fieldMeta(key, k, x).kind !== "int_list") return `${fieldMeta(key, k, x).label}: …`;
       const m = fieldMeta(key, k, x);
       const val = formatField(m, x);
       return entries.length === 1 ? val : `${m.label} ${val}`;

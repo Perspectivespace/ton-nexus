@@ -344,6 +344,17 @@ async def leaderboard(
     # прошлый месяц без призов. Денег здесь не двигаем: это расчёт по текущему числу участников.
     current = month == month_of(now)
     plan = tower_prizes.plan(cfg, participants) if cfg["enabled"] and current else None
+    # счёт последнего призового места — для строки «+X до N-го места» у тех, кто ниже
+    cutoff = None
+    if plan and plan["places"]:
+        cutoff = await session.scalar(
+            select(TowerMonthlyBest.best_score)
+            .join(User, User.id == TowerMonthlyBest.user_id)
+            .where(TowerMonthlyBest.month == month, TowerMonthlyBest.best_score > 0, User.is_banned.is_(False))
+            .order_by(TowerMonthlyBest.best_score.desc(), TowerMonthlyBest.achieved_at.asc(), TowerMonthlyBest.user_id.asc())
+            .offset(plan["places"] - 1)
+            .limit(1)
+        )
     return {
         "month": month.strftime("%Y-%m"),
         "entries": entries,
@@ -357,5 +368,9 @@ async def leaderboard(
         "prize_places": plan["places"] if plan else 0,
         "next_place_at": plan["next_place_at"] if plan else None,
         "max_places": cfg["max_places"],
+        "prize_limited_by": plan["limited_by"] if plan else None,
+        "min_prize_ton": cfg["min_prize_ton"] if plan else None,
+        "prize_total_ton": plan["total_ton"] if plan else None,
+        "prize_cutoff_score": int(cutoff) if cutoff is not None else None,
         "prizes": plan["prizes"] if plan else None,
     }

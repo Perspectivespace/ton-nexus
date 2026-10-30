@@ -475,9 +475,25 @@ class LeaderboardTest(unittest.TestCase):
 
 
 class PrizesTest(unittest.TestCase):
-    """Настройка tower_prizes: бюджет, доли, пороги мест, округление вниз. Денег не двигает."""
+    """Настройка tower_prizes: бюджет, места (лесенка и %), гармонические доли, группы, округление вниз."""
 
-    ON = {**tp.DEFAULT, "enabled": True, "budget_ton": "10"}
+    ON = {**tp.DEFAULT, "enabled": True, "budget_ton": "100"}
+
+    @staticmethod
+    def flat(plan):
+        """Суммы по каждому месту: [TON места 1, места 2, …]."""
+        out = []
+        for g in plan["prizes"]:
+            out += [Decimal(g["ton"])] * (g["to_place"] - g["from_place"] + 1)
+        return out
+
+    def test_legacy_row_migrates(self):
+        old = {"enabled": True, "budget_ton": "10", "min_participants": 10, "base_places": 3, "extra_place_every": 20,
+               "max_places": 5, "shares": {"3": [50, 30, 20]}, "min_score": 1, "payout_mode": "review"}
+        cfg = tp.normalize(old)
+        self.assertNotIn("shares", cfg)
+        self.assertEqual((cfg["ladder_max_places"], cfg["max_places"]), (5, 200))
+        self.assertEqual(cfg["bands"], [20, 50, 100, 200])
 
     def test_default_is_off_and_valid(self):
         from app.services.economy_seed import DEFAULTS
@@ -486,105 +502,153 @@ class PrizesTest(unittest.TestCase):
         self.assertEqual(tp.normalize(tp.DEFAULT), tp.DEFAULT)
         self.assertFalse(tp.DEFAULT["enabled"])
         self.assertEqual(tp.DEFAULT["budget_ton"], "0")
-        for k, row in tp.DEFAULT["shares"].items():
-            self.assertEqual((len(row), sum(row)), (int(k), 100))
+        self.assertEqual((tp.DEFAULT["places_percent"], tp.DEFAULT["max_places"], tp.DEFAULT["min_prize_ton"]), (5, 200, "0.1"))
+        self.assertEqual((tp.DEFAULT["individual_places"], tp.DEFAULT["bands"]), (10, [20, 50, 100, 200]))
+        # черновой формат с таблицами долей отбрасывается без ошибки
+        legacy = {**tp.DEFAULT, "shares": {"3": [50, 30, 20]}}
+        self.assertEqual(tp.normalize(legacy), tp.DEFAULT)
 
-    def test_places_thresholds(self):
+    def test_places_ladder_and_percent(self):
         cfg = tp.normalize(self.ON)
-        want = {0: 0, 1: 0, 9: 0, 10: 3, 20: 3, 21: 4, 40: 4, 41: 5, 60: 5, 61: 5, 100: 5, 10**6: 5}
+        want = {0: 0, 9: 0, 10: 3, 15: 3, 20: 3, 21: 4, 40: 4, 41: 5, 100: 5, 119: 5, 120: 6,
+                500: 25, 2000: 100, 4000: 200, 10**6: 200}
         for n, places in want.items():
             with self.subTest(n=n):
-                self.assertEqual(tp.places_for(cfg, n), places)
-        nxt = {0: 10, 9: 10, 10: 21, 20: 21, 21: 41, 40: 41, 41: None, 100: None}
+                self.assertEqual(tp.places_for(cfg, n)[0], places)
+        nxt = {0: 10, 9: 10, 10: 21, 20: 21, 21: 41, 41: 120, 120: 140, 500: 520, 3999: 4000, 4000: None}
         for n, at in nxt.items():
             with self.subTest(n=n):
                 self.assertEqual(tp.next_place_at(cfg, n), at)
-        # пороги настраиваются: каждые 10 сверх, до 4 мест
-        cfg2 = tp.normalize({**self.ON, "extra_place_every": 10, "max_places": 4,
-                             "shares": {"3": [50, 30, 20], "4": [40, 27, 20, 13]}})
-        self.assertEqual([tp.places_for(cfg2, n) for n in (10, 11, 21, 99)], [3, 4, 4, 4])
-        self.assertEqual(tp.next_place_at(cfg2, 10), 11)
-        # без доп. мест
-        cfg3 = tp.normalize({**self.ON, "extra_place_every": 0, "max_places": 3, "shares": {"3": [50, 30, 20]}})
-        self.assertEqual((tp.places_for(cfg3, 500), tp.next_place_at(cfg3, 500)), (3, None))
+        self.assertEqual(tp.places_for(cfg, 4000), (200, "max"))
+        # настраивается: 10 % мест, потолок 30
+        cfg2 = tp.normalize({**self.ON, "places_percent": 10, "max_places": 30})
+        self.assertEqual([tp.places_for(cfg2, n)[0] for n in (10, 21, 60, 299, 1000)], [3, 4, 6, 29, 30])
+        # без процента — только лесенка
+        cfg3 = tp.normalize({**self.ON, "places_percent": 0})
+        self.assertEqual((tp.places_for(cfg3, 10**5)[0], tp.next_place_at(cfg3, 41)), (5, None))
 
-    def test_split_and_rounding_never_exceeds_budget(self):
+    def test_harmonic_split_and_groups(self):
         cfg = tp.normalize(self.ON)
-        cases = {
-            10: ["5", "3", "2"],
-            20: ["5", "3", "2"],
-            21: ["4", "2.7", "2", "1.3"],
-            40: ["4", "2.7", "2", "1.3"],
-            41: ["3.5", "2.5", "1.8", "1.3", "0.9"],
-            100: ["3.5", "2.5", "1.8", "1.3", "0.9"],
-        }
-        for n, tons in cases.items():
-            with self.subTest(n=n):
-                p = tp.plan(cfg, n)
-                self.assertEqual([r["ton"] for r in p["prizes"]], tons)
-                self.assertEqual(p["places"], len(tons))
-        # ниже минимума — бюджет не тратится
-        p = tp.plan(cfg, 9)
-        self.assertEqual((p["places"], p["prizes"], p["unspent_ton"], p["next_place_at"]), (0, [], "10", 10))
-        # округление вниз до 0.0001: 1 TON на 3 места 50/30/20 — ровно; 0.0007 — остаток не тратится
-        self.assertEqual(tp.split(Decimal("0.0007"), [50, 30, 20]), [Decimal("0.0003"), Decimal("0.0002"), Decimal("0.0001")])
-        self.assertEqual(tp.split(Decimal("1"), [35, 25, 18, 13, 9]),
-                         [Decimal("0.35"), Decimal("0.25"), Decimal("0.18"), Decimal("0.13"), Decimal("0.09")])
-        self.assertEqual(tp.split(Decimal("0.0001"), [40, 27, 20, 13]), [0, 0, 0, 0])
-        # перебор бюджетов и числа участников: сумма ≤ бюджета, каждая сумма кратна 0.0001
+        p = tp.plan(cfg, 15)
+        self.assertEqual([g["ton"] for g in p["prizes"]], ["54.5454", "27.2727", "18.1818"])
+        self.assertEqual((p["total_ton"], p["unspent_ton"]), ("99.9999", "0.0001"))
+        self.assertEqual([g["ton"] for g in tp.plan(cfg, 21)["prizes"]], ["48", "24", "16", "12"])
+        p = tp.plan(cfg, 2000)
+        rng = [(g["from_place"], g["to_place"]) for g in p["prizes"]]
+        self.assertEqual(rng, [(i, i) for i in range(1, 11)] + [(11, 20), (21, 50), (51, 100)])
+        self.assertEqual(p["prizes"][-1]["ton"], "0.2653")
+        # хвост за последней границей — одна группа; группа обрезается по числу мест
+        cfg4 = tp.normalize({**self.ON, "bands": [20], "places_percent": 10})
+        self.assertEqual([(g["from_place"], g["to_place"]) for g in tp.plan(cfg4, 450)["prizes"]][-2:], [(11, 20), (21, 45)])
+
+    def test_min_prize_cuts_places_not_below_base(self):
+        # 5 TON на 4000 игроков: 200 мест по 0.1 не выйдет — мест меньше, у последнего ≥ 0.1
+        cfg = tp.normalize({**self.ON, "budget_ton": "5"})
+        n, why = tp.places_for(cfg, 4000)
+        self.assertEqual(why, "budget")
+        self.assertLess(n, 200)
+        p = tp.plan(cfg, 4000)
+        self.assertGreaterEqual(min(self.flat(p)), Decimal("0.1"))
+        self.assertIsNone(p["next_place_at"])
+        # на одно место больше — уже кто-то ниже 0.1
+        self.assertLess(tp.amounts(cfg, Decimal(5), n + 1)[-1][2], Decimal("0.1"))
+        # минимум для 3 мест: 0.1 × 3 × H3 = 0.55 TON
+        self.assertEqual(tp.min_budget(cfg), Decimal("0.55"))
+        self.assertEqual(tp.places_for({**cfg, "budget_ton": "0.55"}, 1000), (3, "budget"))
+        # меньше — включить нельзя, а если в базе так оказалось — призов нет, бюджет не тратится
+        with self.assertRaises(tp.PrizeConfigError):
+            tp.normalize({**self.ON, "budget_ton": "0.5499"})
+        broken = {**cfg, "budget_ton": "0.5"}
+        p = tp.plan(broken, 1000)
+        self.assertEqual((p["places"], p["prizes"], p["unspent_ton"], p["limited_by"]), (0, [], "0.5", "budget"))
+        self.assertIsNone(tp.next_place_at(broken, 1000))
+
+    def test_invariants_random(self):
+        """Свойства на тысячах случайных бюджетов и составов: итог ≤ бюджета, не растут, ≥ min_prize."""
         import random
 
-        rnd = random.Random(7)
-        budgets = [Decimal("0.0001"), Decimal("0.0003"), Decimal("1"), Decimal("3.3333"), Decimal("100000")]
-        budgets += [Decimal(rnd.randint(1, 10**9)) / Decimal(10**4) for _ in range(300)]
-        for b in budgets:
-            for n in (10, 20, 21, 40, 41, 100):
-                c = tp.normalize({**self.ON, "budget_ton": format(b, "f")})
-                p = tp.plan(c, n)
-                total = sum((Decimal(r["ton"]) for r in p["prizes"]), Decimal(0))
-                self.assertLessEqual(total, b)
-                self.assertEqual(total + Decimal(p["unspent_ton"]), b)
-                for r in p["prizes"]:
-                    d = Decimal(r["ton"])
-                    self.assertEqual(d, d.quantize(Decimal("0.0001")))
-                    self.assertGreaterEqual(d, 0)
+        rnd = random.Random(20261030)
+        cfgs = [tp.normalize(self.ON)]
+        for _ in range(40):
+            ind = rnd.randint(1, 30)
+            bands = sorted(rnd.sample(range(ind + 1, 400), rnd.randint(0, 5)))
+            cfgs.append(tp.normalize({
+                **self.ON, "budget_ton": "100000",
+                "places_percent": rnd.randint(0, 30), "max_places": rnd.randint(5, 400),
+                "min_prize_ton": str(Decimal(rnd.randint(1, 5000)) / 10000),
+                "individual_places": ind, "bands": bands,
+                "extra_place_every": rnd.randint(0, 50),
+            }))
+        checked = 0
+        for _ in range(1500):
+            cfg = dict(rnd.choice(cfgs))
+            budget = (Decimal(rnd.randint(1, 10**9)) / 10000).quantize(tp.STEP)  # до 100000 TON
+            if rnd.random() < 0.3:
+                budget = (Decimal(rnd.randint(1, 50000)) / 10000)
+            cfg["budget_ton"] = tp.ton_str(budget)
+            players = rnd.choice([rnd.randint(0, 60), rnd.randint(0, 5000), rnd.randint(0, 10**6)])
+            p = tp.plan(cfg, players)
+            flat = self.flat(p)
+            with self.subTest(budget=str(budget), players=players, cfg=cfg):
+                self.assertLessEqual(sum(flat, Decimal(0)), budget)
+                self.assertEqual(Decimal(p["total_ton"]) + Decimal(p["unspent_ton"]), budget)
+                self.assertEqual(len(flat), p["places"])
+                self.assertTrue(all(b <= a for a, b in zip(flat, flat[1:])), "суммы не растут")
+                self.assertTrue(all(x == x.quantize(tp.STEP) for x in flat))
+                if flat:
+                    self.assertGreaterEqual(flat[-1], Decimal(cfg["min_prize_ton"]))
+                    self.assertGreaterEqual(p["places"], cfg["base_places"])
+                    self.assertLessEqual(p["places"], min(cfg["max_places"], players))
+                    checked += 1
+                if p["limited_by"] == "budget" and flat:
+                    # бюджет режет места ровно до предела: на одно место больше — кто-то ниже min_prize
+                    more = tp.amounts(cfg, budget, p["places"] + 1)
+                    self.assertLess(more[-1][2], Decimal(cfg["min_prize_ton"]))
+                if players < cfg["min_participants"]:
+                    self.assertEqual(flat, [])
+        self.assertGreater(checked, 500)
 
     def test_rejects_bad_values(self):
         ok = self.ON
         bad = [
             "x",
             {**ok, "extra": 1},
-            {**ok, "places": []},  # старый формат
+            {**ok, "places": []},  # самый старый формат
             {**ok, "enabled": "yes"},
             {**ok, "budget_ton": "0"},  # включено без бюджета
+            {**ok, "budget_ton": "0.3"},  # не хватает на 3 места по 0.1
             {**ok, "budget_ton": "-1"},
             {**ok, "budget_ton": "abc"},
             {**ok, "budget_ton": "NaN"},
             {**ok, "budget_ton": "100001"},
             {**ok, "budget_ton": "0.00001"},
             {**ok, "budget_ton": True},
+            {**ok, "min_prize_ton": "0"},
+            {**ok, "min_prize_ton": "0.00001"},
             {**ok, "base_places": 0},
-            {**ok, "max_places": 2},  # меньше base
-            {**ok, "max_places": 11},
+            {**ok, "ladder_max_places": 2},  # меньше base
+            {**ok, "max_places": 4},  # меньше лесенки
+            {**ok, "max_places": 1001},
+            {**ok, "places_percent": 101},
+            {**ok, "places_percent": -1},
             {**ok, "extra_place_every": -1},
             {**ok, "min_participants": 2},  # меньше числа мест
+            {**ok, "individual_places": 0},
+            {**ok, "bands": [10, 50]},  # первая граница не больше individual_places
+            {**ok, "bands": [50, 20]},
+            {**ok, "bands": [20, 20]},
+            {**ok, "bands": "20 50"},
+            {**ok, "bands": [20.5]},
+            {**ok, "bands": list(range(11, 40))},  # больше 20 групп
             {**ok, "min_score": 0},
-            {**ok, "min_score": 1.5},
             {**ok, "payout_mode": "auto"},
-            {**ok, "shares": {"3": [50, 30, 20], "4": [40, 27, 20, 13]}},  # нет 5
-            {**ok, "shares": {**tp.DEFAULT["shares"], "6": [50, 20, 10, 10, 5, 5]}},
-            {**ok, "shares": {**tp.DEFAULT["shares"], "3": [50, 30, 19]}},  # 99 %
-            {**ok, "shares": {**tp.DEFAULT["shares"], "3": [50, 30, 21]}},  # 101 %
-            {**ok, "shares": {**tp.DEFAULT["shares"], "3": [30, 50, 20]}},  # 2-е больше 1-го
-            {**ok, "shares": {**tp.DEFAULT["shares"], "3": [60, 40]}},
-            {**ok, "shares": {**tp.DEFAULT["shares"], "3": [50.5, 29.5, 20]}},
-            {**ok, "shares": {**tp.DEFAULT["shares"], "3": [100, 0, 0]}},
         ]
         for v in bad:
             with self.subTest(v=v), self.assertRaises(tp.PrizeConfigError):
                 tp.normalize(v)
         self.assertEqual(tp.normalize({**ok, "budget_ton": 25})["budget_ton"], "25")
         self.assertEqual(tp.normalize({**ok, "budget_ton": "12.5000"})["budget_ton"], "12.5")
+        self.assertEqual(tp.normalize({**ok, "bands": []})["bands"], [])
         # битая запись в базе не роняет топ — призы выключены
         self.assertEqual(tp.safe({"enabled": True}), tp.DEFAULT)
         self.assertEqual(tp.safe({"enabled": True, "places": [{"place": 1, "ton": "1"}]}), tp.DEFAULT)
@@ -595,8 +659,10 @@ class PrizesTest(unittest.TestCase):
         async def body(s):
             with self.assertRaises(EconomyAdminError):
                 await set_setting(s, key="tower_prizes", value={**tp.DEFAULT, "enabled": True})
-            v = await set_setting(s, key="tower_prizes", value={**self.ON, "budget_ton": "20.50"})
-            self.assertEqual(v.value["budget_ton"], "20.5")
+            with self.assertRaises(EconomyAdminError):
+                await set_setting(s, key="tower_prizes", value={**self.ON, "budget_ton": "0.4"})
+            v = await set_setting(s, key="tower_prizes", value={**self.ON, "budget_ton": "20.50", "min_prize_ton": "0.10"})
+            self.assertEqual((v.value["budget_ton"], v.value["min_prize_ton"]), ("20.5", "0.1"))
 
         run_db(body)
 
@@ -618,25 +684,28 @@ class PrizesTest(unittest.TestCase):
             lb = await tw.leaderboard(s, user_id=me.id, now=NOON)
             self.assertIsNone(lb["prizes"])
             self.assertIsNone(lb["prize_budget_ton"])
-            self.assertEqual((lb["min_participants"], lb["prize_places"], lb["max_places"]), (10, 0, 5))
-            # конец октября — 1 ноября 00:00 МСК = 31 окт 21:00 UTC
+            self.assertEqual((lb["min_participants"], lb["prize_places"], lb["max_places"]), (10, 0, 200))
             self.assertEqual(lb["month_ends_at"], "2026-10-31T21:00:00+00:00")
             await set_setting(s, key="tower_prizes", value={**self.ON, "budget_ton": "10"})
             await add(0, 9)
             lb = await tw.leaderboard(s, user_id=me.id, now=NOON)
             self.assertEqual((lb["participants"], lb["prize_places"], lb["prizes"], lb["next_place_at"]), (9, 0, [], 10))
-            self.assertEqual(lb["prize_budget_ton"], "10")
+            self.assertEqual((lb["prize_budget_ton"], lb["prize_cutoff_score"]), ("10", None))
             await add(9, 20)
             lb = await tw.leaderboard(s, user_id=me.id, now=NOON)
             self.assertEqual((lb["participants"], lb["prize_places"], lb["next_place_at"]), (20, 3, 21))
-            self.assertEqual([p["ton"] for p in lb["prizes"]], ["5", "3", "2"])
+            self.assertEqual([p["ton"] for p in lb["prizes"]], ["5.4545", "2.7272", "1.8181"])
+            self.assertEqual((lb["prize_total_ton"], lb["min_prize_ton"], lb["prize_limited_by"]), ("9.9998", "0.1", None))
+            self.assertEqual(lb["prize_cutoff_score"], 1000 - 2)  # счёт 3-го места
             await add(20, 21)
             lb = await tw.leaderboard(s, user_id=me.id, now=NOON)
             self.assertEqual((lb["prize_places"], lb["next_place_at"]), (4, 41))
+            self.assertEqual([p["ton"] for p in lb["prizes"]], ["4.8", "2.4", "1.6", "1.2"])
             await add(21, 41)
             lb = await tw.leaderboard(s, user_id=me.id, now=NOON)
-            self.assertEqual((lb["participants"], lb["prize_places"], lb["next_place_at"]), (41, 5, None))
-            self.assertEqual([p["ton"] for p in lb["prizes"]], ["3.5", "2.5", "1.8", "1.3", "0.9"])
+            self.assertEqual((lb["participants"], lb["prize_places"], lb["next_place_at"]), (41, 5, 120))
+            self.assertEqual(lb["prizes"][0], {"from_place": 1, "to_place": 1, "ton": "4.3795"})
+            self.assertEqual(lb["prize_cutoff_score"], 1000 - 4)
             # min_score: участник — с лучшим счётом не меньше порога
             await set_setting(s, key="tower_prizes", value={**self.ON, "min_score": 1000 - 19})
             lb = await tw.leaderboard(s, user_id=me.id, now=NOON)
@@ -645,12 +714,12 @@ class PrizesTest(unittest.TestCase):
             await set_setting(s, key="tower_prizes", value={**tp.DEFAULT, "budget_ton": "10"})
             lb = await tw.leaderboard(s, user_id=me.id, now=NOON)
             self.assertIsNone(lb["prizes"])
+            self.assertIsNone(lb["prize_cutoff_score"])
             # прошлый месяц: истории бюджета нет — без призов
             await set_setting(s, key="tower_prizes", value=self.ON)
             old = await tw.leaderboard(s, user_id=me.id, month=tw.parse_month("2026-09"), now=NOON)
             self.assertIsNone(old["prizes"])
             self.assertEqual(old["month_ends_at"], "2026-09-30T21:00:00+00:00")
-            self.assertEqual(tw.month_end(tw.parse_month("2026-12")).isoformat(), "2026-12-31T21:00:00+00:00")
 
         run_db(body)
 

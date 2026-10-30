@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fieldMeta, fromInput, parsePctList, summarize, toInput } from "./settingsMeta";
+import { fieldMeta, fromInput, parseIntList, summarize, toInput, towerMinBudget } from "./settingsMeta";
 
 describe("призы «Башни» в редакторе владельца", () => {
   const DEFAULT = {
@@ -8,19 +8,24 @@ describe("призы «Башни» в редакторе владельца", (
     min_participants: 10,
     base_places: 3,
     extra_place_every: 20,
-    max_places: 5,
-    shares: { "3": [50, 30, 20], "4": [40, 27, 20, 13], "5": [35, 25, 18, 13, 9] },
+    ladder_max_places: 5,
+    places_percent: 5,
+    max_places: 200,
+    min_prize_ton: "0.1",
+    individual_places: 10,
+    bands: [20, 50, 100, 200],
     min_score: 1,
     payout_mode: "review",
   };
 
-  it("поля: вкл/выкл, бюджет в TON, целые пороги, доли одной строкой", () => {
+  it("поля: подписи и типы", () => {
     expect(fieldMeta("tower_prizes", "enabled", false).kind).toBe("bool");
     expect(fieldMeta("tower_prizes", "budget_ton", "0")).toMatchObject({ kind: "ton", unit: "TON" });
-    expect(fieldMeta("tower_prizes", "min_participants", 10).kind).toBe("int");
-    expect(fieldMeta("tower_prizes", "extra_place_every", 20).kind).toBe("int");
-    expect(fieldMeta("tower_prizes", "4", [40, 27, 20, 13])).toMatchObject({ kind: "pct_list", label: "4 места" });
-    expect(fieldMeta("tower_prizes", "5", []).label).toBe("5 мест");
+    expect(fieldMeta("tower_prizes", "min_prize_ton", "0.1")).toMatchObject({ kind: "ton", label: "Мин. приз" });
+    expect(fieldMeta("tower_prizes", "places_percent", 5)).toMatchObject({ kind: "int", unit: "%", max: 100 });
+    expect(fieldMeta("tower_prizes", "max_places", 200)).toMatchObject({ kind: "int", max: 1000 });
+    expect(fieldMeta("tower_prizes", "individual_places", 10).kind).toBe("int");
+    expect(fieldMeta("tower_prizes", "bands", [20]).kind).toBe("int_list");
   });
 
   it("вкл/выкл сохраняется булевым, а не строкой", () => {
@@ -30,25 +35,32 @@ describe("призы «Башни» в редакторе владельца", (
     expect(fromInput(m, "0", true)).toBe(false);
   });
 
-  it("бюджет — строкой TON", () => {
-    const m = fieldMeta("tower_prizes", "budget_ton", "0");
-    expect(fromInput(m, "12,50", "0")).toBe("12.5");
+  it("бюджет и мин. приз — строкой TON", () => {
+    expect(fromInput(fieldMeta("tower_prizes", "budget_ton", "0"), "12,50", "0")).toBe("12.5");
+    expect(fromInput(fieldMeta("tower_prizes", "min_prize_ton", "0.1"), "0,2", "0.1")).toBe("0.2");
+    expect(() => fromInput(fieldMeta("tower_prizes", "min_prize_ton", "0.1"), "0", "0.1")).toThrow("не меньше");
   });
 
-  it("доли: строка ↔ проценты", () => {
-    const m = fieldMeta("tower_prizes", "3", [50, 30, 20]);
-    expect(toInput(m, [50, 30, 20])).toBe("50 30 20");
-    expect(fromInput(m, " 60  25 15 ", [50, 30, 20])).toEqual([60, 25, 15]);
-    expect(fromInput(m, "40/27/20/13", [40, 27, 20, 13])).toEqual([40, 27, 20, 13]);
+  it("группы: строка ↔ границы", () => {
+    const m = fieldMeta("tower_prizes", "bands", [20, 50, 100, 200]);
+    expect(toInput(m, [20, 50, 100, 200])).toBe("20 50 100 200");
+    expect(fromInput(m, " 30  60,150 ", [])).toEqual([30, 60, 150]);
+    expect(fromInput(m, "", [20])).toEqual([]);
   });
 
-  it("доли: ошибки по-русски", () => {
-    expect(() => parsePctList("50 30 19")).toThrow("сумма 99%, нужно 100%");
-    expect(() => parsePctList("50 30 21")).toThrow("сумма 101%");
-    expect(() => parsePctList("30 50 20")).toThrow("место 2: не больше, чем за место 1");
-    expect(() => parsePctList("50.5 29.5 20")).toThrow("целое число процентов");
-    expect(() => parsePctList("100 0 0")).toThrow("не меньше 1%");
-    expect(() => parsePctList("60 40", 3)).toThrow("нужно 3 доли");
+  it("группы: ошибки по-русски", () => {
+    expect(() => parseIntList("50 20")).toThrow("по возрастанию: 20 после 50");
+    expect(() => parseIntList("20 20")).toThrow("по возрастанию");
+    expect(() => parseIntList("20.5")).toThrow("нужно целое число");
+    expect(() => parseIntList("0")).toThrow("от 1 до 1000");
+    expect(() => parseIntList("2000")).toThrow("от 1 до 1000");
+  });
+
+  it("минимальный бюджет как на сервере: 3 места по 0.1 TON — 0.55 TON", () => {
+    expect(towerMinBudget(DEFAULT)).toBe(0.55);
+    expect(towerMinBudget({ ...DEFAULT, min_prize_ton: "1" })).toBe(5.5);
+    // 4 места, своя сумма у 2 первых: группа 3–4 в среднем (1/3+1/4)/2
+    expect(towerMinBudget({ base_places: 4, individual_places: 2, min_prize_ton: "0.1" })).toBe(0.7143);
   });
 
   it("сводка в списке настроек", () => {

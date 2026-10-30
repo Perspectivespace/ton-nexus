@@ -127,7 +127,8 @@ export type TowerStatus = {
 
 export type TowerLeaderEntry = { rank: number; name: string; score: number; is_me: boolean };
 
-export type TowerPrize = { place: number; ton: string };
+/** места с from_place по to_place (одно место — равны); каждому — ton */
+export type TowerPrize = { from_place: number; to_place: number; ton: string };
 
 export type TowerLeaderboard = {
   /** «2026-10» */
@@ -151,7 +152,13 @@ export type TowerLeaderboard = {
   /** при каком числе участников добавится призовое место; null — уже максимум */
   next_place_at?: number | null;
   max_places?: number;
-  /** места → TON по текущему числу участников (сумма ≤ бюджета); [] — ниже минимума; null — выключено */
+  /** почему мест не больше: "budget" — бюджет не даёт мин. приз, "max" — потолок мест */
+  prize_limited_by?: "budget" | "max" | null;
+  min_prize_ton?: string | null;
+  prize_total_ton?: string | null;
+  /** счёт последнего призового места */
+  prize_cutoff_score?: number | null;
+  /** группы мест → TON по текущему числу участников (сумма ≤ бюджета); [] — ниже минимума; null — выключено */
   prizes: TowerPrize[] | null;
 };
 

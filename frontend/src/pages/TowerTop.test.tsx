@@ -10,7 +10,7 @@ vi.hoisted(() => {
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import TowerTop from "./TowerTop";
+import TowerTop, { pinGapText, placesWord } from "./TowerTop";
 import { TOWER_TOP_LIMIT } from "@/api/hooks";
 import type { TowerLeaderboard, TowerLeaderEntry } from "@/api/types";
 
@@ -78,46 +78,71 @@ describe("экран «Топ месяца»", () => {
   });
 
   const P3 = [
-    { place: 1, ton: "5" },
-    { place: 2, ton: "3" },
-    { place: 3, ton: "2" },
+    { from_place: 1, to_place: 1, ton: "5.4545" },
+    { from_place: 2, to_place: 2, ton: "2.7272" },
+    { from_place: 3, to_place: 3, ton: "1.8181" },
   ];
-  const P5 = [
-    { place: 1, ton: "3.5" },
-    { place: 2, ton: "2.5" },
-    { place: 3, ton: "1.8" },
-    { place: 4, ton: "1.3" },
-    { place: 5, ton: "0.9" },
+  // 100 TON, 500 игроков: 25 мест, 11–20 и 21–25 — группами (как считает сервер)
+  const P25 = [
+    ...["26.2057", "13.1028", "8.7352", "6.5514", "5.2411", "4.3676", "3.7436", "3.2757", "2.9117", "2.6205"].map((t, i) => ({
+      from_place: i + 1,
+      to_place: i + 1,
+      ton: t,
+    })),
+    { from_place: 11, to_place: 20, ton: "1.7525" },
+    { from_place: 21, to_place: 25, ton: "1.1437" },
+  ];
+  // 100 TON, 2000 игроков: 100 мест, ниже видимого топа-50 — группа 51–100
+  const P100 = [
+    ...P25.slice(0, 10),
+    { from_place: 11, to_place: 20, ton: "1.2892" },
+    { from_place: 21, to_place: 50, ton: "0.5792" },
+    { from_place: 51, to_place: 100, ton: "0.2653" },
   ];
   const on = (over: Partial<TowerLeaderboard>) =>
-    board({ prize_budget_ton: "10", max_places: 5, min_score: 1, ...over });
+    board({ prize_budget_ton: "10", min_prize_ton: "0.1", min_score: 1, ...over });
 
   it("призы: 3 места при 20 игроках — чипы, фонд и сколько до 4-го места", () => {
     const html = render(on({ prizes: P3, prize_places: 3, participants: 20, total_players: 20, next_place_at: 21 }));
     expect(count(html, 'class="tt-prize"')).toBe(3);
+    expect(html).toContain("5,4545 TON");
     expect(html).toContain("Призовой фонд 10 TON · 3 призовых места");
     expect(html).toContain("Ещё 1 игрок — и мест станет 4");
+    expect(html).toContain("Ниже — без приза");
+    expect(html).not.toContain("tt-band\"><span>");
   });
 
-  it("призы: 4 места — чип и у 4-го в списке; до 5-го — 17 игроков", () => {
-    const P4 = [
-      { place: 1, ton: "4" },
-      { place: 2, ton: "2.7" },
-      { place: 3, ton: "2" },
-      { place: 4, ton: "1.3" },
-    ];
-    const html = render(on({ prizes: P4, prize_places: 4, participants: 24, total_players: 24, next_place_at: 41 }));
-    expect(count(html, 'class="tt-prize"')).toBe(4);
-    expect(html).toContain("1.3 TON");
-    expect(html).toContain("4 призовых места");
-    expect(html).toContain("Ещё 17 игроков — и мест станет 5");
+  it("призы: 25 мест — свои суммы до 10-го, дальше подписи групп", () => {
+    const html = render(
+      on({ prize_budget_ton: "100", prizes: P25, prize_places: 25, participants: 500, total_players: 500, next_place_at: 520, entries: entries(50) }),
+    );
+    expect(html).toContain("Призовой фонд 100 TON · 25 призовых мест");
+    expect(html).toContain("Ещё 20 игроков — и мест станет 26");
+    // 10 своих сумм (3 на пьедестале + 4…10 в списке) и 2 подписи групп
+    expect(count(html, 'class="tt-prize"')).toBe(12);
+    expect(html).toContain("<span>11–20 место</span>");
+    expect(html).toContain("1,7525 TON");
+    expect(html).toContain("<span>21–25 место</span>");
+    expect(html.indexOf("21–25 место")).toBeLessThan(html.indexOf("Ниже — без приза"));
+    expect(html).not.toContain("tt-below");
   });
 
-  it("призы: 5 мест — максимум, без строки «ещё»", () => {
-    const html = render(on({ prizes: P5, prize_places: 5, participants: 57, next_place_at: null }));
-    expect(count(html, 'class="tt-prize"')).toBe(5);
-    expect(html).toContain("5 призовых мест");
-    expect(html).not.toContain("Ещё");
+  it("призы: 100 мест — группа 51–100 ниже видимого топа в «Призы ниже»", () => {
+    const html = render(
+      on({ prize_budget_ton: "100", prizes: P100, prize_places: 100, participants: 2000, total_players: 2000, next_place_at: 2020, entries: entries(50) }),
+    );
+    expect(html).toContain("100 призовых мест");
+    expect(html).toContain("Призы ниже");
+    expect(html).toMatch(/tt-below[\s\S]*51–100 место[\s\S]*0,2653 TON/);
+    expect(html).not.toContain("Ниже — без приза");
+  });
+
+  it("призы: фонд не даёт больше мест — честно пишем почему", () => {
+    const html = render(on({ prize_budget_ton: "5", prizes: P3, prize_places: 3, participants: 900, next_place_at: null, prize_limited_by: "budget" }));
+    expect(html).toContain("Больше мест фонд не даёт: приз от 0,1 TON");
+    const max = render(on({ prizes: P3, prize_places: 3, participants: 900, next_place_at: null, prize_limited_by: "max" }));
+    expect(max).not.toContain("Ещё");
+    expect(max).not.toContain("Больше мест");
   });
 
   it("призы: меньше минимума — фонд есть, чипов нет, сколько игроков не хватает", () => {
@@ -127,18 +152,35 @@ describe("экран «Топ месяца»", () => {
     expect(html).toContain("Призы — от 10 игроков · ещё 3 игрока");
   });
 
+  it("склонение числа мест", () => {
+    expect(placesWord(1)).toBe("1 призовое место");
+    expect(placesWord(21)).toBe("21 призовое место");
+    expect(placesWord(22)).toBe("22 призовых места");
+    expect(placesWord(12)).toBe("12 призовых мест");
+    expect(placesWord(111)).toBe("111 призовых мест");
+  });
+
   it("прошлый месяц — без призов и без фонда", () => {
     const html = render(on({ month: "2026-09", prizes: null, prize_budget_ton: null }), "/tower/top?m=prev");
     expect(html).toContain("Итоги закрытого месяца не меняются");
     expect(html).not.toContain("TON");
   });
 
-  it("я вне видимого топа — закреплённая строка с разрывом до последнего места", () => {
-    const html = render(board());
+  it("я вне видимого топа — разрыв до последнего ПРИЗОВОГО места", () => {
+    // 3 приза, 3-е место набрало 980: мне (700) нужно 281
+    const html = render(on({ prizes: P3, prize_places: 3, participants: 57, prize_cutoff_score: 980 }));
     expect(html).toContain('class="tt-pin"');
     expect(html).toMatch(/tt-row me"><span class="tt-rank">30<\/span>/);
-    // последний видимый — 12-е место с 890 очками: нужно 891 − 700
-    expect(html).toContain("+191 до 12-го места");
+    expect(html).toContain("+281 до 3-го места · приз 1,8181 TON");
+    expect(pinGapText(board({ prizes: P100, prize_cutoff_score: 400 }), 70, 300)).toBe("Приз сейчас 0,2653 TON");
+    expect(pinGapText(board({ prizes: P100, prize_cutoff_score: 400 }), 120, 300)).toBe("+101 до 100-го места · приз 0,2653 TON");
+  });
+
+  it("без призов — в закреплённой строке не обещаем «до N-го места»", () => {
+    const html = render(board());
+    expect(html).toMatch(/tt-row me"><span class="tt-rank">30<\/span>/);
+    expect(html).not.toContain("tt-gap");
+    expect(html).not.toMatch(/до \d+-го места/);
   });
 
   it("я в видимом топе — без закреплённой строки, моя строка подсвечена", () => {

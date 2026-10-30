@@ -70,7 +70,9 @@ class LeaderMeOut(BaseModel):
 
 
 class LeaderPrizeOut(BaseModel):
-    place: int
+    # места с … по … (одно место — from_place == to_place); каждому — ton
+    from_place: int
+    to_place: int
     ton: str
 
 
@@ -92,9 +94,16 @@ class LeaderboardOut(BaseModel):
     prize_places: int = 0
     # при каком числе участников добавится призовое место; null — уже максимум или выключено
     next_place_at: int | None = None
-    max_places: int = 5
-    # места → TON по текущему числу участников (вниз до 0.0001, сумма ≤ бюджета);
-    # [] — ниже минимума; null — призы выключены (и всегда для прошлых месяцев)
+    max_places: int = 200
+    # почему мест не больше: "budget" — не хватает на min_prize, "max" — потолок max_places
+    prize_limited_by: str | None = None
+    min_prize_ton: str | None = None
+    # сколько уйдёт при текущем числе участников (≤ бюджета; остаток не тратится)
+    prize_total_ton: str | None = None
+    # счёт последнего призового места — сколько нужно, чтобы попасть в призы
+    prize_cutoff_score: int | None = None
+    # группы мест → TON каждому по текущему числу участников (вниз до 0.0001, сумма ≤ бюджета);
+    # [] — ниже минимума или бюджета не хватает; null — призы выключены (и всегда для прошлых месяцев)
     prizes: list[LeaderPrizeOut] | None = None
 
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Panel, ScreenHeader, SkeletonCard, Tabs } from "@/components/ui";
@@ -7,7 +7,7 @@ import { useScreenBack } from "@/lib/backButton";
 import { haptic } from "@/lib/haptics";
 import { closesOn, countdown, formatCountdown, monthPrepositional, monthTitle, mskMonth, prevMonth, spokenCountdown } from "@/lib/tower/month";
 import { useTowerLeaderboard } from "@/api/hooks";
-import type { TowerLeaderboard, TowerLeaderEntry } from "@/api/types";
+import type { TowerLeaderboard, TowerLeaderEntry, TowerPrize } from "@/api/types";
 import "@/styles/tower-top.css";
 
 type Which = "cur" | "prev";
@@ -17,7 +17,16 @@ const TABS = [
 ] as const;
 
 const fmt = (n: number) => n.toLocaleString("ru-RU");
-const ton = (s: string) => `${s} TON`;
+/** «0.2» → «0,2 TON» (как пишем суммы по-русски) */
+const ton = (s: string) => `${s.replace(".", ",")} TON`;
+
+/** «51–100 место» / «7 место» */
+export const placeRange = (g: TowerPrize) => (g.from_place === g.to_place ? `${g.from_place} место` : `${g.from_place}–${g.to_place} место`);
+
+/** Приз места (или undefined). */
+export function prizeOf(prizes: TowerPrize[] | null | undefined, place: number): TowerPrize | undefined {
+  return prizes?.find((g) => g.from_place <= place && place <= g.to_place);
+}
 
 function players(n: number) {
   const a = n % 10;
@@ -55,12 +64,15 @@ export default function TowerTop() {
 }
 
 export function Board({ data, current, now }: { data: TowerLeaderboard; current: boolean; now?: number }) {
-  const prizes = useMemo(() => new Map((data.prizes ?? []).map((p) => [p.place, p.ton])), [data.prizes]);
+  const groups = data.prizes ?? [];
+  const lastPrize = groups.length ? groups[groups.length - 1].to_place : 0;
   const top = data.entries.slice(0, 3);
   const rest = data.entries.slice(3);
   const me = data.me?.rank != null ? data.me : null;
   const meShown = data.entries.some((e) => e.is_me);
-  const last = data.entries[data.entries.length - 1];
+  const lastShown = data.entries.length ? data.entries[data.entries.length - 1].rank : 0;
+  // группы мест, которые ниже видимого списка: «51–100 место · 0,2 TON»
+  const below = groups.filter((g) => g.to_place > Math.max(lastShown, 3));
   const empty = data.entries.length === 0;
   // закреплённая строка: «моё место» вне видимого топа или приглашение сыграть в текущем месяце
   const pin = me && !meShown ? "rank" : current && !me && !empty ? "join" : null;
@@ -98,7 +110,7 @@ export function Board({ data, current, now }: { data: TowerLeaderboard; current:
         ) : (
           <ol className="tt-podium" aria-label="Первая тройка">
             {[1, 0, 2].map((i) => (
-              <Step key={i} place={i + 1} e={top[i]} prize={prizes.get(i + 1)} />
+              <Step key={i} place={i + 1} e={top[i]} prize={prizeOf(groups, i + 1)?.ton} />
             ))}
           </ol>
         )}
@@ -111,10 +123,39 @@ export function Board({ data, current, now }: { data: TowerLeaderboard; current:
       {rest.length > 0 && (
         <Panel className="tt-list" aria-label="Места с 4-го">
           <ol>
-            {rest.map((e) => (
-              <Row key={e.rank} e={e} prize={prizes.get(e.rank)} />
-            ))}
+            {rest.map((e, i) => {
+              const g = prizeOf(groups, e.rank);
+              const band = g && g.from_place !== g.to_place;
+              // подпись группы — у её первого места (или у 4-го, если группа началась на пьедестале)
+              const label = band && (e.rank === g.from_place || i === 0);
+              const cut = lastPrize > 0 && e.rank === lastPrize + 1;
+              return (
+                <Fragment key={e.rank}>
+                  {label ? <BandLabel g={g} /> : null}
+                  {cut ? (
+                    <li className="tt-band cut" aria-label="Ниже — без приза">
+                      Ниже — без приза
+                    </li>
+                  ) : null}
+                  <Row e={e} prize={g && !band ? g.ton : undefined} />
+                </Fragment>
+              );
+            })}
           </ol>
+        </Panel>
+      )}
+
+      {below.length > 0 && (
+        <Panel className="tt-below" aria-label="Призы ниже">
+          <p className="ui-label">Призы ниже</p>
+          <ul>
+            {below.map((g) => (
+              <li key={g.from_place}>
+                <span>{placeRange(g)}</span>
+                <span className="tt-prize">{ton(g.ton)}</span>
+              </li>
+            ))}
+          </ul>
         </Panel>
       )}
 
@@ -127,11 +168,7 @@ export function Board({ data, current, now }: { data: TowerLeaderboard; current:
                 <span className="tt-rank">{me.rank}</span>
                 <span className="tt-name">
                   Вы
-                  {current && last && me.score != null && last.score >= me.score ? (
-                    <span className="tt-gap">
-                      +{fmt(last.score + 1 - me.score)} до {last.rank}-го места
-                    </span>
-                  ) : null}
+                  {current ? <PinGap data={data} rank={me.rank ?? 0} score={me.score ?? 0} /> : null}
                 </span>
                 <span className="tt-score">{fmt(me.score ?? 0)}</span>
               </div>
@@ -151,6 +188,36 @@ export function Board({ data, current, now }: { data: TowerLeaderboard; current:
       )}
     </>
   );
+}
+
+/** Подпись группы мест с одним призом: «11–20 место · 1,75 TON». */
+function BandLabel({ g }: { g: TowerPrize }) {
+  return (
+    <li className="tt-band">
+      <span>{placeRange(g)}</span>
+      <span className="tt-prize">{ton(g.ton)}</span>
+    </li>
+  );
+}
+
+/**
+ * Подстрочник «моего места»: ниже призов — сколько очков до последнего ПРИЗОВОГО места;
+ * в призах — какой приз сейчас. Без призов ничего не обещаем.
+ */
+export function pinGapText(data: TowerLeaderboard, rank: number, score: number): string | null {
+  const groups = data.prizes ?? [];
+  if (!groups.length) return null;
+  const last = groups[groups.length - 1];
+  const mine = prizeOf(groups, rank);
+  if (mine) return `Приз сейчас ${ton(mine.ton)}`;
+  if (data.prize_cutoff_score == null) return null;
+  const need = Math.max(1, data.prize_cutoff_score + 1 - score);
+  return `+${fmt(need)} до ${last.to_place}-го места · приз ${ton(last.ton)}`;
+}
+
+function PinGap({ data, rank, score }: { data: TowerLeaderboard; rank: number; score: number }) {
+  const t = pinGapText(data, rank, score);
+  return t ? <span className="tt-gap">{t}</span> : null;
 }
 
 function Step({ place, e, prize }: { place: number; e?: TowerLeaderEntry; prize?: string }) {
@@ -178,8 +245,11 @@ function Row({ e, prize }: { e: TowerLeaderEntry; prize?: string }) {
   );
 }
 
-function placesWord(n: number) {
-  return `${n} ${n === 1 ? "призовое место" : n >= 2 && n <= 4 ? "призовых места" : "призовых мест"}`;
+export function placesWord(n: number) {
+  const d = n % 10;
+  const dd = n % 100;
+  const w = dd >= 11 && dd <= 14 ? "призовых мест" : d === 1 ? "призовое место" : d >= 2 && d <= 4 ? "призовых места" : "призовых мест";
+  return `${n} ${w}`;
 }
 
 /** Строка призов под пьедесталом: фонд, сколько мест сейчас и сколько игроков до следующего места. */
@@ -190,18 +260,19 @@ export function prizeLines(data: TowerLeaderboard, current: boolean): { main: st
   const have = data.participants ?? data.total_players;
   const next = data.next_place_at;
   const need = next != null ? Math.max(1, next - have) : 0;
-  if (!data.prizes.length)
-    return {
-      main: fund,
-      sub: `Призы — от ${players(data.min_participants)} · ещё ${players(need)}`,
-      on: true,
-    };
-  const n = data.prizes.length;
-  return {
-    main: `${fund} · ${placesWord(n)}`,
-    sub: next != null ? `Ещё ${players(need)} — и мест станет ${n + 1}` : undefined,
-    on: true,
-  };
+  const n = data.prize_places ?? data.prizes.reduce((a, g) => Math.max(a, g.to_place), 0);
+  if (!n) {
+    if (have >= data.min_participants)
+      return { main: fund, sub: `Фонда пока не хватает на призы от ${ton(data.min_prize_ton ?? "0")}`, on: true };
+    return { main: fund, sub: `Призы — от ${players(data.min_participants)} · ещё ${players(need)}`, on: true };
+  }
+  const sub =
+    next != null
+      ? `Ещё ${players(need)} — и мест станет ${n + 1}`
+      : data.prize_limited_by === "budget" && data.min_prize_ton
+        ? `Больше мест фонд не даёт: приз от ${ton(data.min_prize_ton)}`
+        : undefined;
+  return { main: `${fund} · ${placesWord(n)}`, sub, on: true };
 }
 
 function PrizeLine({ data, current }: { data: TowerLeaderboard; current: boolean }) {

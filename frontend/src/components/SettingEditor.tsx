@@ -7,6 +7,7 @@ import {
   fieldMeta,
   fromInput,
   toInput,
+  towerMinBudget,
   type FieldMeta,
 } from "@/lib/settingsMeta";
 
@@ -21,8 +22,8 @@ type Path = (string | number)[];
 
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const isLeaf = (v: unknown) => v === null || typeof v !== "object";
-/** поле, которое редактируется одной строкой, хотя значение — массив (pct_list) */
-const asLeaf = (m: FieldMeta, v: unknown) => isLeaf(v) || m.kind === "pct_list";
+/** поле, которое редактируется одной строкой, хотя значение — массив (int_list) */
+const asLeaf = (m: FieldMeta, v: unknown) => isLeaf(v) || m.kind === "int_list";
 const pkey = (p: Path) => p.join(".");
 const capsCls = "ui-label mb-2 block";
 
@@ -47,7 +48,7 @@ function Field({
   const k = pkey(path);
   const err = ctx.errors[k];
   const hint = [m.hint, extraHint].filter(Boolean).join(" · ");
-  const numeric = m.kind !== "text" && m.kind !== "pct_list";
+  const numeric = m.kind !== "text" && m.kind !== "int_list";
   if (m.kind === "bool")
     return (
       <UiField label={m.label} error={err || undefined} hint={hint || undefined}>
@@ -96,7 +97,7 @@ function Group({ ctx, value, path }: { ctx: Ctx; value: Obj; path: Path }) {
         const m = fieldMeta(ctx.settingKey, k, v);
         const p = [...path, k];
         if (asLeaf(m, v)) {
-          const single = entries.length === 1 || m.kind === "text" || m.kind === "pct_list" || m.label.length > 18;
+          const single = entries.length === 1 || m.kind === "text" || m.kind === "int_list" || m.label.length > 18;
           return (
             <div key={k} className={single ? "col-span-2" : ""}>
               <Field
@@ -262,12 +263,23 @@ export function SettingEditor({
         return;
       }
     }
-    // призы «Башни»: бюджет до 0.0001 TON; включить можно только с бюджетом
+    // призы «Башни»: суммы до 0.0001 TON; включить можно, только если бюджета хватает на первые места
     if (!Object.keys(errs).length && settingKey === "tower_prizes" && isObj(next)) {
-      if ((String(next.budget_ton ?? "").split(".")[1] ?? "").length > 4)
-        errs[pkey(["budget_ton"])] = "не больше 4 знаков после точки";
+      const dec4 = (k: string) => (String(next[k] ?? "").split(".")[1] ?? "").length > 4;
+      if (dec4("budget_ton")) errs[pkey(["budget_ton"])] = "не больше 4 знаков после точки";
+      else if (dec4("min_prize_ton")) errs[pkey(["min_prize_ton"])] = "не больше 4 знаков после точки";
+      else if (Array.isArray(next.bands) && next.bands.length && Number(next.bands[0]) <= Number(next.individual_places))
+        errs[pkey(["bands"])] = `первая граница больше «Своя сумма» (${String(next.individual_places)})`;
+      else if (Number(next.ladder_max_places) < Number(next.base_places))
+        errs[pkey(["ladder_max_places"])] = "не меньше «Мест сначала»";
+      else if (Number(next.max_places) < Number(next.ladder_max_places))
+        errs[pkey(["max_places"])] = "не меньше «Лесенка до»";
       else if (next.enabled === true && !(Number(next.budget_ton) > 0))
         errs[pkey(["budget_ton"])] = "чтобы включить призы, задайте бюджет больше 0";
+      else if (next.enabled === true && Number(next.budget_ton) < towerMinBudget(next)) {
+        const need = towerMinBudget(next);
+        errs[pkey(["budget_ton"])] = `не хватит на ${String(next.base_places)} места по ${String(next.min_prize_ton)} TON — нужно от ${need} TON`;
+      }
     }
     setErrors(errs);
     if (Object.keys(errs).length) {
