@@ -21,6 +21,7 @@ from app.db.base import Base
 from app.models import TowerDailyAttempts, TowerGame, TowerMonthlyBest, User  # noqa: F401 — регистрирует таблицы
 from app.services import gameday
 from app.services import tower as tw
+from app.services import tower_prizes as tp
 from app.services import tower_engine as eng
 
 warnings.filterwarnings("ignore", message=".*Decimal objects natively.*")
@@ -472,6 +473,89 @@ class LeaderboardTest(unittest.TestCase):
         run_db(body)
 
 
+class PrizesTest(unittest.TestCase):
+    """Настройка tower_prizes: проверка значения и что топ отдаёт клиенту. Денег не двигает."""
+
+    def test_default_is_off_and_valid(self):
+        from app.services.economy_seed import DEFAULTS
+
+        self.assertEqual(DEFAULTS["tower_prizes"][0], tp.DEFAULT)
+        self.assertEqual(tp.normalize(tp.DEFAULT), tp.DEFAULT)
+
+    def test_normalize_sorts_and_canonicalizes(self):
+        v = tp.normalize({**tp.DEFAULT, "enabled": True, "places": [{"place": 2, "ton": 3}, {"place": 1, "ton": "5.50"}]})
+        self.assertEqual(v["places"], [{"place": 1, "ton": "5.5"}, {"place": 2, "ton": "3"}])
+
+    def test_rejects_bad_values(self):
+        ok = {**tp.DEFAULT, "enabled": True, "places": [{"place": 1, "ton": "1"}]}
+        bad = [
+            "x",
+            {**ok, "extra": 1},
+            {**ok, "enabled": "yes"},
+            {**ok, "places": []},  # включено без мест
+            {**ok, "places": [{"place": 2, "ton": "1"}]},  # не с 1-го
+            {**ok, "places": [{"place": 1, "ton": "1"}, {"place": 1, "ton": "1"}]},
+            {**ok, "places": [{"place": 1, "ton": "1"}, {"place": 2, "ton": "2"}]},  # 2-е больше 1-го
+            {**ok, "places": [{"place": 1, "ton": "0"}]},
+            {**ok, "places": [{"place": 1, "ton": "-1"}]},
+            {**ok, "places": [{"place": 1, "ton": "abc"}]},
+            {**ok, "places": [{"place": 1, "ton": "NaN"}]},
+            {**ok, "places": [{"place": 1, "ton": "1001"}]},
+            {**ok, "places": [{"place": 1, "ton": "0.0000000001"}]},
+            {**ok, "places": [{"place": 1, "ton": True}]},
+            {**ok, "places": [{"place": True, "ton": "1"}]},
+            {**ok, "places": [{"place": 1}]},
+            {**ok, "places": [{"place": i, "ton": "1"} for i in range(1, 22)]},
+            {**ok, "min_participants": 0},
+            {**ok, "min_score": -1},
+            {**ok, "min_score": 1.5},
+            {**ok, "payout_mode": "auto"},
+        ]
+        for v in bad:
+            with self.subTest(v=v), self.assertRaises(tp.PrizeConfigError):
+                tp.normalize(v)
+        # битая запись в базе не роняет топ
+        self.assertFalse(tp.safe({"enabled": True})["enabled"])
+
+    def test_owner_save_validates_and_normalizes(self):
+        from app.services.economy_admin import EconomyAdminError, set_setting
+
+        async def body(s):
+            with self.assertRaises(EconomyAdminError):
+                await set_setting(s, key="tower_prizes", value={**tp.DEFAULT, "enabled": True})
+            v = await set_setting(s, key="tower_prizes", value={**tp.DEFAULT, "enabled": True, "places": [{"place": 1, "ton": "2.0"}]})
+            self.assertEqual(v.value["places"], [{"place": 1, "ton": "2"}])
+
+        run_db(body)
+
+    def test_leaderboard_prizes_only_when_enabled_and_current(self):
+        from app.services.economy_admin import set_setting
+
+        async def body(s):
+            u = await make_user(s, 1)
+            lb = await tw.leaderboard(s, user_id=u.id, now=NOON)
+            self.assertIsNone(lb["prizes"])
+            self.assertEqual(lb["min_participants"], 10)
+            # конец октября — 1 ноября 00:00 МСК = 31 окт 21:00 UTC
+            self.assertEqual(lb["month_ends_at"], "2026-10-31T21:00:00+00:00")
+            places = [{"place": 1, "ton": "5"}, {"place": 2, "ton": "3"}, {"place": 3, "ton": "1.5"}]
+            # места заданы, но выключено — призов нет
+            await set_setting(s, key="tower_prizes", value={**tp.DEFAULT, "places": places, "min_participants": 25})
+            lb = await tw.leaderboard(s, user_id=u.id, now=NOON)
+            self.assertIsNone(lb["prizes"])
+            self.assertEqual(lb["min_participants"], 25)
+            await set_setting(s, key="tower_prizes", value={**tp.DEFAULT, "enabled": True, "places": places})
+            lb = await tw.leaderboard(s, user_id=u.id, now=NOON)
+            self.assertEqual(lb["prizes"], places)
+            # прошлый месяц: сумм тогда не было — без призов; декабрь заканчивается 1 января
+            old = await tw.leaderboard(s, user_id=u.id, month=tw.parse_month("2026-09"), now=NOON)
+            self.assertIsNone(old["prizes"])
+            self.assertEqual(old["month_ends_at"], "2026-09-30T21:00:00+00:00")
+            self.assertEqual(tw.month_end(tw.parse_month("2026-12")).isoformat(), "2026-12-31T21:00:00+00:00")
+
+        run_db(body)
+
+
 class ApiTest(unittest.TestCase):
     """Через HTTP: подмена БД и авторизации, ответы и коды."""
 
@@ -560,6 +644,10 @@ class ApiTest(unittest.TestCase):
                     lb = (await c.get("/api/v1/tower/leaderboard", params={"limit": 5})).json()
                     self.assertEqual([(e["name"], e["score"], e["is_me"]) for e in lb["entries"]], [("Сергей", res.score, True)])
                     self.assertEqual(lb["me"]["rank"], 1)
+                    # призы не назначены — null; конец месяца и порог участников есть всегда
+                    self.assertIsNone(lb["prizes"])
+                    self.assertEqual(lb["min_participants"], 10)
+                    self.assertTrue(lb["month_ends_at"].endswith("T21:00:00+00:00"))
                     self.assertEqual((await c.get("/api/v1/tower/leaderboard", params={"month": "xx"})).status_code, 400)
                     self.assertEqual((await c.get("/api/v1/tower/leaderboard", params={"limit": 0})).status_code, 422)
 

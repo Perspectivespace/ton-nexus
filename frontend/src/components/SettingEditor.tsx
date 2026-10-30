@@ -21,6 +21,8 @@ type Path = (string | number)[];
 
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const isLeaf = (v: unknown) => v === null || typeof v !== "object";
+/** поле, которое редактируется одной строкой, хотя значение — массив (ton_list) */
+const asLeaf = (m: FieldMeta, v: unknown) => isLeaf(v) || m.kind === "ton_list";
 const pkey = (p: Path) => p.join(".");
 const capsCls = "ui-label mb-2 block";
 
@@ -45,7 +47,16 @@ function Field({
   const k = pkey(path);
   const err = ctx.errors[k];
   const hint = [m.hint, extraHint].filter(Boolean).join(" · ");
-  const numeric = m.kind !== "text";
+  const numeric = m.kind !== "text" && m.kind !== "ton_list";
+  if (m.kind === "bool")
+    return (
+      <UiField label={m.label} error={err || undefined} hint={hint || undefined}>
+        <select className="ui-input" disabled={m.readOnly} value={ctx.draft[k] ?? "0"} onChange={(e) => ctx.set(k, e.target.value)}>
+          <option value="1">Вкл</option>
+          <option value="0">Выкл</option>
+        </select>
+      </UiField>
+    );
   return (
     <UiField label={m.label} unit={m.unit || undefined} error={err || undefined} hint={hint || undefined}>
       <input
@@ -84,8 +95,8 @@ function Group({ ctx, value, path }: { ctx: Ctx; value: Obj; path: Path }) {
       {entries.map(([k, v]) => {
         const m = fieldMeta(ctx.settingKey, k, v);
         const p = [...path, k];
-        if (isLeaf(v)) {
-          const single = entries.length === 1 || m.kind === "text" || m.label.length > 18;
+        if (asLeaf(m, v)) {
+          const single = entries.length === 1 || m.kind === "text" || m.kind === "ton_list" || m.label.length > 18;
           return (
             <div key={k} className={single ? "col-span-2" : ""}>
               <Field
@@ -173,8 +184,8 @@ function collect(settingKey: string, v: unknown, path: Path, out: Map<string, [P
     if (isObj(x)) {
       for (const [k, y] of Object.entries(x)) {
         if (HIDDEN_KEYS.has(k)) continue;
-        if (isLeaf(y)) {
-          const m = fieldMeta(settingKey, k, y);
+        const m = fieldMeta(settingKey, k, y);
+        if (asLeaf(m, y)) {
           const locked = m.readOnly || (row && meta?.lockField?.(row, k)) || (row && k === meta?.rowTitle);
           out.set(pkey([...p, k]), [[...p, k], locked ? { ...m, readOnly: true } : m, y]);
         } else if (depth < 1) walk(y, [...p, k], depth + 1);
@@ -251,6 +262,9 @@ export function SettingEditor({
         return;
       }
     }
+    // призы «Башни»: включить можно только с суммами
+    if (!Object.keys(errs).length && settingKey === "tower_prizes" && isObj(next) && next.enabled === true && !(next.places as unknown[])?.length)
+      errs[pkey(["places"])] = "чтобы включить призы, укажите суммы";
     setErrors(errs);
     if (Object.keys(errs).length) {
       setErr("Проверьте выделенные поля");

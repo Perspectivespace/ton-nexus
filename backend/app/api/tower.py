@@ -69,11 +69,22 @@ class LeaderMeOut(BaseModel):
     score: int | None = None
 
 
+class LeaderPrizeOut(BaseModel):
+    place: int
+    ton: str
+
+
 class LeaderboardOut(BaseModel):
     month: str
     entries: list[LeaderEntryOut]
     total_players: int
     me: LeaderMeOut | None = None
+    # 00:00 МСК 1-го числа следующего месяца (UTC) — отсчёт до конца топа
+    month_ends_at: str
+    # призы платятся, только если в месяце не меньше стольких участников
+    min_participants: int
+    # места → TON; null — призы выключены или не назначены (и всегда для прошлых месяцев)
+    prizes: list[LeaderPrizeOut] | None = None
 
 
 def _http(e: TowerError) -> HTTPException:

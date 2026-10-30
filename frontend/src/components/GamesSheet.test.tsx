@@ -44,6 +44,10 @@ describe("шторка «Игры»", () => {
     expect(html).toContain('aria-modal="true"');
     expect(html.match(/class="gs-card[^"]*"/g)).toEqual(['class="gs-card"', 'class="gs-card amber"']);
     expect(html.indexOf('href="/wheel"')).toBeLessThan(html.indexOf('href="/tower"'));
+    // у «Башни» вторая ссылка «Топ» — рядом с основной, без вложенных <a>
+    expect(html.indexOf('href="/tower"')).toBeLessThan(html.indexOf('href="/tower/top"'));
+    expect(html).toMatch(/<a[^>]*class="gs-hit"[^>]*><\/a>/);
+    expect(html).not.toMatch(/<a[^>]*>(?:(?!<\/a>)[\s\S])*<a /);
     expect(html).toContain("Колесо удачи");
     expect(html).toContain("Башня");
     expect(html).toContain('class="ui-sh-hd"');

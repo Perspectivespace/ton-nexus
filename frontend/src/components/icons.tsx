@@ -62,6 +62,8 @@ export const IconBack = make("Back", p("M15 6l-6 6 6 6"));
 export const IconGamepad = make("Gamepad", <>{p("M7 7h10l4 4v4l-2 2h-2l-2-2H9l-2 2H5l-2-2v-4z")}{p("M7.5 10v4M5.5 12h4")}{p("M15.6 10.6h.8M17.6 13.4h.8")}</>);
 /** Заработок — стопка монет (вне набора 24) */
 export const IconCoins = make("Coins", <>{p("M5 6l3-2h8l3 2-3 2H8z")}{p("M5 6v4l3 2h8l3-2V6")}{p("M5 10v4l3 2h8l3-2v-4")}{p("M5 14v4l3 2h8l3-2v-4")}</>);
+/** Топ — пьедестал 2·1·3 (вне набора 24) */
+export const IconPodium = make("Podium", <>{p("M9 8h6v12H9z")}{p("M3 13h6v7H3zM15 15h6v5h-6z")}{p("M12 3.5v2.5")}</>);
 
 /** Полный список — для витрины /kit и проверки «ровно 24» */
 export const ICONS = {

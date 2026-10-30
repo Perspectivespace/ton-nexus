@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Panel, ScreenHeader, Button, Num, StatusPill } from "@/components/ui";
+import { Link } from "react-router-dom";
+import { Panel, ScreenHeader, Button, Num } from "@/components/ui";
+import { IconChevron, IconPodium } from "@/components/icons";
+import { prefetchRoute } from "@/lib/routes";
 import { BackLink } from "@/components/BackLink";
 import { useScreenBack } from "@/lib/backButton";
 import { haptic } from "@/lib/haptics";
@@ -164,7 +167,17 @@ export default function Tower() {
   return (
     <div className="space-y-4">
       <BackLink />
-      <ScreenHeader eyebrow="Игра" title="Башня" action={best > 0 ? <StatusPill tone="neutral">рекорд месяца {best}</StatusPill> : undefined} />
+      <ScreenHeader
+        eyebrow="Игра"
+        title="Башня"
+        action={
+          <Link to="/tower/top" className="tw-top" onClick={() => haptic.tap()} onPointerEnter={() => void prefetchRoute("/tower/top")}>
+            <IconPodium size={16} />
+            {best > 0 ? <>Топ · {best}</> : "Топ месяца"}
+            <IconChevron size={14} />
+          </Link>
+        }
+      />
 
       <Panel level="e1" cut="l" lift="l2" className="overflow-hidden !p-0">
         <div

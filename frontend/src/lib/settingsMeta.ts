@@ -3,7 +3,8 @@
  * (derived from backend services), field labels, units and validation.
  */
 
-export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text";
+/** bool — «Вкл/Выкл»; ton_list — массив `{place, ton}` одной строкой «5 3 1.5» (1-е, 2-е, 3-е место) */
+export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "ton_list";
 
 export type FieldMeta = {
   label: string;
@@ -30,7 +31,7 @@ export type SettingMeta = {
 };
 
 /** Technical keys the backend/frontend logic relies on — never editable, not shown. */
-export const HIDDEN_KEYS = new Set(["id", "key", "code", "type"]);
+export const HIDDEN_KEYS = new Set(["id", "key", "code", "type", "payout_mode"]);
 
 export const STAT_RU: Record<string, string> = {
   power: "Мощность",
@@ -240,6 +241,28 @@ export const SETTINGS: Record<string, SettingMeta> = {
       return `${o.free_spins_per_day ?? 0} вращ./день · ${o.items?.length ?? 0} секторов`;
     },
   },
+  tower_prizes: {
+    title: "Призы топа «Башни»",
+    short: "TON лучшим игрокам месяца",
+    about:
+      "Призы за места в месячном топе «Башни». Пока призы выключены, игроки видят «Призы пока не назначены», а топ работает как обычная таблица. Суммы пишутся через пробел, начиная с 1-го места: «5 3 1.5» — 5 TON за 1-е, 3 за 2-е, 1.5 за 3-е; каждая следующая не больше предыдущей, до 20 мест. Призы показываются только в текущем месяце и действуют, если за месяц сыграло не меньше «Мин. игроков» и у места не меньше «Мин. счёта». Деньги автоматически не начисляются: после 00:00 МСК 1-го числа владелец проверяет итоги и выплачивает вручную.",
+    fields: {
+      enabled: { label: "Призы", kind: "bool" },
+      places: {
+        label: "Суммы по местам",
+        kind: "ton_list",
+        unit: "TON",
+        hint: "С 1-го места через пробел: 5 3 1.5 · пусто — без призов",
+      },
+      min_participants: { label: "Мин. игроков", kind: "int", min: 1, max: 100000 },
+      min_score: { label: "Мин. счёт", kind: "int", min: 0, max: 1000000000 },
+    },
+    summary: (v) => {
+      const o = v as { enabled?: boolean; places?: { ton?: unknown }[] };
+      const list = (o.places ?? []).map((p) => String(p.ton)).join(" / ");
+      return o.enabled && list ? `${list} TON` : list ? `Выключены · ${list} TON` : "Выключены";
+    },
+  },
 };
 
 export function fieldMeta(settingKey: string, field: string, sample: unknown): FieldMeta {
@@ -279,6 +302,14 @@ export function shiftDecimal(s: string, places: number): string {
 
 /** Value → input string. */
 export function toInput(m: FieldMeta, v: unknown): string {
+  if (m.kind === "bool") return v ? "1" : "0";
+  if (m.kind === "ton_list")
+    return Array.isArray(v)
+      ? [...(v as { place?: number; ton?: unknown }[])]
+          .sort((a, b) => Number(a.place) - Number(b.place))
+          .map((p) => String(p.ton))
+          .join(" ")
+      : "";
   if (v == null) return "";
   if (m.kind === "pct_bp") return String(Number(v) / 100);
   if (m.kind === "pct_frac") return shiftDecimal(String(v), 2);
@@ -295,6 +326,10 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
     if (m.max != null && n > m.max) throw new Error(`не больше ${m.max}`);
   };
   switch (m.kind) {
+    case "bool":
+      return raw === "1" || raw === "true";
+    case "ton_list":
+      return parseTonList(raw);
     case "text":
       if (!s) throw new Error("не может быть пустым");
       return raw.trim();
@@ -333,7 +368,26 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
   }
 }
 
+/** «5 3 1,5» / «5; 3; 1.5» → [{place:1,ton:"5"},…]; суммы > 0, не растут, до 20 мест. Пусто → []. */
+export function parseTonList(raw: string): { place: number; ton: string }[] {
+  const parts = raw.trim().split(/[\s;]+|,(?=\s)|,$/).filter(Boolean);
+  if (parts.length > 20) throw new Error("не больше 20 мест");
+  let prev = Infinity;
+  return parts.map((p, i) => {
+    const s = p.replace(",", ".");
+    if (!DEC.test(s)) throw new Error(`место ${i + 1}: нужно число, например 1.5`);
+    if ((s.split(".")[1] ?? "").length > 9) throw new Error(`место ${i + 1}: не больше 9 знаков после точки`);
+    const n = Number(s);
+    if (n <= 0) throw new Error(`место ${i + 1}: сумма больше 0`);
+    if (n > 1000) throw new Error(`место ${i + 1}: не больше 1000 TON`);
+    if (n > prev) throw new Error(`место ${i + 1}: не больше, чем за место ${i}`);
+    prev = n;
+    return { place: i + 1, ton: shiftDecimal(s, 0) };
+  });
+}
+
 export function formatField(m: FieldMeta, v: unknown): string {
+  if (m.kind === "bool") return v ? "Вкл" : "Выкл";
   const val = toInput(m, v);
   return m.unit ? `${val} ${m.unit}`.replace(" %", "%") : val;
 }
@@ -353,7 +407,7 @@ export function summarize(key: string, v: unknown): string {
   if (!entries.length) return "—";
   return entries
     .map(([k, x]) => {
-      if (x !== null && typeof x === "object") return `${fieldMeta(key, k, x).label}: …`;
+      if (x !== null && typeof x === "object" && fieldMeta(key, k, x).kind !== "ton_list") return `${fieldMeta(key, k, x).label}: …`;
       const m = fieldMeta(key, k, x);
       const val = formatField(m, x);
       return entries.length === 1 ? val : `${m.label} ${val}`;

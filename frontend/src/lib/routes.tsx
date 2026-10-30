@@ -27,6 +27,7 @@ const LOADERS: Record<string, Loader> = {
   withdraws: () => import("@/pages/WithdrawQueue").then((m) => m.WithdrawQueue),
   deploy: () => import("@/pages/Deploy").then((m) => m.Deploy),
   tower: () => import("@/pages/Tower").then((m) => m.default),
+  towerTop: () => import("@/pages/TowerTop").then((m) => m.default),
 };
 type Key = keyof typeof LOADERS;
 
@@ -87,6 +88,7 @@ export function routeKey(path: string): Key | null {
   if (p === "/withdraws") return "withdraws";
   if (p === "/deploy") return "deploy";
   if (p === "/tower") return "tower";
+  if (p === "/tower/top") return "towerTop";
   return null;
 }
 

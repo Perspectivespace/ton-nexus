@@ -1,0 +1,69 @@
+/* Топ «Башни» (/tower/top). Только токены; без backdrop-filter и бесконечных анимаций (DESIGN.md §14.3).
+ * Пьедестал поднимается один раз (0.36 с); при «уменьшить движение» и на html.low-end — сразу на месте. */
+
+.tt-hero { padding: 16px 16px 12px; }
+.tt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tt-count { margin-top: 4px; font: 500 13px/20px var(--f-sans); color: var(--text-2); }
+.tt-clock-box { flex: none; text-align: right; }
+.tt-clock { margin-top: 4px; font: 700 17px/20px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--neon); white-space: nowrap; text-shadow: 0 0 8px var(--neon-soft); }
+.tt-closed { margin-top: 4px; font: 500 13px/20px var(--f-sans); color: var(--text-2); white-space: nowrap; }
+
+/* —— пьедестал: 2 · 1 · 3 —— */
+.tt-podium { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1.14fr 1fr; align-items: end; gap: 8px; }
+.tt-step { --tone: var(--text-2); --h: 40px; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  animation: tt-rise .36s var(--ease-out, ease-out) both; }
+.tt-step.p1 { --tone: var(--amber); --h: 56px; animation-delay: .08s; }
+.tt-step.p2 { --tone: #C7D0E0; }
+.tt-step.p3 { --tone: #D9965F; --h: 28px; animation-delay: .16s; }
+[data-theme="light"] .tt-step.p2 { --tone: #5D6880; }
+[data-theme="light"] .tt-step.p3 { --tone: #9A5622; }
+.tt-medal { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; font: 700 17px/1 var(--f-display); color: var(--tone);
+  background: radial-gradient(circle at 50% 30%, var(--surface-3), var(--surface-1) 70%); box-shadow: inset 0 0 0 2px var(--tone), 0 0 0 3px var(--surface-1); }
+.tt-step.p1 .tt-medal { width: 48px; height: 48px; font-size: 20px; box-shadow: inset 0 0 0 2px var(--tone), 0 0 0 3px var(--surface-1), 0 0 16px var(--amber-soft); }
+.tt-pname { max-width: 100%; margin-top: 4px; font: 600 13px/18px var(--f-sans); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-step.me .tt-pname { color: var(--neon); }
+.tt-step.free .tt-pname, .tt-step.free .tt-pscore { color: var(--text-3); }
+.tt-pscore { font: 700 15px/20px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.tt-step.p1 .tt-pscore { font-size: 17px; line-height: 24px; color: var(--amber-core); }
+.tt-base { align-self: stretch; height: var(--h); margin-top: 4px; position: relative;
+  background: linear-gradient(180deg, var(--surface-3), transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 22%, transparent), color-mix(in srgb, var(--tone) 4%, transparent));
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%, 0 6px); }
+.tt-base::before { content: ""; position: absolute; left: 6px; right: 6px; top: 0; height: 2px; background: var(--tone); opacity: .9; }
+.tt-step.me .tt-base::before { background: var(--neon); }
+
+/* приз — натрий (награда), моно; на пьедестале и в строках */
+.tt-prize { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; font: 600 11px/1 var(--f-mono); white-space: nowrap; color: var(--amber);
+  background: var(--amber-soft); box-shadow: inset 0 0 0 1px rgba(255,181,71,.32); clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px)); }
+
+.tt-foot { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font: 400 12px/16px var(--f-sans); color: var(--text-3); text-align: center; }
+.tt-foot.prize { color: var(--amber); }
+.tt-empty { margin-top: 16px; padding: 12px 0 4px; display: grid; justify-items: center; gap: 8px; text-align: center; }
+.tt-empty .ui-btn { margin-top: 4px; min-width: 160px; }
+
+.tt-rules { display: block; font: 400 12px/18px var(--f-sans); }
+
+/* —— места 4…N —— */
+.tt-list { padding: 4px 0; }
+.tt-list ol { list-style: none; margin: 0; padding: 0; }
+.tt-row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 16px; position: relative; }
+.tt-list .tt-row + .tt-row::before { content: ""; position: absolute; left: 60px; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, var(--line-strong), var(--line) 60%, transparent); }
+.tt-rank { flex: none; width: 32px; font: 600 13px/20px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text-3); text-align: right; }
+.tt-name { flex: 1; min-width: 0; font: 500 15px/20px var(--f-sans); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-score { flex: none; font: 600 15px/20px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); }
+.tt-row.me { background: linear-gradient(90deg, var(--neon-soft), transparent 70%); box-shadow: inset 2px 0 0 var(--neon); }
+.tt-row.me .tt-rank, .tt-row.me .tt-name { color: var(--neon); }
+.tt-gap { display: block; margin-top: 2px; font: 400 12px/16px var(--f-sans); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
+
+/* —— «моё место» закреплено внизу (дока на этом экране нет) —— */
+.tt-pin-gap { height: 72px; }
+.tt-pin { position: fixed; z-index: 20; left: 16px; right: 16px; max-width: calc(32rem - 32px); margin: 0 auto; bottom: calc(8px + var(--safe-b, 0px));
+  --c: var(--cut-m); background: var(--edge-2); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); padding: 1px; }
+.tt-pin .tt-row { min-height: 64px; background: var(--mat-2); box-shadow: var(--bevel-2); clip-path: inherit; }
+.tt-pin .tt-row.me { background: linear-gradient(90deg, var(--neon-soft), transparent 70%), var(--mat-2); box-shadow: inset 2px 0 0 var(--neon), var(--bevel-2); }
+.tt-pin .tt-row.join .tt-name { font-weight: 600; }
+
+@keyframes tt-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tt-step { animation: none; } }
+html.low-end .tt-step { animation: none; }
+html.low-end .tt-clock { text-shadow: none; }

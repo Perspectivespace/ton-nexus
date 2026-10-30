@@ -25,6 +25,7 @@ export default function App() {
           <Route path="/withdraws" element={route("withdraws")} />
           <Route path="/deploy" element={route("deploy")} />
           <Route path="/tower" element={route("tower")} />
+          <Route path="/tower/top" element={route("towerTop")} />
           {/* старые/короткие адреса: /earn, /profile, /upgrade (шторка на Майнере) */}
           {Object.keys(ALIASES).map((p) => (
             <Route key={p} path={p} element={<Alias />} />
