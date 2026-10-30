@@ -7,7 +7,7 @@ import { haptic } from "@/lib/haptics";
 import { prefetchRoute } from "@/lib/routes";
 import { towerLine, wheelLine } from "@/lib/games";
 import { SheetHeader } from "@/components/ui/SheetHeader";
-import { IconChevron } from "@/components/icons";
+import { IconChevron, IconPodium } from "@/components/icons";
 
 /** Колесо: диск с секторами, спицами и восемью лампами (сетка 48) */
 function WheelArt() {
@@ -87,6 +87,7 @@ export default function GamesSheet({
     haptic.sheet();
     void prefetchRoute("/wheel");
     void prefetchRoute("/tower");
+    void prefetchRoute("/tower/top");
     const back = () => closeRef.current();
     const key = (e: KeyboardEvent) => e.key === "Escape" && back();
     window.addEventListener("keydown", key);
@@ -165,23 +166,32 @@ export default function GamesSheet({
             </span>
           </Link>
 
-          <Link to="/tower" className="gs-card amber" onClick={() => haptic.tap()}>
+          {/* карточка — не ссылка целиком: внутри вторая ссылка «Топ», а <a> в <a> недопустим.
+              Основная ссылка растянута на всю карточку (.gs-hit), «Топ» лежит поверх неё */}
+          <div className="gs-card amber">
+            <Link to="/tower" className="gs-hit" aria-label={`Башня — играть. ${t}`} onClick={() => haptic.tap()} />
             <span className="gs-art" aria-hidden="true">
               <span className="gs-med">
                 <TowerArt />
               </span>
             </span>
             <span className="gs-body">
-              <span className="gs-txt">
+              <span className="gs-txt" aria-hidden="true">
                 <span className="gs-name">Башня</span>
                 <span className="gs-st">{t}</span>
               </span>
-              <span className="gs-go" aria-hidden="true">
-                Играть
-                <IconChevron size={14} />
+              <span className="gs-acts">
+                <span className="gs-go" aria-hidden="true">
+                  Играть
+                  <IconChevron size={14} />
+                </span>
+                <Link to="/tower/top" className="gs-sub" onClick={() => haptic.tap()}>
+                  <IconPodium size={14} />
+                  Топ
+                </Link>
               </span>
             </span>
-          </Link>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

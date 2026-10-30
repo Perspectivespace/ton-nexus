@@ -3,7 +3,8 @@
  * (derived from backend services), field labels, units and validation.
  */
 
-export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text";
+/** bool — «Вкл/Выкл»; int_list — возрастающие целые одной строкой «20 50 100 200» */
+export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "int_list";
 
 export type FieldMeta = {
   label: string;
@@ -30,7 +31,7 @@ export type SettingMeta = {
 };
 
 /** Technical keys the backend/frontend logic relies on — never editable, not shown. */
-export const HIDDEN_KEYS = new Set(["id", "key", "code", "type"]);
+export const HIDDEN_KEYS = new Set(["id", "key", "code", "type", "payout_mode"]);
 
 export const STAT_RU: Record<string, string> = {
   power: "Мощность",
@@ -240,6 +241,42 @@ export const SETTINGS: Record<string, SettingMeta> = {
       return `${o.free_spins_per_day ?? 0} вращ./день · ${o.items?.length ?? 0} секторов`;
     },
   },
+  tower_prizes: {
+    title: "Призы топа «Башни»",
+    short: "Бюджет TON на лучших игроков месяца",
+    about:
+      "Бюджет делится между призовыми местами месяца. Меньше «Мин. игроков» — призов нет. Мест — больше из лесенки (3, с 21 игрока 4, с 41 — 5) и «% от игроков», но не больше «Макс. мест». Доля места — 1/место: 1-е вдвое больше 2-го. До «Своя сумма» у каждого места своя сумма, дальше группы с одним призом. Каждому — не меньше «Мин. приза», иначе мест меньше. Суммы вниз до 0.0001 TON, остаток не тратится. Платит владелец вручную после 00:00 МСК 1-го.",
+    fields: {
+      enabled: { label: "Призы", kind: "bool" },
+      budget_ton: {
+        label: "Бюджет на месяц",
+        kind: "ton",
+        unit: "TON",
+        min: 0,
+        max: 100000,
+        hint: "Остаток не тратится",
+      },
+      min_participants: { label: "Мин. игроков", kind: "int", min: 1, max: 100000, hint: "Меньше — призов нет" },
+      base_places: { label: "Мест сначала", kind: "int", min: 1, max: 10, hint: "Меньше не бывает" },
+      extra_place_every: { label: "+1 место за каждые", kind: "int", unit: "игроков", min: 0, max: 100000, hint: "Лесенка; 0 — без неё" },
+      ladder_max_places: { label: "Лесенка до", kind: "int", unit: "мест", min: 1, max: 100 },
+      places_percent: { label: "Мест от игроков", kind: "int", unit: "%", min: 0, max: 100, hint: "500 игроков × 5 % = 25 мест" },
+      max_places: { label: "Макс. мест", kind: "int", min: 1, max: 1000 },
+      min_prize_ton: { label: "Мин. приз", kind: "ton", unit: "TON", min: 0.0001, max: 100000, hint: "Не хватает — мест меньше" },
+      individual_places: { label: "Своя сумма", kind: "int", unit: "мест", min: 1, max: 1000, hint: "Дальше — группы" },
+      bands: {
+        label: "Группы мест — верхние границы",
+        kind: "int_list",
+        hint: "20 50 100 200 → 11–20, 21–50, 51–100, 101–200",
+      },
+      min_score: { label: "Мин. счёт", kind: "int", min: 1, max: 1000000000, hint: "Кто набрал меньше, не считается" },
+    },
+    summary: (v) => {
+      const o = v as { enabled?: boolean; budget_ton?: unknown };
+      const b = o.budget_ton != null && String(o.budget_ton) !== "0" ? `${String(o.budget_ton)} TON в месяц` : "";
+      return o.enabled && b ? b : b ? `Выключены · ${b}` : "Выключены";
+    },
+  },
 };
 
 export function fieldMeta(settingKey: string, field: string, sample: unknown): FieldMeta {
@@ -279,6 +316,8 @@ export function shiftDecimal(s: string, places: number): string {
 
 /** Value → input string. */
 export function toInput(m: FieldMeta, v: unknown): string {
+  if (m.kind === "bool") return v ? "1" : "0";
+  if (m.kind === "int_list") return Array.isArray(v) ? v.map(String).join(" ") : "";
   if (v == null) return "";
   if (m.kind === "pct_bp") return String(Number(v) / 100);
   if (m.kind === "pct_frac") return shiftDecimal(String(v), 2);
@@ -295,6 +334,10 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
     if (m.max != null && n > m.max) throw new Error(`не больше ${m.max}`);
   };
   switch (m.kind) {
+    case "bool":
+      return raw === "1" || raw === "true";
+    case "int_list":
+      return parseIntList(raw, m.min, m.max);
     case "text":
       if (!s) throw new Error("не может быть пустым");
       return raw.trim();
@@ -333,7 +376,39 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
   }
 }
 
+/** «20 50 100 200» → [20, 50, 100, 200]: целые, строго по возрастанию; пусто — []. */
+export function parseIntList(raw: string, min = 1, max = 1000): number[] {
+  const parts = raw.trim().split(/[\s;,/]+/).filter(Boolean);
+  if (parts.length > 20) throw new Error("не больше 20 чисел");
+  let prev = -Infinity;
+  return parts.map((p) => {
+    if (!/^\d+$/.test(p)) throw new Error(`«${p}»: нужно целое число`);
+    const n = Number(p);
+    if (n < min || n > max) throw new Error(`«${p}»: от ${min} до ${max}`);
+    if (n <= prev) throw new Error(`по возрастанию: ${n} после ${prev}`);
+    prev = n;
+    return n;
+  });
+}
+
+/** Гармоническое число H(n) = 1 + 1/2 + … + 1/n. */
+const harmonic = (n: number) => Array.from({ length: n }, (_, i) => 1 / (i + 1)).reduce((a, b) => a + b, 0);
+
+/**
+ * Минимальный бюджет призов «Башни», при котором первые base_places мест получают не меньше мин. приза
+ * (как на сервере: доля места — 1/место; если base_places больше «Своя сумма», хвост — одна группа).
+ */
+export function towerMinBudget(v: { base_places?: unknown; individual_places?: unknown; min_prize_ton?: unknown }): number {
+  const n = Number(v.base_places ?? 3);
+  const ind = Number(v.individual_places ?? 10);
+  const m = Number(v.min_prize_ton ?? 0.1);
+  const a = n <= ind ? n : ind + 1;
+  const share = (harmonic(n) - harmonic(a - 1)) / (n - a + 1);
+  return Math.ceil(((m * harmonic(n)) / share) * 10000 - 1e-6) / 10000;
+}
+
 export function formatField(m: FieldMeta, v: unknown): string {
+  if (m.kind === "bool") return v ? "Вкл" : "Выкл";
   const val = toInput(m, v);
   return m.unit ? `${val} ${m.unit}`.replace(" %", "%") : val;
 }
@@ -353,7 +428,7 @@ export function summarize(key: string, v: unknown): string {
   if (!entries.length) return "—";
   return entries
     .map(([k, x]) => {
-      if (x !== null && typeof x === "object") return `${fieldMeta(key, k, x).label}: …`;
+      if (x !== null && typeof x === "object" && fieldMeta(key, k, x).kind !== "int_list") return `${fieldMeta(key, k, x).label}: …`;
       const m = fieldMeta(key, k, x);
       const val = formatField(m, x);
       return entries.length === 1 ? val : `${m.label} ${val}`;

@@ -348,9 +348,20 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 .gs-st { display: flex; align-items: center; gap: 6px; margin-top: 4px; font: 500 12px/16px var(--f-mono); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gs-st.hot { color: var(--amber); }
 .gs-st i { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-.gs-go { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px 0 12px; font: 700 11px/16px var(--f-display); letter-spacing: .14em;
+.gs-go { align-self: flex-start; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px 0 12px; font: 700 11px/16px var(--f-display); letter-spacing: .14em;
   text-transform: uppercase; color: #041016; background: linear-gradient(180deg, #7ff9ff, var(--neon)); clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%); }
 .gs-go .ui-icon { stroke-width: 2; }
+/* карточка с двумя ссылками: основная растянута на всю карточку, «Топ» — поверх (тап 44, визуально 32) */
+.gs-hit { position: absolute; inset: 0; z-index: 1; -webkit-tap-highlight-color: transparent; }
+.gs-hit:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
+.gs-card:has(.gs-hit:active) { filter: brightness(1.12); }
+.gs-acts { display: flex; align-items: center; gap: 8px; }
+.gs-sub { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 6px; height: 44px; margin: -6px 0; padding: 0 10px;
+  font: 700 11px/16px var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--amber); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.gs-sub::before { content: ""; position: absolute; inset: 6px 0; z-index: -1; background: rgba(255,181,71,.12);
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%); }
+.gs-sub:active::before { background: rgba(255,181,71,.22); }
+.gs-sub:focus-visible { outline: 2px solid var(--amber); outline-offset: -4px; }
 .gs-card.amber .gs-go { background: linear-gradient(180deg, #ffd690, var(--amber)); color: #1a1000; }
 [data-theme="light"] .gs-dim { background: linear-gradient(0deg, rgba(11,15,26,.55), rgba(11,15,26,.3)); }
 [data-theme="light"] .gs-sheet { background: var(--mat-2); }

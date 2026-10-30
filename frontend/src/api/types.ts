@@ -125,6 +125,43 @@ export type TowerStatus = {
   rank: number | null;
 };
 
+export type TowerLeaderEntry = { rank: number; name: string; score: number; is_me: boolean };
+
+/** места с from_place по to_place (одно место — равны); каждому — ton */
+export type TowerPrize = { from_place: number; to_place: number; ton: string };
+
+export type TowerLeaderboard = {
+  /** «2026-10» */
+  month: string;
+  /** лучший счёт месяца каждого игрока; при равенстве выше тот, кто набрал раньше */
+  entries: TowerLeaderEntry[];
+  total_players: number;
+  /** null — в этом месяце у меня нет результата */
+  me: { rank: number | null; score: number | null } | null;
+  /** 00:00 МСК 1-го числа следующего месяца (ISO, UTC) */
+  month_ends_at: string;
+  /** призы платятся, если в месяце не меньше стольких игроков */
+  min_participants: number;
+  /** участник для призов — лучший счёт не меньше min_score */
+  min_score?: number;
+  participants?: number;
+  /** месячный бюджет призов (TON); null — призы выключены (у прошлых месяцев всегда null) */
+  prize_budget_ton?: string | null;
+  /** призовых мест сейчас (0 — ниже минимума или выключено) */
+  prize_places?: number;
+  /** при каком числе участников добавится призовое место; null — уже максимум */
+  next_place_at?: number | null;
+  max_places?: number;
+  /** почему мест не больше: "budget" — бюджет не даёт мин. приз, "max" — потолок мест */
+  prize_limited_by?: "budget" | "max" | null;
+  min_prize_ton?: string | null;
+  prize_total_ton?: string | null;
+  /** счёт последнего призового места */
+  prize_cutoff_score?: number | null;
+  /** группы мест → TON по текущему числу участников (сумма ≤ бюджета); [] — ниже минимума; null — выключено */
+  prizes: TowerPrize[] | null;
+};
+
 export type TowerStart = {
   game_id: number;
   seed: number;

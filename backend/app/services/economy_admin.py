@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
+from app.services import tower_prizes
 from app.services.economy_seed import DEFAULTS, seed_economy
 
 
@@ -86,6 +87,11 @@ async def set_setting(
     description: str | None = None,
 ) -> SettingView:
     _validate_value(key, value)
+    if key == tower_prizes.KEY:
+        try:
+            value = tower_prizes.normalize(value)
+        except tower_prizes.PrizeConfigError as e:
+            raise EconomyAdminError(str(e)) from e
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
     if row:
@@ -134,4 +140,5 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "daily_rewards", "group": "daily", "label": "Награды daily/streak"},
     {"key": "xp_per_level", "group": "progression", "label": "Кривая XP"},
     {"key": "prize_wheel", "group": "roulette", "label": "Колесо призов (веса/награды)"},
+    {"key": "tower_prizes", "group": "tower", "label": "Призы топа «Башни»"},
 ]

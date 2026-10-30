@@ -10,6 +10,7 @@ import type {
   TowerFinish,
   TowerStart,
   TowerStatus,
+  TowerLeaderboard,
 } from "./types";
 
 export function useMe() {
@@ -578,6 +579,19 @@ export function useTowerMe() {
   });
 }
 
+/** сколько мест показывает экран топа (сервер отдаёт до 100) */
+export const TOWER_TOP_LIMIT = 50;
+
+/** Топ месяца; `month` — «ГГГГ-ММ», без него — текущий месяц по Москве */
+export function useTowerLeaderboard(month?: string, limit = TOWER_TOP_LIMIT) {
+  return useQuery({
+    queryKey: ["tower", "leaderboard", month ?? "current", limit],
+    queryFn: () =>
+      api<TowerLeaderboard>(`/api/v1/tower/leaderboard?limit=${limit}${month ? `&month=${encodeURIComponent(month)}` : ""}`),
+    staleTime: 30_000,
+  });
+}
+
 export function useTowerStart() {
   const qc = useQueryClient();
   return useMutation({
@@ -595,6 +609,8 @@ export function useTowerFinish() {
       api<TowerFinish>("/api/v1/tower/finish", { method: "POST", body: JSON.stringify(v) }),
     onSuccess: (r) => {
       qc.setQueryData(["tower", "me"], r.status);
+      // новый рекорд мог сдвинуть место в топе
+      if (r.new_best) void qc.invalidateQueries({ queryKey: ["tower", "leaderboard"] });
     },
   });
 }

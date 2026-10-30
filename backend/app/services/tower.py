@@ -25,6 +25,8 @@ from app.models.user import User
 from app.services import balance as balance_svc
 from app.services import gameday
 from app.services import tower_engine as engine
+from app.services import tower_prizes
+from app.services.economy import get_setting
 
 FREE_ATTEMPTS_PER_DAY = 3
 
@@ -70,6 +72,12 @@ def month_start(day: date) -> date:
 def month_of(now: datetime | None = None) -> date:
     """Месяц (первое число) по Москве для момента `now`."""
     return month_start(gameday.game_day(now))
+
+
+def month_end(month: date) -> datetime:
+    """Конец месяца топа: 00:00 МСК 1-го числа следующего месяца (UTC)."""
+    nxt = date(month.year + (month.month == 12), month.month % 12 + 1, 1)
+    return gameday.day_start(nxt)
 
 
 def parse_month(raw: str) -> date:
@@ -315,9 +323,54 @@ async def leaderboard(
         .where(TowerMonthlyBest.month == month, TowerMonthlyBest.best_score > 0, User.is_banned.is_(False))
     )
     best, rank = await month_standing(session, user_id, month)
+    cfg = tower_prizes.safe(await get_setting(session, tower_prizes.KEY))
+    # участники для призов — у кого лучший счёт не меньше min_score
+    participants = int(total or 0)
+    if cfg["min_score"] > 1:
+        participants = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(TowerMonthlyBest)
+                .join(User, User.id == TowerMonthlyBest.user_id)
+                .where(
+                    TowerMonthlyBest.month == month,
+                    TowerMonthlyBest.best_score >= cfg["min_score"],
+                    User.is_banned.is_(False),
+                )
+            )
+            or 0
+        )
+    # призы — только текущего месяца и только если владелец их включил; истории бюджета нет —
+    # прошлый месяц без призов. Денег здесь не двигаем: это расчёт по текущему числу участников.
+    current = month == month_of(now)
+    plan = tower_prizes.plan(cfg, participants) if cfg["enabled"] and current else None
+    # счёт последнего призового места — для строки «+X до N-го места» у тех, кто ниже
+    cutoff = None
+    if plan and plan["places"]:
+        cutoff = await session.scalar(
+            select(TowerMonthlyBest.best_score)
+            .join(User, User.id == TowerMonthlyBest.user_id)
+            .where(TowerMonthlyBest.month == month, TowerMonthlyBest.best_score > 0, User.is_banned.is_(False))
+            .order_by(TowerMonthlyBest.best_score.desc(), TowerMonthlyBest.achieved_at.asc(), TowerMonthlyBest.user_id.asc())
+            .offset(plan["places"] - 1)
+            .limit(1)
+        )
     return {
         "month": month.strftime("%Y-%m"),
         "entries": entries,
         "total_players": int(total or 0),
         "me": {"rank": rank, "score": best} if rank is not None else None,
+        "month_ends_at": month_end(month).isoformat(),
+        "min_participants": cfg["min_participants"],
+        "min_score": cfg["min_score"],
+        "participants": participants,
+        "prize_budget_ton": plan["budget_ton"] if plan else None,
+        "prize_places": plan["places"] if plan else 0,
+        "next_place_at": plan["next_place_at"] if plan else None,
+        "max_places": cfg["max_places"],
+        "prize_limited_by": plan["limited_by"] if plan else None,
+        "min_prize_ton": cfg["min_prize_ton"] if plan else None,
+        "prize_total_ton": plan["total_ton"] if plan else None,
+        "prize_cutoff_score": int(cutoff) if cutoff is not None else None,
+        "prizes": plan["prizes"] if plan else None,
     }
