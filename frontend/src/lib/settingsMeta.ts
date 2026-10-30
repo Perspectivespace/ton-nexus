@@ -3,8 +3,8 @@
  * (derived from backend services), field labels, units and validation.
  */
 
-/** bool — «Вкл/Выкл»; ton_list — массив `{place, ton}` одной строкой «5 3 1.5» (1-е, 2-е, 3-е место) */
-export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "ton_list";
+/** bool — «Вкл/Выкл»; pct_list — массив целых процентов одной строкой «50 30 20» (сумма 100) */
+export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "pct_list";
 
 export type FieldMeta = {
   label: string;
@@ -243,24 +243,41 @@ export const SETTINGS: Record<string, SettingMeta> = {
   },
   tower_prizes: {
     title: "Призы топа «Башни»",
-    short: "TON лучшим игрокам месяца",
+    short: "Бюджет TON на лучших игроков месяца",
     about:
-      "Призы за места в месячном топе «Башни». Пока призы выключены, игроки видят «Призы пока не назначены», а топ работает как обычная таблица. Суммы пишутся через пробел, начиная с 1-го места: «5 3 1.5» — 5 TON за 1-е, 3 за 2-е, 1.5 за 3-е; каждая следующая не больше предыдущей, до 20 мест. Призы показываются только в текущем месяце и действуют, если за месяц сыграло не меньше «Мин. игроков» и у места не меньше «Мин. счёта». Деньги автоматически не начисляются: после 00:00 МСК 1-го числа владелец проверяет итоги и выплачивает вручную.",
+      "Бюджет на месяц делится между призовыми местами топа «Башни»: 3 места — 50/30/20 %, с 21 игрока 4 места — 40/27/20/13 %, с 41 — 5 мест — 35/25/18/13/9 %. Меньше «Мин. игроков» — призов нет, бюджет не тратится. Суммы округляются вниз до 0.0001 TON, поэтому выплаты не превышают бюджет. Пока выключено, игроки видят «Призы пока не назначены». Деньги не начисляются сами: после 00:00 МСК 1-го числа владелец проверяет итоги и платит вручную.",
     fields: {
       enabled: { label: "Призы", kind: "bool" },
-      places: {
-        label: "Суммы по местам",
-        kind: "ton_list",
+      budget_ton: {
+        label: "Бюджет на месяц",
+        kind: "ton",
         unit: "TON",
-        hint: "С 1-го места через пробел: 5 3 1.5 · пусто — без призов",
+        min: 0,
+        max: 100000,
+        hint: "Остаток не тратится",
       },
-      min_participants: { label: "Мин. игроков", kind: "int", min: 1, max: 100000 },
-      min_score: { label: "Мин. счёт", kind: "int", min: 0, max: 1000000000 },
+      min_participants: { label: "Мин. игроков", kind: "int", min: 1, max: 100000, hint: "Меньше — призов нет" },
+      base_places: { label: "Призовых мест", kind: "int", min: 1, max: 10 },
+      extra_place_every: { label: "+1 место за каждые", kind: "int", unit: "игроков", min: 0, max: 100000, hint: "0 — мест не прибавляется" },
+      max_places: { label: "Макс. мест", kind: "int", min: 1, max: 10 },
+      shares: { label: "Доли бюджета по местам" },
+      ...Object.fromEntries(
+        Array.from({ length: 10 }, (_, i) => [
+          String(i + 1),
+          {
+            label: `${i + 1} ${i === 0 ? "место" : i < 4 ? "места" : "мест"}`,
+            kind: "pct_list" as const,
+            unit: "%",
+            hint: "С 1-го места через пробел, сумма 100",
+          },
+        ]),
+      ),
+      min_score: { label: "Мин. счёт", kind: "int", min: 1, max: 1000000000, hint: "Кто набрал меньше, не считается" },
     },
     summary: (v) => {
-      const o = v as { enabled?: boolean; places?: { ton?: unknown }[] };
-      const list = (o.places ?? []).map((p) => String(p.ton)).join(" / ");
-      return o.enabled && list ? `${list} TON` : list ? `Выключены · ${list} TON` : "Выключены";
+      const o = v as { enabled?: boolean; budget_ton?: unknown };
+      const b = o.budget_ton != null && String(o.budget_ton) !== "0" ? `${String(o.budget_ton)} TON в месяц` : "";
+      return o.enabled && b ? b : b ? `Выключены · ${b}` : "Выключены";
     },
   },
 };
@@ -303,13 +320,7 @@ export function shiftDecimal(s: string, places: number): string {
 /** Value → input string. */
 export function toInput(m: FieldMeta, v: unknown): string {
   if (m.kind === "bool") return v ? "1" : "0";
-  if (m.kind === "ton_list")
-    return Array.isArray(v)
-      ? [...(v as { place?: number; ton?: unknown }[])]
-          .sort((a, b) => Number(a.place) - Number(b.place))
-          .map((p) => String(p.ton))
-          .join(" ")
-      : "";
+  if (m.kind === "pct_list") return Array.isArray(v) ? v.map(String).join(" ") : "";
   if (v == null) return "";
   if (m.kind === "pct_bp") return String(Number(v) / 100);
   if (m.kind === "pct_frac") return shiftDecimal(String(v), 2);
@@ -328,8 +339,8 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
   switch (m.kind) {
     case "bool":
       return raw === "1" || raw === "true";
-    case "ton_list":
-      return parseTonList(raw);
+    case "pct_list":
+      return parsePctList(raw, Array.isArray(original) ? original.length : undefined);
     case "text":
       if (!s) throw new Error("не может быть пустым");
       return raw.trim();
@@ -368,22 +379,22 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
   }
 }
 
-/** «5 3 1,5» / «5; 3; 1.5» → [{place:1,ton:"5"},…]; суммы > 0, не растут, до 20 мест. Пусто → []. */
-export function parseTonList(raw: string): { place: number; ton: string }[] {
-  const parts = raw.trim().split(/[\s;]+|,(?=\s)|,$/).filter(Boolean);
-  if (parts.length > 20) throw new Error("не больше 20 мест");
+/** «50 30 20» → [50, 30, 20]: целые проценты ≥ 1, не растут, сумма ровно 100, столько долей, сколько мест. */
+export function parsePctList(raw: string, places?: number): number[] {
+  const parts = raw.trim().split(/[\s;,/]+/).filter(Boolean);
+  if (places != null && parts.length !== places) throw new Error(`нужно ${places} ${places < 5 ? "доли" : "долей"}`);
   let prev = Infinity;
-  return parts.map((p, i) => {
-    const s = p.replace(",", ".");
-    if (!DEC.test(s)) throw new Error(`место ${i + 1}: нужно число, например 1.5`);
-    if ((s.split(".")[1] ?? "").length > 9) throw new Error(`место ${i + 1}: не больше 9 знаков после точки`);
-    const n = Number(s);
-    if (n <= 0) throw new Error(`место ${i + 1}: сумма больше 0`);
-    if (n > 1000) throw new Error(`место ${i + 1}: не больше 1000 TON`);
+  const out = parts.map((p, i) => {
+    if (!/^\d+$/.test(p)) throw new Error(`место ${i + 1}: целое число процентов`);
+    const n = Number(p);
+    if (n < 1) throw new Error(`место ${i + 1}: не меньше 1%`);
     if (n > prev) throw new Error(`место ${i + 1}: не больше, чем за место ${i}`);
     prev = n;
-    return { place: i + 1, ton: shiftDecimal(s, 0) };
+    return n;
   });
+  const sum = out.reduce((a, b) => a + b, 0);
+  if (sum !== 100) throw new Error(`сумма ${sum}%, нужно 100%`);
+  return out;
 }
 
 export function formatField(m: FieldMeta, v: unknown): string {
@@ -407,7 +418,7 @@ export function summarize(key: string, v: unknown): string {
   if (!entries.length) return "—";
   return entries
     .map(([k, x]) => {
-      if (x !== null && typeof x === "object" && fieldMeta(key, k, x).kind !== "ton_list") return `${fieldMeta(key, k, x).label}: …`;
+      if (x !== null && typeof x === "object" && fieldMeta(key, k, x).kind !== "pct_list") return `${fieldMeta(key, k, x).label}: …`;
       const m = fieldMeta(key, k, x);
       const val = formatField(m, x);
       return entries.length === 1 ? val : `${m.label} ${val}`;

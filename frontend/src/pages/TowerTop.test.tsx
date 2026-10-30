@@ -77,20 +77,60 @@ describe("экран «Топ месяца»", () => {
     expect(html).not.toContain("TON");
   });
 
-  it("призы включены — чипы на местах и условие по числу игроков", () => {
-    const prizes = [
-      { place: 1, ton: "5" },
-      { place: 2, ton: "3" },
-      { place: 3, ton: "1.5" },
-      { place: 4, ton: "1" },
+  const P3 = [
+    { place: 1, ton: "5" },
+    { place: 2, ton: "3" },
+    { place: 3, ton: "2" },
+  ];
+  const P5 = [
+    { place: 1, ton: "3.5" },
+    { place: 2, ton: "2.5" },
+    { place: 3, ton: "1.8" },
+    { place: 4, ton: "1.3" },
+    { place: 5, ton: "0.9" },
+  ];
+  const on = (over: Partial<TowerLeaderboard>) =>
+    board({ prize_budget_ton: "10", max_places: 5, min_score: 1, ...over });
+
+  it("призы: 3 места при 20 игроках — чипы, фонд и сколько до 4-го места", () => {
+    const html = render(on({ prizes: P3, prize_places: 3, participants: 20, total_players: 20, next_place_at: 21 }));
+    expect(count(html, 'class="tt-prize"')).toBe(3);
+    expect(html).toContain("Призовой фонд 10 TON · 3 призовых места");
+    expect(html).toContain("Ещё 1 игрок — и мест станет 4");
+  });
+
+  it("призы: 4 места — чип и у 4-го в списке; до 5-го — 17 игроков", () => {
+    const P4 = [
+      { place: 1, ton: "4" },
+      { place: 2, ton: "2.7" },
+      { place: 3, ton: "2" },
+      { place: 4, ton: "1.3" },
     ];
-    const html = render(board({ prizes, total_players: 7 }));
+    const html = render(on({ prizes: P4, prize_places: 4, participants: 24, total_players: 24, next_place_at: 41 }));
     expect(count(html, 'class="tt-prize"')).toBe(4);
-    expect(html).toContain("5 TON");
-    expect(html).toContain("1.5 TON");
-    expect(html).toContain("Призы за места 1–4");
-    expect(html).toContain("нужно от 10 игроков, сейчас 7");
-    expect(render(board({ prizes, total_players: 57 }))).not.toContain("нужно от");
+    expect(html).toContain("1.3 TON");
+    expect(html).toContain("4 призовых места");
+    expect(html).toContain("Ещё 17 игроков — и мест станет 5");
+  });
+
+  it("призы: 5 мест — максимум, без строки «ещё»", () => {
+    const html = render(on({ prizes: P5, prize_places: 5, participants: 57, next_place_at: null }));
+    expect(count(html, 'class="tt-prize"')).toBe(5);
+    expect(html).toContain("5 призовых мест");
+    expect(html).not.toContain("Ещё");
+  });
+
+  it("призы: меньше минимума — фонд есть, чипов нет, сколько игроков не хватает", () => {
+    const html = render(on({ prizes: [], prize_places: 0, participants: 7, total_players: 7, next_place_at: 10, entries: entries(7) }));
+    expect(html).not.toContain("tt-prize");
+    expect(html).toContain("Призовой фонд 10 TON");
+    expect(html).toContain("Призы — от 10 игроков · ещё 3 игрока");
+  });
+
+  it("прошлый месяц — без призов и без фонда", () => {
+    const html = render(on({ month: "2026-09", prizes: null, prize_budget_ton: null }), "/tower/top?m=prev");
+    expect(html).toContain("Итоги закрытого месяца не меняются");
+    expect(html).not.toContain("TON");
   });
 
   it("я вне видимого топа — закреплённая строка с разрывом до последнего места", () => {

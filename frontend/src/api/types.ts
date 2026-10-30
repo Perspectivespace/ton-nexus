@@ -141,7 +141,17 @@ export type TowerLeaderboard = {
   month_ends_at: string;
   /** призы платятся, если в месяце не меньше стольких игроков */
   min_participants: number;
-  /** null — призы выключены или не назначены (у прошлых месяцев всегда null) */
+  /** участник для призов — лучший счёт не меньше min_score */
+  min_score?: number;
+  participants?: number;
+  /** месячный бюджет призов (TON); null — призы выключены (у прошлых месяцев всегда null) */
+  prize_budget_ton?: string | null;
+  /** призовых мест сейчас (0 — ниже минимума или выключено) */
+  prize_places?: number;
+  /** при каком числе участников добавится призовое место; null — уже максимум */
+  next_place_at?: number | null;
+  max_places?: number;
+  /** места → TON по текущему числу участников (сумма ≤ бюджета); [] — ниже минимума; null — выключено */
   prizes: TowerPrize[] | null;
 };
 

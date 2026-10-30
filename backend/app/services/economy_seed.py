@@ -82,9 +82,20 @@ DEFAULTS: dict[str, tuple[object, str]] = {
     "success_boost_cap_bp": (
         {"bp": 1500},
         "Потолок накопленного бонуса к успеху (bp), 1500 = +15%",
-    ),    "tower_prizes": (
-        {"enabled": False, "places": [], "min_participants": 10, "min_score": 1, "payout_mode": "review"},
-        "Башня: призы топа месяца (места → TON); выключено, пока суммы не назначены",
+    ),
+    "tower_prizes": (
+        {
+            "enabled": False,
+            "budget_ton": "0",
+            "min_participants": 10,
+            "base_places": 3,
+            "extra_place_every": 20,
+            "max_places": 5,
+            "shares": {"3": [50, 30, 20], "4": [40, 27, 20, 13], "5": [35, 25, 18, 13, 9]},
+            "min_score": 1,
+            "payout_mode": "review",
+        },
+        "Башня: месячный бюджет призов топа (TON) и доли мест; выключено, пока бюджет не задан",
     ),
 }
 

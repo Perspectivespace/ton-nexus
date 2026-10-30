@@ -324,9 +324,26 @@ async def leaderboard(
     )
     best, rank = await month_standing(session, user_id, month)
     cfg = tower_prizes.safe(await get_setting(session, tower_prizes.KEY))
-    # призы — только текущего месяца и только если владелец их включил; истории сумм нет — прошлый месяц без призов
+    # участники для призов — у кого лучший счёт не меньше min_score
+    participants = int(total or 0)
+    if cfg["min_score"] > 1:
+        participants = int(
+            await session.scalar(
+                select(func.count())
+                .select_from(TowerMonthlyBest)
+                .join(User, User.id == TowerMonthlyBest.user_id)
+                .where(
+                    TowerMonthlyBest.month == month,
+                    TowerMonthlyBest.best_score >= cfg["min_score"],
+                    User.is_banned.is_(False),
+                )
+            )
+            or 0
+        )
+    # призы — только текущего месяца и только если владелец их включил; истории бюджета нет —
+    # прошлый месяц без призов. Денег здесь не двигаем: это расчёт по текущему числу участников.
     current = month == month_of(now)
-    prizes = cfg["places"] if cfg["enabled"] and cfg["places"] and current else None
+    plan = tower_prizes.plan(cfg, participants) if cfg["enabled"] and current else None
     return {
         "month": month.strftime("%Y-%m"),
         "entries": entries,
@@ -334,5 +351,11 @@ async def leaderboard(
         "me": {"rank": rank, "score": best} if rank is not None else None,
         "month_ends_at": month_end(month).isoformat(),
         "min_participants": cfg["min_participants"],
-        "prizes": prizes,
+        "min_score": cfg["min_score"],
+        "participants": participants,
+        "prize_budget_ton": plan["budget_ton"] if plan else None,
+        "prize_places": plan["places"] if plan else 0,
+        "next_place_at": plan["next_place_at"] if plan else None,
+        "max_places": cfg["max_places"],
+        "prizes": plan["prizes"] if plan else None,
     }

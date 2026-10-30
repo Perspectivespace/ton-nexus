@@ -38,6 +38,8 @@
 
 .tt-foot { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font: 400 12px/16px var(--f-sans); color: var(--text-3); text-align: center; }
 .tt-foot.prize { color: var(--amber); }
+.tt-foot p { margin: 0; }
+.tt-foot-sub { margin-top: 2px !important; color: var(--text-2); }
 .tt-empty { margin-top: 16px; padding: 12px 0 4px; display: grid; justify-items: center; gap: 8px; text-align: center; }
 .tt-empty .ui-btn { margin-top: 4px; min-width: 160px; }
 

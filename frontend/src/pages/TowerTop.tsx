@@ -178,20 +178,39 @@ function Row({ e, prize }: { e: TowerLeaderEntry; prize?: string }) {
   );
 }
 
+function placesWord(n: number) {
+  return `${n} ${n === 1 ? "призовое место" : n >= 2 && n <= 4 ? "призовых места" : "призовых мест"}`;
+}
+
+/** Строка призов под пьедесталом: фонд, сколько мест сейчас и сколько игроков до следующего места. */
+export function prizeLines(data: TowerLeaderboard, current: boolean): { main: string; sub?: string; on: boolean } {
+  if (!current) return { main: "Итоги закрытого месяца не меняются", on: false };
+  if (data.prizes == null || !data.prize_budget_ton) return { main: "Призы пока не назначены", on: false };
+  const fund = `Призовой фонд ${ton(data.prize_budget_ton)}`;
+  const have = data.participants ?? data.total_players;
+  const next = data.next_place_at;
+  const need = next != null ? Math.max(1, next - have) : 0;
+  if (!data.prizes.length)
+    return {
+      main: fund,
+      sub: `Призы — от ${players(data.min_participants)} · ещё ${players(need)}`,
+      on: true,
+    };
+  const n = data.prizes.length;
+  return {
+    main: `${fund} · ${placesWord(n)}`,
+    sub: next != null ? `Ещё ${players(need)} — и мест станет ${n + 1}` : undefined,
+    on: true,
+  };
+}
+
 function PrizeLine({ data, current }: { data: TowerLeaderboard; current: boolean }) {
-  if (!current) return <p className="tt-foot">Итоги закрытого месяца не меняются</p>;
-  if (!data.prizes?.length) return <p className="tt-foot">Призы пока не назначены</p>;
-  const enough = data.total_players >= data.min_participants;
+  const l = prizeLines(data, current);
   return (
-    <p className="tt-foot prize">
-      Призы {data.prizes.length === 1 ? "за 1-е место" : `за места 1–${data.prizes.length}`}
-      {enough ? null : (
-        <>
-          {" "}
-          · нужно от {fmt(data.min_participants)} игроков, сейчас {fmt(data.total_players)}
-        </>
-      )}
-    </p>
+    <div className={l.on ? "tt-foot prize" : "tt-foot"}>
+      <p>{l.main}</p>
+      {l.sub ? <p className="tt-foot-sub">{l.sub}</p> : null}
+    </div>
   );
 }
 
