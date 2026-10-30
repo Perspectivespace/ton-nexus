@@ -6,10 +6,12 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.xp_event import XpEvent
 from app.services.economy import get_setting
 
 
@@ -18,14 +20,25 @@ def xp_needed(curve: dict, level: int) -> int:
     return int(float(curve["base"]) * (float(curve["growth"]) ** (level - 1)))
 
 
-async def add_xp(session: AsyncSession, user: Any, xp: int) -> int:
+async def add_xp(
+    session: AsyncSession, user: Any, xp: int, source: str = "other", now: datetime | None = None
+) -> int:
     """Начисляет XP и сразу повышает уровень, пока хватает опыта.
+
+    Каждое начисление пишется в журнал `xp_events` (источник: daily · task · promo · wheel) —
+    из него считается «Опыт за месяц» для месячного топа по уровню. `users.xp` — опыт внутри
+    уровня (сбрасывается при повышении), поэтому сумму за период по нему не посчитать.
 
     Возвращает, на сколько уровней вырос пользователь.
     """
     xp = int(xp or 0)
     if xp <= 0:
         return 0
+    if session is not None and getattr(user, "id", None) is not None:
+        ev = XpEvent(user_id=user.id, amount=xp, source=source[:16])
+        if now is not None:
+            ev.created_at = now
+        session.add(ev)
     user.xp = int(user.xp or 0) + xp
     curve = await get_setting(session, "xp_per_level")
     gained = 0

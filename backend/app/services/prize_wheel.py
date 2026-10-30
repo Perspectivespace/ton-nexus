@@ -186,7 +186,7 @@ async def spin(session: AsyncSession, *, user: User) -> SpinResult:
 
     if xp > 0:
         # уровень растёт сразу, как и за ежедневку и задания
-        await add_xp(session, user, xp)
+        await add_xp(session, user, xp, "wheel")
     if focus > 0:
         user.focus_tokens = int(user.focus_tokens or 0) + focus
     if block > 0:

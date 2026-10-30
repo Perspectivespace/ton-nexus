@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useMe, useMyWithdrawals, useWithdrawLimits } from "@/api/hooks";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
+import { ProfileRanks } from "@/components/RatingLinks";
 import { api } from "@/api/client";
 import { IconGear, IconHistory, IconOut } from "@/components/icons";
 import { prefersReducedMotion } from "@/components/ui/press";
@@ -99,7 +101,18 @@ export function Wallet() {
 
   return (
     <div className="space-y-5">
-      <ScreenHeader title="Профиль" action={me ? <Tag tone="amber" dot={false}>{levelTag(me)}</Tag> : undefined} />
+      <ScreenHeader
+        title="Профиль"
+        action={
+          me ? (
+            <Link to="/ratings?t=level&from=profile" className="rt-tagl no-underline" aria-label={`${levelTag(me)} — рейтинг по уровню`}>
+              <Tag tone="amber" dot={false}>
+                {levelTag(me)}
+              </Tag>
+            </Link>
+          ) : undefined
+        }
+      />
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <Panel level="hero" see cut="l" lift="l2" className="p-5">
@@ -119,6 +132,8 @@ export function Wallet() {
           )}
         </Panel>
       </motion.div>
+
+      <ProfileRanks />
 
       <List>
         <ListRow

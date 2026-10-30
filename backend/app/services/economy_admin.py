@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
-from app.services import tower_prizes
+from app.services import ratings, tower_prizes
 from app.services.economy_seed import DEFAULTS, seed_economy
 
 
@@ -92,6 +92,16 @@ async def set_setting(
             value = tower_prizes.normalize(value)
         except tower_prizes.PrizeConfigError as e:
             raise EconomyAdminError(str(e)) from e
+    elif key in ratings.PRIZE_KEYS.values():
+        try:
+            value = ratings.normalize_prizes(key, value)
+        except ratings.RatingError as e:
+            raise EconomyAdminError(e.message) from e
+    elif key == ratings.FRIEND_KEY:
+        try:
+            value = ratings.normalize_friend_rule(value)
+        except ratings.RatingError as e:
+            raise EconomyAdminError(e.message) from e
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
     if row:
@@ -141,4 +151,8 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "xp_per_level", "group": "progression", "label": "Кривая XP"},
     {"key": "prize_wheel", "group": "roulette", "label": "Колесо призов (веса/награды)"},
     {"key": "tower_prizes", "group": "tower", "label": "Призы топа «Башни»"},
+    {"key": "level_prizes", "group": "ratings", "label": "Призы рейтинга по уровню"},
+    {"key": "tasks_prizes", "group": "ratings", "label": "Призы топа исполнителей"},
+    {"key": "friends_prizes", "group": "ratings", "label": "Призы топа друзей"},
+    {"key": "friend_rule", "group": "ratings", "label": "Когда друг засчитывается"},
 ]

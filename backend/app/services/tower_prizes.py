@@ -96,10 +96,13 @@ def ton_str(d: Decimal) -> str:
     return format(d.normalize(), "f") if d else "0"
 
 
-def normalize(value: Any) -> dict[str, Any]:
-    """Проверить и привести к каноническому виду. Ошибка — PrizeConfigError с русским текстом."""
+def normalize(value: Any, key: str = KEY) -> dict[str, Any]:
+    """Проверить и привести к каноническому виду. Ошибка — PrizeConfigError с русским текстом.
+
+    Та же модель у призов рейтингов (`level_prizes`, `tasks_prizes`, `friends_prizes`) — `key` только для текста ошибки.
+    """
     if not isinstance(value, dict):
-        raise PrizeConfigError("tower_prizes: нужен объект")
+        raise PrizeConfigError(f"{key}: нужен объект")
     if LEGACY_FIELDS & set(value) and "ladder_max_places" not in value:
         # запись старой модели (таблицы долей): её max_places был потолком лесенки —
         # переносим в ladder_max_places, а общий потолок берём по умолчанию
@@ -108,7 +111,7 @@ def normalize(value: Any) -> dict[str, Any]:
     value = {k: v for k, v in value.items() if k not in LEGACY_FIELDS}
     extra = set(value) - FIELDS
     if extra:
-        raise PrizeConfigError(f"tower_prizes: лишние поля {sorted(extra)}")
+        raise PrizeConfigError(f"{key}: лишние поля {sorted(extra)}")
     out = {**DEFAULT, **value}
     if not isinstance(out["enabled"], bool):
         raise PrizeConfigError("enabled: true или false")

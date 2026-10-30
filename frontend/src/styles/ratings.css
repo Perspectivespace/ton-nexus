@@ -1,0 +1,85 @@
+/* «Рейтинги» (/ratings): язык топа Башни (tower-top.css) + акцент вкладки через --acc.
+ * Только токены, без backdrop-filter и бесконечных анимаций (DESIGN.md §14.3, §14.6). */
+
+.rt { --acc: var(--neon); }
+.rt-u { margin-right: 3px; font: 600 11px/1 var(--f-mono); color: var(--acc); letter-spacing: .02em; }
+.tt-step.p1 .rt-u { color: var(--amber-core); }
+
+/* —— переключатель топов: 4 плитки со значками —— */
+.rt-switch { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.rt-tile { --c: 10px; min-width: 0; height: 64px; padding: 8px 4px 6px; border: 0; cursor: pointer; position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: var(--mat-1); box-shadow: var(--bevel-1, inset 0 1px 0 rgba(255,255,255,.04)); color: var(--text-3);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c)));
+  transition: background-color .18s, color .18s; }
+.rt-tile::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; background: var(--acc); opacity: 0; transition: opacity .18s; }
+.rt-tic { width: 28px; height: 28px; display: grid; place-items: center; color: var(--text-2); }
+.rt-tic .ui-icon { display: block; }
+.rt-tl { max-width: 100%; font: 700 11px/14px var(--f-display); font-stretch: 80%; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt-tile[aria-selected="true"] { color: var(--text); background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 18%, var(--surface-2)), var(--surface-1)); }
+.rt-tile[aria-selected="true"]::after { opacity: 1; }
+.rt-tile[aria-selected="true"] .rt-tic { color: var(--acc); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--acc) 55%, transparent)); }
+html.low-end .rt-tile[aria-selected="true"] .rt-tic { filter: none; }
+
+/* —— шапка топа —— */
+.rt .tt-hero { position: relative; }
+.rt .tt-hero::after { content: ""; position: absolute; left: 28px; right: 28px; top: 0; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--acc) 30%, var(--acc) 70%, transparent); opacity: .85; }
+.rt-hero .tt-head { align-items: center; }
+.rt-eyebrow { display: flex; align-items: center; gap: 8px; font: 700 15px/20px var(--f-display); font-stretch: 85%; letter-spacing: .04em; text-transform: uppercase; color: var(--text); }
+.rt-badge { flex: none; width: 24px; height: 24px; display: grid; place-items: center; color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 40%, transparent);
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
+.rt-badge .ui-icon { display: block; }
+.rt-hero .tt-podium { padding-top: 4px; background: radial-gradient(60% 70% at 50% 100%, color-mix(in srgb, var(--acc) 12%, transparent), transparent 75%); }
+.rt-psub { min-height: 16px; max-width: 100%; font: 500 11px/16px var(--f-sans); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt-foot { text-align: center; }
+.rt-hero.soon .tt-step { opacity: .7; }
+
+/* —— период: два положения, тап 44 px —— */
+.rt-per { flex: none; display: flex; padding: 0; margin: -6px -6px -6px 0; }
+.rt-per button { height: 44px; padding: 0 2px; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+.rt-per span { --c: 6px; height: 30px; padding: 0 10px; display: grid; place-items: center; font: 700 11px/1 var(--f-display); font-stretch: 80%; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+  color: var(--text-3); background: var(--mat-1); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.rt-per button[aria-checked="true"] span { color: var(--text); background: color-mix(in srgb, var(--acc) 22%, var(--surface-2)); box-shadow: inset 0 -2px 0 var(--acc); }
+.rt-per-one { flex: none; font: 600 11px/16px var(--f-display); font-stretch: 80%; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
+
+/* —— список —— */
+.rt-xp { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text-3); }
+.tt-row.join { gap: 12px; padding-right: 10px; }
+.tt-row.join .ui-btn { flex: none; min-width: 104px; }
+.rt-soon { padding: 16px; }
+.rt-more { min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 4px; font: 600 13px/20px var(--f-sans); color: var(--text-2); }
+.rt-more .ui-icon { display: block; }
+
+/* —— «Мои места» в Профиле —— */
+.rt-strip { padding: 4px 12px 12px; }
+.rt-strip-hd { min-height: 44px; padding: 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rt-all { display: inline-flex; align-items: center; gap: 2px; font: 600 13px/20px var(--f-sans); color: var(--neon); }
+.rt-all .ui-icon { display: block; }
+.rt-cells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rt-cell { --c: 10px; min-width: 0; min-height: 76px; padding: 10px 8px 8px; display: grid; justify-items: center; align-content: center; gap: 2px; position: relative;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 10%, var(--surface-2)), var(--surface-1));
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.rt-cell::before { content: ""; position: absolute; left: 12px; right: 12px; top: 0; height: 2px; background: var(--acc); opacity: .8; }
+.rt-cic { width: 24px; height: 24px; display: grid; place-items: center; color: var(--acc); }
+.rt-cic .ui-icon { display: block; }
+.rt-cn { font: 700 17px/22px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+.rt-cpl { font: 600 12px/1 var(--f-mono); color: var(--text-3); margin-left: 1px; }
+.rt-cl { font: 600 11px/14px var(--f-display); font-stretch: 80%; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+
+/* —— «Топ исполнителей» в Заработке —— */
+.rt-ctx { --c: 12px; min-height: 56px; padding: 8px 12px; display: flex; align-items: center; gap: 12px; position: relative;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--acc) 12%, var(--surface-2)), var(--surface-1) 70%); box-shadow: inset 2px 0 0 var(--acc);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.rt-ctx .rt-cic { flex: none; width: 32px; height: 32px; background: color-mix(in srgb, var(--acc) 14%, transparent);
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px)); }
+.rt-ctx-t { display: block; font: 600 14px/20px var(--f-sans); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt-ctx-s { display: block; font: 400 12px/16px var(--f-sans); color: var(--text-2); }
+.rt-chev { flex: none; color: var(--text-3); display: block; }
+
+/* профиль: тег уровня — ссылка на топ по уровню (тап 44) */
+.rt-tagl { height: 44px; display: grid; place-items: center; }
+
+/* «Мои места»: прочерк, пока места нет */
+.rt-cnone { color: var(--text-3); }

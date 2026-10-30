@@ -9,6 +9,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
 
+_PRIZES_OFF: dict = {
+    "enabled": False,
+    "budget_ton": "0",
+    "min_participants": 10,
+    "base_places": 3,
+    "extra_place_every": 20,
+    "ladder_max_places": 5,
+    "places_percent": 5,
+    "max_places": 200,
+    "min_prize_ton": "0.1",
+    "individual_places": 10,
+    "bands": [20, 50, 100, 200],
+    "min_score": 1,
+    "payout_mode": "review",
+}
+
 DEFAULTS: dict[str, tuple[object, str]] = {
     "upgrade_base_cost": (
         {"ton": "0.05"},
@@ -100,6 +116,23 @@ DEFAULTS: dict[str, tuple[object, str]] = {
             "payout_mode": "review",
         },
         "Башня: месячный бюджет призов топа (TON), места и группы мест; выключено, пока бюджет не задан",
+    ),
+    # рейтинги: призы — та же модель, что у «Башни», свой бюджет на каждый топ; по умолчанию выключены
+    "level_prizes": (
+        {**_PRIZES_OFF},
+        "Рейтинг по уровню: призы за опыт, набранный за месяц (TON); выключено, пока бюджет не задан",
+    ),
+    "tasks_prizes": (
+        {**_PRIZES_OFF},
+        "Топ исполнителей: призы за принятые задания за месяц (TON); выключено, пока бюджет не задан",
+    ),
+    "friends_prizes": (
+        {**_PRIZES_OFF},
+        "Топ друзей: призы за засчитанных друзей за месяц (TON); заработает вместе с приглашениями",
+    ),
+    "friend_rule": (
+        {"min_level": 3, "min_tasks": 20, "need_both": False},
+        "Когда приглашённый друг засчитывается: уровень и/или принятые задания (0 — условие выключено)",
     ),
 }
 

@@ -77,7 +77,7 @@ async def redeem(session: AsyncSession, *, user: User, code: str) -> PromoResult
             reference_id=promo.id,
         )
     if xp > 0:
-        await add_xp(session, user, xp)
+        await add_xp(session, user, xp, "promo")
     if focus > 0:
         user.focus_tokens = int(user.focus_tokens or 0) + focus
 

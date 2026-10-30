@@ -123,7 +123,7 @@ async def claim_daily(session: AsyncSession, *, user: User, now: datetime | None
             reference_id=None,
         )
     if xp > 0:
-        await add_xp(session, user, xp)
+        await add_xp(session, user, xp, "daily")
     if focus > 0:
         user.focus_tokens = int(user.focus_tokens or 0) + focus
 
