@@ -6,6 +6,7 @@ import { haptic } from "@/lib/haptics";
 import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { PromoPanel } from "@/components/PromoPanel";
 import { IconUser } from "@/components/icons";
+import { TasksTopLink } from "@/components/RatingLinks";
 
 export type EarnTab = "tasks" | "friends" | "promo";
 const TABS: ReadonlyArray<{ value: EarnTab; label: string }> = [
@@ -80,6 +81,8 @@ function TaskFeed() {
         <p className="ui-sec ui-shade !text-[12px] !leading-[16px]">Выполните — получите TON и опыт после проверки</p>
         <StatusPill tone={isFetching ? "live" : "neutral"}>{isFetching ? "синхр." : `${data?.length ?? 0} активных`}</StatusPill>
       </div>
+
+      <TasksTopLink />
 
       {isLoading && <LoadingPanel label="Загрузка ленты заданий…" />}
       {error && <ErrorPanel message="Канал заданий недоступен" />}

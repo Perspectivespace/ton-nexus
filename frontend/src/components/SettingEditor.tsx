@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { Field as UiField } from "@/components/ui/Field";
 import { cx } from "@/components/ui/press";
+import { friendJoinHint, friendRuleText } from "@/lib/friendRule";
 import {
   HIDDEN_KEYS,
+  PRIZE_KEYS,
   SETTINGS,
   fieldMeta,
   fromInput,
@@ -263,8 +265,8 @@ export function SettingEditor({
         return;
       }
     }
-    // призы «Башни»: суммы до 0.0001 TON; включить можно, только если бюджета хватает на первые места
-    if (!Object.keys(errs).length && settingKey === "tower_prizes" && isObj(next)) {
+    // призы топов («Башня», рейтинги): суммы до 0.0001 TON; включить можно, только если бюджета хватает на первые места
+    if (!Object.keys(errs).length && PRIZE_KEYS.has(settingKey) && isObj(next)) {
       const dec4 = (k: string) => (String(next[k] ?? "").split(".")[1] ?? "").length > 4;
       if (dec4("budget_ton")) errs[pkey(["budget_ton"])] = "не больше 4 знаков после точки";
       else if (dec4("min_prize_ton")) errs[pkey(["min_prize_ton"])] = "не больше 4 знаков после точки";
@@ -310,11 +312,28 @@ export function SettingEditor({
       ) : (
         <ReadOnlyValue label="Значение" value={value} />
       )}
+      {settingKey === "friend_rule" ? <FriendRulePreview draft={draft} /> : null}
       {err && (
         <p className="ui-fhint err" role="alert">
           {err}
         </p>
       )}
     </form>
+  );
+}
+
+/** «Когда друг засчитывается»: как надпись увидят игроки — пересобирается на каждом изменении полей */
+export function FriendRulePreview({ draft }: { draft: Record<string, string> }) {
+  const n = (k: string) => {
+    const x = Number(String(draft[k] ?? "").trim());
+    return Number.isInteger(x) && x > 0 ? x : 0;
+  };
+  const rule = { min_level: n("min_level") <= 1 ? 0 : n("min_level"), min_tasks: n("min_tasks"), need_both: draft.need_both === "1" };
+  return (
+    <div className="ui-fhint" aria-live="polite">
+      <span className={capsCls}>Игроки увидят</span>
+      <span className="block text-[var(--text)]">{friendRuleText(rule)}</span>
+      <span className="block">{`«Вас нет в топе»: ${friendJoinHint(rule)}`}</span>
+    </div>
   );
 }

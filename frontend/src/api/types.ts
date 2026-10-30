@@ -253,3 +253,79 @@ export type TowerFinish = {
   rank: number | null;
   status: TowerStatus;
 };
+
+/* ———— Рейтинги (/api/v1/ratings) ———— */
+
+export type RatingKind = "level" | "tasks" | "friends";
+export type RatingPeriod = "month" | "all";
+
+/** Условие «друг засчитывается» из Экономики: 0 — условие выключено; need_both — нужны оба, иначе любое. */
+export type FriendRuleOut = { min_level: number; min_tasks: number; need_both: boolean };
+
+export type RatingCell = { rank: number | null; value: number | null; total: number; soon: boolean };
+
+export type RatingSummary = {
+  /** «2026-10» — месяц по Москве */
+  month: string;
+  level: RatingCell;
+  /** задания — за текущий месяц */
+  tasks: RatingCell;
+  /** Башня — лучший забег месяца */
+  tower: RatingCell;
+  friends: RatingCell;
+  friend_rule: FriendRuleOut;
+  prizes: Record<"level" | "tasks" | "friends" | "tower", boolean>;
+};
+
+export type RatingEntry = {
+  rank: number;
+  name: string;
+  /** уровень (уровень за всё время), опыт за месяц или число принятых заданий */
+  value: number;
+  /** уровень за всё время: опыт внутри уровня */
+  xp?: number | null;
+  is_me: boolean;
+};
+
+export type RatingMe = {
+  rank: number;
+  value: number;
+  xp?: number | null;
+  /** уровень за всё время: сколько опыта до следующего уровня */
+  xp_to_next?: number | null;
+  /** остальные топы: место выше и сколько добрать до него */
+  next_rank?: number | null;
+  need?: number | null;
+};
+
+export type RatingPrize = {
+  budget_ton: string;
+  places: number;
+  prizes: TowerPrize[];
+  total_ton: string;
+  next_place_at: number | null;
+  limited_by: "budget" | "max" | null;
+  min_participants: number;
+  min_score: number;
+  min_prize_ton: string;
+  participants: number;
+  /** значение последнего призового места */
+  cutoff_value: number | null;
+};
+
+export type RatingBoard = {
+  kind: RatingKind;
+  period: RatingPeriod;
+  periods: RatingPeriod[];
+  month: string;
+  month_ends_at: string;
+  server_time: string;
+  total_players: number;
+  entries: RatingEntry[];
+  me: RatingMe | null;
+  /** топ друзей ещё не открыт */
+  soon: boolean;
+  rule: FriendRuleOut | null;
+  /** призы текущего месяца — только период «месяц» и только если владелец их включил */
+  prize: RatingPrize | null;
+};

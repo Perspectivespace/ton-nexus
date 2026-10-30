@@ -496,7 +496,7 @@ async def review_submission(
         )
         worker = await session.get(User, sub.user_id)
         if worker and task.xp_reward:
-            await add_xp(session, worker, int(task.xp_reward))
+            await add_xp(session, worker, int(task.xp_reward), "task")
 
         task.filled_slots += 1
         if task.filled_slots >= task.total_slots:

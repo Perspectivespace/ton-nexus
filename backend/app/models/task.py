@@ -3,7 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -43,6 +43,8 @@ class Task(Base):
 
 class TaskSubmission(Base):
     __tablename__ = "task_submissions"
+    # топ исполнителей: принятые за месяц (status, reviewed_at)
+    __table_args__ = (Index("ix_task_submissions_status_reviewed", "status", "reviewed_at"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)

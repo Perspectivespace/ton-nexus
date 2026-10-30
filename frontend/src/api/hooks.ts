@@ -13,6 +13,10 @@ import type {
   TowerStatus,
   TowerLeaderboard,
   TowerPrizesAdmin,
+  RatingBoard,
+  RatingKind,
+  RatingPeriod,
+  RatingSummary,
 } from "./types";
 
 export function useMe() {
@@ -600,6 +604,28 @@ export function useTowerLeaderboard(month?: string, limit = TOWER_TOP_LIMIT) {
       return r;
     },
     staleTime: 30_000,
+  });
+}
+
+/** «Мои места»: место в каждом топе (Профиль, ссылка «Топ исполнителей» в Заработке) */
+export function useRatingSummary() {
+  return useQuery({
+    queryKey: ["ratings", "summary"],
+    queryFn: () => api<RatingSummary>("/api/v1/ratings/summary"),
+    staleTime: 60_000,
+  });
+}
+
+/** Топ по уровню / заданиям / друзьям; без `period` сервер берёт период по умолчанию для топа */
+export function useRating(kind: RatingKind, period?: RatingPeriod) {
+  return useQuery({
+    queryKey: ["ratings", kind, period ?? "default"],
+    queryFn: async () => {
+      const r = await api<RatingBoard>(`/api/v1/ratings/${kind}?limit=50${period ? `&period=${period}` : ""}`);
+      setServerClock(r.server_time);
+      return r;
+    },
+    staleTime: 60_000,
   });
 }
 

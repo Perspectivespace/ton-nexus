@@ -20,7 +20,7 @@ const TABS = [
 
 const fmt = (n: number) => n.toLocaleString("ru-RU");
 /** «0.2» → «0,2 TON» (как пишем суммы по-русски) */
-const ton = (s: string) => `${s.replace(".", ",")} TON`;
+export const ton = (s: string) => `${s.replace(".", ",")} TON`;
 
 /** «51–100 место» / «7 место» */
 export const placeRange = (g: TowerPrize) => (g.from_place === g.to_place ? `${g.from_place} место` : `${g.from_place}–${g.to_place} место`);
@@ -267,7 +267,7 @@ function PrizeIcon({ status }: { status: TowerPrizeStatus }) {
 }
 
 /** приз места: сумма; у закрытого месяца — со статусом выплаты */
-function PrizeMark({ m }: { m: Mark }) {
+export function PrizeMark({ m }: { m: Mark }) {
   return (
     <span className={m.status ? `tt-prize ${m.status}` : "tt-prize"}>
       {m.status ? <PrizeIcon status={m.status} /> : null}

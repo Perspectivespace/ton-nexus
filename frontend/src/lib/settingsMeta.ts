@@ -2,6 +2,7 @@
  * Owner-facing metadata for economy settings: Russian titles, explanations
  * (derived from backend services), field labels, units and validation.
  */
+import { friendRuleShort, readFriendRule } from "@/lib/friendRule";
 
 /** bool — «Вкл/Выкл»; int_list — возрастающие целые одной строкой «20 50 100 200» */
 export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "int_list";
@@ -65,6 +66,42 @@ const statWeights: Record<string, Partial<FieldMeta>> = Object.fromEntries(
 const statCaps: Record<string, Partial<FieldMeta>> = Object.fromEntries(
   Object.entries(STAT_RU).map(([k, label]) => [k, { label, kind: "int", unit: "ур.", min: 1, max: 999 }]),
 );
+
+/** Поля призов топа: «Башня», рейтинги по уровню, заданиям и друзьям — одна модель (tower_prizes на сервере) */
+const PRIZE_FIELDS: Record<string, Partial<FieldMeta>> = {
+      enabled: { label: "Призы", kind: "bool" },
+      budget_ton: {
+        label: "Бюджет на месяц",
+        kind: "ton",
+        unit: "TON",
+        min: 0,
+        max: 100000,
+        hint: "Остаток не тратится",
+      },
+      min_participants: { label: "Мин. игроков", kind: "int", min: 1, max: 100000, hint: "Меньше — призов нет" },
+      base_places: { label: "Мест сначала", kind: "int", min: 1, max: 10, hint: "Меньше не бывает" },
+      extra_place_every: { label: "+1 место за каждые", kind: "int", unit: "игроков", min: 0, max: 100000, hint: "Лесенка; 0 — без неё" },
+      ladder_max_places: { label: "Лесенка до", kind: "int", unit: "мест", min: 1, max: 100 },
+      places_percent: { label: "Мест от игроков", kind: "int", unit: "%", min: 0, max: 100, hint: "500 игроков × 5 % = 25 мест" },
+      max_places: { label: "Макс. мест", kind: "int", min: 1, max: 1000 },
+      min_prize_ton: { label: "Мин. приз", kind: "ton", unit: "TON", min: 0.0001, max: 100000, hint: "Не хватает — мест меньше" },
+      individual_places: { label: "Своя сумма", kind: "int", unit: "мест", min: 1, max: 1000, hint: "Дальше — группы" },
+      bands: {
+        label: "Группы мест — верхние границы",
+        kind: "int_list",
+        hint: "20 50 100 200 → 11–20, 21–50, 51–100, 101–200",
+      },
+      min_score: { label: "Мин. счёт", kind: "int", min: 1, max: 1000000000, hint: "Кто набрал меньше, не считается" },
+    };
+
+function prizeSummary(v: unknown): string {
+  const o = v as { enabled?: boolean; budget_ton?: unknown };
+  const b = o.budget_ton != null && String(o.budget_ton) !== "0" ? `${String(o.budget_ton)} TON в месяц` : "";
+  return o.enabled && b ? b : b ? `Выключены · ${b}` : "Выключены";
+}
+
+/** Настройки призов с одной моделью (проверки бюджета в редакторе — общие) */
+export const PRIZE_KEYS = new Set(["tower_prizes", "level_prizes", "tasks_prizes", "friends_prizes"]);
 
 export const SETTINGS: Record<string, SettingMeta> = {
   upgrade_base_cost: {
@@ -246,37 +283,46 @@ export const SETTINGS: Record<string, SettingMeta> = {
     short: "Бюджет TON на лучших игроков месяца",
     about:
       "Бюджет делится между призовыми местами месяца. Меньше «Мин. игроков» — призов нет. Мест — больше из лесенки (3, с 21 игрока 4, с 41 — 5) и «% от игроков», но не больше «Макс. мест». Доля места — 1/место: 1-е вдвое больше 2-го. До «Своя сумма» у каждого места своя сумма, дальше группы с одним призом. Каждому — не меньше «Мин. приза», иначе мест меньше. Суммы вниз до 0.0001 TON, остаток не тратится. Платит владелец вручную после 00:00 МСК 1-го.",
-    fields: {
-      enabled: { label: "Призы", kind: "bool" },
-      budget_ton: {
-        label: "Бюджет на месяц",
-        kind: "ton",
-        unit: "TON",
-        min: 0,
-        max: 100000,
-        hint: "Остаток не тратится",
-      },
-      min_participants: { label: "Мин. игроков", kind: "int", min: 1, max: 100000, hint: "Меньше — призов нет" },
-      base_places: { label: "Мест сначала", kind: "int", min: 1, max: 10, hint: "Меньше не бывает" },
-      extra_place_every: { label: "+1 место за каждые", kind: "int", unit: "игроков", min: 0, max: 100000, hint: "Лесенка; 0 — без неё" },
-      ladder_max_places: { label: "Лесенка до", kind: "int", unit: "мест", min: 1, max: 100 },
-      places_percent: { label: "Мест от игроков", kind: "int", unit: "%", min: 0, max: 100, hint: "500 игроков × 5 % = 25 мест" },
-      max_places: { label: "Макс. мест", kind: "int", min: 1, max: 1000 },
-      min_prize_ton: { label: "Мин. приз", kind: "ton", unit: "TON", min: 0.0001, max: 100000, hint: "Не хватает — мест меньше" },
-      individual_places: { label: "Своя сумма", kind: "int", unit: "мест", min: 1, max: 1000, hint: "Дальше — группы" },
-      bands: {
-        label: "Группы мест — верхние границы",
-        kind: "int_list",
-        hint: "20 50 100 200 → 11–20, 21–50, 51–100, 101–200",
-      },
-      min_score: { label: "Мин. счёт", kind: "int", min: 1, max: 1000000000, hint: "Кто набрал меньше, не считается" },
-    },
-    summary: (v) => {
-      const o = v as { enabled?: boolean; budget_ton?: unknown };
-      const b = o.budget_ton != null && String(o.budget_ton) !== "0" ? `${String(o.budget_ton)} TON в месяц` : "";
-      return o.enabled && b ? b : b ? `Выключены · ${b}` : "Выключены";
-    },
+    fields: PRIZE_FIELDS,
+    summary: prizeSummary,
   },
+  level_prizes: {
+    title: "Призы рейтинга по уровню",
+    short: "Бюджет TON на тех, кто набрал больше опыта за месяц",
+    about:
+      "Месячный топ «Опыт за месяц»: сумма опыта, набранного с 1-го числа по Москве (задания, колесо, отметки, промокоды). Пока призы выключены, в рейтинге только уровень за всё время; включите — появится переключатель «Месяц». Деление бюджета — как у «Башни». Итоги и выплата — в следующем обновлении, сейчас игроки видят фонд и призы мест.",
+    fields: { ...PRIZE_FIELDS, min_score: { ...PRIZE_FIELDS.min_score, label: "Мин. опыт", unit: "XP", hint: "Кто набрал меньше за месяц, не считается" } },
+    summary: prizeSummary,
+  },
+  tasks_prizes: {
+    title: "Призы топа исполнителей",
+    short: "Бюджет TON на тех, у кого больше принятых заданий за месяц",
+    about:
+      "Топ «Задания» за месяц: принятые после проверки задания с 1-го числа по Москве; при равенстве выше тот, кто успел раньше. Деление бюджета — как у «Башни». Итоги и выплата — в следующем обновлении, сейчас игроки видят фонд и призы мест.",
+    fields: { ...PRIZE_FIELDS, min_score: { ...PRIZE_FIELDS.min_score, label: "Мин. заданий", unit: "шт.", hint: "Кто выполнил меньше за месяц, не считается" } },
+    summary: prizeSummary,
+  },
+  friends_prizes: {
+    title: "Призы топа друзей",
+    short: "Бюджет TON на тех, кто привёл больше друзей",
+    about:
+      "Топ «Друзья» пока в статусе «скоро»: приглашения начнут считаться вместе с реферальной программой. Настройку можно подготовить заранее; друг засчитывается по условию «Когда друг засчитывается».",
+    fields: { ...PRIZE_FIELDS, min_score: { ...PRIZE_FIELDS.min_score, label: "Мин. друзей", unit: "чел.", hint: "Кто привёл меньше за месяц, не считается" } },
+    summary: prizeSummary,
+  },
+  friend_rule: {
+    title: "Когда друг засчитывается",
+    short: "Уровень и/или задания приглашённого друга",
+    about:
+      "Друг идёт в топ «Друзья», когда выполнит условие: дойдёт до уровня и/или выполнит столько заданий. 0 — условие выключено; оба 0 — засчитывается сразу. «Нужны оба» — условие «и», иначе хватит любого. Надписи у игроков (подпись топа, «скоро», «Вас нет в топе») собираются из этой настройки сами.",
+    fields: {
+      min_level: { label: "Уровень друга", kind: "int", min: 0, max: 1000, hint: "0 — без условия по уровню" },
+      min_tasks: { label: "Принятых заданий", kind: "int", unit: "шт.", min: 0, max: 100000, hint: "0 — без условия по заданиям" },
+      need_both: { label: "Нужны оба условия", kind: "bool", hint: "Выкл — хватит любого" },
+    },
+    summary: (v) => friendRuleShort(readFriendRule(v)),
+  },
+
 };
 
 export function fieldMeta(settingKey: string, field: string, sample: unknown): FieldMeta {

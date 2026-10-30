@@ -121,7 +121,7 @@ class SpinUsesSettingsTest(unittest.TestCase):
         async def credit(*_a, **_k):
             return None
 
-        async def fake_add_xp(_s, u, xp):
+        async def fake_add_xp(_s, u, xp, _source="other", **_kw):
             u.xp += xp
 
         session = SimpleNamespace(add=lambda *_: None, flush=mock.AsyncMock())
