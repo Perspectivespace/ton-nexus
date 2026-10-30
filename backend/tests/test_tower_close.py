@@ -312,6 +312,8 @@ class CloseTest(unittest.TestCase):
             self.assertEqual(lb["me"], {"rank": 6, "score": lb["entries"][5]["score"]})
             self.assertEqual(lb["prize_places"], 3)
             self.assertEqual(len(lb["prizes"]), 3)
+            self.assertEqual(lb["prize_paid_ton"], tp.ton_str(Decimal(r1.amount)))
+            self.assertEqual(Decimal(lb["prize_awaiting_ton"]) + Decimal(r1.amount), Decimal(tm.planned_ton))
             # текущий месяц — живой топ с часами сервера
             cur = await tw.leaderboard(s, user_id=users[5].id, now=NOV)
             self.assertFalse(cur.get("closed", False))

@@ -120,6 +120,7 @@ class LeaderboardOut(BaseModel):
     # почему без призов: disabled / few_participants / no_budget / no_players
     close_reason: str | None = None
     prize_paid_ton: str | None = None
+    prize_awaiting_ton: str | None = None
 
 
 def _http(e: TowerError) -> HTTPException:

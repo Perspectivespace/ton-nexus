@@ -522,6 +522,11 @@ async def closed_board(
             me["prize_status"] = PUBLIC_STATUS.get(mine.status, "awaiting")
     cfg = (tm.prize_cfg or {}).get("settings") or {}
     plan = (tm.prize_cfg or {}).get("plan")
+    awaiting = await session.scalar(
+        select(func.coalesce(func.sum(TowerMonthResult.amount), 0)).where(
+            TowerMonthResult.tower_month_id == tm.id, TowerMonthResult.status.in_(("pending", "flagged"))
+        )
+    )
     return {
         "month": _month_key(tm.month),
         "entries": entries,
@@ -544,4 +549,5 @@ async def closed_board(
         "closed": True,
         "close_reason": tm.reason,
         "prize_paid_ton": tower_prizes.ton_str(Decimal(tm.paid_ton)),
+        "prize_awaiting_ton": tower_prizes.ton_str(Decimal(awaiting or 0)),
     }
