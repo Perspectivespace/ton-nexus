@@ -15,12 +15,25 @@ function ton(v: string): string {
  * сегодняшний — натриевая подсветка (или зелёная, если уже забрано), будущие — приглушены.
  * Дорожка под плитками заполняется до сегодняшнего дня. День 7 — с бонусом Фокус.
  */
-export function DailyWeek({ days, today, claimed, streak }: { days: DailyDay[]; today: number; claimed: boolean; streak: number }) {
+export function DailyWeek({
+  days,
+  today,
+  claimed,
+  streak,
+  caption = true,
+}: {
+  days: DailyDay[];
+  today: number;
+  claimed: boolean;
+  streak: number;
+  /** строка «Сегодня · день N из 7: +… TON» под полосой (в карточке «Заработка» её заменяет кнопка) */
+  caption?: boolean;
+}) {
   const cur = days.find((d) => d.day === today);
   const fill = Math.max(0, Math.min(1, (today - (claimed ? 0 : 1)) / days.length));
   const round = streak > 7 || (!claimed && streak >= 7) ? Math.floor((claimed ? streak - 1 : streak) / 7) + 1 : 1;
   return (
-    <div className="space-y-3">
+    <div className={caption ? "space-y-3" : undefined}>
       <div className="dw" role="list" aria-label="Награды 7 дней">
         <span className="dw-track" aria-hidden>
           <span className="dw-fill" style={{ transform: `scaleX(${fill})` }} />
@@ -44,7 +57,7 @@ export function DailyWeek({ days, today, claimed, streak }: { days: DailyDay[]; 
           );
         })}
       </div>
-      {cur && (
+      {caption && cur && (
         <p className="ui-sec !text-[12px] !leading-[16px]">
           <span className="text-[var(--text)]">
             {claimed ? "Получено сегодня" : "Сегодня"} · день {today} из 7

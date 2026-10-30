@@ -1,29 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMe, useMiner, useMinerUpgrade, type UpgradeOut } from "@/api/hooks";
-import {
-  ScreenHeader,
-  StatusPill,
-  LoadingPanel,
-  ErrorPanel,
-  Readout,
-  Panel,
-  Scrim,
-  Num,
-  Tag,
-  Button,
-  DialGauge,
-  cx,
-} from "@/components/ui";
+import { LoadingPanel, ErrorPanel, Readout, Panel, Num, Tag, Chip, Button, DialGauge, cx } from "@/components/ui";
 import { prefersReducedMotion } from "@/components/ui/press";
 import { haptic } from "@/lib/haptics";
 import { IconSpark } from "@/components/icons";
-import { useScreenBack } from "@/lib/backButton";
-import { BackLink } from "@/components/BackLink";
 import { formatLeft, useCountdown } from "@/lib/countdown";
+import { reactorLevel, tierFor } from "@/lib/reactorTiers";
+import { ReactorTierPanel } from "@/components/ReactorTierPanel";
 import { useQueryClient } from "@tanstack/react-query";
 
-const TYPE_RU: Record<string, string> = {
+export const TYPE_RU: Record<string, string> = {
   power: "Мощность",
   capacity: "Ёмкость",
   acceleration: "Длительность",
@@ -40,13 +27,18 @@ const TYPE_SHORT: Record<string, string> = {
   stability: "Стаб.",
 };
 
-const TYPES = ["power", "capacity", "acceleration", "luck", "stability"] as const;
+export const TYPES = ["power", "capacity", "acceleration", "luck", "stability"] as const;
 
 type Phase = "idle" | "wait" | "scan" | "needle" | "done";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const pctFmt = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(Math.round(n * 100) / 100)}%`;
 
-export function Upgrade() {
-  useScreenBack("/miner");
+/**
+ * Стойка усиления реактора (DESIGN.md п. 8.2): циферблат шанса, «Стойка параметров» (Фокус/Запрет),
+ * «Попытка усиления» и плашка результата. Живёт в шторке «Усиление реактора» на Майнере
+ * (отдельный чанк — framer-motion грузится только при открытии шторки).
+ */
+export function UpgradeStand() {
   const { data: me } = useMe();
   const { data: m, isLoading, error } = useMiner({ fresh: true });
   const upgrade = useMinerUpgrade();
@@ -141,29 +133,31 @@ export function Upgrade() {
     : short != null
       ? `Не хватает ${short.toFixed(4)} TON. Пополните баланс майнингом, заданиями или промокодом.`
       : null;
-  const canFocus = (me?.focus_tokens ?? 0) > 0;
-  const canBlock = (me?.block_tokens ?? 0) > 0;
+  const focusN = me?.focus_tokens ?? 0;
+  const blockN = me?.block_tokens ?? 0;
+  const canFocus = focusN > 0;
+  const canBlock = blockN > 0;
 
   const chance = last && phase !== "scan" ? last.success_chance_bp / 10000 : null;
   const boost = (me?.success_boost_bp ?? 0) / 100;
+  const level = reactorLevel(m);
+  const tier = tierFor(level);
+  const capBonus = m.capacity_bonus_pct ?? null;
+  const luckLo = m.luck_min_pct ?? null;
+  const luckHi = m.luck_max_pct ?? null;
 
   return (
     <div
-      className="space-y-5"
+      className="us-stand space-y-4"
       onPointerDown={() => {
         if (animating) skip.current = true;
       }}
     >
-      <ScreenHeader
-        title="Усиление"
-        action={<BackLink to="/miner" label="Реактор" />}
-      />
-
-      {/* Герой: циферблат шанса (п. 8.2) */}
-      <Panel level="hero" cut="l" lift="l2" className="px-4 pb-0 pt-4">
-        <DialGauge chance={chance} className={cx(phase === "needle" && "is-run")} />
-        <div className="-mt-2 flex flex-col items-center text-center">
-          <Num value={chance != null ? Math.round(chance * 100) : "—"} decode={false} unit={chance != null ? "%" : undefined} size="xl" glow={chance != null} className="ui-shade" />
+      {/* Циферблат шанса (п. 8.2): в шторке — 220 px, без табло под ним (баланс — у кнопки) */}
+      <Panel level="hero" cut="l" className="px-4 pb-4 pt-3">
+        <DialGauge chance={chance} className={cx("us-dial", phase === "needle" && "is-run")} />
+        <div className="-mt-1 flex flex-col items-center text-center">
+          <Num value={chance != null ? Math.round(chance * 100) : "—"} decode={false} unit={chance != null ? "%" : undefined} size="l" glow={chance != null} className="ui-shade" />
           <p className="ui-label ui-shade mt-1">
             {chance != null
               ? `Успех ${Math.round(chance * 100)}% / Сгорание ${100 - Math.round(chance * 100)}%`
@@ -172,24 +166,18 @@ export function Upgrade() {
                 : "Шанс покажет попытка"}
           </p>
           {boost > 0 && (
-            <p className="ui-sys mt-1">
-              бонус к шансу +{Number(boost.toFixed(1))}% — сработает на следующей попытке и сгорит после неё
-            </p>
+            <p className="ui-sys mt-1">бонус +{Number(boost.toFixed(1))}% к шансу следующей попытки</p>
           )}
         </div>
-        <Scrim className="relative -mx-4 mt-4 grid grid-cols-3 gap-3 px-4 pb-4 pt-3">
-          <Readout label="Баланс" value={me ? Number(me.balance).toFixed(4) : "—"} unit="TON" />
-          <Readout label="Фокус" value={String(me?.focus_tokens ?? 0)} hint="вес типа ×" />
-          <Readout label="Запрет" value={String(me?.block_tokens ?? 0)} hint="блок типа" />
-        </Scrim>
       </Panel>
 
       <Panel className="p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="ui-label">Стойка параметров</p>
-          <StatusPill tone={busy ? "live" : "neutral"}>
-            {busy ? "попытка" : "готов"}
-          </StatusPill>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+          <p className="ui-label whitespace-nowrap">Стойка параметров</p>
+          <span className="flex gap-1.5">
+            <Chip label="Фокус" value={focusN} className={cx(!canFocus && "is-off")} />
+            <Chip label="Запрет" value={blockN} className={cx(!canBlock && "is-off")} />
+          </span>
         </div>
         <div className="grid grid-cols-5 gap-2">
           {TYPES.map((t) => {
@@ -217,6 +205,7 @@ export function Upgrade() {
                   }
                 }}
                 title={TYPE_RU[t]}
+                aria-label={`${TYPE_RU[t]}, ур. ${val}${focused ? ", фокус" : blocked ? ", запрет" : ""}`}
                 aria-pressed={focused || blocked}
                 className={cx("ui-stat", focused && "focus", blocked && "blocked", scanned && "scan")}
               >
@@ -229,46 +218,59 @@ export function Upgrade() {
         </div>
         <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">
           {canFocus || canBlock
-            ? "Тап: Фокус → Запрет → сброс. Параметр выбирается при попытке."
+            ? "Тап по параметру: Фокус → Запрет → сброс. Параметр выбирается при попытке."
             : "Жетонов Фокус и Запрет нет — их дают колесо удачи, ежедневная отметка и промокоды."}
         </p>
+        {(capBonus != null || (luckLo != null && luckHi != null)) && (
+          <p className="ui-sec mt-1 !text-[12px] !leading-[16px]">
+            {capBonus != null && (
+              <>
+                Ёмкость ур. {m.capacity}: <span className="ui-num text-[var(--text)]">{pctFmt(capBonus)}</span> TON за цикл
+              </>
+            )}
+            {capBonus != null && luckLo != null && luckHi != null && " · "}
+            {luckLo != null && luckHi != null && (
+              <>
+                Удача ур. {m.luck}: сбор{" "}
+                <span className="ui-num text-[var(--text)]">
+                  {luckLo === 0 && luckHi === 0 ? "без разброса" : `${pctFmt(luckLo)}…${pctFmt(luckHi)}`}
+                </span>
+              </>
+            )}
+          </p>
+        )}
       </Panel>
 
-      <Panel className="space-y-4 p-5">
+      <Panel className="space-y-3 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="ui-h">
               {phase === "wait" ? "Связь с модулем…" : phase === "scan" ? "Выбор параметра" : phase === "needle" ? "Бросок шанса" : "Попытка усиления"}
             </p>
-            <p className="ui-sec !text-[12px]">
-              {animating ? "Тап по экрану — сразу к результату" : "1) параметр · 2) шанс · провал — стоимость сгорает"}
-            </p>
+            {animating && <p className="ui-sec !text-[12px]">Тап по экрану — сразу к результату</p>}
           </div>
-          {spinning && <Tag tone="neon">идёт</Tag>}
-        </div>
-
-        {cost != null && (
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="ui-label">Стоимость попытки</span>
+          {spinning ? (
+            <Tag tone="neon">идёт</Tag>
+          ) : cost != null ? (
             <Num value={cost.toFixed(4)} unit="TON" size="s" decode={false} />
-          </div>
-        )}
+          ) : null}
+        </div>
         <span className="ui-spill">
-          <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || !!blockReason} aria-describedby={blockReason ? "upgrade-why" : undefined} onClick={run}>
-            {busy ? "Усиление…" : inCycle ? (cycleLeft != null ? `Доступно через ${formatLeft(cycleLeft)}` : "Реактор в цикле") : short != null ? "Не хватает TON" : cost != null ? `Усилить · ${cost.toFixed(4)} TON` : "Усилить"}
+          <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || !!blockReason} aria-describedby="upgrade-why" onClick={run}>
+            {busy ? "Усиление…" : inCycle ? (cycleLeft != null ? `Доступно через ${formatLeft(cycleLeft)}` : "Реактор в цикле") : short != null ? "Не хватает TON" : "Усилить"}
           </Button>
         </span>
-        {blockReason && !busy && (
+        {!busy && (
           <p id="upgrade-why" className="ui-sec !text-[12px] !leading-[16px]">
-            {blockReason}
+            {blockReason ?? (
+              <>
+                Провал — стоимость сгорает · баланс <span className="ui-num text-[var(--text)]">{me ? Number(me.balance).toFixed(4) : "—"}</span> TON
+              </>
+            )}
           </p>
         )}
 
-        {upgrade.isError && (
-          <ErrorPanel
-            message={upgrade.error instanceof Error ? upgrade.error.message : "Отказ модуля"}
-          />
-        )}
+        {upgrade.isError && <ErrorPanel message={upgrade.error instanceof Error ? upgrade.error.message : "Отказ модуля"} />}
       </Panel>
 
       <AnimatePresence mode="wait">
@@ -280,9 +282,9 @@ export function Upgrade() {
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             ref={resultRef}
-            className="scroll-mb-28"
+            className="scroll-mb-6"
           >
-            <Panel danger={!last.success} className={cx("p-5", phase === "done" && !last.success && "ui-burn")}>
+            <Panel danger={!last.success} className={cx("p-4", phase === "done" && !last.success && "ui-burn")}>
               <div className="flex items-center justify-between">
                 <p className="ui-label">{last.success ? "Закреплено" : "Сгорание"}</p>
                 <span className={cx("ui-verdict", last.success ? "ok" : "burn", phase === "done" && last.success && "ui-ignite")}>
@@ -298,17 +300,20 @@ export function Upgrade() {
                   </span>
                 )}
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-3 grid grid-cols-2 gap-3">
                 <Readout label="Стоимость" value={Number(last.cost).toFixed(4)} unit="TON" />
                 <Readout label="Шанс" value={`${(last.success_chance_bp / 100).toFixed(1)}`} unit="%" />
               </div>
-              {last.burned && !last.success && (
-                <p className="ui-sec mt-3 !text-[12px] !text-[var(--magenta)]">Сумма списана без возврата.</p>
-              )}
+              {last.burned && !last.success && <p className="ui-sec mt-3 !text-[12px] !text-[var(--magenta)]">Сумма списана без возврата.</p>}
             </Panel>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Облик реактора и путь к следующему — бывшая панель под героем Майнера */}
+      <ReactorTierPanel tier={tier} level={level} />
     </div>
   );
 }
+
+export default UpgradeStand;

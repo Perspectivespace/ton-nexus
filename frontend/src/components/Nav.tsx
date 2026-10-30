@@ -7,7 +7,7 @@ import { Dock } from "./ui/index";
 
 /**
  * Пять мест дока: Контур · Майнер · [Игры] · Заработок · Профиль.
- * До PR «б» Заработок ведёт на ленту заданий `/tasks`, Профиль — на баланс `/wallet`.
+ * Заработок — `/tasks` (псевдоним `/earn`), Профиль — `/wallet` (псевдоним `/profile`), lib/routes.tsx ALIASES.
  */
 export const dockItems = [
   { to: "/", label: "Контур", Icon: IconHome },

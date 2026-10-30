@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMe, useMiner, useMinerStart, useMinerClaim } from "@/api/hooks";
 import {
   ScreenHeader,
@@ -11,8 +11,10 @@ import {
   Scrim,
   Num,
   Reactor,
-  StatTile,
   Button,
+  List,
+  ListRow,
+  Sheet,
   useToast,
   useIgniteOnce,
   useLiveAccrued,
@@ -21,7 +23,14 @@ import {
 import { prefersReducedMotion } from "@/components/ui/press";
 import { haptic } from "@/lib/haptics";
 import { markTierSeen, reactorLevel, seenTier, tierFor } from "@/lib/reactorTiers";
-import { ReactorTierPanel } from "@/components/ReactorTierPanel";
+import { IconUp } from "@/components/icons";
+
+/** Стойка усиления — отдельный чанк (framer-motion), грузится при открытии шторки или заранее в простое */
+const loadStand = () => import("@/components/UpgradeStand");
+const UpgradeStand = lazy(loadStand);
+
+/** Открыта ли шторка «Усиление реактора»: /miner?upgrade (старый адрес /upgrade ведёт сюда же) */
+export const UPGRADE_PARAM = "upgrade";
 
 const statusTone = {
   idle: "neutral" as const,
@@ -41,6 +50,18 @@ export function Miner() {
   const start = useMinerStart();
   const claim = useMinerClaim();
   const toast = useToast();
+  const [params, setParams] = useSearchParams();
+  const upgradeOpen = params.has(UPGRADE_PARAM);
+  const setUpgradeOpen = (v: boolean) =>
+    setParams(
+      (p) => {
+        const n = new URLSearchParams(p);
+        if (v) n.set(UPGRADE_PARAM, "1");
+        else n.delete(UPGRADE_PARAM);
+        return n;
+      },
+      { replace: true },
+    );
 
   const accrued = Number(m?.accrued_now ?? m?.pending_reward ?? 0);
   const cap = Number(m?.storage_cap ?? m?.estimated_reward ?? 0);
@@ -83,6 +104,18 @@ export function Miner() {
       window.clearTimeout(t2);
     };
   }, [m == null, tier.id]); // toast стабилен, m нужен только как «загрузился»
+
+  // чанк стойки — в простое после загрузки майнера, чтобы шторка открывалась без скелетона
+  useEffect(() => {
+    if (!m) return;
+    const w = window as Window & { requestIdleCallback?: Window["requestIdleCallback"] };
+    if (typeof w.requestIdleCallback === "function") {
+      const id = w.requestIdleCallback(() => void loadStand(), { timeout: 4000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(() => void loadStand(), 1200);
+    return () => window.clearTimeout(id);
+  }, [m == null]);
 
   // Момент B: после «Собрать» дуга стекает 600 мс и держится на нуле, пока не придут свежие данные
   const [claimAt, setClaimAt] = useState<number | null>(null);
@@ -134,13 +167,29 @@ export function Miner() {
   const shown = draining ? 0 : live;
   // «Заполнено» — только когда в хранилище действительно ~100% (после частичного сбора цикл кончается раньше)
   const full = ready && cap > 0 && accrued >= cap * 0.999;
-  const capBonus = m?.capacity_bonus_pct ?? null;
-  const luckLo = m?.luck_min_pct ?? null;
-  const luckHi = m?.luck_max_pct ?? null;
-  const pctFmt = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(Math.round(n * 100) / 100)}%`;
+  const boost = (me?.success_boost_bp ?? 0) / 100;
+  const cost = m.upgrade_cost != null && Number.isFinite(Number(m.upgrade_cost)) ? Number(m.upgrade_cost) : null;
+  const upgradeSub = (
+    <>
+      Ур. <b className="ui-num text-[var(--text)]">{level}</b>
+      {boost > 0 ? (
+        <>
+          {" "}
+          · бонус шанса <b className="ui-num text-[var(--neon)]">+{Number(boost.toFixed(1))}%</b>
+        </>
+      ) : running ? (
+        " · после цикла"
+      ) : cost != null ? (
+        <>
+          {" "}
+          · попытка <span className="ui-num">{cost.toFixed(4)}</span> TON
+        </>
+      ) : null}
+    </>
+  );
 
   return (
-    <div className="space-y-5">
+    <div className="mn-page space-y-4">
       <ScreenHeader
         title="Майнер"
         action={
@@ -152,7 +201,7 @@ export function Miner() {
 
       {/* Герой: «окно в город» со скримом под цифрами */}
       {/* появление героя — CSS (прежняя пружина framer-motion в linear()), чтобы чанк «Майнера» не ждал библиотеку анимаций */}
-      <div className="mn-rise">
+      <div className="mn-rise mn-hero">
         <Panel level="hero" see cut="l" lift="l2" className="p-5">
           <div className="relative flex flex-col items-center">
             <Reactor
@@ -163,7 +212,7 @@ export function Miner() {
               tier={tier.id}
               reveal={reveal}
             />
-            <p className="ui-label ui-shade mt-6">Накоплено в цикле</p>
+            <p className="mn-acc ui-label ui-shade mt-5">Накоплено в цикле</p>
             <Num
               value={shown.toFixed(6)}
               unit="TON"
@@ -178,7 +227,7 @@ export function Miner() {
             )}
           </div>
 
-          <Scrim className="relative -mx-5 -mb-5 mt-5 px-5 pb-5 pt-4">
+          <Scrim className="mn-scrim relative -mx-5 -mb-5 mt-4 px-5 pb-5 pt-4">
             <div className="min-w-0 space-y-2">
               <div className="grid grid-cols-2 gap-3">
                 <Readout label="Хранилище за цикл" value={cap.toFixed(6)} unit="TON" />
@@ -201,44 +250,9 @@ export function Miner() {
                       ? "Реактор работает: к концу цикла хранилище заполнится на 100%. Собрать можно раньше."
                       : "Запустите цикл, чтобы начать накопление."}
               </p>
-              {(capBonus != null || (luckLo != null && luckHi != null)) && (
-                <p className="ui-sec !text-[12px] !leading-[16px]">
-                  {capBonus != null && (
-                    <>
-                      Ёмкость ур. {m.capacity}: <span className="ui-num text-[var(--text)]">{pctFmt(capBonus)}</span> TON за цикл
-                    </>
-                  )}
-                  {capBonus != null && luckLo != null && luckHi != null && " · "}
-                  {luckLo != null && luckHi != null && (
-                    <>
-                      Удача ур. {m.luck}: сбор{" "}
-                      <span className="ui-num text-[var(--text)]">
-                        {luckLo === 0 && luckHi === 0 ? "без разброса" : `${pctFmt(luckLo)}…${pctFmt(luckHi)}`}
-                      </span>
-                    </>
-                  )}
-                </p>
-              )}
             </div>
           </Scrim>
         </Panel>
-      </div>
-
-      <ReactorTierPanel tier={tier} level={level} />
-
-      {/* Характеристики реактора */}
-      <div className="grid grid-cols-5 gap-2">
-        {(
-          [
-            ["power", "Мощн.", m.power, "Мощность"],
-            ["capacity", "Ёмк.", m.capacity, "Ёмкость"],
-            ["acceleration", "Длит.", m.acceleration, "Длительность цикла"],
-            ["luck", "Удача", m.luck, "Удача"],
-            ["stability", "Стаб.", m.stability, "Стабильность"],
-          ] as const
-        ).map(([key, k, v, tip]) => (
-          <StatTile key={key} label={k} value={v} title={tip} />
-        ))}
       </div>
 
       <div className="flex flex-col gap-2.5">
@@ -269,10 +283,23 @@ export function Miner() {
             </Button>
           </span>
         )}
-        <Link to="/upgrade" className="ui-btn secondary block lg no-underline" onClick={() => haptic.tap()}>
-          Усиление реактора
-        </Link>
+        {/* Одна компактная строка вместо сетки параметров и кнопки-перехода (DESIGN.md §14.1) */}
+        <List>
+          <ListRow
+            className="mn-up"
+            icon={<IconUp size={20} />}
+            title="Усиление"
+            sub={upgradeSub}
+            onClick={() => setUpgradeOpen(true)}
+          />
+        </List>
       </div>
+
+      <Sheet open={upgradeOpen} onClose={() => setUpgradeOpen(false)} title="Усиление реактора" sub={`${tier.mk} «${tier.name}» · ур. ${level}`} className="us-sheet">
+        <Suspense fallback={<LoadingPanel label="Калибровка модуля усиления…" />}>
+          <UpgradeStand />
+        </Suspense>
+      </Sheet>
     </div>
   );
 }

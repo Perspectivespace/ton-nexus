@@ -1,5 +1,6 @@
 import { idleWhenQuiet } from "@/lib/quiet";
 import { Component, lazy, Suspense, createElement, type ComponentType, type ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { ErrorState } from "@/components/ui/States";
 import { warmFonts } from "@/lib/fontWarm";
@@ -18,7 +19,8 @@ const LOADERS: Record<string, Loader> = {
   taskDetail: () => import("@/pages/TaskDetail").then((m) => m.TaskDetail),
   taskCreate: () => import("@/pages/TaskCreate").then((m) => m.TaskCreate),
   wallet: () => import("@/pages/Wallet").then((m) => m.Wallet),
-  upgrade: () => import("@/pages/Upgrade").then((m) => m.Upgrade),
+  // не раздел, а чанк стойки для шторки «Усиление реактора» на Майнере — только для фоновой подгрузки
+  upgrade: () => import("@/components/UpgradeStand").then((m) => m.UpgradeStand),
   wheel: () => import("@/pages/Wheel").then((m) => m.Wheel),
   owner: () => import("@/pages/Owner").then((m) => m.Owner),
   inbox: () => import("@/pages/Inbox").then((m) => m.Inbox),
@@ -41,15 +43,44 @@ function load(key: Key): Promise<ComponentType> {
   ));
 }
 
+/**
+ * Старые и новые адреса разделов дока (DESIGN.md §14): /earn → Заработок (/tasks), /profile → Профиль (/wallet),
+ * /upgrade → Майнер с открытой шторкой «Усиление реактора». Остальные параметры адреса (?tab=…) сохраняются.
+ */
+export const ALIASES: Record<string, string> = {
+  "/earn": "/tasks",
+  "/profile": "/wallet",
+  "/upgrade": "/miner?upgrade=1",
+};
+
+/** Куда ведёт псевдоним с учётом query: aliasTarget("/earn", "?tab=promo") → "/tasks?tab=promo" */
+export function aliasTarget(path: string, search = ""): string | null {
+  const p = path.replace(/\/+$/, "") || "/";
+  const to = ALIASES[p];
+  if (!to) return null;
+  const [base, q0] = to.split("?");
+  const q = new URLSearchParams(q0 ?? "");
+  new URLSearchParams(search).forEach((v, k) => q.set(k, v));
+  const qs = q.toString();
+  return qs ? `${base}?${qs}` : base;
+}
+
+/** <Route element> для псевдонима: replace, чтобы «Назад» не возвращал на старый адрес */
+export function Alias() {
+  const loc = useLocation();
+  return <Navigate to={aliasTarget(loc.pathname, loc.search) ?? "/"} replace />;
+}
+
 /** путь → раздел (для предзагрузки по ссылке) */
 export function routeKey(path: string): Key | null {
-  const p = path.replace(/[?#].*$/, "").replace(/\/+$/, "") || "/";
+  const raw = path.replace(/[?#].*$/, "").replace(/\/+$/, "") || "/";
+  const alias = aliasTarget(raw);
+  const p = alias ? alias.replace(/[?#].*$/, "") : raw;
   if (p === "/miner") return "miner";
   if (p === "/tasks") return "tasks";
   if (p === "/tasks/new") return "taskCreate";
   if (p.startsWith("/tasks/")) return "taskDetail";
   if (p === "/wallet") return "wallet";
-  if (p === "/upgrade") return "upgrade";
   if (p === "/wheel") return "wheel";
   if (p === "/owner") return "owner";
   if (p === "/inbox") return "inbox";

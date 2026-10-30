@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Home } from "@/pages/Home";
-import { route } from "@/lib/routes";
+import { Alias, ALIASES, route } from "@/lib/routes";
 
 // Витрина набора компонентов — только в dev-сборке, в прод не попадает
 const Kit = import.meta.env.DEV ? lazy(() => import("@/pages/Kit")) : null;
@@ -19,13 +19,16 @@ export default function App() {
           <Route path="/tasks/new" element={route("taskCreate")} />
           <Route path="/tasks/:id" element={route("taskDetail")} />
           <Route path="/wallet" element={route("wallet")} />
-          <Route path="/upgrade" element={route("upgrade")} />
           <Route path="/wheel" element={route("wheel")} />
           <Route path="/owner" element={route("owner")} />
           <Route path="/inbox" element={route("inbox")} />
           <Route path="/withdraws" element={route("withdraws")} />
           <Route path="/deploy" element={route("deploy")} />
           <Route path="/tower" element={route("tower")} />
+          {/* старые/короткие адреса: /earn, /profile, /upgrade (шторка на Майнере) */}
+          {Object.keys(ALIASES).map((p) => (
+            <Route key={p} path={p} element={<Alias />} />
+          ))}
           {Kit && (
             <Route
               path="/kit"
