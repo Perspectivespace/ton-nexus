@@ -237,7 +237,7 @@ export function Wheel() {
         )}
         <div className="grid grid-cols-2 gap-4">
           <Readout label="Серия" value={String(d?.streak ?? 0)} unit="дн" />
-          <Readout label={daily.waiting ? "Следующая через" : "Сегодня"} value={daily.countdown ?? "доступно"} />
+          <Readout label={daily.waiting ? "Следующая через" : "Сегодня"} value={daily.countdown ?? "доступно"} live />
         </div>
         <Button kind="secondary" block icon={<IconBolt size={18} />} disabled={!daily.ready} onClick={daily.claimNow}>
           {daily.pending ? "Начисление…" : daily.waiting ? "Отметка получена" : "Забрать отметку"}

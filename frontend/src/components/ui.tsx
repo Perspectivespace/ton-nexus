@@ -35,11 +35,15 @@ export function EmptyPanel({ title, body }: { title: string; body: string }) {
 }
 
 /** Показание: подпись капсом, моно-цифра, единица, подсказка */
-export function Readout({ label, value, unit, hint }: { label: string; value: string; unit?: string; hint?: string }) {
+/**
+ * Подпись + крупное значение. `live` — значение меняется само (обратный отсчёт): без «расшифровки»
+ * цифр при каждой смене, только тихая замена текста (иначе отсчёт «перезагружается» каждую секунду).
+ */
+export function Readout({ label, value, unit, hint, live }: { label: string; value: string; unit?: string; hint?: string; live?: boolean }) {
   return (
     <div className="min-w-0">
       <p className="ui-label">{label}</p>
-      <Num value={value} unit={unit} size="m" className="mt-1 block truncate !text-[19px] !font-bold" />
+      <Num value={value} unit={unit} size="m" decode={!live} className="mt-1 block truncate !text-[19px] !font-bold" />
       {hint && <p className="ui-sys mt-0.5">{hint}</p>}
     </div>
   );
