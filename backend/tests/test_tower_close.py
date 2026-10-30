@@ -321,6 +321,27 @@ class CloseTest(unittest.TestCase):
 
         run_db(body)
 
+    def test_closed_board_maps_every_status(self):
+        """На «Прошлом»: paid → paid, pending и flagged → awaiting, voided → voided (и у «моего места» так же)."""
+
+        async def body(s):
+            await set_prizes(s, ON)
+            users = await seed_month(s, 12)
+            tm, _ = await tc.close_month(s, OCT, now=NOV)
+            r1, r2, r3 = await prize_rows(s, tm)
+            r1.status, r2.status, r3.status = "paid", "flagged", "voided"
+            await s.flush()
+            for uid, want in ((r1.user_id, "paid"), (r2.user_id, "awaiting"), (r3.user_id, "voided")):
+                lb = await tw.leaderboard(s, user_id=uid, month=OCT, now=NOV)
+                self.assertEqual([e.get("prize_status") for e in lb["entries"][:4]], ["paid", "awaiting", "voided", None])
+                self.assertEqual(lb["me"]["prize_status"], want)
+            r2.status = "pending"
+            await s.flush()
+            lb = await tw.leaderboard(s, user_id=users[0].id, month=OCT, now=NOV)
+            self.assertEqual(lb["entries"][1]["prize_status"], "awaiting")
+
+        run_db(body)
+
 
 class AdminApiTest(unittest.TestCase):
     def test_owner_only_and_flow(self):
