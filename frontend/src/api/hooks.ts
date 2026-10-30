@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
+import { setServerClock } from "@/lib/cityPhase";
 import type {
   DeployJob,
   DeployOverview,
@@ -11,6 +12,7 @@ import type {
   TowerStart,
   TowerStatus,
   TowerLeaderboard,
+  TowerPrizesAdmin,
 } from "./types";
 
 export function useMe() {
@@ -573,7 +575,11 @@ export function useSetDeployer() {
 export function useTowerMe() {
   return useQuery({
     queryKey: ["tower", "me"],
-    queryFn: () => api<TowerStatus>("/api/v1/tower/me"),
+    queryFn: async () => {
+      const r = await api<TowerStatus>("/api/v1/tower/me");
+      setServerClock(r.server_time);
+      return r;
+    },
     // попытки могли смениться (полночь по Москве, игра с другого устройства) — смотрим заново при каждом открытии
     refetchOnMount: "always",
   });
@@ -586,9 +592,52 @@ export const TOWER_TOP_LIMIT = 50;
 export function useTowerLeaderboard(month?: string, limit = TOWER_TOP_LIMIT) {
   return useQuery({
     queryKey: ["tower", "leaderboard", month ?? "current", limit],
-    queryFn: () =>
-      api<TowerLeaderboard>(`/api/v1/tower/leaderboard?limit=${limit}${month ? `&month=${encodeURIComponent(month)}` : ""}`),
+    queryFn: async () => {
+      const r = await api<TowerLeaderboard>(
+        `/api/v1/tower/leaderboard?limit=${limit}${month ? `&month=${encodeURIComponent(month)}` : ""}`,
+      );
+      setServerClock(r.server_time);
+      return r;
+    },
     staleTime: 30_000,
+  });
+}
+
+/** «Призы Башни» в Кассе — только владельцу */
+export function useTowerPrizesAdmin(enabled: boolean) {
+  return useQuery({
+    queryKey: ["tower", "prizes-admin"],
+    queryFn: () => api<TowerPrizesAdmin>("/api/v1/tower/admin/prizes"),
+    enabled,
+  });
+}
+
+export type TowerPrizeAction =
+  | { kind: "close"; month?: string }
+  | { kind: "pay" | "void" | "approve"; id: number }
+  | { kind: "pay-all"; monthId: number };
+
+function prizeActionPath(a: TowerPrizeAction): string {
+  const base = "/api/v1/tower/admin/prizes";
+  if (a.kind === "close") return `${base}/close`;
+  if (a.kind === "pay-all") return `${base}/months/${a.monthId}/pay-all`;
+  return `${base}/results/${a.id}/${a.kind}`;
+}
+
+/** Закрыть месяц / выплатить / аннулировать / одобрить: сервер отвечает свежим списком */
+export function useTowerPrizeAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (a: TowerPrizeAction) =>
+      api<TowerPrizesAdmin>(prizeActionPath(a), {
+        method: "POST",
+        body: JSON.stringify(a.kind === "close" ? { month: a.month ?? null } : {}),
+      }),
+    onSuccess: (r) => {
+      qc.setQueryData(["tower", "prizes-admin"], r);
+      // статусы призов на вкладке «Прошлый» поменялись
+      void qc.invalidateQueries({ queryKey: ["tower", "leaderboard"] });
+    },
   });
 }
 

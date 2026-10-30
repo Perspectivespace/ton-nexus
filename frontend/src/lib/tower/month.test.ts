@@ -54,3 +54,20 @@ describe("обратный отсчёт", () => {
     expect(formatCountdown(countdown(undefined))).toBe("00:00:00");
   });
 });
+
+describe("часы сервера", () => {
+  it("месяц и отсчёт идут по server_time, а не по часам телефона", async () => {
+    const { setServerClock } = await import("@/lib/cityPhase");
+    const { mskMonth: m, countdown: cd } = await import("./month");
+    const phone = Date.now();
+    // телефон отстаёт: на сервере уже 1 ноября 00:00:30 МСК
+    setServerClock("2026-10-31T21:00:30Z");
+    try {
+      expect(m()).toBe("2026-11");
+      expect(cd("2026-10-31T21:00:00Z").over).toBe(true);
+      expect(Math.abs(Date.now() - phone)).toBeLessThan(5000);
+    } finally {
+      setServerClock(new Date().toISOString());
+    }
+  });
+});

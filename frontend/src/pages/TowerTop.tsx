@@ -5,9 +5,10 @@ import { ErrorState, Panel, ScreenHeader, SkeletonCard, Tabs } from "@/component
 import { BackLink } from "@/components/BackLink";
 import { useScreenBack } from "@/lib/backButton";
 import { haptic } from "@/lib/haptics";
+import { serverNow } from "@/lib/cityPhase";
 import { closesOn, countdown, formatCountdown, monthPrepositional, monthTitle, mskMonth, prevMonth, spokenCountdown } from "@/lib/tower/month";
 import { useTowerLeaderboard } from "@/api/hooks";
-import type { TowerLeaderboard, TowerLeaderEntry, TowerPrize } from "@/api/types";
+import type { TowerLeaderboard, TowerLeaderEntry, TowerPrize, TowerPrizeStatus } from "@/api/types";
 import "@/styles/tower-top.css";
 
 type Which = "cur" | "prev";
@@ -40,6 +41,7 @@ function players(n: number) {
  */
 export default function TowerTop() {
   useScreenBack("/tower");
+  // сервер прислал свои часы вместе с топом (hooks) — месяц и отсчёт считаем по ним
   const [sp, setSp] = useSearchParams();
   const which: Which = sp.get("m") === "prev" ? "prev" : "cur";
   const cur = mskMonth();
@@ -65,6 +67,10 @@ export default function TowerTop() {
 
 export function Board({ data, current, now }: { data: TowerLeaderboard; current: boolean; now?: number }) {
   const groups = data.prizes ?? [];
+  // закрытый месяц: у призовых мест — сумма и статус выплаты из замороженных итогов
+  const closed = !current && !!data.closed;
+  const mark = (e?: TowerLeaderEntry, fallback?: string): Mark | undefined =>
+    closed ? (e?.prize_ton ? { ton: e.prize_ton, status: e.prize_status } : undefined) : fallback ? { ton: fallback } : undefined;
   const lastPrize = groups.length ? groups[groups.length - 1].to_place : 0;
   const top = data.entries.slice(0, 3);
   const rest = data.entries.slice(3);
@@ -110,7 +116,7 @@ export function Board({ data, current, now }: { data: TowerLeaderboard; current:
         ) : (
           <ol className="tt-podium" aria-label="Первая тройка">
             {[1, 0, 2].map((i) => (
-              <Step key={i} place={i + 1} e={top[i]} prize={prizeOf(groups, i + 1)?.ton} />
+              <Step key={i} place={i + 1} e={top[i]} prize={mark(top[i], prizeOf(groups, i + 1)?.ton)} />
             ))}
           </ol>
         )}
@@ -118,7 +124,20 @@ export function Board({ data, current, now }: { data: TowerLeaderboard; current:
         <PrizeLine data={data} current={current} />
       </Panel>
 
-      <p className="tt-rules ui-onbg">Лучший забег месяца · при равенстве выше тот, кто набрал раньше · хватит бесплатных попыток</p>
+      {closed && groups.length > 0 ? (
+        <p className="tt-legend ui-onbg" aria-hidden="true">
+          <span className="tt-prize paid">
+            <PrizeIcon status="paid" />
+            выплачено
+          </span>
+          <span className="tt-prize awaiting">
+            <PrizeIcon status="awaiting" />
+            ждёт выплаты
+          </span>
+        </p>
+      ) : (
+        <p className="tt-rules ui-onbg">Лучший забег месяца · при равенстве выше тот, кто набрал раньше · хватит бесплатных попыток</p>
+      )}
 
       {rest.length > 0 && (
         <Panel className="tt-list" aria-label="Места с 4-го">
@@ -137,7 +156,7 @@ export function Board({ data, current, now }: { data: TowerLeaderboard; current:
                       Ниже — без приза
                     </li>
                   ) : null}
-                  <Row e={e} prize={g && !band ? g.ton : undefined} />
+                  <Row e={e} prize={mark(e, g && !band ? g.ton : undefined)} />
                 </Fragment>
               );
             })}
@@ -168,7 +187,11 @@ export function Board({ data, current, now }: { data: TowerLeaderboard; current:
                 <span className="tt-rank">{me.rank}</span>
                 <span className="tt-name">
                   Вы
-                  {current ? <PinGap data={data} rank={me.rank ?? 0} score={me.score ?? 0} /> : null}
+                  {current ? (
+                    <PinGap data={data} rank={me.rank ?? 0} score={me.score ?? 0} />
+                  ) : closed && me.prize_ton ? (
+                    <span className="tt-gap">{`Приз ${ton(me.prize_ton)} · ${STATUS_WORD[me.prize_status ?? "awaiting"]}`}</span>
+                  ) : null}
                 </span>
                 <span className="tt-score">{fmt(me.score ?? 0)}</span>
               </div>
@@ -220,7 +243,40 @@ function PinGap({ data, rank, score }: { data: TowerLeaderboard; rank: number; s
   return t ? <span className="tt-gap">{t}</span> : null;
 }
 
-function Step({ place, e, prize }: { place: number; e?: TowerLeaderEntry; prize?: string }) {
+type Mark = { ton: string; status?: TowerPrizeStatus };
+
+const STATUS_WORD: Record<TowerPrizeStatus, string> = { paid: "выплачено", awaiting: "ждёт выплаты", voided: "аннулирован" };
+
+/** значок статуса приза: галочка — выплачено, часы — ждёт, черта — аннулирован (только stroke, без свечения) */
+function PrizeIcon({ status }: { status: TowerPrizeStatus }) {
+  return (
+    <svg className="tt-picon" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+      {status === "paid" ? (
+        <path d="M2.5 6.2 5 8.6l4.6-5" />
+      ) : status === "awaiting" ? (
+        <>
+          <circle cx="6" cy="6" r="4.2" />
+          <path d="M6 3.6V6l1.7 1.1" />
+        </>
+      ) : (
+        <path d="M2.5 6h7" />
+      )}
+    </svg>
+  );
+}
+
+/** приз места: сумма; у закрытого месяца — со статусом выплаты */
+function PrizeMark({ m }: { m: Mark }) {
+  return (
+    <span className={m.status ? `tt-prize ${m.status}` : "tt-prize"}>
+      {m.status ? <PrizeIcon status={m.status} /> : null}
+      {ton(m.ton)}
+      {m.status ? <span className="sr-only">{`, ${STATUS_WORD[m.status]}`}</span> : null}
+    </span>
+  );
+}
+
+function Step({ place, e, prize }: { place: number; e?: TowerLeaderEntry; prize?: Mark }) {
   return (
     <li className={`tt-step p${place}${e?.is_me ? " me" : ""}${e ? "" : " free"}`} aria-label={e ? `${place}-е место: ${e.is_me ? "вы" : e.name}, ${e.score}` : `${place}-е место свободно`}>
       <span className="tt-medal" aria-hidden="true">
@@ -228,18 +284,18 @@ function Step({ place, e, prize }: { place: number; e?: TowerLeaderEntry; prize?
       </span>
       <span className="tt-pname">{e ? (e.is_me ? "Вы" : e.name) : "свободно"}</span>
       <span className="tt-pscore">{e ? fmt(e.score) : "—"}</span>
-      {prize ? <span className="tt-prize">{ton(prize)}</span> : null}
+      {prize ? <PrizeMark m={prize} /> : null}
       <span className="tt-base" aria-hidden="true" />
     </li>
   );
 }
 
-function Row({ e, prize }: { e: TowerLeaderEntry; prize?: string }) {
+function Row({ e, prize }: { e: TowerLeaderEntry; prize?: Mark }) {
   return (
     <li className={e.is_me ? "tt-row me" : "tt-row"}>
       <span className="tt-rank">{e.rank}</span>
       <span className="tt-name">{e.is_me ? "Вы" : e.name}</span>
-      {prize ? <span className="tt-prize">{ton(prize)}</span> : null}
+      {prize ? <PrizeMark m={prize} /> : null}
       <span className="tt-score">{fmt(e.score)}</span>
     </li>
   );
@@ -254,7 +310,7 @@ export function placesWord(n: number) {
 
 /** Строка призов под пьедесталом: фонд, сколько мест сейчас и сколько игроков до следующего места. */
 export function prizeLines(data: TowerLeaderboard, current: boolean): { main: string; sub?: string; on: boolean } {
-  if (!current) return { main: "Итоги закрытого месяца не меняются", on: false };
+  if (!current) return data.closed ? closedLines(data) : { main: "Итоги закрытого месяца не меняются", on: false };
   if (data.prizes == null || !data.prize_budget_ton) return { main: "Призы пока не назначены", on: false };
   const fund = `Призовой фонд ${ton(data.prize_budget_ton)}`;
   const have = data.participants ?? data.total_players;
@@ -275,6 +331,35 @@ export function prizeLines(data: TowerLeaderboard, current: boolean): { main: st
   return { main: `${fund} · ${placesWord(n)}`, sub, on: true };
 }
 
+const NO_PRIZES: Record<string, string> = {
+  disabled: "Призы в этом месяце не разыгрывались",
+  no_budget: "Фонда не хватило на минимальный приз",
+  no_players: "Призов не было",
+};
+
+/** Подпись закрытого месяца: фонд и места на момент закрытия, сколько уже выплачено. */
+export function closedLines(data: TowerLeaderboard): { main: string; sub?: string; on: boolean } {
+  const n = data.prize_places ?? 0;
+  if (!data.prizes?.length || !n) {
+    const why =
+      data.close_reason === "few_participants"
+        ? `Призов не было: меньше ${players(data.min_participants)}`
+        : (NO_PRIZES[data.close_reason ?? ""] ?? "Призов не было");
+    return { main: why, sub: "Итоги закрыты и не меняются", on: false };
+  }
+  const planned = data.prize_total_ton ?? "0";
+  const paid = data.prize_paid_ton ?? "0";
+  const waiting = Number(data.prize_awaiting_ton ?? 0) > 0;
+  const sub = !waiting
+    ? Number(paid) > 0
+      ? `Призы выплачены · ${ton(paid)}`
+      : "Призы аннулированы"
+    : Number(paid) > 0
+      ? `Выплачено ${ton(paid)} · ждут выплаты ${ton(data.prize_awaiting_ton ?? "0")}`
+      : `${ton(data.prize_awaiting_ton ?? planned)} ждут выплаты`;
+  return { main: `Фонд ${ton(data.prize_budget_ton ?? planned)} · ${placesWord(n)}`, sub, on: true };
+}
+
 function PrizeLine({ data, current }: { data: TowerLeaderboard; current: boolean }) {
   const l = prizeLines(data, current);
   return (
@@ -287,12 +372,12 @@ function PrizeLine({ data, current }: { data: TowerLeaderboard; current: boolean
 
 /** «До итогов 12 д 04:05:09» — тикает раз в секунду; на нуле перезапрашивает топ (начался новый месяц) */
 export function MonthClock({ endsAt, now: fixed }: { endsAt: string; now?: number }) {
-  const [now, setNow] = useState(() => fixed ?? Date.now());
+  const [now, setNow] = useState(() => fixed ?? serverNow());
   const qc = useQueryClient();
   const c = countdown(endsAt, now);
   useEffect(() => {
     if (fixed != null || c.over) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    const id = window.setInterval(() => setNow(serverNow()), 1000);
     return () => window.clearInterval(id);
   }, [fixed, c.over]);
   useEffect(() => {

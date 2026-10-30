@@ -18,6 +18,7 @@ import {
 } from "@/components/ui";
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
+import { TowerPrizesAdmin } from "@/components/TowerPrizesAdmin";
 
 function formatDate(iso: string) {
   try {
@@ -120,10 +121,11 @@ function WithdrawCard({
         />
       </Field>
 
-      <div className="flex gap-2">
+      {/* столбиком: в строку две подписи не влезают на 360–390 px и раздвигали страницу */}
+      <div className="grid gap-2">
         <button
           type="button"
-          className="ui-btn primary flex-1"
+          className="ui-btn primary"
           disabled={!!busy}
           onClick={() => act(true)}
         >
@@ -131,7 +133,7 @@ function WithdrawCard({
         </button>
         <button
           type="button"
-          className="ui-btn danger flex-1"
+          className="ui-btn danger"
           disabled={!!busy}
           onClick={() => act(false)}
         >
@@ -204,6 +206,9 @@ export function WithdrawQueue() {
           <WithdrawCard key={item.id} item={item} onDone={() => q.refetch()} />
         ))}
       </AnimatePresence>
+
+      {/* призы «Башни» — решает и платит только владелец */}
+      {me?.is_owner ? <TowerPrizesAdmin /> : null}
 
       <BackLink />
     </div>

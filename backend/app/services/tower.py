@@ -20,7 +20,7 @@ from datetime import date, datetime
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tower import TowerDailyAttempts, TowerGame, TowerMonthlyBest
+from app.models.tower import TowerDailyAttempts, TowerGame, TowerMonth, TowerMonthlyBest
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services import gameday
@@ -147,6 +147,7 @@ async def my_status(session: AsyncSession, *, user_id: int, now: datetime | None
         "used_today": min(used, FREE_ATTEMPTS_PER_DAY),
         "left_today": max(0, FREE_ATTEMPTS_PER_DAY - used),
         "next_reset_at": gameday.next_reset(now).isoformat(),
+        "server_time": now.isoformat(),
         "month": month.strftime("%Y-%m"),
         "best_month": best,
         "rank": rank,
@@ -302,8 +303,16 @@ async def leaderboard(
     now: datetime | None = None,
 ) -> dict:
     """Топ месяца: лучший счёт игрока (не сумма); при равенстве выше тот, кто набрал раньше."""
+    now = now or gameday.now_utc()
     month = month or month_of(now)
     limit = max(1, min(int(limit), LEADERBOARD_MAX))
+    if month < month_of(now):
+        # закрытый месяц — из сохранённых итогов (места и призы заморожены, у призов статус выплаты)
+        from app.services import tower_close
+
+        tm = await session.scalar(select(TowerMonth).where(TowerMonth.month == month))
+        if tm is not None:
+            return await tower_close.closed_board(session, tm, user_id=user_id, limit=limit, now=now)
     q = (
         select(TowerMonthlyBest, User)
         .join(User, User.id == TowerMonthlyBest.user_id)
@@ -340,8 +349,8 @@ async def leaderboard(
             )
             or 0
         )
-    # призы — только текущего месяца и только если владелец их включил; истории бюджета нет —
-    # прошлый месяц без призов. Денег здесь не двигаем: это расчёт по текущему числу участников.
+    # призы — только текущего месяца и только если владелец их включил (прошлый месяц без строки итогов —
+    # например, ещё не закрыт — показываем без призов). Денег здесь не двигаем: это расчёт по текущему числу участников.
     current = month == month_of(now)
     plan = tower_prizes.plan(cfg, participants) if cfg["enabled"] and current else None
     # счёт последнего призового места — для строки «+X до N-го места» у тех, кто ниже
@@ -361,6 +370,7 @@ async def leaderboard(
         "total_players": int(total or 0),
         "me": {"rank": rank, "score": best} if rank is not None else None,
         "month_ends_at": month_end(month).isoformat(),
+        "server_time": now.isoformat(),
         "min_participants": cfg["min_participants"],
         "min_score": cfg["min_score"],
         "participants": participants,
