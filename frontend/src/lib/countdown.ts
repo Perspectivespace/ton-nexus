@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useSecondTick } from "@/lib/clock";
 
 /** «23:41:05» — часы:минуты:секунды до момента; меньше нуля не бывает. */
 export function formatLeft(ms: number) {
@@ -17,26 +18,21 @@ export function nextMskMidnight(now = Date.now()) {
 
 /**
  * Живой отсчёт до `target` (мс, по часам сервера). `offset` — поправка «сервер минус телефон».
- * Тикает раз в секунду, пока цель в будущем; по достижении зовёт `onDone` один раз.
+ * Тикает от общих секундных часов (`lib/clock`), пока цель в будущем; по достижении зовёт `onDone` один раз.
+ * Компонент только перерисовывает текст — без перемонтирования и повторных анимаций.
  */
 export function useCountdown(target: number | null, offset = 0, onDone?: () => void) {
-  const [now, setNow] = useState(() => Date.now() + offset);
+  const live = target != null && Date.now() + offset < target;
+  useSecondTick(live);
+  const now = Date.now() + offset;
+  const left = target == null ? null : Math.max(0, target - now);
+  const done = useRef<number | null>(null);
+  const cb = useRef(onDone);
+  cb.current = onDone;
   useEffect(() => {
-    if (target == null) return;
-    setNow(Date.now() + offset);
-    const id = window.setInterval(() => {
-      const t = Date.now() + offset;
-      setNow(t);
-      if (t >= target) {
-        window.clearInterval(id);
-        onDone?.();
-      }
-    }, 1000);
-    return () => window.clearInterval(id);
-    // onDone намеренно не в зависимостях: достаточно последнего на момент запуска
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, offset]);
-  if (target == null) return null;
-  const left = target - now;
-  return left > 0 ? left : 0;
+    if (target == null || left == null || left > 0 || done.current === target) return;
+    done.current = target;
+    cb.current?.();
+  }, [target, left]);
+  return left;
 }

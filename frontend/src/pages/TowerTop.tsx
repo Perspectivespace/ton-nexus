@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ErrorState, Panel, ScreenHeader, SkeletonCard, Tabs } from "@/components/ui";
@@ -6,6 +6,7 @@ import { BackLink } from "@/components/BackLink";
 import { useScreenBack } from "@/lib/backButton";
 import { haptic } from "@/lib/haptics";
 import { serverNow } from "@/lib/cityPhase";
+import { useSecondTick } from "@/lib/clock";
 import { closesOn, countdown, formatCountdown, monthPrepositional, monthTitle, mskMonth, prevMonth, spokenCountdown } from "@/lib/tower/month";
 import { useTowerLeaderboard } from "@/api/hooks";
 import type { TowerLeaderboard, TowerLeaderEntry, TowerPrize, TowerPrizeStatus } from "@/api/types";
@@ -372,14 +373,10 @@ function PrizeLine({ data, current }: { data: TowerLeaderboard; current: boolean
 
 /** «До итогов 12 д 04:05:09» — тикает раз в секунду; на нуле перезапрашивает топ (начался новый месяц) */
 export function MonthClock({ endsAt, now: fixed }: { endsAt: string; now?: number }) {
-  const [now, setNow] = useState(() => fixed ?? serverNow());
   const qc = useQueryClient();
-  const c = countdown(endsAt, now);
-  useEffect(() => {
-    if (fixed != null || c.over) return;
-    const id = window.setInterval(() => setNow(serverNow()), 1000);
-    return () => window.clearInterval(id);
-  }, [fixed, c.over]);
+  const live = fixed == null && !countdown(endsAt, serverNow()).over;
+  useSecondTick(live);
+  const c = countdown(endsAt, fixed ?? serverNow());
   useEffect(() => {
     if (c.over && fixed == null) void qc.invalidateQueries({ queryKey: ["tower", "leaderboard"] });
   }, [c.over, fixed, qc]);
