@@ -718,3 +718,61 @@ export function useWalletUnlink() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["wallet"] }),
   });
 }
+
+
+export type DepositInfo = {
+  enabled: boolean;
+  project_address: string;
+  memo: string;
+  min_ton: string;
+  network: string;
+};
+
+export function useDepositInfo() {
+  return useQuery({
+    queryKey: ["deposits", "info"],
+    queryFn: () => api<DepositInfo>("/api/v1/deposits/info"),
+  });
+}
+
+export function useMyDeposits() {
+  return useQuery({
+    queryKey: ["deposits", "mine"],
+    queryFn: () => api<{ id: number; amount_ton: string; status: string; created_at: string }[]>("/api/v1/deposits/mine"),
+  });
+}
+
+export type AdminDeposit = {
+  id: number;
+  tx_hash: string;
+  amount_ton: string;
+  status: "unmatched" | "below_min" | "credited" | "manual" | "ignored";
+  memo: string | null;
+  comment: string | null;
+  from_address: string | null;
+  user_id: number | null;
+  utime: number | null;
+  created_at: string;
+};
+
+/** Касса → «Пополнения»: незачисленные переводы (без мемо или меньше минимума) */
+export function useAdminDeposits(enabled = true) {
+  return useQuery({
+    queryKey: ["deposits", "admin"],
+    queryFn: () => api<AdminDeposit[]>("/api/v1/deposits"),
+    enabled,
+  });
+}
+
+/** Зачислить перевод вручную (только владелец) — через balance.credit на сервере */
+export function useAssignDeposit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, telegram_id, note }: { id: number; telegram_id: number; note?: string | null }) =>
+      api<{ id: number; status: string; amount_ton: string }>(`/api/v1/deposits/${id}/assign`, {
+        method: "POST",
+        body: JSON.stringify({ telegram_id, note: note || null }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["deposits", "admin"] }),
+  });
+}

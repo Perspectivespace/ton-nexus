@@ -50,7 +50,23 @@ function Field({
   const k = pkey(path);
   const err = ctx.errors[k];
   const hint = [m.hint, extraHint].filter(Boolean).join(" · ");
-  const numeric = m.kind !== "text" && m.kind !== "int_list";
+  const numeric = m.kind !== "text" && m.kind !== "int_list" && m.kind !== "select";
+  if (m.kind === "select") {
+    const cur = ctx.draft[k] ?? "";
+    const known = m.options?.some((o) => o.value === cur);
+    return (
+      <UiField label={m.label} error={err || undefined} hint={hint || undefined}>
+        <select className="ui-input" disabled={m.readOnly} value={cur} onChange={(e) => ctx.set(k, e.target.value)}>
+          {!known && <option value={cur}>{cur || "—"}</option>}
+          {m.options?.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </UiField>
+    );
+  }
   if (m.kind === "bool")
     return (
       <UiField label={m.label} error={err || undefined} hint={hint || undefined}>

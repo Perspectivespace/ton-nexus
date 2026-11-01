@@ -51,6 +51,21 @@ class WalletError(Exception):
         super().__init__(message)
 
 
+def normalize_address(value: str, *, testnet: bool = False) -> tuple[str, str]:
+    """Any TON address form (raw `0:<hex>` or friendly `EQ/UQ…`) -> (raw, non-bounceable friendly).
+
+    Raw form is the comparison key; the friendly `UQ…` form (`0Q…` on testnet) is what we show and send.
+    Raises WalletError on an invalid address.
+    """
+    try:
+        addr = Address((value or "").strip())
+    except Exception as e:  # pytoniq AddressError and malformed input
+        raise WalletError("Неверный адрес TON") from e
+    raw = addr.to_str(is_user_friendly=False)
+    friendly = addr.to_str(is_user_friendly=True, is_bounceable=False, is_test_only=testnet)
+    return raw, friendly
+
+
 def _domain_from_webapp() -> str:
     url = (app_settings.webapp_url or "").rstrip("/")
     if "://" in url:

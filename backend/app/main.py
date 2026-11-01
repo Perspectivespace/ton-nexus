@@ -1,6 +1,8 @@
 """FastAPI entrypoint — TON Nexus."""
 
-from contextlib import asynccontextmanager
+import asyncio
+import logging
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +11,25 @@ from app.api import api_router
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.services.economy_seed import seed_economy
+from app.services.ton_deposits import poll_once
+
+
+async def deposit_loop():
+    """Фоновый опрос toncenter: пополнения TON. Ошибки не останавливают цикл."""
+    from app.services.economy import get_setting
+
+    while True:
+        try:
+            await poll_once(SessionLocal)
+        except Exception:
+            logging.getLogger(__name__).exception("[deposits] poll error")
+        try:
+            async with SessionLocal() as s:
+                cfg = await get_setting(s, "ton_deposits") or {}
+                interval = min(max(int(cfg.get("poll_seconds", 15)), 5), 120)
+        except Exception:
+            interval = 15
+        await asyncio.sleep(interval)
 
 
 @asynccontextmanager
@@ -19,7 +40,11 @@ async def lifespan(app: FastAPI):
             await session.commit()
     except Exception as e:
         print(f"[startup] seed_economy skipped: {e}")
+    task = asyncio.create_task(deposit_loop())
     yield
+    task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
 
 
 app = FastAPI(

@@ -104,6 +104,8 @@ async def set_setting(
             raise EconomyAdminError(e.message) from e
     elif key == "ton_wallet":
         value = _normalize_ton_wallet(value)
+    elif key == "ton_deposits":
+        value = _normalize_ton_deposits(value)
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
     if row:
@@ -132,6 +134,43 @@ async def bulk_set(session: AsyncSession, updates: dict[str, Any]) -> list[Setti
     return out
 
 
+def _normalize_ton_deposits(v: dict) -> dict:
+    """Пополнение TON: адрес проекта приводится к одной форме (UQ…), включить можно только с адресом."""
+    from decimal import Decimal, InvalidOperation
+
+    from app.services.ton_wallet import WalletError, normalize_address
+
+    if not isinstance(v, dict):
+        raise EconomyAdminError("Настройки пополнения должны быть объектом")
+    out = dict(v)
+    out.pop("network", None)  # сеть одна на всё — берётся из ton_wallet.network
+    addr = str(out.get("project_address") or "").strip()
+    if addr:
+        try:
+            _, addr = normalize_address(addr)
+        except WalletError as e:
+            raise EconomyAdminError("Неверный адрес кошелька проекта") from e
+    out["project_address"] = addr
+    out["enabled"] = bool(out.get("enabled", False))
+    if out["enabled"] and not addr:
+        raise EconomyAdminError("Сначала укажите кошелёк проекта")
+    try:
+        min_ton = Decimal(str(out.get("min_ton", "0.1")))
+    except (InvalidOperation, ValueError) as e:
+        raise EconomyAdminError("Минимум пополнения — число") from e
+    if not min_ton.is_finite() or min_ton <= 0:
+        raise EconomyAdminError("Минимум пополнения должен быть больше 0")
+    out["min_ton"] = str(min_ton)
+    try:
+        poll = int(out.get("poll_seconds", 15))
+    except (TypeError, ValueError) as e:
+        raise EconomyAdminError("Интервал опроса — целое число секунд") from e
+    if not 5 <= poll <= 120:
+        raise EconomyAdminError("Интервал опроса — от 5 до 120 секунд")
+    out["poll_seconds"] = poll
+    return out
+
+
 def _normalize_ton_wallet(v: dict) -> dict:
     if not isinstance(v, dict):
         raise EconomyAdminError("Настройки кошелька должны быть объектом")
@@ -147,6 +186,8 @@ def _normalize_ton_wallet(v: dict) -> dict:
 
 
 SETTING_CATALOG: list[dict[str, str]] = [
+    {"key": "ton_deposits", "group": "ton", "label": "Пополнение TON"},
+    {"key": "ton_wallet", "group": "ton", "label": "Кошелёк TON"},
     {"key": "upgrade_base_cost", "group": "miner_upgrade", "label": "Базовая цена усиления"},
     {"key": "upgrade_cost_scale", "group": "miner_upgrade", "label": "Надбавка цены за уровни"},
     {"key": "upgrade_type_weights", "group": "miner_upgrade", "label": "Веса колеса типа"},

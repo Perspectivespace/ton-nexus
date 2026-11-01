@@ -6,6 +6,7 @@ from app.models.task import Task, TaskSubmission
 from app.models.tower import TowerDailyAttempts, TowerGame, TowerMonth, TowerMonthlyBest, TowerMonthResult
 from app.models.user import User
 from app.models.wallet import UserWallet, TonProofNonce
+from app.models.deposit import TonDeposit, ChainCursor
 from app.models.withdraw import WithdrawRequest
 from app.models.xp_event import XpEvent
 
@@ -13,6 +14,8 @@ __all__ = [
     "User",
     "UserWallet",
     "TonProofNonce",
+    "TonDeposit",
+    "ChainCursor",
     "BalanceHistory",
     "Miner",
     "MinerUpgradeLog",

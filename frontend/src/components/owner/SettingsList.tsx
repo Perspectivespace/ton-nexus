@@ -15,9 +15,10 @@ const GROUP_RU: Record<string, string> = {
   roulette: "Колесо удачи",
   tower: "Башня",
   ratings: "Рейтинги",
+  ton: "TON",
   custom: "Прочее",
 };
-const GROUP_ORDER = ["miner", "miner_upgrade", "roulette", "tower", "ratings", "daily", "tasks", "withdraw", "growth", "progression", "custom"];
+const GROUP_ORDER = ["miner", "miner_upgrade", "roulette", "tower", "ratings", "daily", "tasks", "withdraw", "ton", "growth", "progression", "custom"];
 
 const titleOf = (s: EconomySetting) => SETTINGS[s.key]?.title || s.label || "Настройка";
 
