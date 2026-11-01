@@ -23,6 +23,8 @@ export default defineConfig({
           if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) return "vendor-query";
           if (/[\\/]node_modules[\\/](framer-motion|motion-dom|motion-utils)[\\/]/.test(id)) return "vendor-motion";
           if (/[\\/]node_modules[\\/]@twa-dev[\\/]/.test(id)) return "tg-sdk";
+          // TON Connect — только по требованию (шторки «Кошелёк» и «Пополнение»), не в чанке Wallet
+          if (/[\\/]node_modules[\\/](@tonconnect|solid-js|ua-parser-js|deepmerge)[\\/]/.test(id)) return "vendor-tonconnect";
         },
       },
     },
