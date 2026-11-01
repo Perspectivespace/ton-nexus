@@ -59,6 +59,7 @@ DEFAULTS: dict[str, tuple[object, str]] = {
     "miner_session_hours": ({"hours": 12}, "Длительность сессии (часы)"),
     "miner_base_rate": ({"ton_per_hour": "0.00035"}, "Базовая ставка TON/час"),
     "ton_wallet": ({"enabled": True, "network": "mainnet", "unique_address": True, "proof_ttl_minutes": 15}, "Настройки кошелька TON"),
+    "ton_deposits": ({"enabled": False, "project_address": "", "min_ton": "0.1", "poll_seconds": 10, "network": "mainnet"}, "Пополнение TON"),
     "miner_power_mult": ({"per_level": "0.08"}, "Множитель за Мощность"),
     "miner_capacity_mult": ({"per_level": "0.06"}, "Ёмкость: +доля добычи за цикл за уровень выше 1"),
     "miner_luck_roll_bp": (

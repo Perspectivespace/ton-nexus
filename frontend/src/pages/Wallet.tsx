@@ -9,6 +9,7 @@ import { ProfileRanks } from "@/components/RatingLinks";
 import { api } from "@/api/client";
 import { IconGear, IconHistory, IconOut, IconWallet } from "@/components/icons";
 import { WalletConnectSheet } from "@/components/WalletConnectSheet";
+import { TopUpSheet } from "@/components/TopUpSheet";
 import { LazyTonConnectProvider } from "@/lib/tonconnect";
 import { prefersReducedMotion } from "@/components/ui/press";
 import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, Sheet, Tag, useToast, type Tone } from "@/components/ui";
@@ -39,7 +40,7 @@ export function levelTag(me: Pick<MeOut, "level" | "xp"> | undefined) {
   return `ур. ${me.level} · ${me.xp.toLocaleString("ru-RU")} XP`;
 }
 
-type Panel3 = "withdraw" | "history" | "settings" | "wallet" | null;
+type Panel3 = "withdraw" | "history" | "settings" | "wallet" | "topup" | null;
 
 /**
  * «Профиль» (/wallet, псевдоним /profile, DESIGN.md §14.1): уровень в шапке, баланс,
@@ -51,6 +52,7 @@ export function Wallet() {
   const limits = useWithdrawLimits();
   const qc = useQueryClient();
   const { data: walletInfo } = useWallet();
+  const depositInfo = { enabled: false, project_address: "", memo: "", min_ton: "0.1" };
   const unlink = useWalletUnlink();
   const [typed, setAmount] = useState<string | null>(null);
   const [wallet, setWallet] = useState("");
@@ -151,6 +153,12 @@ export function Wallet() {
         />
         <ListRow
           icon={<IconOut size={20} />}
+          title="Пополнить"
+          sub="TON · от 0.1 TON"
+          onClick={() => setSheet("topup")}
+        />
+        <ListRow
+          icon={<IconOut size={20} />}
           title="Вывод"
           sub={
             pending
@@ -246,6 +254,9 @@ export function Wallet() {
         )}
       </Sheet>
 
+      <Sheet open={sheet === "topup"} onClose={closeSheet} title="Пополнение">
+        <TopUpSheet info={depositInfo} onClose={closeSheet} />
+      </Sheet>
       <Sheet open={sheet === "wallet"} onClose={closeSheet} title="Кошелёк TON">
         <LazyTonConnectProvider>
           <WalletConnectSheet
