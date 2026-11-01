@@ -1,6 +1,6 @@
 """TON wallet linking API."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,8 +46,9 @@ class LinkBody(BaseModel):
 
 
 @router.get("/tonconnect-manifest.json")
-async def manifest():
+async def manifest(response: Response):
     base = settings.webapp_url.rstrip("/")
+    response.headers["Cache-Control"] = "public, max-age=300"
     return {
         "url": base,
         "name": "TON Nexus",

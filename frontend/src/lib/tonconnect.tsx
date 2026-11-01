@@ -1,21 +1,18 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 
-const TonConnectUIProvider = lazy(() =>
+const Provider = lazy(() =>
   import("@tonconnect/ui-react").then((m) => ({ default: m.TonConnectUIProvider }))
 );
 
-export function LazyTonConnectProvider({ children }: { children: React.ReactNode }) {
+export function LazyTonConnectProvider({ children }: { children: ReactNode }) {
+  const manifestUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/api/v1/wallet/tonconnect-manifest.json`
+    : "/api/v1/wallet/tonconnect-manifest.json";
   return (
     <Suspense fallback={null}>
-      <TonConnectUIProvider manifestUrl="/api/v1/wallet/tonconnect-manifest.json">
+      <Provider manifestUrl={manifestUrl}>
         {children}
-      </TonConnectUIProvider>
+      </Provider>
     </Suspense>
   );
-}
-
-export async function openTonConnectModal(payload: string) {
-  const { TonConnectUI } = await import("@tonconnect/ui-react");
-  // Helper used by the wallet sheet; actual UI instance is created inside the sheet.
-  return { TonConnectUI, payload };
 }

@@ -246,12 +246,14 @@ export function Wallet() {
         {walletInfo?.wallet ? (
           <div className="space-y-4">
             <p className="font-mono text-[13px] break-all">{walletInfo.wallet.address}</p>
-            <HoldButton onConfirm={() => unlink.mutate()}>Отвязать</HoldButton>
+            <Button className="w-full" onClick={() => { navigator.clipboard?.writeText(walletInfo.wallet!.address); toast({ title: "Скопировано" }); }}>Скопировать</Button>
+            <Button className="w-full" onClick={() => toast({ title: "Смена кошелька — в следующем обновлении" })}>Сменить кошелёк</Button>
+            <HoldButton block onConfirm={() => unlink.mutate(undefined, { onError: (e) => toast({ kind: "danger", title: e instanceof Error ? e.message : "Ошибка" }) })}>Отвязать</HoldButton>
           </div>
         ) : (
           <div className="space-y-4">
             <p className="text-[13px] text-[var(--text-dim)]">Подтвердите, что кошелёк ваш: приложение кошелька попросит подпись. Деньги не списываются.</p>
-            <Button className="w-full" onClick={() => toast("Откройте кошелёк в Telegram для привязки")}>Привязать кошелёк</Button>
+            <Button className="w-full !h-[52px]" onClick={() => toast({ title: "Откройте кошелёк в Telegram для привязки" })}>Привязать кошелёк</Button>
           </div>
         )}
       </Sheet>
