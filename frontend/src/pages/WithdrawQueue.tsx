@@ -14,11 +14,13 @@ import {
   EmptyPanel,
   Readout,
   Field,
+  Tabs,
   useToast,
 } from "@/components/ui";
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
 import { TowerPrizesAdmin } from "@/components/TowerPrizesAdmin";
+import { DepositsAdmin } from "@/components/DepositsAdmin";
 
 function formatDate(iso: string) {
   try {
@@ -65,10 +67,18 @@ function WithdrawCard({
         approve,
         note: note.trim() || null,
       });
-      toast({ kind: approve ? "ok" : "info", title: approve ? "Вывод одобрен" : "Вывод отклонен", sub: `#${item.id}` });
+      toast({
+        kind: approve ? "ok" : "info",
+        title: approve ? "Вывод одобрен" : "Вывод отклонен",
+        sub: `#${item.id}`,
+      });
       onDone();
     } catch (e) {
-      toast({ kind: "danger", title: "Решение не сохранено", sub: e instanceof Error ? e.message : "Ошибка" });
+      toast({
+        kind: "danger",
+        title: "Решение не сохранено",
+        sub: e instanceof Error ? e.message : "Ошибка",
+      });
     } finally {
       setBusy(null);
     }
@@ -87,13 +97,19 @@ function WithdrawCard({
           <p className="text-[11px] font-mono text-[var(--text-dim)]">
             заявка #{item.id} · пользователь #{item.user_id}
           </p>
-          <p className="mt-0.5 text-[11px] text-[var(--text-dim)]">{formatDate(item.created_at)}</p>
+          <p className="mt-0.5 text-[11px] text-[var(--text-dim)]">
+            {formatDate(item.created_at)}
+          </p>
         </div>
         <StatusPill tone="warn">в холде</StatusPill>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        <Readout label="Сумма (в холде)" value={Number(item.amount).toFixed(4)} unit="TON" />
+        <Readout
+          label="Сумма (в холде)"
+          value={Number(item.amount).toFixed(4)}
+          unit="TON"
+        />
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">
             Кошелёк
@@ -154,6 +170,7 @@ export function WithdrawQueue() {
   useScreenBack("/");
   const { data: me, isLoading: meLoading } = useMe();
   const q = usePendingWithdrawals();
+  const [tab, setTab] = useState<"withdraw" | "deposits">("withdraw");
 
   const allowed = me?.is_owner || me?.is_admin;
 
@@ -183,32 +200,55 @@ export function WithdrawQueue() {
         eyebrow="Управление"
         title="Касса"
         action={
-          <StatusPill tone={list.length ? "warn" : "ok"}>{list.length} в холде</StatusPill>
+          <StatusPill tone={list.length ? "warn" : "ok"}>
+            {list.length} в холде
+          </StatusPill>
         }
       />
 
-      <div className="ui-cut hero p-4">
-        <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
-          Средства уже списаны с баланса и лежат в холде. «Одобрить» — вы подтверждаете, что выплатили
-          вручную. «Отклонить» — TON возвращается пользователю.
-        </p>
-      </div>
+      <Tabs
+        label="Раздел кассы"
+        items={[
+          { value: "withdraw", label: "Вывод" },
+          { value: "deposits", label: "Пополнения" },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
-      {list.length === 0 && (
-        <EmptyPanel
-          title="Очередь пуста"
-          body="Нет заявок, ждущих решения. Новые появятся здесь."
-        />
+      {tab === "deposits" ? (
+        <DepositsAdmin isOwner={!!me?.is_owner} />
+      ) : (
+        <>
+          <div className="ui-cut hero p-4">
+            <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
+              Средства уже списаны с баланса и лежат в холде. «Одобрить» — вы
+              подтверждаете, что выплатили вручную. «Отклонить» — TON
+              возвращается пользователю.
+            </p>
+          </div>
+
+          {list.length === 0 && (
+            <EmptyPanel
+              title="Очередь пуста"
+              body="Нет заявок, ждущих решения. Новые появятся здесь."
+            />
+          )}
+
+          <AnimatePresence mode="popLayout">
+            {list.map((item) => (
+              <WithdrawCard
+                key={item.id}
+                item={item}
+                onDone={() => q.refetch()}
+              />
+            ))}
+          </AnimatePresence>
+
+          {/* призы «Башни» — решает и платит только владелец */}
+          {me?.is_owner ? <TowerPrizesAdmin /> : null}
+        </>
       )}
-
-      <AnimatePresence mode="popLayout">
-        {list.map((item) => (
-          <WithdrawCard key={item.id} item={item} onDone={() => q.refetch()} />
-        ))}
-      </AnimatePresence>
-
-      {/* призы «Башни» — решает и платит только владелец */}
-      {me?.is_owner ? <TowerPrizesAdmin /> : null}
 
       <BackLink />
     </div>
