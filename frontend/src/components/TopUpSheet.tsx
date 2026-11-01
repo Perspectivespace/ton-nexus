@@ -49,6 +49,7 @@ export function TopUpSheet({ info, onClose }: Props) {
       const rows = await api<{ status: string }[]>("/api/v1/deposits/check", { method: "POST" });
       qc.invalidateQueries({ queryKey: ["me"] });
       qc.invalidateQueries({ queryKey: ["deposits", "mine"] });
+      qc.invalidateQueries({ queryKey: ["balance"] });
       const credited = rows.filter((r) => r.status === "credited" || r.status === "manual").length;
       toast({ title: credited ? `Зачислено пополнений: ${credited}` : "Пока не видим перевод", sub: "Сеть подтверждает перевод за 5–30 секунд" });
     } catch (e) {
