@@ -6,7 +6,9 @@ import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
 import { ProfileRanks } from "@/components/RatingLinks";
 import { api } from "@/api/client";
-import { IconGear, IconHistory, IconOut } from "@/components/icons";
+import { IconGear, IconHistory, IconOut, IconWallet } from "@/components/icons";
+import { WalletConnectSheet } from "@/components/WalletConnectSheet";
+import { LazyTonConnectProvider } from "@/lib/tonconnect";
 import { prefersReducedMotion } from "@/components/ui/press";
 import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, Sheet, Tag, useToast, type Tone } from "@/components/ui";
 
@@ -139,7 +141,7 @@ export function Wallet() {
 
       <List>
         <ListRow
-          icon={<IconOut size={20} />}
+          icon={<IconWallet size={20} />}
           title="Кошелёк TON"
           sub={walletInfo?.wallet ? `${shortAddr(walletInfo.wallet.address)} · ${walletInfo.wallet.wallet_app || "кошелёк"}` : "Не привязан · нужен для пополнения и вывода"}
           trailing={<Tag tone={walletInfo?.wallet ? "ok" : "neutral"}>{walletInfo?.wallet ? "привязан" : "привязать"}</Tag>}
@@ -243,19 +245,13 @@ export function Wallet() {
       </Sheet>
 
       <Sheet open={sheet === "wallet"} onClose={closeSheet} title="Кошелёк TON">
-        {walletInfo?.wallet ? (
-          <div className="space-y-4">
-            <p className="font-mono text-[13px] break-all">{walletInfo.wallet.address}</p>
-            <Button className="w-full" onClick={() => { navigator.clipboard?.writeText(walletInfo.wallet!.address); toast({ title: "Скопировано" }); }}>Скопировать</Button>
-            <Button className="w-full" onClick={() => toast({ title: "Смена кошелька — в следующем обновлении" })}>Сменить кошелёк</Button>
-            <HoldButton block onConfirm={() => unlink.mutate(undefined, { onError: (e) => toast({ kind: "danger", title: e instanceof Error ? e.message : "Ошибка" }) })}>Отвязать</HoldButton>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-[13px] text-[var(--text-dim)]">Подтвердите, что кошелёк ваш: приложение кошелька попросит подпись. Деньги не списываются.</p>
-            <Button className="w-full !h-[52px]" onClick={() => toast({ title: "Откройте кошелёк в Telegram для привязки" })}>Привязать кошелёк</Button>
-          </div>
-        )}
+        <LazyTonConnectProvider>
+          <WalletConnectSheet
+            linked={walletInfo?.wallet ?? null}
+            onLinked={() => { setSheet(null); }}
+            onUnlink={() => unlink.mutate(undefined, { onError: (e) => toast({ kind: "danger", title: e instanceof Error ? e.message : "Ошибка" }) })}
+          />
+        </LazyTonConnectProvider>
       </Sheet>
 
       <Sheet open={sheet === "history"} onClose={closeSheet} title="История" sub="Заявки на вывод TON">

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -21,6 +21,12 @@ class UserWallet(Base):
     linked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     unlinked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     proof_nonce_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+    __table_args__ = (
+        Index("ix_user_wallets_active_user", "user_id", unique=True, sqlite_where=text("unlinked_at IS NULL"), postgresql_where=text("unlinked_at IS NULL")),
+        Index("ix_user_wallets_active_address", "address_raw", unique=True, sqlite_where=text("unlinked_at IS NULL"), postgresql_where=text("unlinked_at IS NULL")),
+    )
 
 
 class TonProofNonce(Base):

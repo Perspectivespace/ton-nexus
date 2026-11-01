@@ -100,6 +100,8 @@ async def set_setting(
     elif key == ratings.FRIEND_KEY:
         try:
             value = ratings.normalize_friend_rule(value)
+        if key == "ton_wallet":
+            value = _normalize_ton_wallet(value)
         except ratings.RatingError as e:
             raise EconomyAdminError(e.message) from e
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
@@ -128,6 +130,18 @@ async def bulk_set(session: AsyncSession, updates: dict[str, Any]) -> list[Setti
     for key, value in updates.items():
         out.append(await set_setting(session, key=key, value=value))
     return out
+
+
+def _normalize_ton_wallet(v: dict) -> dict:
+    net = v.get("network", "mainnet")
+    if net not in ("mainnet", "testnet"):
+        raise EconomyAdminError("Сеть должна быть mainnet или testnet")
+    ttl = int(v.get("proof_ttl_minutes", 15))
+    if not 1 <= ttl <= 30:
+        raise EconomyAdminError("Срок подтверждения — от 1 до 30 минут")
+    v["network"] = net
+    v["proof_ttl_minutes"] = ttl
+    return v
 
 
 SETTING_CATALOG: list[dict[str, str]] = [
