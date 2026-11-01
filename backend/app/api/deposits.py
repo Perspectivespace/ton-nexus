@@ -14,6 +14,8 @@ from app.models.user import User
 from app.services.economy import get_setting
 from app.services.roles import is_admin, is_platform_owner
 from app.services.ton_deposits import DepositError, assign_manual, ensure_memo
+from pytoniq_core import begin_cell
+import base64
 
 router = APIRouter(prefix="/deposits", tags=["deposits"])
 
@@ -34,6 +36,31 @@ async def info(user: User = Depends(get_current_user), db: AsyncSession = Depend
         "memo": memo,
         "min_ton": str(cfg.get("min_ton", "0.1")),
         "network": cfg.get("network", "mainnet"),
+    }
+
+
+@router.get("/tx-payload")
+async def tx_payload(amount: str = "1", user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    cfg = await get_setting(db, "ton_deposits") or {}
+    if not cfg.get("enabled") or not cfg.get("project_address"):
+        raise HTTPException(status_code=400, detail="Пополнение временно недоступно")
+    memo = await ensure_memo(db, user)
+    await db.commit()
+    try:
+        amt = Decimal(amount)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Неверная сумма")
+    min_ton = Decimal(str(cfg.get("min_ton", "0.1")))
+    if amt < min_ton:
+        raise HTTPException(status_code=400, detail=f"Минимум {min_ton} TON")
+    nano = int(amt * Decimal("1000000000"))
+    cell = begin_cell().store_uint(0, 32).store_snake_string(memo).end_cell()
+    payload = base64.b64encode(cell.to_boc()).decode()
+    return {
+        "to": cfg["project_address"],
+        "amount_nano": str(nano),
+        "payload": payload,
+        "valid_until": int(__import__("time").time()) + 600,
     }
 
 

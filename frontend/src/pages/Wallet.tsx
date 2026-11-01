@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink } from "@/api/hooks";
+import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink, useDepositInfo } from "@/api/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
@@ -52,7 +52,7 @@ export function Wallet() {
   const limits = useWithdrawLimits();
   const qc = useQueryClient();
   const { data: walletInfo } = useWallet();
-  const depositInfo = { enabled: false, project_address: "", memo: "", min_ton: "0.1" };
+  const { data: depositInfo } = useDepositInfo();
   const unlink = useWalletUnlink();
   const [typed, setAmount] = useState<string | null>(null);
   const [wallet, setWallet] = useState("");
@@ -154,7 +154,7 @@ export function Wallet() {
         <ListRow
           icon={<IconOut size={20} />}
           title="Пополнить"
-          sub="TON · от 0.1 TON"
+          sub={depositInfo?.enabled ? `TON · от ${depositInfo.min_ton} TON` : "Скоро"}
           onClick={() => setSheet("topup")}
         />
         <ListRow

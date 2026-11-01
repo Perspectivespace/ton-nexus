@@ -718,3 +718,26 @@ export function useWalletUnlink() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["wallet"] }),
   });
 }
+
+
+export type DepositInfo = {
+  enabled: boolean;
+  project_address: string;
+  memo: string;
+  min_ton: string;
+  network: string;
+};
+
+export function useDepositInfo() {
+  return useQuery({
+    queryKey: ["deposits", "info"],
+    queryFn: () => api<DepositInfo>("/api/v1/deposits/info"),
+  });
+}
+
+export function useMyDeposits() {
+  return useQuery({
+    queryKey: ["deposits", "mine"],
+    queryFn: () => api<{ id: number; amount_ton: string; status: string; created_at: string }[]>("/api/v1/deposits/mine"),
+  });
+}

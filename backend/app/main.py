@@ -9,9 +9,19 @@ from app.api import api_router
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.services.economy_seed import seed_economy
+from app.services.ton_deposits import poll_once
+import asyncio
 
 
 @asynccontextmanager
+async def deposit_loop():
+    while True:
+        try:
+            await poll_once(SessionLocal)
+        except Exception as e:
+            print(f"[deposits] poll error: {e}")
+        await asyncio.sleep(15)
+
 async def lifespan(app: FastAPI):
     try:
         async with SessionLocal() as session:
@@ -19,7 +29,9 @@ async def lifespan(app: FastAPI):
             await session.commit()
     except Exception as e:
         print(f"[startup] seed_economy skipped: {e}")
+    task = asyncio.create_task(deposit_loop())
     yield
+    task.cancel()
 
 
 app = FastAPI(

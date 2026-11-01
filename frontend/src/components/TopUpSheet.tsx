@@ -8,6 +8,7 @@ type Props = {
 };
 
 export function TopUpSheet({ info, onClose }: Props) {
+  void onClose;
   const [amount, setAmount] = useState("1");
   const [showManual, setShowManual] = useState(false);
   const toast = useToast();

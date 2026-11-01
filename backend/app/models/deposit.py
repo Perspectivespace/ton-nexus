@@ -16,7 +16,11 @@ class TonDeposit(Base):
     tx_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     amount_ton: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    amount_nano: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     memo: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    comment: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    lt: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    utime: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")  # credited, unmatched, below_min, manual
     from_address: Mapped[str | None] = mapped_column(String(66), nullable=True)
     credited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
