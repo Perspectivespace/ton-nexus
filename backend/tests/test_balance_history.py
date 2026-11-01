@@ -194,6 +194,7 @@ class ApiTests(Base_):
         self.assertEqual(r.status_code, 200, r.text)
         j = r.json()
         self.assertEqual([(i["kind"], i["amount"]) for i in j["items"]], [("promo", "1.5")])
+        self.assertEqual(j["items"][0]["detail"], "X")
         self.assertEqual((j["next_cursor"], j["pending"]), (None, []))
         self.assertEqual((await self.client.get("/api/v1/balance/history", params={"filter": "x"})).status_code, 400)
         self.assertEqual((await self.client.get("/api/v1/balance/history", params={"limit": 500})).status_code, 422)

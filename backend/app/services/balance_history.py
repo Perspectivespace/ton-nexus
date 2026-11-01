@@ -143,6 +143,19 @@ async def _withdraw_statuses(session: AsyncSession, user_id: int, rows: list[Bal
     return out
 
 
+# «Промо CODE» → «CODE», «Рулетка: 0.1 TON» → «0.1 TON»: подпись строки уже называет вид
+_DETAIL_PREFIX = {"promo": "Промо ", "wheel": "Рулетка: "}
+
+
+def _detail(kind: str, description: str | None) -> str | None:
+    if kind not in _DETAIL_KINDS or not description:
+        return None
+    pre = _DETAIL_PREFIX.get(kind)
+    if pre and description.startswith(pre):
+        return description[len(pre):] or None
+    return description
+
+
 def _item(r: BalanceHistory, req: WithdrawRequest | None) -> dict:
     kind = kind_of(r.operation_type, r.balance_type)
     sign = "" if r.operation_type == "credit" else "-"
@@ -151,7 +164,7 @@ def _item(r: BalanceHistory, req: WithdrawRequest | None) -> dict:
         "kind": kind,
         "group": group_of(kind, r.operation_type),
         "label": LABELS[kind],
-        "detail": r.description if kind in _DETAIL_KINDS else None,
+        "detail": _detail(kind, r.description),
         "amount": sign + _ton(r.amount),
         "balance_after": _ton(r.balance_after),
         "created_at": _aware(r.created_at).isoformat(),
@@ -185,7 +198,7 @@ async def _pending_deposits(session: AsyncSession, user_id: int) -> list[dict]:
             "kind": "deposit_pending",
             "group": "deposits",
             "label": "Пополнение TON",
-            "detail": "Меньше минимума — зачислим после проверки",
+            "detail": "Меньше минимума",
             "amount": _ton(d.amount_ton),
             "balance_after": None,
             "created_at": (
