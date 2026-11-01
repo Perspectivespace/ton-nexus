@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,6 +43,8 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(deposit_loop())
     yield
     task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
 
 
 app = FastAPI(
