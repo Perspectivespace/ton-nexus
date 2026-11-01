@@ -102,16 +102,8 @@ async def create_request(
     if pending:
         raise WithdrawStateError("you already have a pending withdraw")
 
-    await balance_svc.debit(
-        session,
-        user_id=user.id,
-        amount=amount,
-        balance_type="withdraw",
-        description="Заявка на вывод (hold)",
-        reference_type="withdraw",
-        reference_id=None,
-    )
-
+    # сначала заявка, чтобы строка журнала ссылалась на неё (история баланса показывает статус вывода);
+    # при нехватке средств debit бросает исключение и транзакция откатывается вместе с заявкой
     req = WithdrawRequest(
         user_id=user.id,
         amount=amount,
@@ -120,6 +112,16 @@ async def create_request(
     )
     session.add(req)
     await session.flush()
+
+    await balance_svc.debit(
+        session,
+        user_id=user.id,
+        amount=amount,
+        balance_type="withdraw",
+        description="Заявка на вывод (hold)",
+        reference_type="withdraw",
+        reference_id=req.id,
+    )
     return _view(req)
 
 
