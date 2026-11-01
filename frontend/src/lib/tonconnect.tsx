@@ -10,7 +10,11 @@ export function LazyTonConnectProvider({ children }: { children: ReactNode }) {
     : "/api/v1/wallet/tonconnect-manifest.json";
   return (
     <Suspense fallback={null}>
-      <Provider manifestUrl={manifestUrl}>
+      <Provider
+        manifestUrl={manifestUrl}
+        uiPreferences={{ theme: "DARK" as any, borderRadius: "m" }}
+        language="ru"
+      >
         {children}
       </Provider>
     </Suspense>

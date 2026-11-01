@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink } from "@/api/hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
 import { ProfileRanks } from "@/components/RatingLinks";
@@ -48,6 +49,7 @@ export function Wallet() {
   const { data: me, refetch } = useMe();
   const mine = useMyWithdrawals();
   const limits = useWithdrawLimits();
+  const qc = useQueryClient();
   const { data: walletInfo } = useWallet();
   const unlink = useWalletUnlink();
   const [typed, setAmount] = useState<string | null>(null);
@@ -143,7 +145,7 @@ export function Wallet() {
         <ListRow
           icon={<IconWallet size={20} />}
           title="Кошелёк TON"
-          sub={walletInfo?.wallet ? `${shortAddr(walletInfo.wallet.address)} · ${walletInfo.wallet.wallet_app || "кошелёк"}` : "Не привязан · нужен для пополнения и вывода"}
+          sub={walletInfo?.wallet ? `${shortAddr(walletInfo.wallet.address)} · ${walletInfo.wallet.wallet_app || "кошелёк"}` : "Не привязан"}
           trailing={<Tag tone={walletInfo?.wallet ? "ok" : "neutral"}>{walletInfo?.wallet ? "привязан" : "привязать"}</Tag>}
           onClick={() => setSheet("wallet")}
         />
@@ -248,7 +250,7 @@ export function Wallet() {
         <LazyTonConnectProvider>
           <WalletConnectSheet
             linked={walletInfo?.wallet ?? null}
-            onLinked={() => { setSheet(null); }}
+            onLinked={() => { qc.invalidateQueries({ queryKey: ["wallet"] }); setSheet(null); }}
             onUnlink={() => unlink.mutate(undefined, { onError: (e) => toast({ kind: "danger", title: e instanceof Error ? e.message : "Ошибка" }) })}
           />
         </LazyTonConnectProvider>

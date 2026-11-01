@@ -31,18 +31,14 @@ from app.services.gameday import now_utc
 
 logger = logging.getLogger(__name__)
 
-# Code hashes of known wallet versions (hex). Source: tonkeeper/tongo wallet.GetCodeHashByVer
-# and ton-connect/demo-dapp-backend state_init.go.
+# Code hashes of known wallet versions (hex).
+# Source: tonkeeper/tongo wallet.GetCodeHashByVer and ton-connect/demo-dapp-backend state_init.go.
+# v3r1/v3r2/v4r2 data layout: seqno:32 subwallet:32 pubkey:256
+# v5r1 data layout: is_signature_allowed:1 seqno:32 wallet_id:32 pubkey:256
 KNOWN_CODE_HASHES = {
-    # v3r1, v3r2, v4r1, v4r2 — data layout: seqno:32 subwallet:32 pubkey:256
-    "84dafa449f98a6987789ba232358072bc0f76dc4524002a5d0918b9a75d2d599": "v4r2",
-    "fe9530d3243853083ef2ef0b4c2908c0abf6fa1c31ea243aacaa5bf8c7d753f1": "v4r1",
     "587cc789eff1c84f46ec3797e45fc809a14ff5ae24f1e0c7a6a99cc9dc9061ff": "v3r2",
-    "9e78fbf3bde0b46b9c8f6a4f2f4c0e6e8c0e6e8c0e6e8c0e6e8c0e6e8c0e6e8": "v3r1",  # placeholder, real hash below
-}
-# Real hashes from pytoniq / tonkeeper (will be verified in tests):
-KNOWN_CODE_HASHES = {
     "84dafa449f98a6987789ba232358072bc0f76dc4524002a5d0918b9a75d2d599": "v4r2",
+    "20834b7b72b112147e1b2fb457b84e74d1a30f04f737d4f62a668e9552d9512b": "v5r1",
 }
 
 
@@ -103,28 +99,39 @@ def _extract_pubkey_from_stateinit(state_init_b64: str, expected_address_raw: st
     except Exception as e:
         raise WalletError("Этот кошелёк пока не поддерживается") from e
 
-    # Hash of StateInit cell must equal the address hash part
     state_hash = cell.hash.hex()
     addr_hash = expected_address_raw.split(":")[1] if ":" in expected_address_raw else expected_address_raw
     if state_hash != addr_hash:
         raise WalletError("Адрес не совпадает с данными кошелька")
 
-    # Parse StateInit TL-B: split_depth:(Maybe (## 5)) special:(Maybe TickTock) code:(Maybe ^Cell) data:(Maybe ^Cell) library:(HashmapE 256 SimpleLib)
-    # For simplicity we look for the data cell that contains the pubkey.
-    # Known layout for v3/v4: seqno(32) + subwallet(32) + pubkey(256)
+    # Get code hash from first ref (code cell)
+    code_hash = None
+    if cell.refs and len(cell.refs) >= 1:
+        code_hash = cell.refs[0].hash.hex()
+
+    version = KNOWN_CODE_HASHES.get(code_hash or "")
+    if not version:
+        # Unknown code — would call get_public_key via toncenter here (task 02 adds API key).
+        # For now reject.
+        raise WalletError("Этот кошелёк пока не поддерживается")
+
     try:
-        # pytoniq Cell.begin_parse
-        s = cell.begin_parse()
-        # Skip optional split_depth and special (usually empty)
-        # This is a simplified parser; full TL-B parsing is complex.
-        # We rely on the fact that for standard wallets the data cell is the second ref.
         if cell.refs and len(cell.refs) >= 2:
             data_cell = cell.refs[1]
             ds = data_cell.begin_parse()
-            # seqno:32, subwallet:32, pubkey:256
-            ds.skip_bits(64)
-            pubkey = ds.load_bytes(32)
+            if version in ("v3r1", "v3r2", "v4r2"):
+                # seqno:32 subwallet:32 pubkey:256
+                ds.skip_bits(64)
+                pubkey = ds.load_bytes(32)
+            elif version == "v5r1":
+                # is_signature_allowed:1 seqno:32 wallet_id:32 pubkey:256
+                ds.skip_bits(1 + 32 + 32)
+                pubkey = ds.load_bytes(32)
+            else:
+                raise WalletError("Этот кошелёк пока не поддерживается")
             return pubkey.hex()
+    except WalletError:
+        raise
     except Exception as e:
         logger.warning("StateInit data parse failed: %s", e)
 

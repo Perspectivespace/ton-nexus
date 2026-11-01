@@ -100,10 +100,10 @@ async def set_setting(
     elif key == ratings.FRIEND_KEY:
         try:
             value = ratings.normalize_friend_rule(value)
-        if key == "ton_wallet":
-            value = _normalize_ton_wallet(value)
         except ratings.RatingError as e:
             raise EconomyAdminError(e.message) from e
+    elif key == "ton_wallet":
+        value = _normalize_ton_wallet(value)
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
     if row:
