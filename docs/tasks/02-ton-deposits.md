@@ -3,7 +3,7 @@
 - **Ветка:** `feat/ton-deposits`
 - **Заголовок PR:** `Пополнение: зачисление TON на баланс по мемо с кошелька проекта`
 - **Миграция:** `backend/alembic/versions/008_ton_deposits.py` (`revision = "008"`, `down_revision = "007"`)
-- **Зависит от:** задачи 01 (привязка кошелька, миграция 007, группа настроек `ton`) — начинать после её мержа в `main`.
+- **Зависит от:** задачи 01 (привязка кошелька, миграция `007_user_wallets.py`, настройка `ton_wallet`) — уже в `main` (PR #75). Последняя миграция в `main` — `007`, значит у этой задачи `008`.
 - **Перед началом:** прочитай `docs/HANDOFF.md` (§4, §6, §7, §9).
 
 ## Цель
@@ -20,7 +20,8 @@
 
 - Деньги — только `backend/app/services/balance.py`: `credit(session, *, user_id, amount, balance_type, description, reference_type, reference_id)`; строка пользователя под `get_user_for_update`; каждая операция пишет `BalanceHistory` с `balance_after`. `users.balance` — `Numeric(18, 8)`.
 - Настройки — `services/economy_seed.DEFAULTS`, нормализация в `services/economy_admin.set_setting`, группы в `SETTING_CATALOG`; изменение — только владелец (`api/economy.py`, `_require_owner`). Фронт: `lib/settingsMeta.ts`, `components/owner/SettingsList.tsx`, `components/SettingEditor.tsx`.
-- Задача 01 дала: `user_wallets`, `services/ton_wallet.active_wallet`, группу настроек `ton` (`ton_wallet.network`), ленивый провайдер TON Connect `frontend/src/lib/tonconnect.tsx`, строку «Кошелёк TON» в `pages/Wallet.tsx`.
+- Задача 01 дала: `user_wallets` (`backend/app/models/wallet.py`), `services/ton_wallet.active_wallet` и `link_wallet`, настройку `ton_wallet` (`network`: `mainnet` | `testnet`, нормализация `_normalize_ton_wallet` в `economy_admin.py`), ленивый провайдер TON Connect `frontend/src/lib/tonconnect.tsx`, лист `components/WalletConnectSheet.tsx` + `WalletConnectSheetInner.tsx`, строку «Кошелёк TON» в `pages/Wallet.tsx`.
+- Группы `ton` в `SETTING_CATALOG` (`economy_admin.py`) и в `GROUP_RU` (`components/owner/SettingsList.tsx`) пока **нет**: `ton_wallet` сейчас попадает в «прочее». В этой задаче добавь группу `ton` («TON») и положи в неё `ton_wallet` и `ton_deposits`.
 - «Касса» (`frontend/src/pages/WithdrawQueue.tsx`, вход из `components/WorkArea.tsx`) — экран команды для заявок на вывод; сюда добавляем вкладку пополнений.
 - Планировщика в проекте нет (`backend/app/main.py` — только `lifespan` с `seed_economy`). Бот при деплое не перезапускается; API — перезапускается.
 - Сравнение адресов — через raw-форму (`pytoniq-core` `Address`), как в задаче 01.
@@ -134,6 +135,18 @@
 
 Фронт (vitest): разбор суммы с запятой, преобразование TON → нанотоны строкой без float (`"1.5"` → `"1500000000"`), отображение статусов.
 
+## Хвосты из задачи 01 (сделать в этом же PR)
+
+Это недоделки после ревью PR #75. Они входят в эту задачу и проверяются на ревью так же, как основная часть.
+
+1. **Хэши кода кошельков** — `backend/tests/test_ton_wallet.py` (unittest, SQLite в памяти, без сети): положи в тесты официальные BOC кода кошельков v3r1, v3r2, v4r2, v5r1 (как в `pytoniq`/`tonsdk`, укажи источник в комментарии) и **вычисляй** хэш кода из них (`Cell.one_from_boc(...).hash`), сравнивая с `KNOWN_CODE_HASHES`. Сравнивать таблицу с теми же строками, захардкоженными в тесте, — не проверка.
+2. **Привязки через `link_wallet` на SQLite** (тот же файл): положительные привязки для настоящих v4r2 и v5r1: ключ Ed25519, `StateInit` из официального кода и данных кошелька, адрес = хэш `StateInit`, подпись `ton_proof` по алгоритму из задачи 01; кошелёк привязан, `public_key` совпадает. Отказы через `link_wallet`: подпись чужим ключом для чужого адреса; `StateInit`, не совпадающий с адресом; повторное использование того же nonce; адрес уже привязан к другому пользователю; после отвязки кошелёк неактивен и его можно привязать заново.
+3. **Сборка фронта:** в `frontend/vite.config.ts` в `manualChunks` добавь правило `vendor-tonconnect` для `@tonconnect/*` (сейчас библиотека уходит в безымянный чанк `index-*.js`). Загрузка должна остаться ленивой: при открытии «Профиля» чанк не грузится.
+4. **Настройки владельца:** поле `network` у `ton_wallet` — выбор из двух вариантов `mainnet` / `testnet`, а не текстовое поле. Если в `SettingEditor.tsx` нет вида поля «выбор» — добавь его (`kind: "select"` со списком вариантов) и тест в `settingsMeta`.
+5. **Строка «Кошелёк TON»:** у привязанного кошелька подзаголовок в одну строку и на 360, и на 390 px (обрезка с многоточием или короче сокращённый адрес). Скриншоты 360 и 390.
+6. **Ожидание при привязке:** «Ожидание…» на кнопке держится, пока идёт запрос `POST /wallet/link`, а не сбрасывается при закрытии модалки TON Connect. После ответа — успех или ошибка с «Повторить».
+7. **Запасной способ для неизвестного кода кошелька:** если хэш кода не из `KNOWN_CODE_HASHES`, получить ключ через `get_public_key` у toncenter (тот же `TONCENTER_API_KEY` и база по `ton_wallet.network`, что в этой задаче). Ключ из ответа должен совпасть с ключом, которым проверяется подпись; при ошибке сети — понятный отказ «Не удалось проверить кошелёк, попробуйте позже», без падения. Привязка всё равно требует `StateInit`, хэш которого равен адресу. Тест с подменённым ответом toncenter: совпал ключ → привязка; другой ключ → отказ; ошибка сети → отказ.
+
 ## Критерии приёмки
 
 - [ ] Миграция `008` применяется на базе с данными и откатывается.
@@ -143,6 +156,7 @@
 - [ ] Ручной способ с копированием адреса и мемо работает без привязки.
 - [ ] Ключ toncenter — только в окружении сервера; в PR — пошаговая инструкция для Сергея. Сид-фраз и приватных ключей нигде нет.
 - [ ] UI по чек-листу 360/390 px.
+- [ ] Все 7 пунктов «Хвосты из задачи 01» сделаны и перечислены в описании PR.
 
 ## Не входит (не делать)
 
@@ -169,4 +183,5 @@
 - `backend/app/services/economy_seed.py`, `backend/app/services/economy_admin.py`
 - `frontend/src/pages/Wallet.tsx`, `frontend/src/pages/WithdrawQueue.tsx`, `frontend/src/api/hooks.ts`
 - `frontend/src/lib/settingsMeta.ts` (+ тест)
+- Хвосты из 01: `backend/app/services/ton_wallet.py`, `backend/tests/test_ton_wallet.py`, `frontend/vite.config.ts`, `frontend/src/components/SettingEditor.tsx`, `frontend/src/components/owner/SettingsList.tsx`, `frontend/src/components/WalletConnectSheetInner.tsx`
 - `docs/SCHEMA.md`
