@@ -44,7 +44,8 @@ def upgrade() -> None:
     op.create_table(
         "chain_cursors",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("key", sa.String(32), nullable=False),
+        sa.Column("key", sa.String(66), nullable=False),
+        sa.Column("last_hash", sa.String(64), nullable=True),
         sa.Column("lt", sa.BigInteger(), nullable=False, server_default="0"),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.PrimaryKeyConstraint("id"),

@@ -13,15 +13,23 @@ from app.services.ton_deposits import poll_once
 import asyncio
 
 
-@asynccontextmanager
 async def deposit_loop():
     while True:
         try:
             await poll_once(SessionLocal)
         except Exception as e:
             print(f"[deposits] poll error: {e}")
-        await asyncio.sleep(15)
+        # Interval from settings (default 15)
+        try:
+            async with SessionLocal() as s:
+                from app.services.economy import get_setting
+                cfg = await get_setting(s, "ton_deposits") or {}
+                interval = int(cfg.get("poll_seconds", 15))
+        except Exception:
+            interval = 15
+        await asyncio.sleep(interval)
 
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         async with SessionLocal() as session:

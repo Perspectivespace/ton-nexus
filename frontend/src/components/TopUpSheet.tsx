@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useTonConnectUI } from "@tonconnect/ui-react";
 import { Button, Field, useToast } from "@/components/ui";
+import { api } from "@/api/client";
 import { haptic } from "@/lib/haptics";
 
 type Props = {
@@ -8,15 +10,39 @@ type Props = {
 };
 
 export function TopUpSheet({ info, onClose }: Props) {
-  void onClose;
   const [amount, setAmount] = useState("1");
   const [showManual, setShowManual] = useState(false);
+  const [loading, setLoading] = useState(false);
   const toast = useToast();
+  const [tonConnectUI] = useTonConnectUI();
 
   const copy = (text: string) => {
     navigator.clipboard?.writeText(text);
     haptic.select();
     toast({ title: "Скопировано" });
+  };
+
+  const topUp = async () => {
+    if (!info?.enabled) return;
+    setLoading(true);
+    try {
+      const payload = await api<{ to: string; amount_nano: string; payload: string; valid_until: number }>(
+        `/api/v1/deposits/tx-payload?amount=${encodeURIComponent(amount)}`
+      );
+      if (!tonConnectUI.connected) {
+        await tonConnectUI.openModal();
+      }
+      await tonConnectUI.sendTransaction({
+        validUntil: payload.valid_until,
+        messages: [{ address: payload.to, amount: payload.amount_nano, payload: payload.payload }],
+      });
+      toast({ title: "Ждём подтверждение сети…" });
+      onClose();
+    } catch (e) {
+      toast({ kind: "danger", title: e instanceof Error ? e.message : "Ошибка" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -36,8 +62,8 @@ export function TopUpSheet({ info, onClose }: Props) {
           </button>
         ))}
       </div>
-      <Button className="w-full !h-[52px]" disabled={!info?.enabled}>
-        Пополнить
+      <Button className="w-full !h-[52px]" disabled={!info?.enabled || loading} onClick={topUp}>
+        {loading ? "Ожидание…" : "Пополнить"}
       </Button>
       <button type="button" className="text-[12px] text-[var(--text-dim)]" onClick={() => setShowManual((v) => !v)}>
         {showManual ? "Скрыть" : "Перевод с биржи или другого кошелька"}

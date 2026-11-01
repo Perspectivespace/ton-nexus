@@ -104,6 +104,8 @@ async def set_setting(
             raise EconomyAdminError(e.message) from e
     elif key == "ton_wallet":
         value = _normalize_ton_wallet(value)
+    elif key == "ton_deposits":
+        value = _normalize_ton_deposits(value)
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
     if row:
@@ -132,6 +134,16 @@ async def bulk_set(session: AsyncSession, updates: dict[str, Any]) -> list[Setti
     return out
 
 
+def _normalize_ton_deposits(v: dict) -> dict:
+    if not isinstance(v, dict):
+        raise EconomyAdminError("Настройки пополнения должны быть объектом")
+    addr = (v.get("project_address") or "").strip()
+    if v.get("enabled") and not addr:
+        raise EconomyAdminError("Укажите адрес кошелька проекта")
+    v["project_address"] = addr
+    return v
+
+
 def _normalize_ton_wallet(v: dict) -> dict:
     if not isinstance(v, dict):
         raise EconomyAdminError("Настройки кошелька должны быть объектом")
@@ -147,6 +159,8 @@ def _normalize_ton_wallet(v: dict) -> dict:
 
 
 SETTING_CATALOG: list[dict[str, str]] = [
+    {"key": "ton_deposits", "group": "ton", "label": "Пополнение TON"},
+    {"key": "ton_wallet", "group": "ton", "label": "Кошелёк TON"},
     {"key": "upgrade_base_cost", "group": "miner_upgrade", "label": "Базовая цена усиления"},
     {"key": "upgrade_cost_scale", "group": "miner_upgrade", "label": "Надбавка цены за уровни"},
     {"key": "upgrade_type_weights", "group": "miner_upgrade", "label": "Веса колеса типа"},

@@ -27,6 +27,7 @@ def normalize_database_url(url: str) -> str:
 
 
 class Settings(BaseSettings):
+    toncenter_api_key: str = ""
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "TON Nexus"

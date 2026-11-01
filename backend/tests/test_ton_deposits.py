@@ -16,6 +16,7 @@ class MemoTests(unittest.TestCase):
 
     def test_normalize_case_and_spaces(self):
         self.assertEqual(_normalize_memo("tn abc 123"), "TNABC123")
+        self.assertEqual(_normalize_memo("pay TN0I1L extra"), "TN0111")
         self.assertEqual(_normalize_memo("  TNXYZ  "), "TNXYZ")
         self.assertIsNone(_normalize_memo("hello"))
         self.assertIsNone(_normalize_memo(""))

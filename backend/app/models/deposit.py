@@ -32,6 +32,7 @@ class ChainCursor(Base):
     __tablename__ = "chain_cursors"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    key: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    key: Mapped[str] = mapped_column(String(66), unique=True, nullable=False)
+    last_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     lt: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

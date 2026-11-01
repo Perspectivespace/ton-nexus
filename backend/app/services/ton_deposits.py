@@ -41,7 +41,11 @@ def _normalize_memo(raw: str | None) -> str | None:
     if not raw:
         return None
     s = raw.strip().upper().replace(" ", "").replace("\t", "")
-    return s if s.startswith("TN") and len(s) >= 4 else None
+    s = s.replace("O", "0").replace("I", "1").replace("L", "1")
+    # Find TN + alphanum inside longer text
+    import re
+    m = re.search(r"TN[0-9A-Z]{4,}", s)
+    return m.group(0) if m else None
 
 
 async def ensure_memo(session: AsyncSession, user: User) -> str:
@@ -148,12 +152,11 @@ async def assign_manual(
     return dep
 
 
-async def _fetch_transactions(address: str, lt: int, network: str) -> list[dict]:
+async def _fetch_transactions(address: str, network: str, limit: int = 100) -> list[dict]:
+    """Fetch recent transactions. toncenter returns newest first."""
     base = TONCENTER_TESTNET if network == "testnet" else TONCENTER_MAINNET
     key = app_settings.toncenter_api_key or ""
-    params = {"address": address, "limit": 50, "archival": "true"}
-    if lt:
-        params["lt"] = lt
+    params = {"address": address, "limit": limit, "archival": "true"}
     if key:
         params["api_key"] = key
     try:
@@ -168,7 +171,9 @@ async def _fetch_transactions(address: str, lt: int, network: str) -> list[dict]
 
 
 async def poll_once(session_factory, *, now=None) -> int:
-    """Poll toncenter for new transactions. Returns count of new deposits."""
+    """Poll toncenter for new transactions. Returns count of new deposits.
+    First run: set cursor to current max lt without crediting old history.
+    """
     async with session_factory() as session:
         cfg = await get_setting(session, "ton_deposits") or {}
         if not cfg.get("enabled") or not cfg.get("project_address"):
@@ -178,38 +183,53 @@ async def poll_once(session_factory, *, now=None) -> int:
 
         cursor = await session.scalar(select(ChainCursor).where(ChainCursor.key == address))
         last_lt = cursor.lt if cursor else 0
+        is_first = cursor is None
 
-        txs = await _fetch_transactions(address, last_lt, network)
+        txs = await _fetch_transactions(address, network)
+        if not txs:
+            return 0
+
+        # Newest first; find max lt
+        max_lt = max(int(tx.get("transaction_id", {}).get("lt", 0)) for tx in txs)
+
+        if is_first:
+            # First run: just set cursor, don't credit old history
+            session.add(ChainCursor(key=address, lt=max_lt))
+            await session.commit()
+            return 0
+
         count = 0
-        max_lt = last_lt
         for tx in txs:
             tx_hash = tx.get("transaction_id", {}).get("hash", "")
             lt = int(tx.get("transaction_id", {}).get("lt", 0))
             if lt <= last_lt:
                 continue
+            # Skip bounced
+            if tx.get("in_msg", {}).get("bounced"):
+                continue
             in_msg = tx.get("in_msg", {})
             value = int(in_msg.get("value", 0))
             comment = in_msg.get("message", "")
             src = in_msg.get("source", "")
-            if value > 0:
-                await credit_deposit(
-                    session,
-                    tx_hash=tx_hash,
-                    amount_nano=value,
-                    memo=comment,
-                    from_address=src,
-                    lt=lt,
-                    utime=int(tx.get("utime", 0)),
-                    comment=comment,
-                    now=now,
-                )
-                count += 1
-            if lt > max_lt:
-                max_lt = lt
+            if value > 0 and tx_hash:
+                try:
+                    await credit_deposit(
+                        session,
+                        tx_hash=tx_hash,
+                        amount_nano=value,
+                        memo=comment,
+                        from_address=src,
+                        lt=lt,
+                        utime=int(tx.get("utime", 0)),
+                        comment=comment,
+                        now=now,
+                    )
+                    count += 1
+                except Exception as e:
+                    logger.warning("credit failed for %s: %s", tx_hash, e)
+                    await session.rollback()
 
         if cursor:
             cursor.lt = max_lt
-        else:
-            session.add(ChainCursor(key=address, lt=max_lt))
         await session.commit()
         return count

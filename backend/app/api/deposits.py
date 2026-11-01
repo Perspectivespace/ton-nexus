@@ -48,11 +48,15 @@ async def tx_payload(amount: str = "1", user: User = Depends(get_current_user), 
     await db.commit()
     try:
         amt = Decimal(amount)
+        if amt.is_nan() or amt <= 0:
+            raise ValueError()
     except Exception:
         raise HTTPException(status_code=400, detail="Неверная сумма")
     min_ton = Decimal(str(cfg.get("min_ton", "0.1")))
     if amt < min_ton:
         raise HTTPException(status_code=400, detail=f"Минимум {min_ton} TON")
+    if amt > Decimal("10000"):
+        raise HTTPException(status_code=400, detail="Сумма слишком большая")
     nano = int(amt * Decimal("1000000000"))
     cell = begin_cell().store_uint(0, 32).store_snake_string(memo).end_cell()
     payload = base64.b64encode(cell.to_boc()).decode()
