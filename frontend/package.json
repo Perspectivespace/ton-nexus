@@ -17,6 +17,7 @@
     "@fontsource/onest": "^5.3.1",
     "@fontsource/tektur": "^5.3.0",
     "@tanstack/react-query": "^5.66.0",
+    "@tonconnect/ui-react": "^2.4.4",
     "@twa-dev/sdk": "^8.0.2",
     "framer-motion": "^12.4.0",
     "react": "^19.0.0",

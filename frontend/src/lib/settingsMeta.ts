@@ -104,6 +104,17 @@ function prizeSummary(v: unknown): string {
 export const PRIZE_KEYS = new Set(["tower_prizes", "level_prizes", "tasks_prizes", "friends_prizes"]);
 
 export const SETTINGS: Record<string, SettingMeta> = {
+  ton_wallet: {
+    title: "Кошелёк TON",
+    short: "Сеть и срок подтверждения",
+    about: "Сеть для привязки кошелька (mainnet или testnet) и срок действия подтверждения в минутах.",
+    fields: {
+      enabled: { label: "Включено", kind: "bool" },
+      network: { label: "Сеть", kind: "text", hint: "mainnet или testnet" },
+      proof_ttl_minutes: { label: "Срок подтверждения", kind: "int", unit: "мин", min: 1, max: 30 },
+      unique_address: { label: "Один адрес — один аккаунт", kind: "bool" },
+    },
+  },
   upgrade_base_cost: {
     title: "Цена попытки усиления",
     short: "Базовая стоимость одной попытки, TON",
@@ -481,3 +492,5 @@ export function summarize(key: string, v: unknown): string {
     })
     .join(" · ");
 }
+
+// ton_wallet: настройки привязки кошелька (enabled, network, unique_address)

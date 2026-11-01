@@ -10,6 +10,7 @@ from app.api.ratings import router as ratings_router
 from app.api.tasks import router as tasks_router
 from app.api.tower import router as tower_router
 from app.api.withdraw import router as withdraw_router
+from app.api.wallet import router as wallet_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(me_router)
@@ -19,6 +20,7 @@ api_router.include_router(admin_router)
 api_router.include_router(deploy_router)
 api_router.include_router(economy_router)
 api_router.include_router(withdraw_router)
+api_router.include_router(wallet_router)
 api_router.include_router(engagement_router)
 api_router.include_router(tower_router)
 api_router.include_router(ratings_router)

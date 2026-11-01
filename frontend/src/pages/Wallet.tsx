@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useMe, useMyWithdrawals, useWithdrawLimits } from "@/api/hooks";
+import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink } from "@/api/hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
 import { ProfileRanks } from "@/components/RatingLinks";
 import { api } from "@/api/client";
-import { IconGear, IconHistory, IconOut } from "@/components/icons";
+import { IconGear, IconHistory, IconOut, IconWallet } from "@/components/icons";
+import { WalletConnectSheet } from "@/components/WalletConnectSheet";
+import { LazyTonConnectProvider } from "@/lib/tonconnect";
 import { prefersReducedMotion } from "@/components/ui/press";
 import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, Sheet, Tag, useToast, type Tone } from "@/components/ui";
 
@@ -36,7 +39,7 @@ export function levelTag(me: Pick<MeOut, "level" | "xp"> | undefined) {
   return `ур. ${me.level} · ${me.xp.toLocaleString("ru-RU")} XP`;
 }
 
-type Panel3 = "withdraw" | "history" | "settings" | null;
+type Panel3 = "withdraw" | "history" | "settings" | "wallet" | null;
 
 /**
  * «Профиль» (/wallet, псевдоним /profile, DESIGN.md §14.1): уровень в шапке, баланс,
@@ -46,6 +49,9 @@ export function Wallet() {
   const { data: me, refetch } = useMe();
   const mine = useMyWithdrawals();
   const limits = useWithdrawLimits();
+  const qc = useQueryClient();
+  const { data: walletInfo } = useWallet();
+  const unlink = useWalletUnlink();
   const [typed, setAmount] = useState<string | null>(null);
   const [wallet, setWallet] = useState("");
   const [loading, setLoading] = useState(false);
@@ -136,6 +142,13 @@ export function Wallet() {
       <ProfileRanks />
 
       <List>
+        <ListRow
+          icon={<IconWallet size={20} />}
+          title="Кошелёк TON"
+          sub={walletInfo?.wallet ? shortAddr(walletInfo.wallet.address) : "Не привязан"}
+          trailing={<Tag tone={walletInfo?.wallet ? "ok" : "neutral"}>{walletInfo?.wallet ? "привязан" : "привязать"}</Tag>}
+          onClick={() => setSheet("wallet")}
+        />
         <ListRow
           icon={<IconOut size={20} />}
           title="Вывод"
@@ -231,6 +244,16 @@ export function Wallet() {
             )}
           </div>
         )}
+      </Sheet>
+
+      <Sheet open={sheet === "wallet"} onClose={closeSheet} title="Кошелёк TON">
+        <LazyTonConnectProvider>
+          <WalletConnectSheet
+            linked={walletInfo?.wallet ?? null}
+            onLinked={() => { qc.invalidateQueries({ queryKey: ["wallet"] }); setSheet(null); }}
+            onUnlink={() => unlink.mutate(undefined, { onError: (e) => toast({ kind: "danger", title: e instanceof Error ? e.message : "Ошибка" }) })}
+          />
+        </LazyTonConnectProvider>
       </Sheet>
 
       <Sheet open={sheet === "history"} onClose={closeSheet} title="История" sub="Заявки на вывод TON">
