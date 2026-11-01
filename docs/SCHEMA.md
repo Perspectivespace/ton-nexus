@@ -16,6 +16,8 @@ PostgreSQL · SQLAlchemy 2 async · Alembic (миграции — следующ
 | `promo_codes` / `promo_redemptions` | Промо |
 | `daily_checkins` | Daily + streak |
 | `withdraw_requests` | Вывод manual |
+| `user_wallets` | Привязки TON-кошельков (TON Connect) |
+| `wallet_proof_payloads` | Nonce для ton_proof |
 
 ## Майнер
 

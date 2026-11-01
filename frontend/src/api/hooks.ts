@@ -689,3 +689,32 @@ export function useTowerFinish() {
     },
   });
 }
+
+export type WalletInfo = {
+  enabled: boolean;
+  network: string;
+  wallet: { address: string; wallet_app: string | null; linked_at: string } | null;
+};
+
+export function useWallet() {
+  return useQuery({
+    queryKey: ["wallet"],
+    queryFn: () => api<WalletInfo>("/api/v1/wallet"),
+  });
+}
+
+export function useWalletLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => api("/api/v1/wallet/link", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["wallet"] }),
+  });
+}
+
+export function useWalletUnlink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api("/api/v1/wallet/unlink", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["wallet"] }),
+  });
+}

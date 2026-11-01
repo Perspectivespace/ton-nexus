@@ -481,3 +481,5 @@ export function summarize(key: string, v: unknown): string {
     })
     .join(" · ");
 }
+
+// ton_wallet: настройки привязки кошелька (enabled, network, unique_address)

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useMe, useMyWithdrawals, useWithdrawLimits } from "@/api/hooks";
+import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink } from "@/api/hooks";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
 import { ProfileRanks } from "@/components/RatingLinks";
@@ -36,7 +36,7 @@ export function levelTag(me: Pick<MeOut, "level" | "xp"> | undefined) {
   return `ур. ${me.level} · ${me.xp.toLocaleString("ru-RU")} XP`;
 }
 
-type Panel3 = "withdraw" | "history" | "settings" | null;
+type Panel3 = "withdraw" | "history" | "settings" | "wallet" | null;
 
 /**
  * «Профиль» (/wallet, псевдоним /profile, DESIGN.md §14.1): уровень в шапке, баланс,
@@ -46,6 +46,8 @@ export function Wallet() {
   const { data: me, refetch } = useMe();
   const mine = useMyWithdrawals();
   const limits = useWithdrawLimits();
+  const { data: walletInfo } = useWallet();
+  const unlink = useWalletUnlink();
   const [typed, setAmount] = useState<string | null>(null);
   const [wallet, setWallet] = useState("");
   const [loading, setLoading] = useState(false);
@@ -136,6 +138,13 @@ export function Wallet() {
       <ProfileRanks />
 
       <List>
+        <ListRow
+          icon={<IconOut size={20} />}
+          title="Кошелёк TON"
+          sub={walletInfo?.wallet ? `${shortAddr(walletInfo.wallet.address)} · ${walletInfo.wallet.wallet_app || "кошелёк"}` : "Не привязан · нужен для пополнения и вывода"}
+          trailing={<Tag tone={walletInfo?.wallet ? "ok" : "neutral"}>{walletInfo?.wallet ? "привязан" : "привязать"}</Tag>}
+          onClick={() => setSheet("wallet")}
+        />
         <ListRow
           icon={<IconOut size={20} />}
           title="Вывод"
@@ -229,6 +238,20 @@ export function Wallet() {
                 {why}
               </p>
             )}
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet open={sheet === "wallet"} onClose={closeSheet} title="Кошелёк TON">
+        {walletInfo?.wallet ? (
+          <div className="space-y-4">
+            <p className="font-mono text-[13px] break-all">{walletInfo.wallet.address}</p>
+            <HoldButton onConfirm={() => unlink.mutate()}>Отвязать</HoldButton>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-[13px] text-[var(--text-dim)]">Подтвердите, что кошелёк ваш: приложение кошелька попросит подпись. Деньги не списываются.</p>
+            <Button className="w-full" onClick={() => toast("Откройте кошелёк в Telegram для привязки")}>Привязать кошелёк</Button>
           </div>
         )}
       </Sheet>
