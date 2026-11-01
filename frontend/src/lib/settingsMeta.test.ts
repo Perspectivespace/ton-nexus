@@ -69,3 +69,21 @@ describe("призы «Башни» в редакторе владельца", (
     expect(summarize("tower_prizes", { ...DEFAULT, enabled: true, budget_ton: "20" })).toBe("20 TON в месяц");
   });
 });
+
+describe("TON: сеть списком и пополнения", () => {
+  it("сеть — выбор mainnet/testnet, чужое значение не сохраняется", () => {
+    const m = fieldMeta("ton_wallet", "network", "mainnet");
+    expect(m.kind).toBe("select");
+    expect(fromInput(m, "testnet", "mainnet")).toBe("testnet");
+    expect(() => fromInput(m, "devnet", "mainnet")).toThrow();
+    expect(summarize("ton_wallet", { enabled: true, network: "testnet", unique_address: true })).not.toContain("undefined");
+  });
+  it("адрес кошелька проекта можно оставить пустым, опрос 5–120 с", () => {
+    const addr = fieldMeta("ton_deposits", "project_address", "");
+    expect(fromInput(addr, "", "")).toBe("");
+    const poll = fieldMeta("ton_deposits", "poll_seconds", 15);
+    expect(fromInput(poll, "15", 15)).toBe(15);
+    expect(() => fromInput(poll, "2", 15)).toThrow();
+    expect(summarize("ton_deposits", { enabled: true, project_address: "", min_ton: "0.1", poll_seconds: 15 })).toContain("нет кошелька");
+  });
+});

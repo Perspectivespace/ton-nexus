@@ -4,8 +4,8 @@
  */
 import { friendRuleShort, readFriendRule } from "@/lib/friendRule";
 
-/** bool — «Вкл/Выкл»; int_list — возрастающие целые одной строкой «20 50 100 200» */
-export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "int_list";
+/** bool — «Вкл/Выкл»; int_list — возрастающие целые одной строкой «20 50 100 200»; select — один из options */
+export type FieldKind = "ton" | "int" | "num" | "pct_bp" | "pct_frac" | "text" | "bool" | "int_list" | "select";
 
 export type FieldMeta = {
   label: string;
@@ -15,6 +15,10 @@ export type FieldMeta = {
   max?: number;
   hint?: string;
   readOnly?: boolean;
+  /** select: варианты значения и подписи */
+  options?: ReadonlyArray<{ value: string; label: string }>;
+  /** text: пустое значение разрешено */
+  optional?: boolean;
 };
 
 export type SettingMeta = {
@@ -103,14 +107,36 @@ function prizeSummary(v: unknown): string {
 /** Настройки призов с одной моделью (проверки бюджета в редакторе — общие) */
 export const PRIZE_KEYS = new Set(["tower_prizes", "level_prizes", "tasks_prizes", "friends_prizes"]);
 
+const NETWORK_OPTIONS = [
+  { value: "mainnet", label: "Основная (mainnet)" },
+  { value: "testnet", label: "Тестовая (testnet)" },
+] as const;
+
 export const SETTINGS: Record<string, SettingMeta> = {
+  ton_deposits: {
+    title: "Пополнение TON",
+    short: "Кошелёк проекта, минимум и опрос сети",
+    about:
+      "Игроки переводят TON на кошелёк проекта с личным комментарием (мемо). Сервер раз в несколько секунд читает новые переводы и зачисляет их на баланс. Перевод без мемо или меньше минимума попадает в «Касса → Пополнения» для ручного зачисления. Сеть берётся из настройки «Кошелёк TON».",
+    fields: {
+      enabled: { label: "Включено", kind: "bool" },
+      project_address: { label: "Кошелёк проекта", kind: "text", optional: true, hint: "Адрес в любом виде — сохранится как UQ…" },
+      min_ton: { label: "Минимум", kind: "ton", unit: "TON", min: 0.000000001 },
+      poll_seconds: { label: "Опрос сети", kind: "int", unit: "с", min: 5, max: 120 },
+    },
+    summary: (v) => {
+      const o = v as { enabled?: boolean; min_ton?: unknown; project_address?: string };
+      if (!o.project_address) return "Выключено · нет кошелька проекта";
+      return `${o.enabled ? "Включено" : "Выключено"} · от ${String(o.min_ton ?? "0.1")} TON`;
+    },
+  },
   ton_wallet: {
     title: "Кошелёк TON",
     short: "Сеть и срок подтверждения",
     about: "Сеть для привязки кошелька (mainnet или testnet) и срок действия подтверждения в минутах.",
     fields: {
       enabled: { label: "Включено", kind: "bool" },
-      network: { label: "Сеть", kind: "text", hint: "mainnet или testnet" },
+      network: { label: "Сеть", kind: "select", options: NETWORK_OPTIONS, hint: "Одна сеть для привязки кошелька и пополнений" },
       proof_ttl_minutes: { label: "Срок подтверждения", kind: "int", unit: "мин", min: 1, max: 30 },
       unique_address: { label: "Один адрес — один аккаунт", kind: "bool" },
     },
@@ -396,8 +422,11 @@ export function fromInput(m: FieldMeta, raw: string, original: unknown): unknown
     case "int_list":
       return parseIntList(raw, m.min, m.max);
     case "text":
-      if (!s) throw new Error("не может быть пустым");
+      if (!s && !m.optional) throw new Error("не может быть пустым");
       return raw.trim();
+    case "select":
+      if (!m.options?.some((o) => o.value === raw)) throw new Error("выберите значение из списка");
+      return raw;
     case "int": {
       if (!/^-?\d+$/.test(s)) throw new Error("нужно целое число");
       const n = Number(s);
@@ -466,6 +495,7 @@ export function towerMinBudget(v: { base_places?: unknown; individual_places?: u
 
 export function formatField(m: FieldMeta, v: unknown): string {
   if (m.kind === "bool") return v ? "Вкл" : "Выкл";
+  if (m.kind === "select") return m.options?.find((o) => o.value === v)?.label ?? String(v ?? "—");
   const val = toInput(m, v);
   return m.unit ? `${val} ${m.unit}`.replace(" %", "%") : val;
 }
