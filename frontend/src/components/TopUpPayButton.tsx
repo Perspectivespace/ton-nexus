@@ -1,47 +1,11 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTonConnectUI, type TonConnectUI } from "@tonconnect/ui-react";
+import { useTonConnectUI } from "@tonconnect/ui-react";
 import { Button, useToast } from "@/components/ui";
 import { api } from "@/api/client";
+import { ensureConnected } from "@/lib/tonconnectFlow";
 
 type TxPayload = { to: string; amount_nano: string; payload: string; valid_until: number };
-
-/** Подключить кошелёк и дождаться подключения: openModal() возвращается сразу, ждём onStatusChange */
-export async function ensureConnected(ui: TonConnectUI): Promise<void> {
-  if (ui.connected) return;
-  await ui.connectionRestored;
-  if (ui.connected) return;
-  await new Promise<void>((resolve, reject) => {
-    let offStatus = () => {};
-    let offModal = () => {};
-    const done = () => {
-      offStatus();
-      offModal();
-    };
-    offStatus = ui.onStatusChange(
-      (w) => {
-        if (w) {
-          done();
-          resolve();
-        }
-      },
-      (e) => {
-        done();
-        reject(e);
-      },
-    );
-    offModal = ui.onModalStateChange((s) => {
-      if (s.status === "closed" && s.closeReason === "action-cancelled" && !ui.connected) {
-        done();
-        reject(new Error("Кошелёк не подключён"));
-      }
-    });
-    ui.openModal().catch((e) => {
-      done();
-      reject(e);
-    });
-  });
-}
 
 export default function TopUpPayButton({
   amount,
