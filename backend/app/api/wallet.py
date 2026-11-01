@@ -1,7 +1,7 @@
 """TON wallet linking API."""
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -21,10 +21,22 @@ router = APIRouter(prefix="/wallet", tags=["wallet"])
 
 
 class AccountIn(BaseModel):
+    """Аккаунт из TON Connect. SDK присылает сеть в поле chain, старые клиенты в network."""
+
     address: str
-    network: str | int
+    network: str | int | None = None
+    chain: str | int | None = None
     publicKey: str | None = None
     walletStateInit: str | None = None
+
+    @model_validator(mode="after")
+    def _network_from_chain(self):
+        if self.network is None:
+            self.network = self.chain
+        if self.network is None:
+            raise ValueError("Не указана сеть кошелька")
+        self.network = str(self.network)
+        return self
 
 
 class DomainIn(BaseModel):
