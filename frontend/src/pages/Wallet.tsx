@@ -145,7 +145,7 @@ export function Wallet() {
         <ListRow
           icon={<IconWallet size={20} />}
           title="Кошелёк TON"
-          sub={walletInfo?.wallet ? `${shortAddr(walletInfo.wallet.address)} · ${walletInfo.wallet.wallet_app || "кошелёк"}` : "Не привязан"}
+          sub={walletInfo?.wallet ? shortAddr(walletInfo.wallet.address) : "Не привязан"}
           trailing={<Tag tone={walletInfo?.wallet ? "ok" : "neutral"}>{walletInfo?.wallet ? "привязан" : "привязать"}</Tag>}
           onClick={() => setSheet("wallet")}
         />

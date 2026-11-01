@@ -133,6 +133,8 @@ async def bulk_set(session: AsyncSession, updates: dict[str, Any]) -> list[Setti
 
 
 def _normalize_ton_wallet(v: dict) -> dict:
+    if not isinstance(v, dict):
+        raise EconomyAdminError("Настройки кошелька должны быть объектом")
     net = v.get("network", "mainnet")
     if net not in ("mainnet", "testnet"):
         raise EconomyAdminError("Сеть должна быть mainnet или testnet")

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTonConnectUI } from "@tonconnect/ui-react";
 import { Button, HoldButton, useToast } from "@/components/ui";
 import { api } from "@/api/client";
@@ -15,20 +15,36 @@ export default function WalletConnectSheetInner({ linked, onLinked, onUnlink }: 
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const unsubRef = useRef<(() => void) | null>(null);
+
+  const cleanup = useCallback(() => {
+    unsubRef.current?.();
+    unsubRef.current = null;
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const off = tonConnectUI.onModalStateChange((state) => {
+      if (state.status === "closed") cleanup();
+    });
+    return () => {
+      off();
+      cleanup();
+    };
+  }, [tonConnectUI, cleanup]);
 
   const startLink = useCallback(async () => {
+    cleanup();
     setError(null);
     setLoading(true);
     try {
-      // Reset previous session for "change wallet"
       if (tonConnectUI.connected) {
         await tonConnectUI.disconnect();
       }
       const { payload } = await api<{ payload: string }>("/api/v1/wallet/proof-payload", { method: "POST" });
       tonConnectUI.setConnectRequestParameters({ state: "ready", value: { tonProof: payload } });
 
-      let unsub: (() => void) | undefined;
-      unsub = tonConnectUI.onStatusChange(async (w) => {
+      unsubRef.current = tonConnectUI.onStatusChange(async (w) => {
         if (w?.connectItems?.tonProof && "proof" in w.connectItems.tonProof) {
           try {
             await api("/api/v1/wallet/link", {
@@ -43,20 +59,17 @@ export default function WalletConnectSheetInner({ linked, onLinked, onUnlink }: 
           } catch (e) {
             setError(e instanceof Error ? e.message : "Ошибка привязки");
           } finally {
-            setLoading(false);
-            unsub?.();
+            cleanup();
           }
         }
       });
 
       await tonConnectUI.openModal();
-      // If user closes modal without connecting, reset loading
-      setTimeout(() => setLoading(false), 500);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка");
-      setLoading(false);
+      cleanup();
     }
-  }, [tonConnectUI, onLinked]);
+  }, [tonConnectUI, onLinked, cleanup]);
 
   const copy = () => {
     if (linked) {

@@ -110,7 +110,7 @@ export const SETTINGS: Record<string, SettingMeta> = {
     about: "Сеть для привязки кошелька (mainnet или testnet) и срок действия подтверждения в минутах.",
     fields: {
       enabled: { label: "Включено", kind: "bool" },
-      network: { label: "Сеть", kind: "text" },
+      network: { label: "Сеть", kind: "text", hint: "mainnet или testnet" },
       proof_ttl_minutes: { label: "Срок подтверждения", kind: "int", unit: "мин", min: 1, max: 30 },
       unique_address: { label: "Один адрес — один аккаунт", kind: "bool" },
     },
