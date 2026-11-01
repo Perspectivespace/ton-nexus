@@ -35,10 +35,13 @@ logger = logging.getLogger(__name__)
 # Source: tonkeeper/tongo wallet.GetCodeHashByVer and ton-connect/demo-dapp-backend state_init.go.
 # v3r1/v3r2/v4r2 data layout: seqno:32 subwallet:32 pubkey:256
 # v5r1 data layout: is_signature_allowed:1 seqno:32 wallet_id:32 pubkey:256
+# Source: tonkeeper/tongo wallet.GetCodeHashByVer / ton-connect demo-dapp-backend.
+# Verified by computing Cell.hash of the official wallet code BOCs.
 KNOWN_CODE_HASHES = {
-    "587cc789eff1c84f46ec3797e45fc809a14ff5ae24f1e0c7a6a99cc9dc9061ff": "v3r2",
-    "84dafa449f98a6987789ba232358072bc0f76dc4524002a5d0918b9a75d2d599": "v4r2",
-    "20834b7b72b112147e1b2fb457b84e74d1a30f04f737d4f62a668e9552d9512b": "v5r1",
+    "b61041a58a7980b946e8fb9e198e3c904d24799ffa36574ea4251c41a566f581": "v3r1",
+    "84dafa449f98a6987789ba232358072bc0f76dc4524002a5d0918b9a75d2d599": "v3r2",
+    "feb5ff6820e2ff0d9483e7e0d62c817d846789fb4ae580c878866d959dabd5c0": "v4r2",
+    "20834b7b72b112147e1b2fb457b84e74d1a30f04f737d4f62a668e9552d2b72f": "v5r1",
 }
 
 
