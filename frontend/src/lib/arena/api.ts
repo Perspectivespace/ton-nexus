@@ -39,12 +39,57 @@ export interface ArenaResult {
   place: number;
   prize_nano: string;
 }
+/** план хода в формате API: шаги [x, y], attack — место (seat) цели */
+export interface ApiPlan {
+  path: [number, number][];
+  attack: number | null;
+  medkit: boolean;
+}
 export interface ArenaTurnInfo {
   turn: number;
   opens_at: string;
   deadline: string;
   ready_seats: number[];
-  my_plan: unknown;
+  my_plan: { plan: ApiPlan | null; ready: boolean } | null;
+}
+export interface ArenaPlayerView {
+  seat: number;
+  slot?: number;
+  name?: string;
+  is_me?: boolean;
+  x?: number;
+  y?: number;
+  hp?: number;
+  ap?: number;
+  armor?: string | null;
+  weapon?: string;
+  medkits?: number;
+  alive?: boolean;
+  death_turn?: number | null;
+  kills?: number;
+  dealt?: number;
+}
+export interface ArenaEventView {
+  t: string;
+  who?: number;
+  target?: number;
+  dmg?: number;
+  hp?: number;
+  zone?: boolean;
+  stage?: number;
+  closed?: boolean;
+  kind?: string;
+  type?: string | null;
+}
+/** итог хода: перемещения [[fx, fy], [tx, ty]] по месту, выстрелы, урон зоны, гибели, подборы, события */
+export interface ArenaLastTurn {
+  turn: number;
+  moves: Record<string, [[number, number], [number, number]]>;
+  shots: { from: number; to: number; miss: boolean; fx: number; fy: number; tx: number; ty: number; dmg: number | null }[];
+  zone_hits: { who: number; dmg: number }[];
+  deaths: number[];
+  picks: { who: number; x: number; y: number; kind: string; type: string | null }[];
+  events: ArenaEventView[];
 }
 export interface ArenaMatchView {
   id: number;
@@ -54,7 +99,30 @@ export interface ArenaMatchView {
   finished?: boolean;
   current?: ArenaTurnInfo | null;
   n?: number;
-  players?: { seat: number; name?: string; hp?: number; alive?: boolean; is_me?: boolean }[];
+  tiles?: number[][];
+  loot?: { id: number | string; x: number; y: number; kind: string; type: string | null }[];
+  zone?: { stage: number; box: number[]; closed: boolean };
+  players?: ArenaPlayerView[];
+  last_turn?: ArenaLastTurn | null;
+  places?: { seat: number; place: number; shared?: boolean }[] | null;
+}
+/** запись журнала ходов из /state?since=N (только разыгранные ходы) */
+export interface ArenaTurnEntry {
+  turn: number;
+  opens_at: string;
+  deadline: string;
+  resolved_at: string | null;
+  reason: string | null;
+  /** сыгранные планы по месту (после розыгрыша — уже проверенные сервером) */
+  plans: Record<string, ApiPlan | null>;
+  result: ArenaLastTurn | null;
+}
+export interface ArenaPlanResp {
+  ok: boolean;
+  turn: number;
+  seat: number;
+  ready: boolean;
+  resolved: boolean;
 }
 export interface ArenaRoom {
   id: number;
@@ -71,6 +139,8 @@ export interface ArenaRoom {
   seed_hash: string | null;
   results: ArenaResult[];
   match: ArenaMatchView | null;
+  /** журнал разыгранных ходов (только в /state) */
+  turns?: ArenaTurnEntry[];
   server_time: string;
   skew?: number;
 }
@@ -94,14 +164,21 @@ export const arenaApi = {
   room: (id: number) => api<ArenaRoom>(`${ARENA}/rooms/${id}`).then(withSkew),
   /** комната + бой; since — последний полученный ход (журнал ходов нужен экрану боя, здесь не берём лишнего) */
   state: (id: number, since = 0) => api<ArenaRoom>(`${ARENA}/rooms/${id}/state?since=${since}`).then(withSkew),
+  /** план хода; ready=false — черновик (виден только мне), ready=true — «Готово» */
+  plan: (id: number, turn: number, plan: ApiPlan | null, ready: boolean) =>
+    api<ArenaPlanResp>(`${ARENA}/rooms/${id}/plan`, { method: "POST", body: JSON.stringify({ turn, plan, ready }) }),
 };
 
-/** Ошибка API «Арены»: detail = {code, message[, room_id]} */
+/** Ошибка API «Арены»: detail = {code, message[, room_id, reason, current_turn]} */
 export interface ArenaErr {
   status: number;
   code: string;
   message: string;
   roomId?: number;
+  /** bad_plan: причина (path_too_long, step_into_wall, …) */
+  reason?: string;
+  /** turn_mismatch: какой ход сейчас открыт */
+  currentTurn?: number;
 }
 
 export function parseArenaError(e: unknown): ArenaErr {
@@ -109,8 +186,15 @@ export function parseArenaError(e: unknown): ArenaErr {
     try {
       const d = JSON.parse(e.message);
       if (d && typeof d === "object" && typeof d.code === "string") {
-        const roomId = Number(d.room_id);
-        return { status: e.status, code: d.code, message: String(d.message ?? ""), ...(Number.isFinite(roomId) && roomId > 0 ? { roomId } : {}) };
+        const roomId = Number(d.room_id), cur = Number(d.current_turn);
+        return {
+          status: e.status,
+          code: d.code,
+          message: String(d.message ?? ""),
+          ...(Number.isFinite(roomId) && roomId > 0 ? { roomId } : {}),
+          ...(typeof d.reason === "string" ? { reason: d.reason } : {}),
+          ...(d.current_turn != null && Number.isFinite(cur) ? { currentTurn: cur } : {}),
+        };
       }
     } catch {
       /* detail — обычная строка */

@@ -90,6 +90,26 @@ describe("arenaApi — запросы к /api/v1/arena", () => {
   });
 });
 
+describe("план хода", () => {
+  it("plan: POST {turn, plan, ready}; ошибки 400/409 несут reason и current_turn", async () => {
+    const calls = mockFetch((c) =>
+      c.body && (c.body as { turn: number }).turn === 5
+        ? { body: { ok: true, turn: 5, seat: 2, ready: true, resolved: false } }
+        : c.body && (c.body as { turn: number }).turn === 6
+          ? { status: 400, body: { detail: { code: "bad_plan", message: "x", reason: "step_into_wall" } } }
+          : { status: 409, body: { detail: { code: "turn_mismatch", message: "y", current_turn: 8 } } },
+    );
+    const ok = await arenaApi.plan(7, 5, { path: [[1, 2]], attack: 3, medkit: false }, true);
+    expect(ok).toMatchObject({ ok: true, ready: true, seat: 2 });
+    expect(calls[0]).toEqual({ url: "/api/v1/arena/rooms/7/plan", method: "POST", body: { turn: 5, plan: { path: [[1, 2]], attack: 3, medkit: false }, ready: true } });
+    const e1 = parseArenaError(await arenaApi.plan(7, 6, null, false).catch((e) => e));
+    expect(e1).toMatchObject({ status: 400, code: "bad_plan", reason: "step_into_wall" });
+    expect(calls[1].body).toEqual({ turn: 6, plan: null, ready: false });
+    const e2 = parseArenaError(await arenaApi.plan(7, 4, null, true).catch((e) => e));
+    expect(e2).toMatchObject({ status: 409, code: "turn_mismatch", currentTurn: 8 });
+  });
+});
+
 describe("parseArenaError", () => {
   it("402 строкой — тоже нехватка; прочие строки — http_N; не ApiError — нет связи", () => {
     expect(parseArenaError(new ApiError(402, "Payment Required")).code).toBe("insufficient_balance");

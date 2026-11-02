@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
@@ -29,7 +29,8 @@ function payoutTonConnect(): Plugin {
 export default defineConfig({
   plugins: [react(), tailwindcss(), payoutTonConnect()],
   resolve: {
-    alias: { "@": path.resolve(__dirname, "src") },
+    // @shared — общий с бэкендом код в корне репозитория (движок «Арены»: shared/arena/engine.js, его же проверяют векторы Python-порта)
+    alias: { "@": path.resolve(__dirname, "src"), "@shared": path.resolve(__dirname, "../shared") },
   },
   build: {
     // шрифты не встраиваем в CSS как base64: браузер сам скачает только нужные поднаборы (кириллица/латиница)
@@ -61,5 +62,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // dev-сервер отдаёт ../shared (импорты @shared/…)
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), path.resolve(__dirname, "../shared")] },
   },
 });
