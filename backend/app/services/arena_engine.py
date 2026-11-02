@@ -123,6 +123,11 @@ def cheb(ax: int, ay: int, bx: int, by: int) -> int:
     return max(abs(ax - bx), abs(ay - by))
 
 
+def sealed_corner(tiles: Any, ax: int, ay: int, bx: int, by: int) -> bool:
+    """Запертый угол: диагональ между двумя препятствиями (стена или укрытие) по бокам — ни шага, ни удара."""
+    return ax != bx and ay != by and tiles[ay][bx] != FLOOR and tiles[by][ax] != FLOOR
+
+
 def _orbit(n: int, x: int, y: int) -> list[tuple[int, int]]:
     """Орбита клетки при повороте на 90° вокруг центра (1 или 4 клетки при нечётном n)."""
     pts: list[tuple[int, int]] = []
@@ -222,7 +227,7 @@ def generate_map(room_code: str, seed: int) -> GameMap:
             continue
         if not place(1, COVER, 2, 2):  # укрытия в кольце финальной 5×5
             continue
-        # связность: из первого старта достижима каждая не-стена (8 соседей)
+        # связность: из первого старта достижима каждая не-стена (8 соседей, без запертых углов)
         seen = {spawns[0]}
         stack = [spawns[0]]
         while stack:
@@ -230,7 +235,13 @@ def generate_map(room_code: str, seed: int) -> GameMap:
             for dx in (-1, 0, 1):
                 for dy in (-1, 0, 1):
                     x, y = px + dx, py + dy
-                    if 0 <= x < n and 0 <= y < n and tiles[y][x] != WALL and (x, y) not in seen:
+                    if (
+                        0 <= x < n
+                        and 0 <= y < n
+                        and tiles[y][x] != WALL
+                        and (x, y) not in seen
+                        and not sealed_corner(tiles, px, py, x, y)
+                    ):
                         seen.add((x, y))
                         stack.append((x, y))
         if sum(1 for row in tiles for t in row if t != WALL) != len(seen):
@@ -239,19 +250,37 @@ def generate_map(room_code: str, seed: int) -> GameMap:
         loot: list[Loot] = [Loot(0, "weapon", "rifle", c, c)]
         taken = set(reserved)
         taken.add((c, c))
-        for kind, typ, dmin, dmax in _LOOT[n]:
-            # как в engine.js: 400 попыток; не нашлось места — этой орбиты лута на карте нет
+
+        def free_orbit(o: list[tuple[int, int]]) -> bool:
+            return len(o) == 4 and all(tiles[py][px] != WALL and (px, py) not in taken for px, py in o)
+
+        def put_loot(kind: str, typ: str, dmin: int, dmax: int) -> bool:
+            def put(o: list[tuple[int, int]]) -> None:
+                for px, py in o:
+                    taken.add((px, py))
+                    loot.append(Loot(len(loot), kind, typ, px, py))
+
             for _ in range(400):
                 x, y = int(r() * n), int(r() * n)
                 if not dmin <= ring(x, y) <= dmax:
                     continue
                 o = _orbit(n, x, y)
-                if len(o) < 4 or any(tiles[py][px] == WALL or (px, py) in taken for px, py in o):
+                if not free_orbit(o):
                     continue
-                for px, py in o:
-                    taken.add((px, py))
-                    loot.append(Loot(len(loot) + 1, kind, typ, px, py))
-                break
+                put(o)
+                return True
+            # запасной путь (детерминированный): свободная орбита в кольцах [dmin, dmax], иначе — в ближайших
+            free = [o for o in orbits_in(1, c) if free_orbit(o)]
+            for w in range(c + 1):
+                cands = [o for o in free if dmin - w <= ring(*o[0]) <= dmax + w]
+                if cands:
+                    put(cands[int(r() * len(cands))])
+                    return True
+            return False
+
+        # состав лута всегда полный; не влез — другая попытка карты
+        if not all(put_loot(*row) for row in _LOOT[n]):
+            continue
         return GameMap(tuple(tuple(row) for row in tiles), tuple(loot), tuple(spawns))
     raise MapGenError("map gen failed")
 
@@ -348,7 +377,9 @@ def los(s: MatchState, ax: int, ay: int, bx: int, by: int) -> bool:
 
 def can_hit(s: MatchState, ax: int, ay: int, weapon: str, bx: int, by: int) -> bool:
     d = cheb(ax, ay, bx, by)
-    return 1 <= d <= WEAPONS[weapon].range and (d == 1 or los(s, ax, ay, bx, by))
+    if not 1 <= d <= WEAPONS[weapon].range:
+        return False
+    return not sealed_corner(s.tiles, ax, ay, bx, by) if d == 1 else los(s, ax, ay, bx, by)
 
 
 def raw_damage(s: MatchState, ax: int, ay: int, weapon: str, bx: int, by: int) -> int:
@@ -443,6 +474,8 @@ def validate_plan(s: MatchState, player_id: int, plan: Plan) -> Plan:
             raise InvalidPlan("step_not_adjacent", f"({cx}, {cy}) → ({x}, {y})")
         if s.tiles[y][x] == WALL:
             raise InvalidPlan("step_into_wall", f"({x}, {y})")
+        if sealed_corner(s.tiles, cx, cy, x, y):
+            raise InvalidPlan("step_sealed_corner", f"({cx}, {cy}) → ({x}, {y})")
         cx, cy = x, y
     if plan.attack is not None:
         if len(plan.path) == 2:
