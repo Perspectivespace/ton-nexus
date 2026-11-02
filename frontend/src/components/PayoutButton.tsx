@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { useTonConnectUI } from "@tonconnect/ui-react";
+import { useEffect, useState } from "react";
 import { Button, HoldButton, Sheet, useToast } from "@/components/ui";
 import { api, ApiError } from "@/api/client";
 import type { PayoutConfig } from "@/api/hooks";
-import { isCancel, runPayout, short, WrongWalletError, type PayoutTx, type PayoutUI } from "@/lib/payoutFlow";
+import { isCancel, runPayout, short, WrongWalletError, type PayoutTx } from "@/lib/payoutFlow";
+import { usePayoutSession } from "@/lib/payoutSession";
 
 /**
- * «Выплатить» по заявке на вывод — грузится лениво вместе с TON Connect (Касса без него открывается быстрее).
- * Отправляет только с кошелька выплат. Пока прошлый перевод «отправляется», сервер второй не выдаёт (409);
+ * «Выплатить» по заявке на вывод — грузится лениво. Работает в сессии кошелька выплат (PayoutSession),
+ * а не в общей сессии TON Connect с личным кошельком. Отправляет только с кошелька выплат. Пока прошлый перевод «отправляется», сервер второй не выдаёт (409);
  * обойти это может только владелец — удержанием в шторке.
  */
 export default function PayoutButton({
@@ -28,12 +28,15 @@ export default function PayoutButton({
   /** сервер мог поменять заявку (409: перевод уже нашёлся в сети) — перечитать очередь */
   onChanged: () => void;
 }) {
-  const [ui] = useTonConnectUI();
+  const { ui, address } = usePayoutSession();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [wrong, setWrong] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<string | null>(null);
   const [askForce, setAskForce] = useState(false);
+
+  // кошелёк в сессии выплат сменили — старое «не тот кошелёк» больше не актуально
+  useEffect(() => setWrong(null), [address]);
 
   const pay = async (force: boolean) => {
     setAskForce(false);
@@ -42,7 +45,7 @@ export default function PayoutButton({
     setBlocked(null);
     try {
       const tx = await runPayout({
-        ui: ui as unknown as PayoutUI,
+        ui,
         payoutWallet: config.payout_wallet,
         payoutWalletRaw: config.payout_wallet_raw ?? "",
         fetchPayload: () => api<PayoutTx>(`/api/v1/withdraw/${id}/tx-payload${force ? "?force=1" : ""}`),
@@ -67,15 +70,6 @@ export default function PayoutButton({
     }
   };
 
-  const disconnect = async () => {
-    try {
-      await ui.disconnect();
-    } catch {
-      /* уже отключён */
-    }
-    setWrong(null);
-  };
-
   return (
     <div className="grid gap-2">
       <Button kind={sending ? "secondary" : "primary"} block size={sending ? "md" : "lg"} disabled={disabled || loading} onClick={() => pay(false)}>
@@ -85,9 +79,6 @@ export default function PayoutButton({
       {wrong ? (
         <div role="alert" className="grid gap-2 border border-[var(--magenta)] bg-[var(--magenta-soft)] p-3">
           <p className="text-[13px] leading-snug text-[var(--magenta)]">{wrong}</p>
-          <Button kind="secondary" size="sm" onClick={disconnect}>
-            Отключить кошелёк
-          </Button>
         </div>
       ) : null}
 
