@@ -130,6 +130,22 @@ export const SETTINGS: Record<string, SettingMeta> = {
       return `${o.enabled ? "Включено" : "Выключено"} · от ${String(o.min_ton ?? "0.1")} TON`;
     },
   },
+  ton_payouts: {
+    title: "Выплаты TON",
+    short: "Кошелёк, с которого платятся выводы",
+    about:
+      "Касса → «Вывод» → «Выплатить»: владелец или админ подключает этот кошелёк через TON Connect и подтверждает перевод на адрес из заявки. Другой подключённый кошелёк Касса не пустит. Сервер находит перевод в сети по комментарию «TN payout #id», сверяет адрес и сумму и закрывает заявку. Сеть берётся из настройки «Кошелёк TON».",
+    fields: {
+      enabled: { label: "Включено", kind: "bool" },
+      payout_wallet: { label: "Кошелёк выплат", kind: "text", optional: true, hint: "Адрес в любом виде — сохранится как UQ…. Включить можно только с адресом" },
+    },
+    summary: (v) => {
+      const o = v as { enabled?: boolean; payout_wallet?: string };
+      if (!o.payout_wallet) return "Выключено · нет кошелька выплат";
+      const w = o.payout_wallet;
+      return `${o.enabled ? "Включено" : "Выключено"} · ${w.slice(0, 6)}…${w.slice(-4)}`;
+    },
+  },
   ton_wallet: {
     title: "Кошелёк TON",
     short: "Сеть и срок подтверждения",

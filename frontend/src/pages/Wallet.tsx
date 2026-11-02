@@ -67,7 +67,7 @@ export function Wallet() {
   const sum = Number(amount.replace(",", "."));
   const balance = me ? Number(me.balance) : null;
   const list = mine.data || [];
-  const pending = list.find((w) => w.status === "pending");
+  const pending = list.find((w) => w.status === "pending" || w.status === "sending");
   const addr = wallet.trim();
   const addrOk = TON_ADDR.test(addr);
 
@@ -169,7 +169,7 @@ export function Wallet() {
                 ? `На кошелёк TON · от ${min} TON`
                 : "На кошелёк TON"
           }
-          trailing={pending ? <Tag tone="warn">ждёт</Tag> : undefined}
+          trailing={pending ? <Tag tone={pending.status === "sending" ? "neon" : "warn"}>{pending.status === "sending" ? "отправляется" : "ждёт"}</Tag> : undefined}
           onClick={() => setSheet("withdraw")}
         />
         <ListRow
@@ -236,7 +236,9 @@ export function Wallet() {
               {[shortAddr(pending.wallet_address || ""), fmtDate(pending.created_at)].filter(Boolean).join(" · ")}
             </p>
             <p className="ui-sec">
-              Сумма заморожена до решения владельца. При отказе вернётся на баланс. Новую заявку можно создать после решения.
+              {pending.status === "sending"
+                ? "Перевод отправлен на ваш кошелёк — ждём подтверждения сети. Обычно это меньше минуты."
+                : "Сумма заморожена до решения владельца. При отказе вернётся на баланс. Новую заявку можно создать после решения."}
             </p>
           </div>
         ) : ask ? (
