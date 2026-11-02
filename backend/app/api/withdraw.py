@@ -203,6 +203,19 @@ async def payout_verify_hash(
     return _out(await w_svc.get_view(db, request_id))
 
 
+_REVIEW_RU = {
+    "owner or admin required": "Только владелец или админ",
+    "only the owner can mark paid without proof": "Отметить без проверки может только владелец",
+    "note required to mark paid without proof": "Нужна заметка: как и когда выплачено",
+    "payout in progress": "Перевод уже отправляется — сначала «Проверить»",
+    "request not pending": "Заявка уже закрыта",
+}
+
+
+def _ru(e: Exception) -> str:
+    return _REVIEW_RU.get(str(e), str(e))
+
+
 @router.post("/{request_id}/review", response_model=WithdrawOut)
 async def review_withdraw(
     request_id: int,
@@ -227,8 +240,8 @@ async def review_withdraw(
         await db.commit()  # проверка сети могла закрыть заявку как выплаченную
         raise _payout_http(e) from e
     except WithdrawPermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e)) from e
+        raise HTTPException(status_code=403, detail=_ru(e)) from e
     except WithdrawStateError as e:
-        raise HTTPException(status_code=409, detail=str(e)) from e
+        raise HTTPException(status_code=409, detail=_ru(e)) from e
     except WithdrawError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=400, detail=_ru(e)) from e
