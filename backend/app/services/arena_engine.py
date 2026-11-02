@@ -355,7 +355,8 @@ def passable(s: MatchState, x: int, y: int) -> bool:
 
 
 def los(s: MatchState, ax: int, ay: int, bx: int, by: int) -> bool:
-    """Линия огня: стены между стрелком и целью (Брезенхэм, концы не считаются)."""
+    """Линия огня: стены между стрелком и целью (Брезенхэм, концы не считаются); луч не проходит по диагонали
+    между двумя ортогонально соседними стенами (запертый угол)."""
     x0, y0 = ax, ay
     dx, dy = abs(bx - x0), -abs(by - y0)
     sx = 1 if x0 < bx else -1
@@ -367,12 +368,17 @@ def los(s: MatchState, ax: int, ay: int, bx: int, by: int) -> bool:
         if not (x0 == ax and y0 == ay) and s.tiles[y0][x0] == WALL:
             return False
         e2 = 2 * err
+        nx, ny = x0, y0
         if e2 >= dy:
             err += dy
-            x0 += sx
+            nx += sx
         if e2 <= dx:
             err += dx
-            y0 += sy
+            ny += sy
+        # диагональный шаг луча между двумя ортогонально соседними стенами — запертый угол, выстрел не проходит
+        if nx != x0 and ny != y0 and s.tiles[y0][nx] == WALL and s.tiles[ny][x0] == WALL:
+            return False
+        x0, y0 = nx, ny
 
 
 def can_hit(s: MatchState, ax: int, ay: int, weapon: str, bx: int, by: int) -> bool:

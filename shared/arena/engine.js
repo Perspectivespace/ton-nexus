@@ -202,8 +202,12 @@ export function los(s, a, b) {
     if (x0 === b.x && y0 === b.y) return true;
     if (!(x0 === a.x && y0 === a.y) && s.tiles[y0][x0] === 1) return false;
     const e2 = 2 * err;
-    if (e2 >= dy) { err += dy; x0 += sx; }
-    if (e2 <= dx) { err += dx; y0 += sy; }
+    let nx = x0, ny = y0;
+    if (e2 >= dy) { err += dy; nx += sx; }
+    if (e2 <= dx) { err += dx; ny += sy; }
+    // диагональный шаг луча между двумя ортогонально соседними стенами — запертый угол, выстрел не проходит
+    if (nx !== x0 && ny !== y0 && s.tiles[y0][nx] === 1 && s.tiles[ny][x0] === 1) return false;
+    x0 = nx; y0 = ny;
   }
 }
 

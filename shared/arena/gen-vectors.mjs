@@ -46,6 +46,56 @@ function corners() {
   return out;
 }
 
+// Линия огня: для каждой пары проходимых клеток на 2..5 по Чебышёву (a по строкам, затем b по строкам) —
+// бит los(a, b); 4 бита → hex-цифра. Ловит расхождения Брезенхема и запертых углов для лучей.
+// Брезенхем без правила углов — только чтобы посчитать, сколько пар закрыто именно запертым углом
+function wallsOnly(s, a, b) {
+  let x0 = a.x, y0 = a.y;
+  const dx = Math.abs(b.x - x0), dy = -Math.abs(b.y - y0), sx = x0 < b.x ? 1 : -1, sy = y0 < b.y ? 1 : -1;
+  let err = dx + dy;
+  for (;;) {
+    if (x0 === b.x && y0 === b.y) return true;
+    if (!(x0 === a.x && y0 === a.y) && s.tiles[y0][x0] === 1) return false;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+
+function losBits() {
+  const out = [];
+  for (const room of ["a4", "a8"]) {
+    // seed 0 и первые три seed, где правило угла реально закрывает лучи (стены по диагонали встречаются на ~¼ карт)
+    const picked = [];
+    for (let seed = 0; picked.length < 4; seed++) {
+      const l = losMap(room, seed);
+      if (seed === 0 || l.corner > 0) picked.push(l);
+    }
+    out.push(...picked);
+  }
+  return out;
+}
+
+function losMap(room, seed) {
+  const s = E.createMatch(room, seed, players(room));
+  const cells = [];
+  for (let y = 0; y < s.N; y++) for (let x = 0; x < s.N; x++) if (E.passable(s, x, y)) cells.push({ x, y });
+  let bits = "", blocked = 0, corner = 0;
+  for (const a of cells) for (const b of cells) {
+    const d = E.cheb(a, b);
+    if (d < 2 || d > 5) continue;
+    const v = E.los(s, a, b);
+    bits += v ? "1" : "0";
+    if (!v) blocked++;
+    if (!v && wallsOnly(s, a, b)) corner++;
+  }
+  const pairs = bits.length;
+  while (bits.length % 4) bits += "0";
+  let hex = "";
+  for (let i = 0; i < bits.length; i += 4) hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
+  return { room, seed, pairs, blocked, corner, hex };
+}
+
 // «Сценарий»: случайные, но валидные планы (шаг/рывок/стоять, атака по ближнему или случайному, аптечка)
 function scriptedPlans(s, r) {
   const plans = {};
@@ -129,6 +179,6 @@ const config = {
   ARMORS: Object.fromEntries(Object.entries(E.ARMORS).map(([k, a]) => [k, [a.ap, a.tier]])),
   ROOMS: Object.fromEntries(Object.entries(E.ROOMS).map(([k, r]) => [k, [r.players, r.size]])),
 };
-const json = JSON.stringify({ version: 2, config, maps: maps(), corners: corners(), matches });
+const json = JSON.stringify({ version: 2, config, maps: maps(), corners: corners(), los: losBits(), matches });
 writeFileSync(OUT, json + "\n");
-console.log(`arena-vectors.json: ${maps().length} карт, ${corners().length} углов, ${matches.length} матчей, ${matches.reduce((a, m) => a + m.turns.length, 0)} ходов, ${(json.length / 1024).toFixed(0)} КБ`);
+console.log(`arena-vectors.json: ${maps().length} карт, ${corners().length} углов, ${losBits().reduce((a, l) => a + l.pairs, 0)} лучей (${losBits().reduce((a, l) => a + l.corner, 0)} закрыты углом), ${matches.length} матчей, ${matches.reduce((a, m) => a + m.turns.length, 0)} ходов, ${(json.length / 1024).toFixed(0)} КБ`);
