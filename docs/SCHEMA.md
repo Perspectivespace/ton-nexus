@@ -20,6 +20,8 @@ PostgreSQL · SQLAlchemy 2 async · Alembic (миграции — следующ
 | `ton_deposits` | Пополнения TON по мемо |
 | `chain_cursors` | Курсор опроса toncenter |
 | `wallet_proof_payloads` | Nonce для ton_proof |
+| `arena_rooms` | «Арена»: комнаты (a4/a8), статус, ставка/комиссия в nanoTON, seed commit–reveal, доход с комиссии |
+| `arena_entries` | «Арена»: места игроков, ставка в холде, итоговое место и приз (`docs/arena/RULES.md`) |
 
 ## Майнер
 
