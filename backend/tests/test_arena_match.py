@@ -32,7 +32,12 @@ class MatchBase(ApiBase):
         tgs = [await self.user(**kw) for _ in range(n)]
         views = [(await self.post("/join", tg, {"type": code})).json() for tg in tgs]
         self.assertEqual(views[-1]["status"], "running", views[-1])
-        return tgs, views[0]["id"]
+        rid = views[0]["id"]
+        # на старте места перемешиваются seed'ом: вернуть игроков по местам (tgs[i] — место i), порядок входа — в joined
+        seat = {tg: (await self.get(f"/rooms/{rid}", tg)).json()["my_seat"] for tg in tgs}
+        self.assertEqual(sorted(seat.values()), list(range(n)))
+        self.joined = tgs
+        return sorted(tgs, key=seat.__getitem__), rid
 
     async def open_turn(self, rid):
         """Закончить отсчёт: окно текущего хода открыто 1 с назад (дедлайн через 9 с)."""
@@ -132,7 +137,7 @@ class TurnLoopTest(MatchBase):
         m = v["match"]
         self.assertEqual((m["phase"], m["turn"], m["current"]["turn"]), ("countdown", 1, 1))
         self.assertEqual((m["n"], len(m["players"]), m["my_seat"] if "my_seat" in m else v["my_seat"]), (9, 4, 0))
-        self.assertEqual([p["seat"] for p in m["players"]], [0, 1, 2, 3])
+        self.assertEqual(sorted(p["seat"] for p in m["players"]), [0, 1, 2, 3])
         self.assertNotIn("seed", v)
         self.assertEqual(v["turns"], [])
         r = await self.plan(rid, tgs[0], 1)
@@ -287,6 +292,7 @@ class FinishTest(MatchBase):
         tgs, rid = await self.full_room(code, n)
         final = await self.play_out(rid, tgs)
         v = await self.state(rid, tgs[0])
+        seat_of = {tg: seat for seat, tg in enumerate(tgs)}
         self.assertEqual((v["status"], v["match"]["phase"], v["match"]["current"]), ("finished", "finished", None))
         # деньги: призы + комиссия = ставки до нанотона; история баланса — arena_prize
         async with self.S() as s:
@@ -317,8 +323,12 @@ class FinishTest(MatchBase):
         self.assertEqual([t["turn"] for t in log], list(range(1, len(log) + 1)))
         self.assertIn("deadline", {t["reason"] for t in log})
         self.assertIn("ready", {t["reason"] for t in log})
+        # рассадка: места = seat_order(seed, n) по слотам входа; слот каждого места — в публичном виде боя
+        order = eng.seat_order(v["seed"], v["seats_total"])
+        self.assertEqual({p["seat"]: p["slot"] for p in v["match"]["players"]}, {seat: slot for slot, seat in enumerate(order)})
+        self.assertEqual([seat_of[tg] for tg in self.joined], order)
         replay = eng.run_match(
-            v["type"], v["seed"], list(range(v["seats_total"])),
+            v["type"], v["seed"], order,
             [{int(k): eng.parse_plan(p) if p else None for k, p in t["plans"].items()} for t in log],
         )
         self.assertTrue(replay.finished)

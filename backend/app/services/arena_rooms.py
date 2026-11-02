@@ -135,7 +135,7 @@ async def join_type(session: AsyncSession, *, code: str, user_id: int, now: date
 
 async def start_match(session: AsyncSession, room_id: int, *, now: datetime | None = None) -> ArenaMatch:
     """Набранная комната → running (escrow.start), состояние боя перед 1-м ходом и окно 1-го хода
-    (после отсчёта). Игроки в движке — номера мест. Повтор — тот же бой."""
+    (после отсчёта). Места перемешиваются seed'ом; игроки в движке — номера мест. Повтор — тот же бой."""
     now = now or escrow.utcnow()
     room = await escrow.start(session, room_id, now=now)
     existing = await session.scalar(select(ArenaMatch).where(ArenaMatch.room_id == room.id))
@@ -148,10 +148,20 @@ async def start_match(session: AsyncSession, room_id: int, *, now: datetime | No
             .order_by(ArenaEntry.seat)
         )
     ).all()
-    seats = [int(e.seat) for e in entries]
-    if seats != list(range(room.seats)):
-        raise escrow.ArenaStateError(f"room {room.id}: seats {seats}")
-    state = arena_engine.create_match(room.room_type, int(room.seed), seats)
+    slots = [int(e.seat) for e in entries]
+    if slots != list(range(room.seats)):
+        raise escrow.ArenaStateError(f"room {room.id}: seats {slots}")
+    # До старта место = слот входа. На старте места перемешиваются seed'ом (RULES §3): вошедший i-м получает
+    # seat_order(seed, n)[i]. Два шага — из-за unique (комната, место).
+    order = arena_engine.seat_order(int(room.seed), room.seats)
+    for e in entries:
+        e.seat = None
+    await session.flush()
+    for slot, e in enumerate(entries):
+        e.seat = order[slot]
+    await session.flush()
+    # игроки в движке — места, в порядке входа (slot в состоянии = слот входа)
+    state = arena_engine.create_match(room.room_type, int(room.seed), order)
     match = ArenaMatch(
         room_id=room.id, turn=state.turn, state_json=arena_engine.state_to_json(state), created_at=now, updated_at=now
     )

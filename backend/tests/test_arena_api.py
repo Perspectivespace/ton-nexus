@@ -248,9 +248,16 @@ class RoomsApiTest(ApiBase):
         self.assertEqual((room.status, m.turn, views[-1]["match"]["id"]), ("running", 1, m.id))
         st = eng.state_from_json(m.state_json)
         # игроки в движке — номера мест (в публичном журнале нет id пользователей)
+        # места перемешаны seed'ом: вошедший i-м сидит на seat_order(seed, 4)[i], не по порядку входа
+        order = eng.seat_order(room.seed, 4)
         self.assertEqual(list(seats), [0, 1, 2, 3])
-        self.assertEqual(eng.state_to_dict(st), eng.state_to_dict(eng.create_match("a4", room.seed, [0, 1, 2, 3])))
-        self.assertEqual([p.id for p in st.players], [0, 1, 2, 3])
+        async with self.S() as s:
+            by_user = dict((await s.execute(select(ArenaEntry.user_id, ArenaEntry.seat).where(ArenaEntry.room_id == rid))).all())
+            uid = {u.telegram_id: u.id for u in (await s.scalars(select(User))).all()}
+        self.assertEqual([by_user[uid[tg]] for tg in tgs[:4]], order)
+        self.assertEqual([(await self.get(f"/rooms/{rid}", tg)).json()["my_seat"] for tg in tgs[:4]], order)
+        self.assertEqual(eng.state_to_dict(st), eng.state_to_dict(eng.create_match("a4", room.seed, order)))
+        self.assertEqual([(p.id, p.slot) for p in st.players], [(seat, slot) for slot, seat in enumerate(order)])
         # 1-й ход: отсчёт 3 с после старта, затем 10 с на план
         self.assertEqual(t1.turn, 1)
         self.assertEqual(ae._aware(t1.opens_at) - ae._aware(room.started_at), timedelta(seconds=3))

@@ -58,7 +58,7 @@ class ArenaEntry(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     room_id: Mapped[int] = mapped_column(ForeignKey("arena_rooms.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    # номер места 0…seats-1 (порядок входа); NULL — место освобождено
+    # номер места 0…seats-1: до старта — слот входа, на старте перемешивается seed'ом; NULL — место освобождено
     seat: Mapped[int | None] = mapped_column(Integer, nullable=True)
     held_nano: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="held", server_default="held")

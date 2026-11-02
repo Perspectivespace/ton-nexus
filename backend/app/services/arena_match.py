@@ -311,6 +311,7 @@ def _players(state: eng.MatchState, names: dict[int, str], my_seat: int | None) 
         out.append(
             {
                 "seat": p.id,
+                "slot": p.slot,  # слот входа: seat == seat_order(seed, n)[slot]
                 "name": names.get(p.id, "Игрок"),
                 "is_me": p.id == my_seat,
                 "x": p.x,

@@ -179,6 +179,14 @@ const config = {
   ARMORS: Object.fromEntries(Object.entries(E.ARMORS).map(([k, a]) => [k, [a.ap, a.tier]])),
   ROOMS: Object.fromEntries(Object.entries(E.ROOMS).map(([k, r]) => [k, [r.players, r.size]])),
 };
-const json = JSON.stringify({ version: 2, config, maps: maps(), corners: corners(), los: losBits(), matches });
+// Места по seed: [room, seed, seatOrder] — крайние seed и разброс по uint32
+const seats = [];
+for (const room of ["a4", "a8"]) {
+  const seeds = [...EDGE_SEEDS];
+  for (let i = 0; i < 40; i++) seeds.push((Math.imul(i + 7, 2246822519) >>> 0));
+  for (const seed of seeds) seats.push([room, seed, E.seatOrder(seed, E.ROOMS[room].players)]);
+}
+
+const json = JSON.stringify({ version: 2, config, maps: maps(), corners: corners(), los: losBits(), matches, seats });
 writeFileSync(OUT, json + "\n");
-console.log(`arena-vectors.json: ${maps().length} карт, ${corners().length} углов, ${losBits().reduce((a, l) => a + l.pairs, 0)} лучей (${losBits().reduce((a, l) => a + l.corner, 0)} закрыты углом), ${matches.length} матчей, ${matches.reduce((a, m) => a + m.turns.length, 0)} ходов, ${(json.length / 1024).toFixed(0)} КБ`);
+console.log(`arena-vectors.json: ${maps().length} карт, ${corners().length} углов, ${losBits().reduce((a, l) => a + l.pairs, 0)} лучей (${losBits().reduce((a, l) => a + l.corner, 0)} закрыты углом), ${matches.length} матчей, ${seats.length} рассадок, ${matches.reduce((a, m) => a + m.turns.length, 0)} ходов, ${(json.length / 1024).toFixed(0)} КБ`);

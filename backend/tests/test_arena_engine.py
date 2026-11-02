@@ -59,6 +59,33 @@ class ConfigParityTest(unittest.TestCase):
         self.assertEqual(got, [0.6270739405881613, 0.002735721180215478, 0.5274470399599522])
 
 
+class SeatOrderTest(unittest.TestCase):
+    """Рассадка по seed (RULES §3): места = seat_order(seed, n)[слот входа]."""
+
+    def test_matches_js(self):
+        self.assertEqual({r for r, _, _ in VECTORS["seats"]}, {"a4", "a8"})
+        self.assertGreaterEqual(len(VECTORS["seats"]), 80)
+        for room, seed, order in VECTORS["seats"]:
+            with self.subTest(room=room, seed=seed):
+                self.assertEqual(eng.seat_order(seed, arena_config.room_type(room).seats), order)
+
+    def test_permutation_deterministic_and_shuffled(self):
+        for n in (4, 8):
+            orders = [eng.seat_order(seed, n) for seed in range(2400)]
+            for seed, o in enumerate(orders):
+                self.assertEqual(sorted(o), list(range(n)))
+                self.assertEqual(eng.seat_order(seed, n), o)  # тот же seed — та же рассадка
+            # не порядок входа: «как вошли» — примерно 1 из n! seed (a4: ~100 из 2400), каждый слот бывает на каждом месте
+            self.assertLess(sum(o == list(range(n)) for o in orders), 150)
+            for slot in range(n):
+                self.assertEqual({o[slot] for o in orders}, set(range(n)))
+        self.assertNotEqual(eng.seat_order(1, 4), [0, 1, 2, 3])
+        self.assertEqual(eng.seat_order(2**32 + 5, 8), eng.seat_order(5, 8))  # seed — uint32, как в JS
+        self.assertEqual(eng.seat_order(7, 1), [0])
+        with self.assertRaises(ValueError):
+            eng.seat_order(7, 0)
+
+
 class MapParityTest(unittest.TestCase):
     def test_maps_match_js(self):
         for v in VECTORS["maps"]:
