@@ -11,6 +11,9 @@ vi.hoisted(() => {
 vi.mock("@tonconnect/ui-react", () => {
   throw new Error("@tonconnect/ui-react imported statically");
 });
+vi.mock("virtual:tn-payout-tonconnect-ui", () => {
+  throw new Error("payout TON Connect imported statically");
+});
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

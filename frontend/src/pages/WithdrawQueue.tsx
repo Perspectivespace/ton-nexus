@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useMe, usePayoutConfig, usePendingWithdrawals } from "@/api/hooks";
 import { ScreenHeader, StatusPill, LoadingPanel, ErrorPanel, EmptyPanel, Tabs } from "@/components/ui";
 import { WithdrawCard } from "@/components/WithdrawCard";
-import { LazyTonConnectProvider } from "@/lib/tonconnect";
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
 import { TowerPrizesAdmin } from "@/components/TowerPrizesAdmin";
 import { DepositsAdmin } from "@/components/DepositsAdmin";
+
+// Сессия кошелька выплат — своя копия TON Connect, отдельным чанком: Касса открывается без неё
+const PayoutSession = lazy(() => import("@/components/PayoutSession"));
 
 export function WithdrawQueue() {
   useScreenBack("/");
@@ -37,6 +39,15 @@ export function WithdrawQueue() {
   }
 
   const list = q.data || [];
+  const payoutReady = !!cfg.data?.enabled && !!cfg.data.payout_wallet_raw;
+  const withSession = (children: ReactNode) =>
+    payoutReady && cfg.data ? (
+      <Suspense fallback={<p className="ui-sec">Загрузка…</p>}>
+        <PayoutSession config={cfg.data}>{children}</PayoutSession>
+      </Suspense>
+    ) : (
+      children
+    );
 
   return (
     <div className="space-y-5">
@@ -80,7 +91,7 @@ export function WithdrawQueue() {
           )}
 
           {list.length > 0 && (
-            <LazyTonConnectProvider fallback={<p className="ui-sec">Загрузка…</p>}>
+            withSession(
               <AnimatePresence mode="popLayout">
                 {list.map((item) => (
                   <WithdrawCard
@@ -92,7 +103,7 @@ export function WithdrawQueue() {
                   />
                 ))}
               </AnimatePresence>
-            </LazyTonConnectProvider>
+            )
           )}
 
           {/* призы «Башни» — решает и платит только владелец */}

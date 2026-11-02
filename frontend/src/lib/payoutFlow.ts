@@ -24,7 +24,7 @@ export class WrongWalletError extends Error {
     public connected: string,
     public expected: string,
   ) {
-    super(`Подключён другой кошелёк. Выплаты идут только с кошелька выплат ${short(expected)} — отключите этот и подключите его.`);
+    super(`Подключён не кошелёк выплат. Выплаты идут только с ${short(expected)} — нажмите «Отключить» в блоке «Кошелёк выплат» и подключите его.`);
   }
 }
 
