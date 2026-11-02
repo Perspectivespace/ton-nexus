@@ -34,6 +34,9 @@ _KINDS: dict[str, tuple[str, str]] = {
     "prize_wheel": ("wheel", "wheel"),
     "promo": ("promo", "promo"),
     "tower_prize": ("tower_prize", "tower_prize"),
+    "arena_hold": ("arena_hold", "arena_hold"),
+    "arena_refund": ("arena_refund", "arena_refund"),
+    "arena_prize": ("arena_prize", "arena_prize"),
 }
 
 LABELS: dict[str, str] = {
@@ -48,6 +51,9 @@ LABELS: dict[str, str] = {
     "wheel": "Рулетка",
     "promo": "Промокод",
     "tower_prize": "Приз «Башни»",
+    "arena_hold": "Ставка «Арены»",
+    "arena_refund": "Возврат ставки «Арены»",
+    "arena_prize": "Приз «Арены»",
     "credit": "Начисление",
     "debit": "Списание",
 }
@@ -62,8 +68,8 @@ def tx_url(tx_hash: str | None, network: str = "mainnet") -> str | None:
     host = "testnet.tonviewer.com" if network == "testnet" else "tonviewer.com"
     return f"https://{host}/transaction/{tx_hash}"
 
-# у каких видов в подписи полезно описание из журнала (номер задания, приз рулетки, месяц «Башни»)
-_DETAIL_KINDS = {"task_reward", "task_budget", "wheel", "tower_prize", "promo"}
+# у каких видов в подписи полезно описание из журнала (номер задания, приз рулетки, месяц «Башни», комната «Арены»)
+_DETAIL_KINDS = {"task_reward", "task_budget", "wheel", "tower_prize", "promo", "arena_hold", "arena_refund", "arena_prize"}
 
 
 def kind_of(operation_type: str, balance_type: str | None) -> str:

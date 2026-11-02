@@ -67,6 +67,9 @@ class KindTests(unittest.TestCase):
             ("debit", "tasks"): ("task_budget", "spending"),
             ("debit", "upgrade_burn"): ("upgrade", "spending"),
             ("credit", "tower_prize"): ("tower_prize", "earnings"),
+            ("debit", "arena_hold"): ("arena_hold", "spending"),
+            ("credit", "arena_refund"): ("arena_refund", "earnings"),
+            ("credit", "arena_prize"): ("arena_prize", "earnings"),
             ("credit", "something_new"): ("credit", "earnings"),
             ("debit", None): ("debit", "spending"),
         }
