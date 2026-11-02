@@ -1,12 +1,18 @@
 import type { ReactNode } from "react";
 import { useMe, usePendingSubmissions, usePendingTaskApprovals, usePendingWithdrawals } from "@/api/hooks";
-import { IconCheck, IconGear, IconOut, IconRefresh, IconSpark } from "@/components/icons";
+import { IconCheck, IconGear, IconOut, IconRefresh, IconSpark, IconUser } from "@/components/icons";
 import { List, ListRow, SectionLabel, StatusPill } from "@/components/ui";
 
 const POLL_MS = 60_000;
 
 /** Подпись под разделом: кто его видит (видимость та же, что и раньше — по ролям) */
 export const WORK_NOTE = "Видно только команде: владельцу, админам, амбассадорам и деплоерам. Игроки этот раздел не видят.";
+
+/** Подпись строки «Роли»: что этот человек может выдавать */
+export function rolesSub(owner: boolean, deployer: boolean): string {
+  if (owner && deployer) return "Админы и владельцы";
+  return owner ? "Админы" : "Владельцы";
+}
 
 /** Счётчик «ждёт решения» справа в строке — только когда есть что разбирать. */
 function Count({ n }: { n: number }) {
@@ -16,7 +22,7 @@ function Count({ n }: { n: number }) {
 /**
  * «Управление» — единственный вход в инструменты команды; последний раздел «Профиля» (/wallet), DESIGN.md §14.1.
  * Строки показываются по роли; доступ всё равно проверяет сервер, здесь только видимость.
- * Сначала очереди со счётчиками, потом создание, потом кабинет и деплой.
+ * Сначала очереди со счётчиками, потом создание, потом кабинет, роли и деплой.
  */
 export function WorkArea() {
   const { data: me } = useMe();
@@ -78,6 +84,12 @@ export function WorkArea() {
         title="Кабинет владельца"
         sub="Обзор · промо · экономика"
       />,
+    );
+  }
+  if (me.is_owner || me.can_deploy) {
+    // админов назначает владелец, владельцев — деплойер
+    rows.push(
+      <ListRow key="roles" to="/roles" icon={<IconUser size={20} />} title="Роли" sub={rolesSub(me.is_owner, me.can_deploy)} />,
     );
   }
   if (me.can_deploy) {

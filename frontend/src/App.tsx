@@ -24,6 +24,7 @@ export default function App() {
           <Route path="/inbox" element={route("inbox")} />
           <Route path="/withdraws" element={route("withdraws")} />
           <Route path="/deploy" element={route("deploy")} />
+          <Route path="/roles" element={route("roles")} />
           <Route path="/tower" element={route("tower")} />
           <Route path="/tower/top" element={route("towerTop")} />
           <Route path="/ratings" element={route("ratings")} />

@@ -113,6 +113,37 @@ export type DeployerOut = {
   from_env?: boolean;
 };
 
+/** «Роли»: строка списка владельцев / админов */
+export type StaffRow = {
+  telegram_id: number;
+  username: string | null;
+  first_name: string | null;
+  /** владелец из TELEGRAM_OWNER_IDS — в приложении не снимается */
+  from_env?: boolean;
+  /** кто выдал роль последним (по журналу), null — выдана до журнала */
+  granted_by?: string | null;
+  granted_at?: string | null;
+};
+
+export type StaffOut = {
+  owners: StaffRow[];
+  admins: StaffRow[];
+  /** может назначать админов (владелец) */
+  can_manage_admins: boolean;
+  /** может назначать владельцев (деплойер) */
+  can_manage_owners: boolean;
+};
+
+export type UserSearchRow = {
+  telegram_id: number;
+  username: string | null;
+  first_name: string | null;
+  is_owner: boolean;
+  owner_from_env: boolean;
+  is_admin: boolean;
+  is_deployer: boolean;
+};
+
 // ── «Башня» ──
 export type TowerStatus = {
   free_per_day: number;
