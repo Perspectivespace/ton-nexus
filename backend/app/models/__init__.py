@@ -1,4 +1,4 @@
-from app.models.arena import ArenaEntry, ArenaMatch, ArenaRoom
+from app.models.arena import ArenaEntry, ArenaMatch, ArenaRoom, ArenaTurn
 from app.models.balance import BalanceHistory
 from app.models.economy import EconomySetting
 from app.models.miner import Miner, MinerUpgradeLog
@@ -16,6 +16,7 @@ __all__ = [
     "ArenaRoom",
     "ArenaEntry",
     "ArenaMatch",
+    "ArenaTurn",
     "User",
     "RoleChange",
     "UserWallet",
