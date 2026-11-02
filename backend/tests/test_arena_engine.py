@@ -36,7 +36,7 @@ def js_plans(raw: dict) -> dict[int, Plan]:
 
 class ConfigParityTest(unittest.TestCase):
     def test_vectors_file(self):
-        self.assertEqual(VECTORS["version"], 1)
+        self.assertEqual(VECTORS["version"], 2)
         self.assertGreaterEqual(len(VECTORS["maps"]), 80)
         self.assertGreaterEqual(len(VECTORS["matches"]), 12)
         self.assertEqual({m["kind"] for m in VECTORS["matches"]}, {"bots", "bots+afk", "script"})
@@ -71,10 +71,35 @@ class MapParityTest(unittest.TestCase):
                 self.assertEqual([[p.id, p.x, p.y] for p in s.players], v["starts"])
 
 
+class CornerParityTest(unittest.TestCase):
+    def test_corners_match_js(self):
+        sealed = 0
+        for room, seed, ax, ay, bx, by, can_step, fists, rifle in VECTORS["corners"]:
+            with self.subTest(room=room, seed=seed, a=(ax, ay), b=(bx, by)):
+                s = eng.create_match(room, seed, list(range(arena_config.room_type(room).seats)))
+                me = s.players[0]
+                me.x, me.y = ax, ay
+                try:
+                    eng.validate_plan(s, me.id, Plan(((bx, by),)))
+                    ok = True
+                except InvalidPlan as e:
+                    self.assertEqual(e.code, "step_sealed_corner")
+                    ok = False
+                self.assertEqual(ok, can_step)
+                self.assertEqual(eng.can_hit(s, ax, ay, "fists", bx, by), fists)
+                self.assertEqual(eng.can_hit(s, ax, ay, "rifle", bx, by), rifle)
+                sealed += not can_step
+        self.assertGreater(sealed, 0)
+
+
 class MatchParityTest(unittest.TestCase):
     def test_matches_turn_by_turn(self):
         for m in VECTORS["matches"]:
             s = eng.create_match(m["room"], m["seed"], m["ids"])
+            with self.subTest(room=m["room"], seed=m["seed"], kind=m["kind"], turn=0):
+                self.assertEqual(["".join(map(str, row)) for row in s.tiles], m["start"]["tiles"])
+                self.assertEqual([[l.id, l.kind, l.type, l.x, l.y] for l in s.loot], m["start"]["loot"])
+                self.assertEqual([[p.id, p.x, p.y] for p in s.players], m["start"]["starts"])
             for t in m["turns"]:
                 with self.subTest(room=m["room"], seed=m["seed"], kind=m["kind"], turn=t["turn"]):
                     self.assertEqual(s.turn, t["turn"])
@@ -90,11 +115,9 @@ class MatchParityTest(unittest.TestCase):
                     self.assertEqual([[z["who"], z["dmg"]] for z in lt["zone_hits"]], t["zoneHits"])
                     self.assertEqual(lt["deaths"], t["deaths"])
                     self.assertEqual([[q["who"], q["x"], q["y"], q["kind"], q["type"]] for q in lt["picks"]], t["picks"])
-                    ev = [py_event(e) for e in lt["events"]]
-                    if len(t["events"]) < 40:  # JS хранит ленту из 40 последних событий
-                        self.assertEqual(ev, t["events"])
-                    else:
-                        self.assertEqual(ev[: len(t["events"])], t["events"])
+                    # все события хода (lastTurn.events), не клиентская лента из 40
+                    self.assertEqual([py_event(e) for e in lt["events"]], t["events"])
+                    self.assertEqual(s.places is None, not t["finished"])
             self.assertTrue(s.finished)
             self.assertEqual([[p.id, p.place, p.shared] for p in s.places], m["places"])
 
@@ -166,11 +189,9 @@ class MapInvariantsTest(unittest.TestCase):
                                 self.assertNotIn((sx + dx, sy + dy), loot_cells)
                     for l in gm.loot:
                         self.assertNotEqual(T[l.y][l.x], eng.WALL)
-                    counts = Counter(l.type for l in gm.loot)
-                    for typ, cnt in counts.items():
-                        self.assertLessEqual(cnt, loot_full[code][typ])
-                        self.assertEqual(cnt % 4 if typ != "rifle" else cnt, 0 if typ != "rifle" else 1)
-                    # связность: все не-стены в одной компоненте (8 соседей)
+                    self.assertEqual(Counter(l.type for l in gm.loot), loot_full[code])
+                    self.assertEqual([l.id for l in gm.loot], list(range(len(gm.loot))))
+                    # связность: все не-стены в одной компоненте (8 соседей, запертые углы не проходятся)
                     free = {(x, y) for x, y in cells if T[y][x] != eng.WALL}
                     seen, stack = {(c, c)}, [(c, c)]
                     while stack:
@@ -178,13 +199,31 @@ class MapInvariantsTest(unittest.TestCase):
                         for dx in (-1, 0, 1):
                             for dy in (-1, 0, 1):
                                 q = (px + dx, py + dy)
-                                if q in free and q not in seen:
-                                    seen.add(q)
-                                    stack.append(q)
+                                if q not in free or q in seen:
+                                    continue
+                                if dx and dy and T[py][px + dx] != eng.FLOOR and T[py + dy][px] != eng.FLOOR:
+                                    continue  # запертый угол
+                                seen.add(q)
+                                stack.append(q)
                     self.assertEqual(seen, free)
                     # старты: каждый спавн занят ровно одним игроком
                     s = eng.create_match(code, seed, list(range(100, 100 + rt.seats)))
                     self.assertEqual(sorted((p.x, p.y) for p in s.players), sorted(gm.spawns))
+
+    def test_loot_always_complete_20000_seeds(self):
+        """Честность: на каждой карте полный состав лута (раньше на части карт орбита молча пропадала)."""
+        full = {"a4": 21, "a8": 33}  # винтовка + орбиты по 4
+        for code, total in full.items():
+            want = Counter()
+            for kind, typ, *_ in eng._LOOT[arena_config.room_type(code).board]:
+                want[(kind, typ)] += 4
+            want[("weapon", "rifle")] = 1
+            bad = []
+            for seed in range(20_000):
+                gm = eng.generate_map(code, seed)
+                if len(gm.loot) != total or Counter((l.kind, l.type) for l in gm.loot) != want:
+                    bad.append(seed)
+            self.assertEqual(bad, [], code)
 
     def test_deterministic_and_seed_sensitive(self):
         a = eng.create_match("a8", 42, list(range(8)))
@@ -328,16 +367,37 @@ class TurnRulesTest(unittest.TestCase):
         s = board([(1, 1, 4, {"weapon": "rifle"}), (2, 5, 4)], walls=[(3, 4)])
         s = eng.resolve_turn(s, {1: step(attack=2)})
         self.assertTrue(s.last_turn["shots"][0]["miss"])
-        # вплотную по диагонали между двумя стенами — удар проходит (LOS не проверяется на d=1)
-        s = board([(1, 4, 4), (2, 5, 5)], walls=[(5, 4), (4, 5)])
+        # вплотную линия огня не нужна: стена сбоку не мешает
+        s = board([(1, 4, 4), (2, 5, 5)], walls=[(5, 4)])
         s = eng.resolve_turn(s, {1: step(attack=2)})
         self.assertEqual(s.player(2).hp, 88)
-        # ...и шаг по диагонали между стенами тоже разрешён
-        s = board([(1, 4, 4), (2, 0, 0)], walls=[(5, 4), (4, 5)])
-        self.assertEqual(eng.validate_plan(s, 1, step((5, 5))), step((5, 5)))
         # дальность пистолета 3 — с 4 клеток мимо
         s = eng.resolve_turn(board([(1, 0, 4, {"weapon": "pistol"}), (2, 4, 4)]), {1: step(attack=2)})
         self.assertTrue(s.last_turn["shots"][0]["miss"])
+
+    def test_sealed_corner(self):
+        # запертый угол: по бокам диагонали два препятствия (стена/укрытие в любом сочетании)
+        for walls, covers in (([(5, 4), (4, 5)], []), ([(5, 4)], [(4, 5)]), ([], [(5, 4), (4, 5)])):
+            with self.subTest(walls=walls, covers=covers):
+                s = board([(1, 4, 4, {"weapon": "rifle"}), (2, 5, 5), (3, 0, 0)], walls=walls, covers=covers)
+                # ни удара (любым оружием на d=1) ...
+                out = eng.resolve_turn(s, {1: step(attack=2), 2: step(attack=1)})
+                self.assertEqual([x["miss"] for x in out.last_turn["shots"]], [True, True])
+                self.assertEqual((out.player(1).hp, out.player(2).hp), (100, 100))
+                # ... ни шага через угол
+                with self.assertRaises(InvalidPlan) as cm:
+                    eng.validate_plan(s, 1, step((5, 5)))
+                self.assertEqual(cm.exception.code, "step_sealed_corner")
+        # одно препятствие — угол открыт: шаг и удар проходят
+        s = board([(1, 4, 4), (2, 5, 5), (3, 0, 0)], covers=[(5, 4)])
+        self.assertEqual(eng.validate_plan(s, 1, step((5, 3))), step((5, 3)))
+        out = eng.resolve_turn(s, {1: step(attack=2)})
+        self.assertEqual(out.player(2).hp, 88)
+        # рывок: второй шаг через запертый угол — весь план отклонён
+        s = board([(1, 3, 4), (2, 0, 0)], walls=[(5, 4)], covers=[(4, 5)])
+        with self.assertRaises(InvalidPlan) as cm:
+            eng.validate_plan(s, 1, step((4, 4), (5, 5)))
+        self.assertEqual(cm.exception.code, "step_sealed_corner")
 
     def test_medkit(self):
         s = eng.resolve_turn(board([(1, 4, 4, {"hp": 80, "medkits": 2}), (2, 0, 0)]), {1: Plan(medkit=True)})
