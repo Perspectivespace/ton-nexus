@@ -1,8 +1,9 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button, ErrorState, ScreenHeader, useToast } from "@/components/ui";
 import { BackLink } from "@/components/BackLink";
 import { IconCheck, IconChevron, IconRefresh } from "@/components/icons";
-import { ArenaArt } from "@/components/arena/ArenaArt";
+import { ArenaBattle } from "@/components/arena/ArenaBattle";
 import { useScreenBack } from "@/lib/backButton";
 import { haptic } from "@/lib/haptics";
 import {
@@ -144,7 +145,12 @@ export interface ArenaRoomViewProps {
   again?: boolean;
   onLeave?: () => void;
   onAgain?: () => void;
+  /** экран боя: live — показывать (и доиграть финал), out — игрок ушёл к итогам до конца боя */
+  battle?: "live" | "out" | "done";
+  onBattleDone?: () => void;
+  onWatch?: () => void;
 }
+const noop = () => {};
 
 /** Экран комнаты по состоянию (чистый вид — для тестов и скриншотов) */
 export function ArenaRoomView({
@@ -155,6 +161,9 @@ export function ArenaRoomView({
   again,
   onLeave,
   onAgain,
+  battle = "live",
+  onBattleDone,
+  onWatch,
 }: ArenaRoomViewProps) {
   const name = `Арена ${room.seats_total}`;
   if (screen.kind === "waiting" || screen.kind === "countdown") {
@@ -227,28 +236,29 @@ export function ArenaRoomView({
       </div>
     );
   }
-  if (screen.kind === "battle") {
-    return (
-      <div className="ar-body">
-        <div className="ar-hero ar-hero-sm">
-          <ArenaArt id="arb" h={150} className="ar-hero-art" />
+  if (screen.kind === "battle" || (screen.kind === "finished" && battle === "live")) {
+    if (battle === "out" && screen.kind === "battle") {
+      const me = room.match?.players?.find((p) => p.is_me);
+      const alive = room.match?.players?.filter((p) => p.alive).length ?? 0;
+      return (
+        <div className="ar-body">
+          <div className="ar-panel ar-next">
+            <span className="ui-label ar-neon">Бой идёт · ход {screen.turn}</span>
+            <b>{me && !me.alive ? `Вы выбыли · ${alive + 1} место` : "Вы не в бою"}</b>
+            <p>Итоги и приз придут сюда сами, когда бой закончится.</p>
+          </div>
+          <div className="ar-foot">
+            <Button kind="secondary" size="lg" block onClick={onWatch}>
+              Досмотреть
+            </Button>
+            <Link to="/arena" className="ui-btn ghost lg block no-underline">
+              В лобби
+            </Link>
+          </div>
         </div>
-        <div className="ar-panel ar-next">
-          <span className="ui-label ar-neon">Бой идёт · ход {screen.turn}</span>
-          <b>Экран боя появится в следующем обновлении</b>
-          <p>
-            Матч уже идёт на сервере. Пока экрана боя нет, ходы без плана — вы
-            стоите на месте. Результат и приз придут сюда сами.
-          </p>
-        </div>
-        <Hold room={room} t={type} />
-        <div className="ar-foot">
-          <Link to="/arena" className="ui-btn secondary lg block no-underline">
-            В лобби
-          </Link>
-        </div>
-      </div>
-    );
+      );
+    }
+    return <ArenaBattle room={room} onDone={onBattleDone ?? noop} />;
   }
   if (screen.kind === "finished") {
     const res = [...room.results].sort((a, b) => a.place - b.place);
@@ -349,7 +359,7 @@ const TITLE: Record<RoomScreen["kind"], string> = {
 
 /**
  * Комната «Арены» (/arena/:id): набор игроков с таймером 3:00, выход с возвратом, автовозврат, отсчёт 3-2-1,
- * дальше — заглушка экрана боя (сам бой — следующий шаг). Опрос ~1 с, пока комната живая.
+ * дальше — экран боя (ArenaBattle) и итоги. Опрос ~1 с, пока комната живая.
  */
 export default function ArenaRoomPage() {
   useScreenBack("/arena");
@@ -370,6 +380,19 @@ export default function ArenaRoomPage() {
   );
   const screen = room ? roomScreen(room, now) : null;
   const t = lobby.data?.types.find((x) => x.type === room?.type);
+  // экран боя: финальный ход доигрывается на поле, к итогам — после «Бой окончен» (или по кнопке)
+  const [battle, setBattle] = useState<"live" | "out" | "done">("done");
+  const sawBattle = useRef(false);
+  const kind = screen?.kind;
+  useEffect(() => {
+    if (kind === "battle" && !sawBattle.current) {
+      sawBattle.current = true;
+      setBattle("live");
+    }
+  }, [kind]);
+  const onBattleDone = useCallback(() => setBattle(room?.status === "running" ? "out" : "done"), [room?.status]);
+  const onWatch = useCallback(() => setBattle("live"), []);
+  const inBattle = !!screen && (screen.kind === "battle" || (screen.kind === "finished" && battle === "live"));
 
   const onLeave = () =>
     leave.mutate(undefined, {
@@ -424,14 +447,16 @@ export default function ArenaRoomPage() {
   return (
     <div className="ar space-y-4">
       <BackLink to="/arena" label="Лобби" />
-      <ScreenHeader
-        eyebrow="Арена"
-        title={
-          room
-            ? `Арена ${room.seats_total} · ${TITLE[screen!.kind]}`
-            : "Комната"
-        }
-      />
+      {inBattle ? null : (
+        <ScreenHeader
+          eyebrow="Арена"
+          title={
+            room
+              ? `Арена ${room.seats_total} · ${TITLE[screen!.kind]}`
+              : "Комната"
+          }
+        />
+      )}
       {room && screen ? (
         <ArenaRoomView
           room={room}
@@ -441,6 +466,9 @@ export default function ArenaRoomPage() {
           again={join.isPending}
           onLeave={onLeave}
           onAgain={onAgain}
+          battle={battle}
+          onBattleDone={onBattleDone}
+          onWatch={onWatch}
         />
       ) : err && (err.status === 404 || err.status === 403) ? (
         <>
