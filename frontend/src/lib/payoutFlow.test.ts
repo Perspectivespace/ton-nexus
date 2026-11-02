@@ -48,7 +48,8 @@ describe("Касса → «Выплатить»: только с кошельк�
     const fetchPayload = vi.fn(async () => tx());
     const p = runPayout({ ui: f.ui, payoutWallet: FRIENDLY, payoutWalletRaw: RAW, fetchPayload });
     await expect(p).rejects.toBeInstanceOf(WrongWalletError);
-    await expect(p).rejects.toThrow(/другой кошелёк/);
+    await expect(p).rejects.toThrow(/не кошелёк выплат/);
+    await expect(p).rejects.not.toThrow(/личн/);
     expect(fetchPayload).not.toHaveBeenCalled();
     expect(f.raw.sendTransaction).not.toHaveBeenCalled();
   });
