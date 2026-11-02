@@ -6,10 +6,11 @@
 - «найти или создать» сериализуется транзакционной advisory-блокировкой Postgres на тип комнаты
   (иначе два параллельных входа создали бы две комнаты); на SQLite (тесты, локально) — без неё.
   Порядок блокировок: advisory(тип) → комната → игрок (как в эскроу: комната → игрок);
-- возврат просроченных комнат: лениво (перед входом и на чтениях) и из фонового опросчика (main.deposit_loop);
-- seed карты выдаётся из secrets при создании комнаты (escrow.create_room) и до боя виден только хэш
-  (commit–reveal); при старте он не меняется.
-Флаг «Арены» (настройка arena.enabled) проверяет API, а не этот модуль.
+- возврат просроченных комнат: лениво (перед входом и на чтениях) и из фонового опросчика (main.arena_loop);
+- seed карты выдаётся из secrets при создании комнаты (escrow.create_room) и до конца боя виден только хэш
+  (commit–reveal); при старте он не меняется, после конца seed и соль раскрываются в виде комнаты;
+- ходы боя, журнал и расчёт — services/arena_match.
+Флаг «Арены» (настройка arena.enabled) и доступ к комнате проверяет API, а не этот модуль.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from app.models.arena import ArenaEntry, ArenaMatch, ArenaRoom
 from app.models.user import User
 from app.services import arena_engine
 from app.services import arena_escrow as escrow
+from app.services import arena_match
 from app.services.arena_config import ARENA_ROOMS, room_type
 from app.services.economy import get_setting
 
@@ -92,11 +94,14 @@ async def refund_expired(session: AsyncSession, *, now: datetime | None = None) 
 
 
 async def poll_once(session_factory: async_sessionmaker) -> int:
-    """Шаг фонового опросчика: возвраты по просроченным комнатам, своя сессия и транзакция."""
+    """Шаг фонового опросчика: возвраты по просроченным комнатам и ходы с прошедшим дедлайном.
+
+    Возвраты — своя транзакция, каждый ход — своя (arena_match.advance_due). Возвращает число возвратов + ходов.
+    """
     async with session_factory() as s:
         n = await escrow.refund_expired(s)
         await s.commit()
-        return n
+    return n + await arena_match.advance_due(session_factory)
 
 
 @dataclass
@@ -129,7 +134,8 @@ async def join_type(session: AsyncSession, *, code: str, user_id: int, now: date
 
 
 async def start_match(session: AsyncSession, room_id: int, *, now: datetime | None = None) -> ArenaMatch:
-    """Набранная комната → running (escrow.start) и состояние боя перед 1-м ходом. Повтор — тот же бой."""
+    """Набранная комната → running (escrow.start), состояние боя перед 1-м ходом и окно 1-го хода
+    (после отсчёта). Игроки в движке — номера мест. Повтор — тот же бой."""
     now = now or escrow.utcnow()
     room = await escrow.start(session, room_id, now=now)
     existing = await session.scalar(select(ArenaMatch).where(ArenaMatch.room_id == room.id))
@@ -142,12 +148,16 @@ async def start_match(session: AsyncSession, room_id: int, *, now: datetime | No
             .order_by(ArenaEntry.seat)
         )
     ).all()
-    state = arena_engine.create_match(room.room_type, int(room.seed), [e.user_id for e in entries])
+    seats = [int(e.seat) for e in entries]
+    if seats != list(range(room.seats)):
+        raise escrow.ArenaStateError(f"room {room.id}: seats {seats}")
+    state = arena_engine.create_match(room.room_type, int(room.seed), seats)
     match = ArenaMatch(
         room_id=room.id, turn=state.turn, state_json=arena_engine.state_to_json(state), created_at=now, updated_at=now
     )
     session.add(match)
     await session.flush()
+    await arena_match.open_first_turn(session, room)
     return match
 
 
@@ -204,12 +214,30 @@ async def list_types(session: AsyncSession, *, user_id: int) -> dict:
     return {"types": types, "active_room_id": await escrow.active_room_id(session, user_id), "server_time": now.isoformat()}
 
 
-async def room_view(session: AsyncSession, room_id: int, *, user_id: int) -> dict:
+async def is_participant(session: AsyncSession, room_id: int, user_id: int) -> bool:
+    """Был ли пользователь в комнате (любое место, в т. ч. вышедший или получивший возврат)."""
+    return (
+        await session.scalar(
+            select(ArenaEntry.id).where(ArenaEntry.room_id == room_id, ArenaEntry.user_id == user_id).limit(1)
+        )
+    ) is not None
+
+
+async def get_room(session: AsyncSession, room_id: int) -> ArenaRoom:
     room = await session.scalar(
         select(ArenaRoom).where(ArenaRoom.id == room_id).execution_options(populate_existing=True)
     )
     if room is None:
         raise escrow.ArenaRoomNotFound(f"room {room_id}")
+    return room
+
+
+_REVEALED = ("finished", "cancelled", "refunded")
+
+
+async def room_view(session: AsyncSession, room_id: int, *, user_id: int, with_match: bool = False) -> dict:
+    """Вид комнаты для участника (или владельца). with_match — полное состояние боя (поле, игроки, ход)."""
+    room = await get_room(session, room_id)
     rows = (
         await session.execute(
             select(ArenaEntry, User)
@@ -220,20 +248,29 @@ async def room_view(session: AsyncSession, room_id: int, *, user_id: int) -> dic
         )
     ).all()
     seats: list[dict | None] = [None] * room.seats
+    names: dict[int, str] = {}
+    results = []
     me = None
     for e, u in rows:
         if e.seat is None or not 0 <= e.seat < room.seats:
             continue
-        seats[e.seat] = {"seat": e.seat, "name": display_name(u), "is_me": e.user_id == user_id}
+        names[e.seat] = display_name(u)
+        seats[e.seat] = {"seat": e.seat, "name": names[e.seat], "is_me": e.user_id == user_id}
         if e.user_id == user_id:
             me = e.seat
+        if e.place is not None:
+            results.append({"seat": e.seat, "name": names[e.seat], "place": e.place, "prize_nano": str(e.prize_nano)})
     match = None
-    if room.status in ("running", "finished"):
-        m = await session.scalar(select(ArenaMatch).where(ArenaMatch.room_id == room.id))
-        if m is not None:
-            # состояние боя и ходы — в PR 4; пока только id и номер хода
-            match = {"id": m.id, "turn": m.turn}
-    return {
+    if room.status in ("running", "finished", "cancelled"):
+        if with_match:
+            match = await arena_match.match_view(session, room, names=names, my_seat=me)
+        else:
+            m = await session.scalar(
+                select(ArenaMatch).where(ArenaMatch.room_id == room.id).execution_options(populate_existing=True)
+            )
+            if m is not None:
+                match = {"id": m.id, "turn": m.turn}
+    out = {
         "id": room.id,
         "type": room.room_type,
         "status": room.status,
@@ -244,7 +281,14 @@ async def room_view(session: AsyncSession, room_id: int, *, user_id: int) -> dic
         "stake_nano": str(room.stake_nano),
         "fill_deadline": _iso(room.fill_deadline),
         "started_at": _iso(room.started_at),
+        "finished_at": _iso(room.finished_at),
         "seed_hash": room.seed_hash,
+        "results": sorted(results, key=lambda r: (r["place"], r["seat"])) if room.status == "finished" else None,
         "match": match,
         "server_time": escrow.utcnow().isoformat(),
     }
+    if room.status in _REVEALED:
+        # commit–reveal: seed и соль — только когда комната закрыта; sha256("<соль>:<seed>") == seed_hash
+        out["seed"] = int(room.seed)
+        out["seed_salt"] = room.seed_salt
+    return out

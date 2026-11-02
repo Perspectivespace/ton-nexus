@@ -452,6 +452,11 @@ def parse_plan(raw: Any) -> Plan:
     return Plan(tuple(path), attack, medkit)
 
 
+def plan_to_dict(plan: Plan) -> dict[str, Any]:
+    """План → JSON в том же формате, что принимает parse_plan (для журнала ходов)."""
+    return {"path": [[x, y] for x, y in plan.path], "attack": plan.attack, "medkit": plan.medkit}
+
+
 def validate_plan(s: MatchState, player_id: int, plan: Plan) -> Plan:
     """Строгая проверка на сервере. Возвращает тот же план или бросает InvalidPlan с кодом.
 

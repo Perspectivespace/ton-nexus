@@ -17,8 +17,7 @@ from app.services.ton_payouts import poll_once as poll_payouts_once
 
 
 async def deposit_loop():
-    """Фоновый опрос: пополнения TON, подтверждение выплат (toncenter), возвраты ставок «Арены» по таймауту набора.
-    Ошибки не останавливают цикл."""
+    """Фоновый опрос: пополнения TON и подтверждение выплат (toncenter). Ошибки не останавливают цикл."""
     from app.services.economy import get_setting
 
     while True:
@@ -31,16 +30,27 @@ async def deposit_loop():
         except Exception:
             logging.getLogger(__name__).exception("[payouts] poll error")
         try:
-            await arena_poll_once(SessionLocal)
-        except Exception:
-            logging.getLogger(__name__).exception("[arena] refund poll error")
-        try:
             async with SessionLocal() as s:
                 cfg = await get_setting(s, "ton_deposits") or {}
                 interval = min(max(int(cfg.get("poll_seconds", 15)), 5), 120)
         except Exception:
             interval = 15
         await asyncio.sleep(interval)
+
+
+# «Арена»: ход длится 10 с, поэтому свой цикл с коротким шагом (интервал опроса пополнений — 5–120 с)
+ARENA_TICK_S = 2
+
+
+async def arena_loop():
+    """Фоновый цикл «Арены»: возвраты ставок по таймауту набора и разрешение ходов с прошедшим дедлайном
+    (если игроки не опрашивают комнату сами). Ошибки не останавливают цикл."""
+    while True:
+        try:
+            await arena_poll_once(SessionLocal)
+        except Exception:
+            logging.getLogger(__name__).exception("[arena] poll error")
+        await asyncio.sleep(ARENA_TICK_S)
 
 
 @asynccontextmanager
@@ -51,11 +61,13 @@ async def lifespan(app: FastAPI):
             await session.commit()
     except Exception as e:
         print(f"[startup] seed_economy skipped: {e}")
-    task = asyncio.create_task(deposit_loop())
+    tasks = [asyncio.create_task(deposit_loop()), asyncio.create_task(arena_loop())]
     yield
-    task.cancel()
-    with suppress(asyncio.CancelledError):
-        await task
+    for task in tasks:
+        task.cancel()
+    for task in tasks:
+        with suppress(asyncio.CancelledError):
+            await task
 
 
 app = FastAPI(
