@@ -34,6 +34,8 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Tech permission, orthogonal to owner > admin > ambassador: may update servers.
     is_deployer: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Владелец, назначенный в приложении (вдобавок к TELEGRAM_OWNER_IDS). Назначают только деплойеры.
+    is_owner: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deposit_memo: Mapped[str | None] = mapped_column(String(16), nullable=True, unique=True)
 
     created_at: Mapped[datetime] = mapped_column(
