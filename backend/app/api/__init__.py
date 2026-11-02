@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.admin import router as admin_router
+from app.api.arena import router as arena_router
 from app.api.deploy import router as deploy_router
 from app.api.economy import router as economy_router
 from app.api.engagement import router as engagement_router
@@ -28,3 +29,4 @@ api_router.include_router(balance_router)
 api_router.include_router(engagement_router)
 api_router.include_router(tower_router)
 api_router.include_router(ratings_router)
+api_router.include_router(arena_router)
