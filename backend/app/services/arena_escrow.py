@@ -65,6 +65,16 @@ class ArenaAlreadyJoined(ArenaError):
         self.entry_id = entry_id
 
 
+class ArenaAlreadyInRoom(ArenaError):
+    """Игрок уже в другой активной комнате (место held в комнате waiting/running): одна активная комната."""
+
+    code = "already_in_room"
+
+    def __init__(self, room_id: int):
+        super().__init__(f"already in active room {room_id}")
+        self.room_id = room_id
+
+
 class ArenaNotJoined(ArenaError):
     code = "not_joined"
 
@@ -153,7 +163,10 @@ async def join(session: AsyncSession, *, room_id: int, user_id: int, now: dateti
     """Войти в комнату: занять свободное место и списать ставку в холд (arena_hold).
 
     Повторный вход — ArenaAlreadyJoined (денег не трогает). После выхода можно войти снова — та же строка.
-    Просроченную комнату не трогает (только ошибка): возврат делает refund_if_expired.
+    Одна активная комната на игрока: место held в другой комнате waiting/running — ArenaAlreadyInRoom
+    (проверка под блокировкой строки игрока, поэтому параллельные входы в разные комнаты дают один холд).
+    Просроченную комнату не трогает (только ошибка): возврат делает refund_if_expired — API комнат вызывает
+    его до входа, чтобы игрока из ненабравшейся комнаты не держало.
     """
     now = now or utcnow()
     room = await _lock_room(session, room_id)
@@ -169,7 +182,11 @@ async def join(session: AsyncSession, *, room_id: int, user_id: int, now: dateti
     if len(taken) >= room.seats:
         raise ArenaRoomFull(f"room {room_id} is full")
     stake = nano_to_ton(room.stake_nano)
+    # блокировка игрока (порядок «комната → игрок» как везде); после неё видны все закоммиченные входы
     user = await balance.get_user_for_update(session, user_id)
+    other = await active_room_id(session, user_id)
+    if other is not None and other != room.id:
+        raise ArenaAlreadyInRoom(other)
     if Decimal(user.balance) < stake:
         raise ArenaInsufficientBalance(f"need {stake}, have {user.balance}")
     seat = min(s for s in range(room.seats) if s not in taken)
@@ -193,6 +210,21 @@ async def join(session: AsyncSession, *, room_id: int, user_id: int, now: dateti
         reference_id=mine.id,
     )
     return mine
+
+
+async def active_room_id(session: AsyncSession, user_id: int) -> int | None:
+    """Комната, где у игрока ставка в холде (комната waiting/running), или None."""
+    return await session.scalar(
+        select(ArenaEntry.room_id)
+        .join(ArenaRoom, ArenaRoom.id == ArenaEntry.room_id)
+        .where(
+            ArenaEntry.user_id == user_id,
+            ArenaEntry.status == "held",
+            ArenaRoom.status.in_(("waiting", "running")),
+        )
+        .order_by(ArenaEntry.room_id)
+        .limit(1)
+    )
 
 
 async def _refund(session: AsyncSession, room: ArenaRoom, entry: ArenaEntry, now: datetime) -> None:

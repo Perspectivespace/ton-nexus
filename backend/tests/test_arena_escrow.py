@@ -407,6 +407,46 @@ class EscrowTests(unittest.TestCase):
             self.assertEqual(int(prizes) + await ae.house_revenue_nano(s), int(stakes))
         run_sqlite(body)
 
+    def test_one_active_room(self):
+        async def body(s):
+            (u,) = await users(s, 1, "1")
+            a = await ae.create_room(s, "a4", now=NOW)
+            b = await ae.create_room(s, "a8", now=NOW)
+            await ae.join(s, room_id=a.id, user_id=u, now=NOW)
+            with self.assertRaises(ae.ArenaAlreadyInRoom) as cm:
+                await ae.join(s, room_id=b.id, user_id=u, now=NOW)
+            self.assertEqual((cm.exception.room_id, cm.exception.code), (a.id, "already_in_room"))
+            self.assertEqual(await bal(s, u), D("0.9"))
+            self.assertEqual(await ae.active_room_id(s, u), a.id)
+            # после выхода — можно в другую
+            await ae.leave(s, room_id=a.id, user_id=u, now=NOW)
+            self.assertIsNone(await ae.active_room_id(s, u))
+            await ae.join(s, room_id=b.id, user_id=u, now=NOW)
+            # после возврата по таймауту — снова можно
+            await ae.refund_if_expired(s, b.id, now=NOW + timedelta(seconds=FILL_TIMEOUT_S))
+            c = await ae.create_room(s, "a4", now=NOW + timedelta(seconds=FILL_TIMEOUT_S))
+            await ae.join(s, room_id=c.id, user_id=u, now=NOW + timedelta(seconds=FILL_TIMEOUT_S))
+            self.assertEqual(await ae.active_room_id(s, u), c.id)
+            self.assertEqual(await bal(s, u), D("0.9"))
+        run_sqlite(body)
+
+    def test_one_active_room_running_and_after_finish(self):
+        async def body(s):
+            room, ids = await full_room(s, "a4")
+            other = await ae.create_room(s, "a4", now=NOW)
+            with self.assertRaises(ae.ArenaAlreadyInRoom) as cm:  # бой идёт — комната активна
+                await ae.join(s, room_id=other.id, user_id=ids[0], now=NOW)
+            self.assertEqual(cm.exception.room_id, room.id)
+            await ae.settle(s, room.id, {uid: i + 1 for i, uid in enumerate(ids)})
+            for uid in ids:  # после расчёта — можно снова
+                await ae.join(s, room_id=other.id, user_id=uid, now=NOW)
+            # после отмены — тоже
+            await ae.start(s, other.id, now=NOW)
+            await ae.cancel(s, other.id)
+            third = await ae.create_room(s, "a8", now=NOW)
+            await ae.join(s, room_id=third.id, user_id=ids[0], now=NOW)
+        run_sqlite(body)
+
     def test_seat_unique_constraint(self):
         async def body(s):
             a, b = await users(s, 2)
@@ -475,6 +515,25 @@ class PostgresConcurrencyTest(unittest.TestCase):
             async with maker() as s:
                 self.assertEqual(await bal(s, u), D("0.9"))
                 self.assertEqual(len(await ledger(s, u, "arena_hold")), 1)
+
+        self._run(scenario)
+
+    def test_parallel_join_two_rooms_one_hold(self):
+        async def scenario(maker):
+            async with maker() as s:
+                (u,) = await users(s, 1)
+                rooms = [await ae.create_room(s, code) for code in ("a4", "a8", "a4", "a8")]
+                await s.commit()
+            res = await asyncio.gather(
+                *(self._tx(maker, lambda s, r=r: ae.join(s, room_id=r.id, user_id=u)) for r in rooms for _ in range(2))
+            )
+            self.assertEqual(sum(isinstance(r, ArenaEntry) for r in res), 1, res)
+            self.assertTrue(all(isinstance(r, ArenaEntry) or r in ("ArenaAlreadyInRoom", "ArenaAlreadyJoined") for r in res), res)
+            async with maker() as s:
+                self.assertEqual(await bal(s, u), D("0.9"))
+                self.assertEqual(len(await ledger(s, u, "arena_hold")), 1)
+                held = (await s.scalars(select(ArenaEntry).where(ArenaEntry.user_id == u, ArenaEntry.status == "held"))).all()
+                self.assertEqual(len(held), 1)
 
         self._run(scenario)
 
