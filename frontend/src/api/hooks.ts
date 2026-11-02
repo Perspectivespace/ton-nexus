@@ -5,6 +5,8 @@ import type {
   DeployJob,
   DeployOverview,
   DeployerOut,
+  StaffOut,
+  UserSearchRow,
   MeOut,
   MinerOut,
   TaskOut,
@@ -623,6 +625,39 @@ export function useSetDeployer() {
     mutationFn: (body: { telegram_id: number; is_deployer: boolean }) =>
       api("/api/v1/admin/roles", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["deploy", "deployers"] }),
+  });
+}
+
+/* ---------- Роли: владельцы и админы ---------- */
+
+export function useRolesStaff(enabled = true) {
+  return useQuery({
+    queryKey: ["roles", "staff"],
+    queryFn: () => api<StaffOut>("/api/v1/admin/roles/staff"),
+    enabled,
+  });
+}
+
+/** Поиск по @username (начало) или точному Telegram ID; пустой запрос не уходит на сервер */
+export function useUserSearch(q: string) {
+  const query = q.trim();
+  return useQuery({
+    queryKey: ["roles", "search", query],
+    queryFn: () => api<UserSearchRow[]>(`/api/v1/admin/users/search?q=${encodeURIComponent(query)}`),
+    enabled: query.replace(/^@/, "").length > 0,
+    staleTime: 15000,
+  });
+}
+
+export function useSetRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { telegram_id: number; is_admin?: boolean; is_owner?: boolean }) =>
+      api("/api/v1/admin/roles", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roles"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
   });
 }
 

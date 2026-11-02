@@ -26,6 +26,7 @@ const LOADERS: Record<string, Loader> = {
   inbox: () => import("@/pages/Inbox").then((m) => m.Inbox),
   withdraws: () => import("@/pages/WithdrawQueue").then((m) => m.WithdrawQueue),
   deploy: () => import("@/pages/Deploy").then((m) => m.Deploy),
+  roles: () => import("@/pages/Roles").then((m) => m.Roles),
   tower: () => import("@/pages/Tower").then((m) => m.default),
   towerTop: () => import("@/pages/TowerTop").then((m) => m.default),
   ratings: () => import("@/pages/Ratings").then((m) => m.default),
@@ -88,6 +89,7 @@ export function routeKey(path: string): Key | null {
   if (p === "/inbox") return "inbox";
   if (p === "/withdraws") return "withdraws";
   if (p === "/deploy") return "deploy";
+  if (p === "/roles") return "roles";
   if (p === "/tower") return "tower";
   if (p === "/tower/top") return "towerTop";
   if (p === "/ratings") return "ratings";

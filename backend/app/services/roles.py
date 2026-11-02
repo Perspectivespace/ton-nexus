@@ -9,17 +9,27 @@ Telegram ID is listed in TELEGRAM_DEPLOYER_IDS (server settings). Only deployers
 deploy and manage deployers. Env deployers cannot be revoked from the app, and
 the last deployer cannot be revoked, so the list never becomes empty. If it ever
 does, add an ID to TELEGRAM_DEPLOYER_IDS on the server and restart the API.
+
+Owners: Telegram IDs from TELEGRAM_OWNER_IDS (server settings) plus users.is_owner (granted in the
+app). Every owner-only check goes through is_platform_owner, never telegram_auth.is_owner directly.
+Only deployers grant and revoke owners; env owners cannot be revoked from the app, and the last
+owner cannot be revoked.
 """
 
 from __future__ import annotations
 
 from app.core.config import settings
-from app.core.telegram_auth import is_owner
+from app.core.telegram_auth import env_owner_ids, is_owner
 from app.models.user import User
 
 
-def is_platform_owner(user: User) -> bool:
+def is_env_owner(user: User) -> bool:
     return is_owner(user.telegram_id)
+
+
+def is_platform_owner(user: User) -> bool:
+    """Владелец: из настроек сервера или назначен в приложении (users.is_owner)."""
+    return is_env_owner(user) or bool(getattr(user, "is_owner", False))
 
 
 def is_admin(user: User) -> bool:
@@ -98,3 +108,37 @@ async def db_deployer_tg_ids(db, *, lock: bool = False) -> list[int]:
 
 async def deployer_count(db, *, lock: bool = False) -> int:
     return len(set(await db_deployer_tg_ids(db, lock=lock)) | env_deployer_ids())
+
+
+def can_assign_owner(user: User) -> bool:
+    """Владельцев назначают и снимают только деплойеры (не просто владельцы)."""
+    return is_deployer(user)
+
+
+def owner_change_error(user: User, target: User, make_owner: bool, owner_count: int) -> str | None:
+    """Почему нельзя поменять флаг владельца у target; None — можно.
+    owner_count — все владельцы: из базы и из настроек сервера."""
+    if not can_assign_owner(user):
+        return "only a deployer can manage owners"
+    if make_owner:
+        return None
+    if is_env_owner(target):
+        return "owner is set in server settings"
+    if bool(getattr(target, "is_owner", False)) and owner_count <= 1:
+        return "cannot revoke the last owner"
+    return None
+
+
+async def db_owner_tg_ids(db, *, lock: bool = False) -> list[int]:
+    """Telegram ID владельцев из базы; lock=True — как db_deployer_tg_ids: строки заблокированы до конца
+    транзакции, два деплойера не снимут последних владельцев одновременно."""
+    from sqlalchemy import select
+
+    q = select(User.telegram_id).where(User.is_owner.is_(True)).order_by(User.id)
+    if lock:
+        q = q.with_for_update()
+    return list((await db.scalars(q)).all())
+
+
+async def owner_count(db, *, lock: bool = False) -> int:
+    return len(set(await db_owner_tg_ids(db, lock=lock)) | env_owner_ids())

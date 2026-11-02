@@ -93,6 +93,10 @@ class FakeDb:
     def __init__(self, users):
         self.users = users
         self.committed = False
+        self.added = []
+
+    def add(self, obj):
+        self.added.append(obj)
 
     async def scalar(self, q):
         tg = q.whereclause.right.value

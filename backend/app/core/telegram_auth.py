@@ -65,7 +65,12 @@ def validate_init_data(
     }
 
 
-def is_owner(telegram_id: int) -> bool:
+def env_owner_ids() -> set[int]:
     raw = settings.telegram_owner_ids or ""
-    ids = {int(x.strip()) for x in raw.split(",") if x.strip().isdigit()}
-    return telegram_id in ids
+    return {int(x.strip()) for x in raw.split(",") if x.strip().isdigit()}
+
+
+def is_owner(telegram_id: int) -> bool:
+    """Владелец из настроек сервера (TELEGRAM_OWNER_IDS). Для проверок прав — roles.is_platform_owner:
+    он учитывает и владельцев, назначенных в приложении."""
+    return telegram_id in env_owner_ids()
