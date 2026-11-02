@@ -78,7 +78,7 @@ export default function PayoutButton({
 
   return (
     <div className="grid gap-2">
-      <Button block size="lg" disabled={disabled || loading} onClick={() => pay(false)}>
+      <Button kind={sending ? "secondary" : "primary"} block size={sending ? "md" : "lg"} disabled={disabled || loading} onClick={() => pay(false)}>
         {loading ? "Ожидание кошелька…" : sending ? "Отправить ещё раз" : "Выплатить"}
       </Button>
 

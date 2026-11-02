@@ -137,7 +137,7 @@ export const SETTINGS: Record<string, SettingMeta> = {
       "Касса → «Вывод» → «Выплатить»: владелец или админ подключает этот кошелёк через TON Connect и подтверждает перевод на адрес из заявки. Другой подключённый кошелёк Касса не пустит. Сервер находит перевод в сети по комментарию «TN payout #id», сверяет адрес и сумму и закрывает заявку. Сеть берётся из настройки «Кошелёк TON».",
     fields: {
       enabled: { label: "Включено", kind: "bool" },
-      payout_wallet: { label: "Кошелёк выплат", kind: "text", optional: true, hint: "Адрес в любом виде — сохранится как UQ…. Включить можно только с адресом" },
+      payout_wallet: { label: "Кошелёк выплат", kind: "text", optional: true, hint: "Адрес в любом виде — сохранится как UQ… Включить можно только с адресом" },
     },
     summary: (v) => {
       const o = v as { enabled?: boolean; payout_wallet?: string };

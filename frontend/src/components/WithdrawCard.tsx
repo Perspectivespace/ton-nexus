@@ -27,11 +27,12 @@ export function tonAmount(a: string) {
   return a.includes(".") ? a.replace(/0+$/, "").replace(/\.$/, "") : a;
 }
 
+/** имя (или @username) крупно; @username и Telegram ID — моно-строкой ниже */
 export function whoLabel(item: WithdrawOut) {
-  const name = item.first_name?.trim();
   const at = item.username ? `@${item.username}` : null;
   const tg = item.user_telegram_id ? `tg ${item.user_telegram_id}` : `#${item.user_id}`;
-  return [name, at, tg].filter(Boolean).join(" · ");
+  const name = item.first_name?.trim() || at || tg;
+  return { name, ids: [at, tg].filter((x) => x && x !== name).join(" · ") };
 }
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Ошибка");
@@ -67,6 +68,7 @@ export function WithdrawCard({
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const sending = item.status === "sending";
+  const who = whoLabel(item);
   const ready = !!config?.enabled && !!config.payout_wallet_raw;
   const busy = review.isPending || check.isPending || verify.isPending;
 
@@ -132,6 +134,13 @@ export function WithdrawCard({
     }
   }
 
+  // пока перевод «отправляется», главное действие — «Проверить», а не второй перевод
+  const checkBtn = (
+    <Button kind={sending ? "primary" : "secondary"} size={sending ? "lg" : "md"} block disabled={busy} onClick={() => runCheck()}>
+      {check.isPending ? "Проверяем сеть…" : "Проверить"}
+    </Button>
+  );
+
   return (
     <motion.div
       layout
@@ -143,7 +152,8 @@ export function WithdrawCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-medium text-[var(--text)]">{whoLabel(item)}</p>
+          <p className="truncate text-[15px] font-medium text-[var(--text)]">{who.name}</p>
+          {who.ids ? <p className="mt-0.5 truncate font-mono text-[12px] text-[var(--text)]">{who.ids}</p> : null}
           <p className="mt-0.5 font-mono text-[11px] text-[var(--text-dim)]">
             заявка #{item.id} · {when(item.created_at)}
           </p>
@@ -172,6 +182,7 @@ export function WithdrawCard({
       ) : null}
 
       <div className="grid gap-2">
+        {sending ? checkBtn : null}
         {config === undefined ? (
           <Button block size="lg" disabled>
             Загрузка…
@@ -199,12 +210,10 @@ export function WithdrawCard({
           </Suspense>
         ) : (
           <p role="note" className="border border-[var(--amber)] bg-[var(--amber-soft)] p-3 text-[13px] leading-snug text-[var(--amber)]">
-            Выплаты TON выключены. Владелец: Настройки → «Выплаты TON» — укажите кошелёк выплат и включите.
+            Выплаты TON выключены. Владелец: Кабинет → Экономика → «Выплаты TON» — укажите кошелёк выплат и включите.
           </p>
         )}
-        <Button kind="secondary" block disabled={busy} onClick={() => runCheck()}>
-          {check.isPending ? "Проверяем сеть…" : "Проверить"}
-        </Button>
+        {sending ? null : checkBtn}
         <Button kind="ghost" size="sm" aria-expanded={more} onClick={() => setMore((v) => !v)}>
           {more ? "Скрыть" : "Хеш, отказ и другое"}
         </Button>
@@ -264,12 +273,12 @@ export function WithdrawCard({
           Заявка #{item.id} закроется как выплаченная без доказательства в сети. Только если вы перевели {tonAmount(item.amount)} TON
           другим способом.
         </p>
-        <Field label="Заметка" hint="Обязательно: как и когда выплачено" className="mt-4">
+        <Field label="Заметка" hint="Обязательно — останется в заявке" className="mt-4">
           <input
             className="ui-input"
             value={markNote}
             onChange={(e) => setMarkNote(e.target.value)}
-            placeholder="например: вручную из Tonkeeper 2 ноября"
+            placeholder="как и когда выплачено"
             maxLength={480}
           />
         </Field>

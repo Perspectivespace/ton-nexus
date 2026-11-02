@@ -46,7 +46,8 @@ const text = (it: WithdrawOut, config: PayoutConfig | undefined) =>
 describe("Касса → Вывод: карточка заявки", () => {
   it("кто, сколько и куда; кнопка выплаты грузится лениво", () => {
     const t = text(item, cfg);
-    expect(t).toContain("Вася · @vasya · tg 777");
+    expect(t).toContain("Вася");
+    expect(t).toContain("@vasya · tg 777");
     expect(t).toContain("1.5");
     expect(t).toContain(item.wallet_address);
     expect(t).toContain("копировать");
@@ -69,6 +70,7 @@ describe("Касса → Вывод: карточка заявки", () => {
     expect(tonAmount("2.000000000")).toBe("2");
     expect(tonAmount("0.250000000")).toBe("0.25");
     expect(tonAmount("3")).toBe("3");
-    expect(whoLabel({ ...item, first_name: null, username: null, user_telegram_id: null })).toBe("#3");
+    expect(whoLabel({ ...item, first_name: null, username: null, user_telegram_id: null })).toEqual({ name: "#3", ids: "" });
+    expect(whoLabel({ ...item, first_name: null })).toEqual({ name: "@vasya", ids: "tg 777" });
   });
 });

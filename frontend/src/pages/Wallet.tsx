@@ -164,7 +164,7 @@ export function Wallet() {
           title="Вывод"
           sub={
             pending
-              ? `${Number(pending.amount).toFixed(4)} TON на проверке`
+              ? `${Number(pending.amount).toFixed(4)} TON ${pending.status === "sending" ? "в пути" : "на проверке"}`
               : min != null
                 ? `На кошелёк TON · от ${min} TON`
                 : "На кошелёк TON"
