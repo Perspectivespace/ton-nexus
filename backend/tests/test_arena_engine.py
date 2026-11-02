@@ -107,6 +107,28 @@ class LosParityTest(unittest.TestCase):
         self.assertGreater(corner, 0)  # в векторах есть лучи, закрытые именно запертым углом
 
 
+class StateStorageTest(unittest.TestCase):
+    """Состояние в БД (arena_matches.state_json): JSON → состояние → дальше ходы как без сохранения."""
+
+    def test_roundtrip_every_turn(self):
+        for m in VECTORS["matches"][:6]:
+            with self.subTest(room=m["room"], seed=m["seed"], kind=m["kind"]):
+                direct = eng.create_match(m["room"], m["seed"], m["ids"])
+                stored = eng.state_from_json(eng.state_to_json(direct))
+                for t in m["turns"]:
+                    direct = eng.resolve_turn(direct, js_plans(t["plans"]))
+                    stored = eng.state_from_json(eng.state_to_json(eng.resolve_turn(stored, js_plans(t["plans"]))))
+                    self.assertEqual(eng.state_to_dict(stored), eng.state_to_dict(direct))
+                self.assertTrue(stored.finished)
+                self.assertEqual(stored.places, direct.places)
+
+    def test_rejects_unknown_version(self):
+        d = eng.state_to_dict(eng.create_match("a4", 1, [1, 2, 3, 4]))
+        d["v"] = 99
+        with self.assertRaises(ValueError):
+            eng.state_from_dict(d)
+
+
 class MatchParityTest(unittest.TestCase):
     def test_matches_turn_by_turn(self):
         for m in VECTORS["matches"]:

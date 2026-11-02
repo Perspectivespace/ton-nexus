@@ -7,7 +7,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -64,6 +64,24 @@ class ArenaEntry(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="held", server_default="held")
     place: Mapped[int | None] = mapped_column(Integer, nullable=True)
     prize_nano: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ArenaMatch(Base):
+    """Бой набранной комнаты: текущее состояние движка (services/arena_engine, JSON). Одна строка на комнату.
+
+    Создаётся в момент старта комнаты (состояние перед 1-м ходом). Журнал ходов и цикл ходов — PR 4.
+    """
+
+    __tablename__ = "arena_matches"
+    __table_args__ = (UniqueConstraint("room_id", name="uq_arena_matches_room_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("arena_rooms.id", ondelete="CASCADE"), nullable=False)
+    turn: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    state_json: Mapped[str] = mapped_column(Text, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
