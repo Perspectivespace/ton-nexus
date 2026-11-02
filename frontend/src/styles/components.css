@@ -886,3 +886,21 @@ button.ui-stat.scan:disabled { opacity: 1; }
 }
 /* стрелка IconUp несимметрична по вертикали (штрих снизу) — оптически центрируем в плитке строки «Усиление» */
 .mn-up .ic svg { transform: translateY(-1px); }
+
+/* «Арена» — главная карточка шторки «Игры»: кант магента→циан, арт 116 px, бейджи NEW / «тест». Статична. */
+.gs-feat { position: relative; isolation: isolate; display: flex; flex-direction: column; flex: none; text-align: left; text-decoration: none; color: inherit;
+  background: linear-gradient(160deg, rgba(255,46,126,.9), rgba(255,46,126,.2) 30%, rgba(150,170,255,.08) 60%, rgba(43,245,255,.7));
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); -webkit-tap-highlight-color: transparent; transition: filter 120ms ease-out; }
+.gs-feat::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: linear-gradient(180deg, #131826, #0B0E17);
+  clip-path: polygon(0 0, calc(100% - 13.5px) 0, 100% 13.5px, 100% 100%, 13.5px 100%, 0 calc(100% - 13.5px)); }
+.gs-feat:active { filter: brightness(1.12); }
+.gs-feat:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
+.gs-feat-art { position: relative; display: block; height: 116px; margin: 1px 1px 0; overflow: hidden; clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 0 100%); }
+.gs-feat-svg, .gs-feat-svg .ar-art-svg, .gs-feat-svg svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.gs-feat-body { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 12px 14px; }
+.gs-feat .gs-go { align-self: center; }
+.gs-new, .gs-test { position: absolute; top: 8px; z-index: 2; font: 700 9px/14px var(--f-display); letter-spacing: .12em; padding: 0 5px; text-transform: uppercase;
+  clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); }
+.gs-new { left: 10px; color: #2a0012; background: var(--magenta); }
+.gs-test { left: 50px; color: #1a1000; background: var(--amber); }
+@media (prefers-reduced-motion: reduce) { .gs-feat { transition: none; } }

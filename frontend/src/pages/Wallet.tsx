@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink, useDepositInfo, useRecentHistory } from "@/api/hooks";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,7 +51,9 @@ export function Wallet() {
   const [typed, setAmount] = useState<string | null>(null);
   const [wallet, setWallet] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sheet, setSheet] = useState<Panel3>(null);
+  // ?topup=1 — сразу открыть пополнение (ссылка «Пополнить» из «Арены» при нехватке на ставку)
+  const [params, setParams] = useSearchParams();
+  const [sheet, setSheet] = useState<Panel3>(() => (params.has("topup") ? "topup" : null));
   const [ask, setAsk] = useState(false);
   const toast = useToast();
   const recent = useRecentHistory(3);
@@ -87,6 +89,7 @@ export function Wallet() {
   const closeSheet = () => {
     setSheet(null);
     setAsk(false);
+    if (params.has("topup")) setParams((p) => { p.delete("topup"); return p; }, { replace: true });
   };
 
   async function submit() {
