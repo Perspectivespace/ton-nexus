@@ -29,6 +29,23 @@ function maps() {
   return out;
 }
 
+// Углы: все диагонали рядом с препятствиями на картах-векторах — может ли JS-движок пройти и ударить
+function corners() {
+  const out = [];
+  for (const room of ["a4", "a8"]) for (const seed of [0, 1, 4294967295]) {
+    const s = E.createMatch(room, seed, players(room));
+    for (let y = 0; y < s.N; y++) for (let x = 0; x < s.N; x++) for (const [dx, dy] of [[1, 1], [1, -1]]) {
+      const a = { x, y }, b = { x: x + dx, y: y + dy };
+      if (!E.passable(s, a.x, a.y) || !E.passable(s, b.x, b.y)) continue;
+      if (s.tiles[a.y][b.x] === 0 && s.tiles[b.y][a.x] === 0) continue;   // интересны только углы у препятствий
+      const me = { ...s.players[0], x: a.x, y: a.y };
+      const step = E.sanitize(s, me, { path: [b] }).path.length === 1;
+      out.push([room, seed, a.x, a.y, b.x, b.y, step, E.canHit(s, a, "fists", b), E.canHit(s, a, "rifle", b)]);
+    }
+  }
+  return out;
+}
+
 // «Сценарий»: случайные, но валидные планы (шаг/рывок/стоять, атака по ближнему или случайному, аптечка)
 function scriptedPlans(s, r) {
   const plans = {};
@@ -44,7 +61,8 @@ function scriptedPlans(s, r) {
       const opts = [];
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
         if (!dx && !dy) continue;
-        if (E.passable(s, cur.x + dx, cur.y + dy)) opts.push({ x: cur.x + dx, y: cur.y + dy });
+        const nx = { x: cur.x + dx, y: cur.y + dy };
+        if (E.passable(s, nx.x, nx.y) && !E.sealedCorner(s.tiles, cur, nx)) opts.push({ x: cur.x + dx, y: cur.y + dy });
       }
       if (!opts.length) break;
       cur = opts[Math.floor(r() * opts.length)];
@@ -69,6 +87,7 @@ function botPlans(s, afk) {
 
 function match(room, seed, kind) {
   let s = E.createMatch(room, seed, players(room));
+  const start = { tiles: tilesStr(s.tiles), loot: lootArr(s.loot), starts: s.players.map((p) => [p.id, p.x, p.y]) };
   const r = E.rng(seed ^ 0x51ed);
   const afk = new Set(kind === "bots+afk" ? [IDS[room][1], IDS[room][3]] : []);
   const turns = [];
@@ -76,9 +95,8 @@ function match(room, seed, kind) {
     const plans = kind === "script" ? scriptedPlans(s, r) : botPlans(s, afk);
     const t = s.turn;
     s = E.resolveTurn(s, plans);
-    const ev = [];
-    for (const e of s.events) { if (e.turn !== t) break; ev.push(e.target != null ? [e.t, e.who ?? null, e.target] : [e.t, e.who ?? null]); }
     const lt = s.lastTurn;
+    const ev = lt.events.map((e) => (e.target != null ? [e.t, e.who ?? null, e.target] : [e.t, e.who ?? null]));
     turns.push({
       turn: t,
       plans: Object.fromEntries(Object.entries(plans).map(([id, pl]) => [id, pl.medkit ? { medkit: true } : { path: pl.path.map((q) => [q.x, q.y]), attack: pl.attack ?? null }])),
@@ -95,7 +113,7 @@ function match(room, seed, kind) {
       events: ev,
     });
   }
-  return { room, seed, kind, ids: IDS[room], turns, places: s.places.map((q) => [q.id, q.place, q.shared]) };
+  return { room, seed, kind, ids: IDS[room], start, turns, places: s.places.map((q) => [q.id, q.place, q.shared]) };
 }
 
 const matches = [];
@@ -111,6 +129,6 @@ const config = {
   ARMORS: Object.fromEntries(Object.entries(E.ARMORS).map(([k, a]) => [k, [a.ap, a.tier]])),
   ROOMS: Object.fromEntries(Object.entries(E.ROOMS).map(([k, r]) => [k, [r.players, r.size]])),
 };
-const json = JSON.stringify({ version: 1, config, maps: maps(), matches });
+const json = JSON.stringify({ version: 2, config, maps: maps(), corners: corners(), matches });
 writeFileSync(OUT, json + "\n");
-console.log(`arena-vectors.json: ${maps().length} карт, ${matches.length} матчей, ${matches.reduce((a, m) => a + m.turns.length, 0)} ходов, ${(json.length / 1024).toFixed(0)} КБ`);
+console.log(`arena-vectors.json: ${maps().length} карт, ${corners().length} углов, ${matches.length} матчей, ${matches.reduce((a, m) => a + m.turns.length, 0)} ходов, ${(json.length / 1024).toFixed(0)} КБ`);

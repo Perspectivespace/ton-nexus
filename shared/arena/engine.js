@@ -41,6 +41,8 @@ export function rng(seed) {
 
 export const cheb = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 const key = (x, y) => y * 64 + x;
+/** Запертый угол: шаг/удар по диагонали между двумя препятствиями (стена или укрытие) по бокам — нельзя */
+export const sealedCorner = (tiles, a, b) => a.x !== b.x && a.y !== b.y && tiles[a.y][b.x] !== 0 && tiles[b.y][a.x] !== 0;
 
 /** Поворот на 90° вокруг центра: карта симметрична, у всех стартов одинаковые условия */
 function orbit(N, x, y) {
@@ -75,6 +77,15 @@ export const zoneDmg = (stage, N, turn) => {
   const base = 6 + 6 * stage;                                    // 6 · 12 · 18 · 24 …
   const over = stage > maxStage(N) ? Math.max(0, turn - 2 - (maxStage(N) + 1) * ZONE_EVERY) : 0;
   return base + 8 * over;                                        // после закрытия +8 за ход
+};
+
+/** Лут по стороне поля: [вид, тип, кольцо от, до] — каждая строка = орбита из 4 предметов (+ винтовка в центре) */
+export const LOOT = {
+  9: [["weapon", "knife", 2, 3], ["weapon", "pistol", 1, 2], ["armor", "light", 2, 3], ["medkit", "medkit", 1, 3], ["armor", "heavy", 1, 1]],
+  11: [
+    ["weapon", "knife", 3, 4], ["weapon", "knife", 2, 4], ["weapon", "pistol", 2, 3], ["weapon", "pistol", 1, 3],
+    ["armor", "light", 2, 4], ["armor", "heavy", 1, 2], ["medkit", "medkit", 2, 4], ["medkit", "medkit", 1, 3],
+  ],
 };
 
 /** Генерация карты: стены (непроходимы, режут линию огня) и укрытия (−50% урона от выстрелов издалека) */
@@ -115,14 +126,14 @@ function genMap(room, seed) {
     if (!place(big ? 3 : 2, 1, 3, c)) continue;   // стены: 12 / 8 клеток
     if (!place(big ? 2 : 1, 2, 3, c)) continue;   // укрытия снаружи: 8 / 4
     if (!place(1, 2, 2, 2)) continue;             // укрытия в кольце финальной 5×5: 4
-    // связность: из каждого старта достижим каждый пол
+    // связность: из каждого старта достижим каждый пол (ходами по правилам: без запертых углов)
     const seen = new Set([key(spawns[0].x, spawns[0].y)]);
     const q = [spawns[0]];
     while (q.length) {
       const p = q.pop();
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
         const x = p.x + dx, y = p.y + dy;
-        if (x < 0 || y < 0 || x >= N || y >= N || tiles[y][x] === 1 || seen.has(key(x, y))) continue;
+        if (x < 0 || y < 0 || x >= N || y >= N || tiles[y][x] === 1 || seen.has(key(x, y)) || sealedCorner(tiles, p, { x, y })) continue;
         seen.add(key(x, y));
         q.push({ x, y });
       }
@@ -131,38 +142,32 @@ function genMap(room, seed) {
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (tiles[y][x] !== 1) floor++;
     if (floor !== seen.size) continue;
 
-    // лут: орбиты по 4 + центр; сильнее — ближе к центру
+    // лут: орбиты по 4 + центр; сильнее — ближе к центру. Состав всегда полный (LOOT[N]).
     const loot = [];
     const taken = new Set(reserved);
+    const freeOrbit = (o) => o.length === 4 && o.every((p) => tiles[p.y][p.x] !== 1 && !taken.has(key(p.x, p.y)));
     const putLoot = (kind, type, dmin, dmax) => {
+      const put = (o) => { for (const p of o) { taken.add(key(p.x, p.y)); loot.push({ id: loot.length, kind, type, x: p.x, y: p.y }); } };
       for (let guard = 0; guard < 400; guard++) {
         const x = Math.floor(r() * N), y = Math.floor(r() * N);
         const dc = Math.max(Math.abs(x - c), Math.abs(y - c));
         if (dc < dmin || dc > dmax) continue;
         const o = orbit(N, x, y);
-        if (o.length < 4 || o.some((p) => tiles[p.y][p.x] === 1 || taken.has(key(p.x, p.y)))) continue;
-        for (const p of o) { taken.add(key(p.x, p.y)); loot.push({ id: loot.length + 1, kind, type, x: p.x, y: p.y }); }
-        return;
+        if (!freeOrbit(o)) continue;
+        put(o);
+        return true;
       }
+      // запасной путь (детерминированный): свободная орбита в кольцах [dmin, dmax], иначе — в ближайших к ним
+      const all = orbitsIn(1, c).filter(freeOrbit);
+      for (let w = 0; w <= c; w++) {
+        const cands = all.filter((o) => { const d = ring(o[0].x, o[0].y); return d >= dmin - w && d <= dmax + w; });
+        if (cands.length) { put(cands[Math.floor(r() * cands.length)]); return true; }
+      }
+      return false;
     };
     loot.push({ id: 0, kind: "weapon", type: "rifle", x: c, y: c });
     taken.add(key(c, c));
-    if (N === 9) {
-      putLoot("weapon", "knife", 2, 3);
-      putLoot("weapon", "pistol", 1, 2);
-      putLoot("armor", "light", 2, 3);
-      putLoot("medkit", "medkit", 1, 3);
-      putLoot("armor", "heavy", 1, 1);
-    } else {
-      putLoot("weapon", "knife", 3, 4);
-      putLoot("weapon", "knife", 2, 4);
-      putLoot("weapon", "pistol", 2, 3);
-      putLoot("weapon", "pistol", 1, 3);
-      putLoot("armor", "light", 2, 4);
-      putLoot("armor", "heavy", 1, 2);
-      putLoot("medkit", "medkit", 2, 4);
-      putLoot("medkit", "medkit", 1, 3);
-    }
+    if (!LOOT[N].every(([kind, type, dmin, dmax]) => putLoot(kind, type, dmin, dmax))) continue;
     return { tiles, loot, spawns };
   }
   throw new Error("map gen failed");
@@ -204,7 +209,7 @@ export function los(s, a, b) {
 
 export function canHit(s, from, weapon, to) {
   const d = cheb(from, to);
-  return d >= 1 && d <= WEAPONS[weapon].range && (d === 1 || los(s, from, to));
+  return d >= 1 && d <= WEAPONS[weapon].range && (d === 1 ? !sealedCorner(s.tiles, from, to) : los(s, from, to));
 }
 
 /** Урон с учётом укрытия и брони (без случайности) */
@@ -225,7 +230,7 @@ export function sanitize(s, p, plan) {
   if (plan.medkit) { if (p.medkits > 0) out.medkit = true; return out; }
   let cur = { x: p.x, y: p.y };
   for (const st of (plan.path || []).slice(0, 2)) {
-    if (cheb(cur, st) !== 1 || !passable(s, st.x, st.y)) break;
+    if (cheb(cur, st) !== 1 || !passable(s, st.x, st.y) || sealedCorner(s.tiles, cur, st)) break;
     out.path.push({ x: st.x, y: st.y });
     cur = st;
   }
@@ -358,7 +363,8 @@ export function resolveTurn(prev, rawPlans) {
     s.stage++;
     ev.push({ t: "zone-shrink", text: s.stage > maxStage(s.N) ? "Зона закрылась: урон всем" : `Зона сузилась: ${s.N - 2 * s.stage}×${s.N - 2 * s.stage}` });
   }
-  s.events = [...ev.map((e) => ({ ...e, turn: s.turn })), ...prev.events].slice(0, 40);
+  s.lastTurn.events = ev;                                                     // все события хода
+  s.events = [...ev.map((e) => ({ ...e, turn: s.turn })), ...prev.events].slice(0, 40);   // лента для клиента
   if (left.length <= 1 || s.turn >= MAX_TURNS) { s.finished = true; s.places = placements(s); }
   else s.turn++;
   return s;
@@ -401,7 +407,7 @@ function bfs(s, start, occupied) {
     const p = q[h];
     for (const [dx, dy] of DIRS) {
       const x = p.x + dx, y = p.y + dy, k = key(x, y);
-      if (!passable(s, x, y) || dist.has(k) || occupied.has(k)) continue;
+      if (!passable(s, x, y) || dist.has(k) || occupied.has(k) || sealedCorner(s.tiles, p, { x, y })) continue;
       dist.set(k, dist.get(key(p.x, p.y)) + 1);
       prev.set(k, p);
       q.push({ x, y });
@@ -456,7 +462,7 @@ export function botPlan(s, id) {
     cands.push({ path: [p1], pos: p1 });
     for (const [ex, ey] of DIRS) {
       const p2 = { x: p1.x + ex, y: p1.y + ey };
-      if (!passable(s, p2.x, p2.y) || occupied.has(key(p2.x, p2.y)) || cheb(p2, me) < 2) continue;
+      if (!passable(s, p2.x, p2.y) || occupied.has(key(p2.x, p2.y)) || cheb(p2, me) < 2 || sealedCorner(s.tiles, p1, p2)) continue;
       cands.push({ path: [p1, p2], pos: p2, dash: true });
     }
   }
