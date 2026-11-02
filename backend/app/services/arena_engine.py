@@ -333,6 +333,19 @@ class MatchState:
         return None
 
 
+def seat_order(seed: int, n: int) -> list[int]:
+    """Места в комнате по seed (RULES §3): seat_order(seed, n)[i] — номер места (id в движке) игрока, вошедшего i-м.
+    Фишер–Йетс на mulberry32(seed ^ 0x85EBCA6B) — как seatOrder в engine.js; поток отдельный от карты и стартов."""
+    if n < 1:
+        raise ValueError("n >= 1")
+    r = Mulberry32((seed & M32) ^ 0x85EBCA6B)
+    out = list(range(n))
+    for i in range(n - 1, 0, -1):
+        j = int(r() * (i + 1))
+        out[i], out[j] = out[j], out[i]
+    return out
+
+
 def create_match(room_code: str, seed: int, player_ids: list[int]) -> MatchState:
     """Новый матч. player_ids — в порядке входа (слоты); места на карте раздаёт seed."""
     rt = _room_type(room_code)
@@ -450,6 +463,11 @@ def parse_plan(raw: Any) -> Plan:
     if attack is not None and not _is_int(attack):
         raise InvalidPlan("bad_plan", "attack — id игрока или null")
     return Plan(tuple(path), attack, medkit)
+
+
+def plan_to_dict(plan: Plan) -> dict[str, Any]:
+    """План → JSON в том же формате, что принимает parse_plan (для журнала ходов)."""
+    return {"path": [[x, y] for x, y in plan.path], "attack": plan.attack, "medkit": plan.medkit}
 
 
 def validate_plan(s: MatchState, player_id: int, plan: Plan) -> Plan:

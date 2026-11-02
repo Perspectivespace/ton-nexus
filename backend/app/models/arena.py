@@ -2,7 +2,7 @@
 
 Суммы — в нанотонах (целые, BigInteger): 1 TON = 10^9. Баланс пользователя хранится в TON с 8 знаками,
 поэтому все суммы, которые проходят через balance.credit/debit, кратны 10 нанотонам (см. services/arena_escrow).
-Журнал ходов и сам бой — в следующих PR (движок, цикл ходов).
+Бой — arena_matches (состояние движка) и arena_turns (журнал ходов, services/arena_match).
 """
 
 from datetime import datetime
@@ -58,7 +58,7 @@ class ArenaEntry(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     room_id: Mapped[int] = mapped_column(ForeignKey("arena_rooms.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    # номер места 0…seats-1 (порядок входа); NULL — место освобождено
+    # номер места 0…seats-1: до старта — слот входа, на старте перемешивается seed'ом; NULL — место освобождено
     seat: Mapped[int | None] = mapped_column(Integer, nullable=True)
     held_nano: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="held", server_default="held")
@@ -72,7 +72,8 @@ class ArenaEntry(Base):
 class ArenaMatch(Base):
     """Бой набранной комнаты: текущее состояние движка (services/arena_engine, JSON). Одна строка на комнату.
 
-    Создаётся в момент старта комнаты (состояние перед 1-м ходом). Журнал ходов и цикл ходов — PR 4.
+    Создаётся в момент старта комнаты (состояние перед 1-м ходом). Игроки в движке — номера мест (0…seats-1),
+    а не id пользователей: журнал ходов публичный. Ходы — arena_turns, цикл ходов — services/arena_match.
     """
 
     __tablename__ = "arena_matches"
@@ -85,3 +86,28 @@ class ArenaMatch(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ArenaTurn(Base):
+    """Ход боя: окно приёма планов, планы игроков и результат. Одна строка на (комната, ход).
+
+    Строка создаётся, когда ход открывается (1-й — при старте комнаты, следующий — при разрешении предыдущего).
+    plans_json до разрешения — {"<место>": {"plan": {...}, "ready": bool}}; чужие планы до разрешения не отдаются.
+    После разрешения: plans_json — планы, с которыми ход разрешён ({"<место>": план | null}, null — стоял),
+    result_json — итог хода из движка (last_turn), resolved_at, reason ("deadline" | "ready").
+    """
+
+    __tablename__ = "arena_turns"
+    __table_args__ = (UniqueConstraint("room_id", "turn", name="uq_arena_turns_room_turn"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("arena_rooms.id", ondelete="CASCADE"), nullable=False)
+    turn: Mapped[int] = mapped_column(Integer, nullable=False)
+    # планы принимаются с opens_at (1-й ход — после отсчёта 3 с) до deadline включительно не дольше
+    opens_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    plans_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}", server_default="{}")
+    result_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -173,6 +173,15 @@ function genMap(room, seed) {
   throw new Error("map gen failed");
 }
 
+/** Места в комнате по seed (RULES §3): seatOrder(seed, n)[i] — номер места (id в движке) игрока, вошедшего i-м.
+ *  Фишер–Йетс на rng(seed ^ 0x85ebca6b) — поток отдельный от карты и стартов. */
+export function seatOrder(seed, n) {
+  const r = rng(seed ^ 0x85ebca6b);
+  const s = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [s[i], s[j]] = [s[j], s[i]]; }
+  return s;
+}
+
 export const BOT_NAMES = ["kira_ton", "volt", "shade", "mira_x", "ox", "zed_77", "nova", "rook", "lynx", "echo"];
 
 /** Новый матч. players: [{id, name, bot}] в порядке входа; места на карте — по seed */
