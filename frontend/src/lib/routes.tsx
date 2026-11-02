@@ -29,6 +29,8 @@ const LOADERS: Record<string, Loader> = {
   roles: () => import("@/pages/Roles").then((m) => m.Roles),
   tower: () => import("@/pages/Tower").then((m) => m.default),
   towerTop: () => import("@/pages/TowerTop").then((m) => m.default),
+  arena: () => import("@/pages/Arena").then((m) => m.default),
+  arenaRoom: () => import("@/pages/ArenaRoom").then((m) => m.default),
   ratings: () => import("@/pages/Ratings").then((m) => m.default),
 };
 type Key = keyof typeof LOADERS;
@@ -93,6 +95,8 @@ export function routeKey(path: string): Key | null {
   if (p === "/tower") return "tower";
   if (p === "/tower/top") return "towerTop";
   if (p === "/ratings") return "ratings";
+  if (p === "/arena") return "arena";
+  if (/^\/arena\/\d+$/.test(p)) return "arenaRoom";
   return null;
 }
 
