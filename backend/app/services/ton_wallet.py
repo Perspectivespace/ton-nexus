@@ -96,7 +96,7 @@ async def unlink_wallet(session: AsyncSession, *, user: User, now: datetime | No
     pending = await session.scalar(
         select(WithdrawRequest).where(
             WithdrawRequest.user_id == user.id,
-            WithdrawRequest.status == "pending",
+            WithdrawRequest.status.in_(("pending", "sending")),
         )
     )
     if pending:

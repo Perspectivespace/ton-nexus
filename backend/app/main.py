@@ -12,10 +12,11 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.services.economy_seed import seed_economy
 from app.services.ton_deposits import poll_once
+from app.services.ton_payouts import poll_once as poll_payouts_once
 
 
 async def deposit_loop():
-    """Фоновый опрос toncenter: пополнения TON. Ошибки не останавливают цикл."""
+    """Фоновый опрос toncenter: пополнения TON и подтверждение выплат. Ошибки не останавливают цикл."""
     from app.services.economy import get_setting
 
     while True:
@@ -23,6 +24,10 @@ async def deposit_loop():
             await poll_once(SessionLocal)
         except Exception:
             logging.getLogger(__name__).exception("[deposits] poll error")
+        try:
+            await poll_payouts_once(SessionLocal)
+        except Exception:
+            logging.getLogger(__name__).exception("[payouts] poll error")
         try:
             async with SessionLocal() as s:
                 cfg = await get_setting(s, "ton_deposits") or {}

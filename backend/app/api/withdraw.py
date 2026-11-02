@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
+from app.services import ton_deposits as td
+from app.services import ton_payouts as payouts
 from app.services import withdraw as w_svc
 from app.services.balance import InsufficientBalanceError
 from app.services.roles import is_admin, is_platform_owner
@@ -29,7 +31,13 @@ class CreateBody(BaseModel):
 
 class ReviewBody(BaseModel):
     approve: bool
-    note: str | None = None
+    note: str | None = Field(default=None, max_length=500)
+    # approve=True закрывает заявку без доказательства перевода: только владелец, явно и с заметкой
+    unverified: bool = False
+
+
+class VerifyHashBody(BaseModel):
+    tx_hash: str = Field(min_length=10, max_length=200)
 
 
 class WithdrawOut(BaseModel):
@@ -41,6 +49,12 @@ class WithdrawOut(BaseModel):
     admin_note: str | None
     created_at: datetime
     reviewed_at: datetime | None
+    payout_started_at: datetime | None = None
+    tx_hash: str | None = None
+    paid_at: datetime | None = None
+    user_telegram_id: int | None = None
+    username: str | None = None
+    first_name: str | None = None
 
 
 def _out(v: w_svc.WithdrawView) -> WithdrawOut:
@@ -53,7 +67,22 @@ def _out(v: w_svc.WithdrawView) -> WithdrawOut:
         admin_note=v.admin_note,
         created_at=v.created_at,
         reviewed_at=v.reviewed_at,
+        payout_started_at=v.payout_started_at,
+        tx_hash=v.tx_hash,
+        paid_at=v.paid_at,
+        user_telegram_id=v.user_telegram_id,
+        username=v.username,
+        first_name=v.first_name,
     )
+
+
+def _staff(user: User) -> None:
+    if not is_platform_owner(user) and not is_admin(user):
+        raise HTTPException(status_code=403, detail="owner or admin required")
+
+
+def _payout_http(e: payouts.PayoutError) -> HTTPException:
+    return HTTPException(status_code=e.status, detail=e.message)
 
 
 @router.post("", response_model=WithdrawOut)
@@ -112,6 +141,68 @@ async def pending_withdrawals(
     return [_out(i) for i in items]
 
 
+@router.get("/payout-config")
+async def payout_config(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Кошелёк выплат для Кассы: подключённый в TON Connect кошелёк сверяется с ним до отправки."""
+    _staff(user)
+    cfg = await payouts.get_config(db)
+    return {
+        "enabled": cfg.enabled,
+        "payout_wallet": cfg.wallet,
+        "payout_wallet_raw": cfg.wallet_raw,
+        "network": cfg.network,
+        "is_owner": is_platform_owner(user),
+    }
+
+
+@router.get("/{request_id}/tx-payload")
+async def payout_tx_payload(
+    request_id: int,
+    force: bool = False,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Перевод для TON Connect; заявка переходит в «отправляется». Второй — только с force (владелец)."""
+    try:
+        out = await payouts.issue_payload(db, actor=user, request_id=request_id, force=force)
+    except payouts.PayoutError as e:
+        await db.commit()  # проверка сети могла закрыть заявку
+        raise _payout_http(e) from e
+    await db.commit()
+    return out
+
+
+@router.post("/{request_id}/check", response_model=WithdrawOut)
+async def payout_check(request_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """«Проверить»: найти перевод этой заявки среди исходящих кошелька выплат."""
+    _staff(user)
+    try:
+        await payouts.check(db, request_ids=[request_id])
+    except td.ToncenterError as e:
+        raise HTTPException(status_code=503, detail="Не удалось проверить сеть — повторите позже") from e
+    await db.commit()
+    v = await w_svc.get_view(db, request_id)
+    if v is None:
+        raise HTTPException(status_code=404, detail="Заявка не найдена")
+    return _out(v)
+
+
+@router.post("/{request_id}/verify-hash", response_model=WithdrawOut)
+async def payout_verify_hash(
+    request_id: int,
+    body: VerifyHashBody,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Запасной путь: владелец вставляет хеш перевода, сервер проверяет его через toncenter."""
+    try:
+        await payouts.verify_hash(db, actor=user, request_id=request_id, tx_hash=body.tx_hash)
+    except payouts.PayoutError as e:
+        raise _payout_http(e) from e
+    await db.commit()
+    return _out(await w_svc.get_view(db, request_id))
+
+
 @router.post("/{request_id}/review", response_model=WithdrawOut)
 async def review_withdraw(
     request_id: int,
@@ -119,12 +210,22 @@ async def review_withdraw(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        v = await w_svc.review(
-            db, actor=user, request_id=request_id, approve=body.approve, note=body.note
+    if body.approve and not body.unverified:
+        raise HTTPException(
+            status_code=400,
+            detail="Выплата подтверждается переводом из Кассы или по хешу; без проверки — только явно (unverified)",
         )
+    try:
+        if body.approve:
+            v = await w_svc.review(db, actor=user, request_id=request_id, approve=True, note=body.note)
+        else:
+            await payouts.reject(db, actor=user, request_id=request_id, note=body.note)
+            v = await w_svc.get_view(db, request_id)
         await db.commit()
         return _out(v)
+    except payouts.PayoutError as e:
+        await db.commit()  # проверка сети могла закрыть заявку как выплаченную
+        raise _payout_http(e) from e
     except WithdrawPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except WithdrawStateError as e:
