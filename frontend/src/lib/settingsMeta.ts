@@ -146,6 +146,16 @@ export const SETTINGS: Record<string, SettingMeta> = {
       return `${o.enabled ? "Включено" : "Выключено"} · ${w.slice(0, 6)}…${w.slice(-4)}`;
     },
   },
+  arena: {
+    title: "Арена",
+    short: "Вход в комнаты со ставкой",
+    about:
+      "Главный выключатель «Арены». Выключено — игроки не видят комнат и не могут войти; выйти из комнаты до старта и вернуть ставку можно всегда, просроченные комнаты возвращают ставки сами.",
+    fields: {
+      enabled: { label: "Включено", kind: "bool" },
+    },
+    summary: (v) => ((v as { enabled?: boolean })?.enabled ? "Включено" : "Выключено"),
+  },
   ton_wallet: {
     title: "Кошелёк TON",
     short: "Сеть и срок подтверждения",
