@@ -41,6 +41,7 @@ export default function TopUpPayButton({
           .finally(() => {
             qc.invalidateQueries({ queryKey: ["me"] });
             qc.invalidateQueries({ queryKey: ["deposits", "mine"] });
+            qc.invalidateQueries({ queryKey: ["balance"] });
           });
       }, 15000);
       onSent();

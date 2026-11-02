@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import { setServerClock } from "@/lib/cityPhase";
 import type {
@@ -774,5 +774,44 @@ export function useAssignDeposit() {
         body: JSON.stringify({ telegram_id, note: note || null }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["deposits", "admin"] }),
+  });
+}
+
+/** История баланса (GET /balance/history): журнал balance_history с видом операции и статусом вывода */
+export type HistoryFilter = "all" | "deposits" | "withdrawals" | "earnings" | "spending";
+
+export type HistoryItem = {
+  id: number | string;
+  kind: string;
+  group: "deposits" | "withdrawals" | "earnings" | "spending";
+  label: string;
+  detail: string | null;
+  /** со знаком: «-1.5» — списание */
+  amount: string;
+  balance_after: string | null;
+  created_at: string;
+  status: string | null;
+  status_label: string | null;
+};
+
+export type HistoryPage = { items: HistoryItem[]; next_cursor: number | null; pending: HistoryItem[] };
+
+export const historyUrl = (filter: HistoryFilter, cursor?: number | null, limit = 30) =>
+  `/api/v1/balance/history?filter=${filter}&limit=${limit}${cursor ? `&cursor=${cursor}` : ""}`;
+
+export function useBalanceHistory(filter: HistoryFilter) {
+  return useInfiniteQuery({
+    queryKey: ["balance", "history", filter],
+    queryFn: ({ pageParam }) => api<HistoryPage>(historyUrl(filter, pageParam)),
+    initialPageParam: null as number | null,
+    getNextPageParam: (last) => last.next_cursor,
+  });
+}
+
+/** Последние операции для экрана «Кошелёк» */
+export function useRecentHistory(limit = 3) {
+  return useQuery({
+    queryKey: ["balance", "recent", limit],
+    queryFn: () => api<HistoryPage>(historyUrl("all", null, limit)),
   });
 }

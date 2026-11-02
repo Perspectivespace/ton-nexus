@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink, useDepositInfo } from "@/api/hooks";
+import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink, useDepositInfo, useRecentHistory } from "@/api/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
@@ -10,19 +10,13 @@ import { api } from "@/api/client";
 import { IconGear, IconHistory, IconOut, IconWallet } from "@/components/icons";
 import { WalletConnectSheet } from "@/components/WalletConnectSheet";
 import { TopUpSheet } from "@/components/TopUpSheet";
+import { BalanceHistorySheet, HistoryRow } from "@/components/BalanceHistory";
 import { LazyTonConnectProvider } from "@/lib/tonconnect";
 import { prefersReducedMotion } from "@/components/ui/press";
-import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, Sheet, Tag, useToast, type Tone } from "@/components/ui";
+import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Sheet, Tag, useToast } from "@/components/ui";
 
 /** Тот же формат, что проверяет сервер */
 const TON_ADDR = /^(UQ|EQ)[A-Za-z0-9_-]{46}$/;
-
-const W_STATUS: Record<string, { label: string; tone: Tone }> = {
-  pending: { label: "на проверке", tone: "warn" },
-  paid: { label: "выплачено", tone: "ok" },
-  rejected: { label: "отклонено", tone: "danger" },
-  approved: { label: "одобрено", tone: "ok" },
-};
 
 function shortAddr(a: string) {
   return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-6)}` : a;
@@ -60,6 +54,13 @@ export function Wallet() {
   const [sheet, setSheet] = useState<Panel3>(null);
   const [ask, setAsk] = useState(false);
   const toast = useToast();
+  const recent = useRecentHistory(3);
+
+  // баланс изменился (зачисление пополнения, сбор, вывод) — история тоже устарела
+  const balanceKey = me?.balance;
+  useEffect(() => {
+    if (balanceKey != null) qc.invalidateQueries({ queryKey: ["balance"] });
+  }, [balanceKey, qc]);
 
   const min = limits.data ? Number(limits.data.min_ton) : null;
   const amount = typed ?? (limits.data?.min_ton ? String(Number(limits.data.min_ton)) : "");
@@ -99,6 +100,7 @@ export function Wallet() {
       closeSheet();
       refetch();
       mine.refetch();
+      qc.invalidateQueries({ queryKey: ["balance"] });
     } catch (e) {
       setAsk(false);
       toast({ kind: "danger", title: "Заявка не создана", sub: e instanceof Error ? e.message : "Ошибка" });
@@ -174,11 +176,30 @@ export function Wallet() {
           icon={<IconHistory size={20} />}
           iconTone="muted"
           title="История"
-          sub={list.length > 0 ? `Заявки на вывод · ${list.length}` : "Заявок на вывод пока нет"}
+          sub="Пополнения, выводы, начисления и траты"
           onClick={() => setSheet("history")}
         />
         <ListRow icon={<IconGear size={20} />} iconTone="muted" title="Настройки" sub="Тема, анимации, язык" onClick={() => setSheet("settings")} />
       </List>
+
+      {recent.data && recent.data.pending.length + recent.data.items.length > 0 ? (
+        <section className="space-y-2" aria-label="Последние операции">
+          <SectionLabel
+            action={
+              <Button kind="ghost" size="sm" onClick={() => setSheet("history")}>
+                Вся история
+              </Button>
+            }
+          >
+            Последние операции
+          </SectionLabel>
+          <List>
+            {[...recent.data.pending, ...recent.data.items].slice(0, 3).map((it) => (
+              <HistoryRow key={String(it.id)} item={it} />
+            ))}
+          </List>
+        </section>
+      ) : null}
 
       {/* «Управление» команды — последним разделом; игроку не рендерится (видимость по роли — в WorkArea) */}
       <WorkArea />
@@ -267,26 +288,8 @@ export function Wallet() {
         </LazyTonConnectProvider>
       </Sheet>
 
-      <Sheet open={sheet === "history"} onClose={closeSheet} title="История" sub="Заявки на вывод TON">
-        {list.length === 0 ? (
-          <p className="ui-sec">
-            Заявок на вывод пока нет. Начисления за майнинг, задания и отметки видны сразу в балансе — отдельной ленты операций пока нет.
-          </p>
-        ) : (
-          <List>
-            {list.map((w) => {
-              const st = W_STATUS[w.status] ?? { label: w.status, tone: "neutral" as Tone };
-              return (
-                <ListRow
-                  key={w.id}
-                  title={<span className="ui-num s-m">{Number(w.amount).toFixed(4)} TON</span>}
-                  sub={[fmtDate(w.created_at), shortAddr(w.wallet_address || "")].filter(Boolean).join(" · ")}
-                  trailing={<Tag tone={st.tone}>{st.label}</Tag>}
-                />
-              );
-            })}
-          </List>
-        )}
+      <Sheet open={sheet === "history"} onClose={closeSheet} title="История" sub="Все суммы в TON">
+        <BalanceHistorySheet />
       </Sheet>
 
       <Sheet open={sheet === "settings"} onClose={closeSheet} title="Настройки" sub="Берутся из Telegram и системы">
