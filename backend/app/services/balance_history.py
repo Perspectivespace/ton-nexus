@@ -52,7 +52,15 @@ LABELS: dict[str, str] = {
     "debit": "Списание",
 }
 
-WITHDRAW_STATUS_RU = {"pending": "в обработке", "paid": "выплачено", "rejected": "отклонено"}
+WITHDRAW_STATUS_RU = {"pending": "в обработке", "sending": "отправляется", "paid": "выплачено", "rejected": "отклонено"}
+
+
+def tx_url(tx_hash: str | None, network: str = "mainnet") -> str | None:
+    """Ссылка на транзакцию в tonviewer (hex-хеш), для тестовой сети — testnet.tonviewer.com."""
+    if not tx_hash:
+        return None
+    host = "testnet.tonviewer.com" if network == "testnet" else "tonviewer.com"
+    return f"https://{host}/transaction/{tx_hash}"
 
 # у каких видов в подписи полезно описание из журнала (номер задания, приз рулетки, месяц «Башни»)
 _DETAIL_KINDS = {"task_reward", "task_budget", "wheel", "tower_prize", "promo"}
@@ -156,7 +164,7 @@ def _detail(kind: str, description: str | None) -> str | None:
     return description
 
 
-def _item(r: BalanceHistory, req: WithdrawRequest | None) -> dict:
+def _item(r: BalanceHistory, req: WithdrawRequest | None, network: str = "mainnet") -> dict:
     kind = kind_of(r.operation_type, r.balance_type)
     sign = "" if r.operation_type == "credit" else "-"
     item = {
@@ -170,6 +178,7 @@ def _item(r: BalanceHistory, req: WithdrawRequest | None) -> dict:
         "created_at": _aware(r.created_at).isoformat(),
         "status": None,
         "status_label": None,
+        "tx_url": None,
     }
     if kind == "deposit" and r.description and "вручную" in r.description:
         item["detail"] = "Зачислено вручную"
@@ -177,6 +186,7 @@ def _item(r: BalanceHistory, req: WithdrawRequest | None) -> dict:
         item["status"] = req.status
         item["status_label"] = WITHDRAW_STATUS_RU.get(req.status, req.status)
         item["detail"] = f"Заявка #{req.id}"
+        item["tx_url"] = tx_url(req.tx_hash, network)
     elif req is not None and kind == "withdraw_refund":
         item["detail"] = f"Заявка #{req.id} отклонена"
     return item
@@ -232,7 +242,12 @@ async def history(
     more = len(rows) > limit
     rows = rows[:limit]
     reqs = await _withdraw_statuses(session, user_id, rows)
-    items = [_item(r, reqs.get(r.id)) for r in rows]
+    network = "mainnet"
+    if reqs:
+        from app.services.economy import get_setting
+
+        network = (await get_setting(session, "ton_wallet") or {}).get("network", "mainnet")
+    items = [_item(r, reqs.get(r.id), network) for r in rows]
     pending = []
     if cursor is None and flt in ("all", "deposits"):
         pending = await _pending_deposits(session, user_id)

@@ -1,4 +1,8 @@
-"""Manual withdraw — hold on request, owner approve/reject."""
+"""Withdraw requests — hold on request; payout via TON Connect (services/ton_payouts), reject refunds.
+
+pending -> sending (payload issued to the owner's payout wallet) -> paid (outgoing tx seen on chain,
+or verified by hash, or owner-only «без проверки») | rejected (hold refunded).
+"""
 
 from __future__ import annotations
 
@@ -11,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
-from app.models.withdraw import WithdrawRequest
+from app.models.withdraw import OPEN_STATUSES, WithdrawRequest
 from app.services import balance as balance_svc
 from app.services.economy import dec, get_setting
 from app.services.roles import is_admin, is_platform_owner
@@ -42,9 +46,15 @@ class WithdrawView:
     admin_note: str | None
     created_at: datetime
     reviewed_at: datetime | None
+    payout_started_at: datetime | None = None
+    tx_hash: str | None = None
+    paid_at: datetime | None = None
+    user_telegram_id: int | None = None
+    username: str | None = None
+    first_name: str | None = None
 
 
-def _view(w: WithdrawRequest) -> WithdrawView:
+def _view(w: WithdrawRequest, user: User | None = None) -> WithdrawView:
     return WithdrawView(
         id=w.id,
         user_id=w.user_id,
@@ -54,6 +64,12 @@ def _view(w: WithdrawRequest) -> WithdrawView:
         admin_note=w.admin_note,
         created_at=w.created_at,
         reviewed_at=w.reviewed_at,
+        payout_started_at=w.payout_started_at,
+        tx_hash=w.tx_hash,
+        paid_at=w.paid_at,
+        user_telegram_id=user.telegram_id if user else None,
+        username=user.username if user else None,
+        first_name=user.first_name if user else None,
     )
 
 
@@ -96,7 +112,7 @@ async def create_request(
     pending = await session.scalar(
         select(WithdrawRequest.id).where(
             WithdrawRequest.user_id == user.id,
-            WithdrawRequest.status == "pending",
+            WithdrawRequest.status.in_(OPEN_STATUSES),
         )
     )
     if pending:
@@ -140,13 +156,22 @@ async def list_mine(
 async def list_pending(
     session: AsyncSession, *, limit: int = 100
 ) -> list[WithdrawView]:
+    """Открытые заявки (ждут выплаты или отправляются) с пользователем — для Кассы."""
     result = await session.execute(
-        select(WithdrawRequest)
-        .where(WithdrawRequest.status == "pending")
+        select(WithdrawRequest, User)
+        .join(User, User.id == WithdrawRequest.user_id)
+        .where(WithdrawRequest.status.in_(OPEN_STATUSES))
         .order_by(WithdrawRequest.created_at.asc())
         .limit(min(limit, 200))
     )
-    return [_view(w) for w in result.scalars().all()]
+    return [_view(w, u) for w, u in result.all()]
+
+
+async def get_view(session: AsyncSession, request_id: int) -> WithdrawView | None:
+    row = (await session.execute(
+        select(WithdrawRequest, User).join(User, User.id == WithdrawRequest.user_id).where(WithdrawRequest.id == request_id)
+    )).first()
+    return _view(row[0], row[1]) if row else None
 
 
 async def review(
@@ -156,9 +181,16 @@ async def review(
     request_id: int,
     approve: bool,
     note: str | None = None,
+    allow_sending: bool = False,
 ) -> WithdrawView:
+    """approve=True — «отметить выплаченной без проверки»: только владелец и только с заметкой.
+
+    Обычная выплата закрывается проверкой сети (services/ton_payouts). Отклонение возвращает холд;
+    заявку в статусе sending отклоняет только ton_payouts.reject после проверки сети (allow_sending).
+    """
     if not is_platform_owner(actor) and not is_admin(actor):
         raise WithdrawPermissionError("owner or admin required")
+    note = (note or "").strip() or None
 
     # Заявка под блокировкой и перечитана: второе нажатие «Отклонить»/«Выплачено» ждёт первое
     # и видит уже изменённый статус — возврат не начисляется дважды.
@@ -168,16 +200,27 @@ async def review(
         .with_for_update()
         .execution_options(populate_existing=True)
     )
-    if not req or req.status != "pending":
+    allowed = OPEN_STATUSES if (approve or allow_sending) else ("pending",)
+    if not req or req.status not in allowed:
+        if req and req.status == "sending":
+            raise WithdrawStateError("payout in progress")
         raise WithdrawStateError("request not pending")
+    if approve:
+        if not is_platform_owner(actor):
+            raise WithdrawPermissionError("only the owner can mark paid without proof")
+        if not note:
+            raise WithdrawError("note required to mark paid without proof")
 
+    now = datetime.now(timezone.utc)
     req.reviewed_by_telegram_id = actor.telegram_id
-    req.reviewed_at = datetime.now(timezone.utc)
-    req.admin_note = note
+    req.reviewed_at = now
 
     if approve:
         req.status = "paid"
+        req.paid_at = now
+        req.admin_note = f"Без проверки: {note}"
     else:
+        req.admin_note = note
         req.status = "rejected"
         await balance_svc.credit(
             session,

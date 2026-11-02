@@ -14,6 +14,7 @@ import json
 import os
 import unittest
 import warnings
+from unittest import mock
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -123,10 +124,16 @@ class SequentialTest(unittest.TestCase):
             aid, uid = await _seed(s, balance="1")
             admin, u = await s.get(User, aid), await s.get(User, uid)
             req = await withdraw.create_request(s, user=u, amount=D("0.5"), wallet_address=WALLET)
-            await withdraw.review(s, actor=admin, request_id=req.id, approve=True)
-            for approve in (True, False):
-                with self.assertRaises(withdraw.WithdrawStateError):
-                    await withdraw.review(s, actor=admin, request_id=req.id, approve=approve)
+            # «отметить выплаченной без проверки» — только владелец и только с заметкой
+            with self.assertRaises(withdraw.WithdrawPermissionError):
+                await withdraw.review(s, actor=admin, request_id=req.id, approve=True, note="x")
+            with mock.patch.object(withdraw, "is_platform_owner", return_value=True):
+                with self.assertRaises(withdraw.WithdrawError):
+                    await withdraw.review(s, actor=admin, request_id=req.id, approve=True)
+                await withdraw.review(s, actor=admin, request_id=req.id, approve=True, note="перевёл вручную")
+                for approve in (True, False):
+                    with self.assertRaises(withdraw.WithdrawStateError):
+                        await withdraw.review(s, actor=admin, request_id=req.id, approve=approve, note="x")
             self.assertEqual(D(u.balance), D("0.5"))
         run_sqlite(body)
 

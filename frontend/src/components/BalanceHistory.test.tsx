@@ -87,3 +87,16 @@ describe("История баланса", () => {
     expect(text(html)).toContain("выплачено");
   });
 });
+
+describe("выплаченный вывод — ссылка на перевод", () => {
+  it("tx_url → ссылка tonviewer, «отправляется» — свой статус", () => {
+    const paid = { ...withdraw, status: "paid", status_label: "выплачено", tx_url: "https://tonviewer.com/transaction/" + "ab".repeat(32) };
+    const html = renderToStaticMarkup(<HistoryRow item={paid} />);
+    expect(html).toContain('href="https://tonviewer.com/transaction/');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(text(html)).toContain("перевод ↗");
+    const sending = renderToStaticMarkup(<HistoryRow item={{ ...withdraw, status: "sending", status_label: "отправляется" }} />);
+    expect(text(sending)).toContain("отправляется");
+    expect(sending).not.toContain("tonviewer");
+  });
+});

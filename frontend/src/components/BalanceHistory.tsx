@@ -40,7 +40,7 @@ const ICON: Record<string, (p: { size?: number }) => ReactNode> = {
   debit: IconCoins,
 };
 
-const STATUS_TONE: Record<string, Tone> = { pending: "warn", review: "warn", paid: "ok", rejected: "danger" };
+const STATUS_TONE: Record<string, Tone> = { pending: "warn", review: "warn", sending: "neon", paid: "ok", rejected: "danger" };
 
 const EMPTY: Record<HistoryFilter, string> = {
   all: "Здесь появятся пополнения, выводы, награды и траты.",
@@ -67,7 +67,17 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
   const neg = item.amount.startsWith("-");
   const pending = item.kind === "deposit_pending";
   const Icon = ICON[item.kind] ?? IconCoins;
-  const sub = [fmtWhen(item.created_at), item.detail].filter(Boolean).join(" · ");
+  const text = [fmtWhen(item.created_at), item.detail].filter(Boolean).join(" · ");
+  const sub = item.tx_url ? (
+    <>
+      {text} ·{" "}
+      <a href={item.tx_url} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] underline-offset-2 hover:underline">
+        перевод ↗
+      </a>
+    </>
+  ) : (
+    text
+  );
   return (
     <ListRow
       icon={<Icon size={20} />}

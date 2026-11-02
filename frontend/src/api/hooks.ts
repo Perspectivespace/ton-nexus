@@ -345,7 +345,55 @@ export type WithdrawOut = {
   admin_note: string | null;
   created_at: string;
   reviewed_at: string | null;
+  /** выплата: payload выдан (status «sending»), хеш исходящего перевода (hex), когда подтверждена */
+  payout_started_at?: string | null;
+  tx_hash?: string | null;
+  paid_at?: string | null;
+  user_telegram_id?: number | null;
+  username?: string | null;
+  first_name?: string | null;
 };
+
+export type PayoutConfig = {
+  enabled: boolean;
+  payout_wallet: string;
+  payout_wallet_raw: string | null;
+  network: string;
+  is_owner: boolean;
+};
+
+/** Кошелёк выплат (настройка «Выплаты TON») — Касса сверяет с ним подключённый кошелёк */
+export function usePayoutConfig(enabled = true) {
+  return useQuery({
+    queryKey: ["withdraw", "payout-config"],
+    enabled,
+    queryFn: () => api<PayoutConfig>("/api/v1/withdraw/payout-config"),
+    staleTime: 60_000,
+  });
+}
+
+function useWithdrawMutation<V>(fn: (v: V) => Promise<WithdrawOut>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["withdraw"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+/** «Проверить»: сервер ищет перевод заявки среди исходящих кошелька выплат */
+export function useCheckPayout() {
+  return useWithdrawMutation((id: number) => api<WithdrawOut>(`/api/v1/withdraw/${id}/check`, { method: "POST" }));
+}
+
+/** Запасной путь: хеш перевода, сервер проверяет его через toncenter */
+export function useVerifyPayoutHash() {
+  return useWithdrawMutation(({ id, txHash }: { id: number; txHash: string }) =>
+    api<WithdrawOut>(`/api/v1/withdraw/${id}/verify-hash`, { method: "POST", body: JSON.stringify({ tx_hash: txHash }) }),
+  );
+}
 
 export function usePendingWithdrawals(enabled = true, refetchInterval?: number) {
   return useQuery({
@@ -363,14 +411,17 @@ export function useReviewWithdraw() {
       id,
       approve,
       note,
+      unverified = false,
     }: {
       id: number;
       approve: boolean;
       note?: string | null;
+      /** approve без доказательства перевода — только владелец, с заметкой */
+      unverified?: boolean;
     }) =>
       api<WithdrawOut>(`/api/v1/withdraw/${id}/review`, {
         method: "POST",
-        body: JSON.stringify({ approve, note: note || null }),
+        body: JSON.stringify({ approve, note: note || null, unverified }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["withdraw"] });
@@ -792,6 +843,8 @@ export type HistoryItem = {
   created_at: string;
   status: string | null;
   status_label: string | null;
+  /** выплаченный вывод: ссылка на перевод в tonviewer */
+  tx_url?: string | null;
 };
 
 export type HistoryPage = { items: HistoryItem[]; next_cursor: number | null; pending: HistoryItem[] };

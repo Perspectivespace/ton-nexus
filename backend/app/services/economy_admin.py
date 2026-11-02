@@ -106,6 +106,8 @@ async def set_setting(
         value = _normalize_ton_wallet(value)
     elif key == "ton_deposits":
         value = _normalize_ton_deposits(value)
+    elif key == "ton_payouts":
+        value = _normalize_ton_payouts(value)
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
     if row:
@@ -131,6 +133,27 @@ async def bulk_set(session: AsyncSession, updates: dict[str, Any]) -> list[Setti
     out: list[SettingView] = []
     for key, value in updates.items():
         out.append(await set_setting(session, key=key, value=value))
+    return out
+
+
+def _normalize_ton_payouts(v: dict) -> dict:
+    """Выплаты TON: кошелёк выплат приводится к одной форме (UQ…), включить можно только с адресом."""
+    from app.services.ton_wallet import WalletError, normalize_address
+
+    if not isinstance(v, dict):
+        raise EconomyAdminError("Настройки выплат должны быть объектом")
+    out = dict(v)
+    out.pop("network", None)  # сеть одна на всё — ton_wallet.network
+    addr = str(out.get("payout_wallet") or "").strip()
+    if addr:
+        try:
+            _, addr = normalize_address(addr)
+        except WalletError as e:
+            raise EconomyAdminError("Неверный адрес кошелька выплат") from e
+    out["payout_wallet"] = addr
+    out["enabled"] = bool(out.get("enabled", False))
+    if out["enabled"] and not addr:
+        raise EconomyAdminError("Сначала укажите кошелёк выплат")
     return out
 
 
@@ -187,6 +210,7 @@ def _normalize_ton_wallet(v: dict) -> dict:
 
 SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "ton_deposits", "group": "ton", "label": "Пополнение TON"},
+    {"key": "ton_payouts", "group": "ton", "label": "Выплаты TON"},
     {"key": "ton_wallet", "group": "ton", "label": "Кошелёк TON"},
     {"key": "upgrade_base_cost", "group": "miner_upgrade", "label": "Базовая цена усиления"},
     {"key": "upgrade_cost_scale", "group": "miner_upgrade", "label": "Надбавка цены за уровни"},
