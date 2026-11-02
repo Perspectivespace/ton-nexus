@@ -1,4 +1,5 @@
-"""«Арена»: API комнат — авторизация, флаг, список, вход/старт, выход, возврат по таймауту, гонка входов.
+"""«Арена»: API комнат — авторизация, флаг (и обход для владельцев), список, вход/старт, выход,
+возврат по таймауту, гонка входов. Ходы боя — tests/test_arena_match.py.
 
 Последовательные проверки — SQLite в памяти через HTTP (httpx + ASGI), авторизация настоящая (dev-вход в debug).
 Гонка «найти или создать» — на настоящем Postgres, только если задан TEST_PG_URL (как в test_arena_escrow).
@@ -22,7 +23,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
 from app.db.base import Base
-from app.models import ArenaEntry, ArenaMatch, ArenaRoom, User
+from app.models import ArenaEntry, ArenaMatch, ArenaRoom, ArenaTurn, User
 from app.services import arena_engine as eng
 from app.services import arena_escrow as ae
 from app.services import arena_rooms
@@ -100,7 +101,10 @@ class AuthAndFlagTest(ApiBase):
 
     async def test_auth_required(self):
         with mock.patch.object(settings, "debug", False):
-            for method, path in (("get", "/rooms"), ("post", "/join"), ("post", "/leave"), ("get", "/rooms/1")):
+            for method, path in (
+                ("get", "/rooms"), ("post", "/join"), ("post", "/leave"), ("get", "/rooms/1"),
+                ("get", "/rooms/1/state"), ("post", "/rooms/1/plan"), ("post", "/rooms/1/cancel"),
+            ):
                 r = await getattr(self.client, method)(f"/api/v1/arena{path}")
                 self.assertEqual(r.status_code, 401, (method, path))
             r = await self.client.get("/api/v1/arena/rooms", headers={"X-Telegram-Init-Data": "query_id=x&hash=bad"})
@@ -108,10 +112,13 @@ class AuthAndFlagTest(ApiBase):
 
     async def test_disabled_by_default(self):
         tg = await self.user()
-        for r in (await self.get("/rooms", tg), await self.post("/join", tg, {"type": "a4"}), await self.get("/rooms/1", tg)):
+        for r in (await self.get("/rooms", tg), await self.post("/join", tg, {"type": "a4"})):
             self.assertEqual(r.status_code, 403, r.text)
             self.assertEqual(r.json()["detail"]["code"], "arena_disabled")
         self.assertEqual(await self.rooms(), [])
+        # комнату видят только её участники (флаг тут не важен): нет комнаты — 404
+        r = await self.get("/rooms/1", tg)
+        self.assertEqual((r.status_code, r.json()["detail"]["code"]), (404, "room_not_found"))
         self.assertEqual(await self.balance(tg), D(1))
         # выход (возврат денег) открыт и при выключенной «Арене»
         r = await self.post("/leave", tg)
@@ -126,6 +133,22 @@ class AuthAndFlagTest(ApiBase):
         self.assertEqual((await put({"enabled": False})).status_code, 200)
         r = await self.post("/leave", tg)
         self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(await self.balance(tg), D(1))
+
+    async def test_owner_plays_while_switched_off(self):
+        """Флаг выключен: владельцы входят и играют (тест до открытия), остальные — arena_disabled."""
+        owners = [await self.user(is_owner=True) for _ in range(4)]
+        tg = await self.user()
+        j = (await self.get("/rooms", owners[0])).json()
+        self.assertEqual({t["type"] for t in j["types"]}, {"a4", "a8"})
+        views = [(await self.post("/join", o, {"type": "a4"})).json() for o in owners]
+        self.assertEqual(views[-1]["status"], "running")
+        rid = views[0]["id"]
+        r = await self.post("/join", tg, {"type": "a4"})
+        self.assertEqual((r.status_code, r.json()["detail"]["code"]), (403, "arena_disabled"))
+        self.assertEqual((await self.get(f"/rooms/{rid}/state", owners[1])).status_code, 200)
+        r = await self.get(f"/rooms/{rid}", tg)  # не участник и не владелец
+        self.assertEqual((r.status_code, r.json()["detail"]["code"]), (403, "not_participant"))
         self.assertEqual(await self.balance(tg), D(1))
 
     async def test_only_owner_toggles(self):
@@ -220,11 +243,18 @@ class RoomsApiTest(ApiBase):
         async with self.S() as s:
             room = await s.get(ArenaRoom, rid)
             m = await s.scalar(select(ArenaMatch).where(ArenaMatch.room_id == rid))
-            ids = (await s.scalars(select(ArenaEntry.user_id).where(ArenaEntry.room_id == rid).order_by(ArenaEntry.seat))).all()
+            seats = (await s.scalars(select(ArenaEntry.seat).where(ArenaEntry.room_id == rid).order_by(ArenaEntry.seat))).all()
+            t1 = await s.scalar(select(ArenaTurn).where(ArenaTurn.room_id == rid))
         self.assertEqual((room.status, m.turn, views[-1]["match"]["id"]), ("running", 1, m.id))
         st = eng.state_from_json(m.state_json)
-        self.assertEqual(eng.state_to_dict(st), eng.state_to_dict(eng.create_match("a4", room.seed, list(ids))))
-        self.assertEqual([p.id for p in st.players], list(ids))
+        # игроки в движке — номера мест (в публичном журнале нет id пользователей)
+        self.assertEqual(list(seats), [0, 1, 2, 3])
+        self.assertEqual(eng.state_to_dict(st), eng.state_to_dict(eng.create_match("a4", room.seed, [0, 1, 2, 3])))
+        self.assertEqual([p.id for p in st.players], [0, 1, 2, 3])
+        # 1-й ход: отсчёт 3 с после старта, затем 10 с на план
+        self.assertEqual(t1.turn, 1)
+        self.assertEqual(ae._aware(t1.opens_at) - ae._aware(room.started_at), timedelta(seconds=3))
+        self.assertEqual(ae._aware(t1.deadline) - ae._aware(t1.opens_at), timedelta(seconds=10))
         self.assertEqual(ae.seed_commit(st.seed, room.seed_salt), room.seed_hash)  # seed тот, что обещан хэшем
         # бой идёт: выйти нельзя; пятый игрок попадает в новую комнату
         r = await self.post("/leave", tgs[0])
@@ -240,6 +270,8 @@ class RoomsApiTest(ApiBase):
         async with self.S() as s:
             again = await arena_rooms.start_match(s, rid)
             self.assertEqual(again.id, m.id)
+            await s.commit()
+            self.assertEqual(await s.scalar(select(func.count()).select_from(ArenaTurn)), 1)
 
     async def test_leave(self):
         a, b = await self.user(), await self.user()
@@ -294,7 +326,8 @@ class RoomsApiTest(ApiBase):
         statuses = [x.status for x in await self.rooms()]
         self.assertEqual(statuses, ["refunded", "waiting"])
 
-    async def test_deposit_loop_runs_arena_refunds(self):
+    async def test_arena_loop_runs_poller(self):
+        """Свой цикл «Арены» (шаг 2 с — ходы по 10 с); цикл пополнений «Арену» больше не трогает."""
         import app.main as main
 
         called = asyncio.Event()
@@ -314,7 +347,11 @@ class RoomsApiTest(ApiBase):
              mock.patch.object(main.asyncio, "sleep", stop):
             with self.assertRaises(asyncio.CancelledError):
                 await main.deposit_loop()
+            self.assertFalse(called.is_set())
+            with self.assertRaises(asyncio.CancelledError):
+                await main.arena_loop()
         self.assertTrue(called.is_set())
+        self.assertEqual(main.ARENA_TICK_S, 2)
 
 
 @unittest.skipUnless(PG_URL, "нет TEST_PG_URL — гонка входов на Postgres пропущена")
