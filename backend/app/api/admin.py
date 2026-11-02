@@ -1,6 +1,8 @@
 """Owner/admin controls."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,13 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
+from app.services import role_admin
 from app.services.roles import (
     can_assign_admin,
+    can_assign_owner,
     can_deploy,
-    deployer_change_error,
-    deployer_count,
     is_deployer,
-    is_admin,
     is_platform_owner,
 )
 
@@ -26,6 +27,7 @@ class RoleBody(BaseModel):
     is_admin: bool | None = None
     is_ambassador: bool | None = None
     is_deployer: bool | None = None
+    is_owner: bool | None = None
 
 
 class UserRoleOut(BaseModel):
@@ -39,59 +41,96 @@ class UserRoleOut(BaseModel):
     is_owner: bool
 
 
+def _role_out(u: User) -> UserRoleOut:
+    return UserRoleOut(
+        id=u.id,
+        telegram_id=u.telegram_id,
+        username=u.username,
+        is_admin=bool(u.is_admin),
+        is_ambassador=bool(u.is_ambassador),
+        is_deployer=is_deployer(u),
+        can_deploy=can_deploy(u),
+        is_owner=is_platform_owner(u),
+    )
+
+
 @router.post("/roles", response_model=UserRoleOut)
 async def set_roles(
     body: RoleBody,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    target = await db.scalar(select(User).where(User.telegram_id == body.telegram_id))
-    if not target:
-        raise HTTPException(status_code=404, detail="user not found")
+    try:
+        target = await role_admin.change_roles(
+            db,
+            user,
+            body.telegram_id,
+            is_admin_=body.is_admin,
+            is_ambassador=body.is_ambassador,
+            is_deployer_=body.is_deployer,
+            is_owner=body.is_owner,
+        )
+    except role_admin.RoleChangeError as e:
+        raise HTTPException(status_code=e.status, detail=e.detail) from e
+    return _role_out(target)
 
-    if body.is_admin is not None:
-        if not can_assign_admin(user):
-            raise HTTPException(status_code=403, detail="only owner can assign admins")
-        target.is_admin = body.is_admin
 
-    if body.is_ambassador is not None:
-        if not is_admin(user):
-            raise HTTPException(status_code=403, detail="admin or owner required")
-        target.is_ambassador = body.is_ambassador
+class StaffRow(BaseModel):
+    telegram_id: int
+    username: str | None
+    first_name: str | None
+    from_env: bool = False
+    granted_by: str | None = None
+    granted_at: datetime | None = None
 
-    if body.is_deployer is not None:
-        count = await deployer_count(db, lock=True)
-        err = deployer_change_error(user, target, body.is_deployer, count)
-        if err:
-            raise HTTPException(status_code=403, detail=err)
-        target.is_deployer = body.is_deployer
 
-    await db.commit()
-    await db.refresh(target)
-    return UserRoleOut(
-        id=target.id,
-        telegram_id=target.telegram_id,
-        username=target.username,
-        is_admin=bool(target.is_admin),
-        is_ambassador=bool(target.is_ambassador),
-        is_deployer=is_deployer(target),
-        can_deploy=can_deploy(target),
-        is_owner=is_platform_owner(target),
+class StaffOut(BaseModel):
+    owners: list[StaffRow]
+    admins: list[StaffRow]
+    can_manage_admins: bool
+    can_manage_owners: bool
+
+
+class UserSearchRow(BaseModel):
+    telegram_id: int
+    username: str | None
+    first_name: str | None
+    is_owner: bool
+    owner_from_env: bool
+    is_admin: bool
+    is_deployer: bool
+
+
+def require_role_manager(user: User = Depends(get_current_user)) -> User:
+    """«Роли»: владельцы (админы) и деплойеры (владельцы)."""
+    if not (can_assign_admin(user) or can_assign_owner(user)):
+        raise HTTPException(status_code=403, detail="owner or deployer required")
+    return user
+
+
+@router.get("/roles/staff", response_model=StaffOut)
+async def roles_staff(user: User = Depends(require_role_manager), db: AsyncSession = Depends(get_db)):
+    data = await role_admin.staff(db)
+    return StaffOut(
+        owners=[StaffRow(**r) for r in data["owners"]],
+        admins=[StaffRow(**r) for r in data["admins"]],
+        can_manage_admins=can_assign_admin(user),
+        can_manage_owners=can_assign_owner(user),
     )
+
+
+@router.get("/users/search", response_model=list[UserSearchRow])
+async def users_search(
+    q: str = Query(min_length=1, max_length=64),
+    user: User = Depends(require_role_manager),
+    db: AsyncSession = Depends(get_db),
+):
+    return [UserSearchRow(**role_admin.user_roles(u)) for u in await role_admin.search_users(db, q)]
 
 
 @router.get("/me/roles", response_model=UserRoleOut)
 async def my_roles(user: User = Depends(get_current_user)):
-    return UserRoleOut(
-        id=user.id,
-        telegram_id=user.telegram_id,
-        username=user.username,
-        is_admin=bool(user.is_admin),
-        is_ambassador=bool(user.is_ambassador),
-        is_deployer=is_deployer(user),
-        can_deploy=can_deploy(user),
-        is_owner=is_platform_owner(user),
-    )
+    return _role_out(user)
 
 
 from app.services import gameday
