@@ -86,6 +86,11 @@ describe("TON: сеть списком и пополнения", () => {
     expect(() => fromInput(poll, "2", 15)).toThrow();
     expect(summarize("ton_deposits", { enabled: true, project_address: "", min_ton: "0.1", poll_seconds: 15 })).toContain("нет кошелька");
   });
+  it("арена — один флаг", () => {
+    expect(fieldMeta("arena", "enabled", false).kind).toBe("bool");
+    expect(summarize("arena", { enabled: false })).toBe("Выключено");
+    expect(summarize("arena", { enabled: true })).toBe("Включено");
+  });
   it("выплаты TON — кошелёк выплат текстом, сводка без адреса — выключено", () => {
     const w = fieldMeta("ton_payouts", "payout_wallet", "");
     expect(w.kind).toBe("text");

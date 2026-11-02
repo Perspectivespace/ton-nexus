@@ -92,6 +92,43 @@ class CornerParityTest(unittest.TestCase):
         self.assertGreater(sealed, 0)
 
 
+class LosParityTest(unittest.TestCase):
+    def test_los_matches_js(self):
+        corner = 0
+        for v in VECTORS["los"]:
+            with self.subTest(room=v["room"], seed=v["seed"]):
+                s = eng.create_match(v["room"], v["seed"], list(range(arena_config.room_type(v["room"]).seats)))
+                cells = [(x, y) for y in range(s.n) for x in range(s.n) if eng.passable(s, x, y)]
+                bits = "".join("1" if eng.los(s, ax, ay, bx, by) else "0" for ax, ay in cells for bx, by in cells if 2 <= eng.cheb(ax, ay, bx, by) <= 5)
+                self.assertEqual(len(bits), v["pairs"])
+                js = "".join(f"{int(c, 16):04b}" for c in v["hex"])[: v["pairs"]]
+                self.assertEqual(bits, js)
+                corner += v["corner"]
+        self.assertGreater(corner, 0)  # в векторах есть лучи, закрытые именно запертым углом
+
+
+class StateStorageTest(unittest.TestCase):
+    """Состояние в БД (arena_matches.state_json): JSON → состояние → дальше ходы как без сохранения."""
+
+    def test_roundtrip_every_turn(self):
+        for m in VECTORS["matches"][:6]:
+            with self.subTest(room=m["room"], seed=m["seed"], kind=m["kind"]):
+                direct = eng.create_match(m["room"], m["seed"], m["ids"])
+                stored = eng.state_from_json(eng.state_to_json(direct))
+                for t in m["turns"]:
+                    direct = eng.resolve_turn(direct, js_plans(t["plans"]))
+                    stored = eng.state_from_json(eng.state_to_json(eng.resolve_turn(stored, js_plans(t["plans"]))))
+                    self.assertEqual(eng.state_to_dict(stored), eng.state_to_dict(direct))
+                self.assertTrue(stored.finished)
+                self.assertEqual(stored.places, direct.places)
+
+    def test_rejects_unknown_version(self):
+        d = eng.state_to_dict(eng.create_match("a4", 1, [1, 2, 3, 4]))
+        d["v"] = 99
+        with self.assertRaises(ValueError):
+            eng.state_from_dict(d)
+
+
 class MatchParityTest(unittest.TestCase):
     def test_matches_turn_by_turn(self):
         for m in VECTORS["matches"]:
@@ -371,6 +408,15 @@ class TurnRulesTest(unittest.TestCase):
         s = board([(1, 4, 4), (2, 5, 5)], walls=[(5, 4)])
         s = eng.resolve_turn(s, {1: step(attack=2)})
         self.assertEqual(s.player(2).hp, 88)
+        # луч по диагонали между двумя ортогонально соседними стенами (запертый угол) — промах
+        s = board([(1, 2, 2, {"weapon": "rifle"}), (2, 5, 5)], walls=[(4, 3), (3, 4)])
+        self.assertFalse(eng.los(s, 2, 2, 5, 5))
+        s = eng.resolve_turn(s, {1: step(attack=2)})
+        self.assertTrue(s.last_turn["shots"][0]["miss"])
+        # одна стена у диагонали луч не закрывает, укрытия — тоже (они только режут урон)
+        for walls, covers in (([(4, 3)], []), ([], [(4, 3), (3, 4)])):
+            s = board([(1, 2, 2, {"weapon": "rifle"}), (2, 5, 5)], walls=walls, covers=covers)
+            self.assertTrue(eng.los(s, 2, 2, 5, 5), (walls, covers))
         # дальность пистолета 3 — с 4 клеток мимо
         s = eng.resolve_turn(board([(1, 0, 4, {"weapon": "pistol"}), (2, 4, 4)]), {1: step(attack=2)})
         self.assertTrue(s.last_turn["shots"][0]["miss"])

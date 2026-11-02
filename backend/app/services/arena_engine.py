@@ -17,7 +17,8 @@ shared/arena/gen-vectors.mjs) проверяет tests/test_arena_engine.py.
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
+import json
+from dataclasses import asdict, dataclass, field
 from typing import Any, Mapping, Optional
 
 from app.services.arena_config import room_type as _room_type
@@ -355,7 +356,8 @@ def passable(s: MatchState, x: int, y: int) -> bool:
 
 
 def los(s: MatchState, ax: int, ay: int, bx: int, by: int) -> bool:
-    """Линия огня: стены между стрелком и целью (Брезенхэм, концы не считаются)."""
+    """Линия огня: стены между стрелком и целью (Брезенхэм, концы не считаются); луч не проходит по диагонали
+    между двумя ортогонально соседними стенами (запертый угол)."""
     x0, y0 = ax, ay
     dx, dy = abs(bx - x0), -abs(by - y0)
     sx = 1 if x0 < bx else -1
@@ -367,12 +369,17 @@ def los(s: MatchState, ax: int, ay: int, bx: int, by: int) -> bool:
         if not (x0 == ax and y0 == ay) and s.tiles[y0][x0] == WALL:
             return False
         e2 = 2 * err
+        nx, ny = x0, y0
         if e2 >= dy:
             err += dy
-            x0 += sx
+            nx += sx
         if e2 <= dx:
             err += dx
-            y0 += sy
+            ny += sy
+        # диагональный шаг луча между двумя ортогонально соседними стенами — запертый угол, выстрел не проходит
+        if nx != x0 and ny != y0 and s.tiles[y0][nx] == WALL and s.tiles[ny][x0] == WALL:
+            return False
+        x0, y0 = nx, ny
 
 
 def can_hit(s: MatchState, ax: int, ay: int, weapon: str, bx: int, by: int) -> bool:
@@ -682,3 +689,44 @@ def run_match(room_code: str, seed: int, player_ids: list[int], turns: list[Mapp
     for plans in turns:
         s = resolve_turn(s, plans)
     return s
+
+
+# ───────── хранение состояния (arena_matches.state_json) ─────────
+
+STATE_VERSION = 1
+
+
+def state_to_dict(s: MatchState) -> dict[str, Any]:
+    """Состояние матча → JSON-совместимый dict (для БД). Обратное — state_from_dict."""
+    d = asdict(s)
+    d["v"] = STATE_VERSION
+    d["tiles"] = [list(row) for row in s.tiles]
+    # last_turn — уже JSON-подобный (списки и dict со строковыми ключами); кортежи станут списками
+    d["last_turn"] = json.loads(json.dumps(s.last_turn)) if s.last_turn is not None else None
+    return d
+
+
+def state_from_dict(d: Mapping[str, Any]) -> MatchState:
+    if d.get("v") != STATE_VERSION:
+        raise ValueError(f"неизвестная версия состояния: {d.get('v')!r}")
+    return MatchState(
+        room=d["room"],
+        seed=int(d["seed"]),
+        n=int(d["n"]),
+        tiles=tuple(tuple(int(c) for c in row) for row in d["tiles"]),
+        loot=[Loot(**x) for x in d["loot"]],
+        players=[Player(**p) for p in d["players"]],
+        turn=int(d["turn"]),
+        stage=int(d["stage"]),
+        finished=bool(d["finished"]),
+        last_turn=d.get("last_turn"),
+        places=[Place(**x) for x in d["places"]] if d.get("places") is not None else None,
+    )
+
+
+def state_to_json(s: MatchState) -> str:
+    return json.dumps(state_to_dict(s), separators=(",", ":"))
+
+
+def state_from_json(raw: str) -> MatchState:
+    return state_from_dict(json.loads(raw))

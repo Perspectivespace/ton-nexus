@@ -108,6 +108,8 @@ async def set_setting(
         value = _normalize_ton_deposits(value)
     elif key == "ton_payouts":
         value = _normalize_ton_payouts(value)
+    elif key == "arena":
+        value = _normalize_arena(value)
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
     if row:
@@ -194,6 +196,16 @@ def _normalize_ton_deposits(v: dict) -> dict:
     return out
 
 
+def _normalize_arena(v: dict) -> dict:
+    """«Арена»: только флаг enabled (bool). Лишние ключи отбрасываются."""
+    if not isinstance(v, dict):
+        raise EconomyAdminError("Настройки «Арены» должны быть объектом")
+    enabled = v.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise EconomyAdminError("«Арена»: enabled — да/нет")
+    return {"enabled": enabled}
+
+
 def _normalize_ton_wallet(v: dict) -> dict:
     if not isinstance(v, dict):
         raise EconomyAdminError("Настройки кошелька должны быть объектом")
@@ -212,6 +224,7 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "ton_deposits", "group": "ton", "label": "Пополнение TON"},
     {"key": "ton_payouts", "group": "ton", "label": "Выплаты TON"},
     {"key": "ton_wallet", "group": "ton", "label": "Кошелёк TON"},
+    {"key": "arena", "group": "arena", "label": "«Арена»: включена"},
     {"key": "upgrade_base_cost", "group": "miner_upgrade", "label": "Базовая цена усиления"},
     {"key": "upgrade_cost_scale", "group": "miner_upgrade", "label": "Надбавка цены за уровни"},
     {"key": "upgrade_type_weights", "group": "miner_upgrade", "label": "Веса колеса типа"},
