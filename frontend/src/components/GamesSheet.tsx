@@ -1,13 +1,16 @@
 import { useEffect, useId, useRef, type RefObject } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useDragControls, useReducedMotion, type Transition } from "framer-motion";
-import { useTowerMe, useWheelStatus } from "@/api/hooks";
+import { useEconomySettings, useMe, useTowerMe, useWheelStatus } from "@/api/hooks";
 import { pushBack } from "@/lib/backButton";
 import { haptic } from "@/lib/haptics";
 import { prefetchRoute } from "@/lib/routes";
 import { towerLine, wheelLine } from "@/lib/games";
 import { SheetHeader } from "@/components/ui/SheetHeader";
 import { IconChevron, IconPodium } from "@/components/icons";
+import { ArenaArt } from "@/components/arena/ArenaArt";
+import { useArenaLobby } from "@/lib/arena/hooks";
+import { arenaCard, fmtTon } from "@/lib/arena/api";
 
 /** Колесо: диск с секторами, спицами и восемью лампами (сетка 48) */
 function WheelArt() {
@@ -52,7 +55,7 @@ function TowerArt() {
 const lowEnd = () => typeof document !== "undefined" && document.documentElement.classList.contains("low-end");
 
 /**
- * Шторка «Игры» (DESIGN.md п. 14.2): две премиальные карточки — Колесо удачи и Башня; вся карточка — ссылка.
+ * Шторка «Игры» (DESIGN.md п. 14.2): «Арена» (если открыта или вы владелец) и две карточки — Колесо удачи и Башня; вся карточка — ссылка.
  * Отдельный чанк (framer-motion не в стартовой загрузке), монтируется при первом открытии.
  * Закрывается свайпом вниз (за ручку и шапку), крестиком, тапом по фону, Esc и «Назад» Telegram.
  * При открытии подтягиваются чанки Колеса и Башни. Бесконечных анимаций нет; «уменьшить движение» — мгновенно,
@@ -82,12 +85,27 @@ export default function GamesSheet({
   const w = wheelLine(wheel.data);
   const t = towerLine(tower.data?.best_month);
 
+  // «Арена»: игрок видит карточку, только когда она открыта (GET /arena/rooms отвечает);
+  // владелец — всегда, а при выключенной настройке — с бейджем «тест»
+  const me = useMe();
+  const owner = !!me.data?.is_owner;
+  const eco = useEconomySettings(open && owner);
+  const lobby = useArenaLobby({ enabled: open && !!me.data });
+  const card = arenaCard({
+    isOwner: me.data?.is_owner,
+    setting: eco.data?.find((x) => x.key === "arena")?.value,
+    lobby: lobby.data ? "ok" : lobby.isError ? "err" : "pending",
+  });
+  const waiting = lobby.data?.types.reduce((n, x) => n + x.waiting, 0) ?? 0;
+  const stake = lobby.data?.types[0]?.stake_nano;
+
   useEffect(() => {
     if (!open) return;
     haptic.sheet();
     void prefetchRoute("/wheel");
     void prefetchRoute("/tower");
     void prefetchRoute("/tower/top");
+    void prefetchRoute("/arena");
     const back = () => closeRef.current();
     const key = (e: KeyboardEvent) => e.key === "Escape" && back();
     window.addEventListener("keydown", key);
@@ -144,6 +162,29 @@ export default function GamesSheet({
           <div className="gs-head" onPointerDown={startDrag}>
             <SheetHeader title="Игры" sub="Выберите игру" id={titleId} onClose={() => closeRef.current()} closeRef={closeBtn} />
           </div>
+
+          {card.show && (
+            <Link to="/arena" className="gs-feat" onClick={() => haptic.tap()}>
+              <span className="gs-feat-art" aria-hidden="true">
+                <ArenaArt id="gsa" h={116} className="gs-feat-svg" />
+                <span className="gs-new">NEW</span>
+                {card.test && <span className="gs-test">тест</span>}
+              </span>
+              <span className="gs-feat-body">
+                <span className="gs-txt">
+                  <span className="gs-name">Арена</span>
+                  <span className="gs-st">
+                    PvP · {stake ? fmtTon(stake) : "0.1"} TON
+                    {lobby.data ? ` · ${waiting} ${waiting === 1 ? "ждёт" : "ждут"}` : ""}
+                  </span>
+                </span>
+                <span className="gs-go" aria-hidden="true">
+                  В бой
+                  <IconChevron size={14} />
+                </span>
+              </span>
+            </Link>
+          )}
 
           <Link to="/wheel" className="gs-card" onClick={() => haptic.tap()}>
             <span className="gs-art" aria-hidden="true">

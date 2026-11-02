@@ -13,10 +13,19 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import GamesSheet from "./GamesSheet";
 
-function render(open: boolean, wheel?: { left_today: number }, best?: number) {
+type Arena = { me?: { is_owner: boolean }; enabled?: boolean; waiting?: number[] };
+function render(open: boolean, wheel?: { left_today: number }, best?: number, arena: Arena = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, enabled: false } } });
   if (wheel) qc.setQueryData(["wheel"], wheel);
   if (best != null) qc.setQueryData(["tower", "me"], { best_month: best });
+  if (arena.me) qc.setQueryData(["me"], { ...arena.me, balance: "1.0" });
+  if (arena.enabled != null) qc.setQueryData(["economy"], [{ key: "arena", value: { enabled: arena.enabled } }]);
+  if (arena.waiting)
+    qc.setQueryData(["arena", "rooms"], {
+      types: arena.waiting.map((w, i) => ({ type: `a${i}`, seats: 4, board: 9, stake_nano: "100000000", prizes_nano: ["360000000"], pot_nano: "400000000", commission_bps: 1000, waiting: w })),
+      active_room_id: null,
+      server_time: "2026-11-02T12:00:00Z",
+    });
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
@@ -57,5 +66,31 @@ describe("шторка «Игры»", () => {
     const id = html.match(/aria-labelledby="([^"]+)"/)?.[1];
     expect(id).toBeTruthy();
     expect(html).toContain(`id="${id}"`);
+  });
+
+  describe("карточка «Арены»", () => {
+    it("игрок: нет ответа лобби (закрыта) — карточки нет", () => {
+      const html = render(true, undefined, undefined, { me: { is_owner: false } });
+      expect(html).not.toContain("gs-feat");
+      expect(html).not.toContain('href="/arena"');
+    });
+
+    it("игрок: лобби открыто — карточка первой, PvP · 0.1 TON · N ждут, без «тест»", () => {
+      const html = render(true, undefined, undefined, { me: { is_owner: false }, waiting: [2, 1] });
+      expect(html).toContain('class="gs-feat"');
+      expect(html.indexOf('href="/arena"')).toBeLessThan(html.indexOf('href="/wheel"'));
+      expect(html).toContain("PvP · 0.1 TON · 3 ждут");
+      expect(html).toContain("NEW");
+      expect(html).not.toContain("gs-test");
+    });
+
+    it("владелец: настройка выключена — карточка с бейджем «тест», включена — без", () => {
+      const off = render(true, undefined, undefined, { me: { is_owner: true }, enabled: false });
+      expect(off).toContain('class="gs-feat"');
+      expect(off).toMatch(/class="gs-test">тест</);
+      const on = render(true, undefined, undefined, { me: { is_owner: true }, enabled: true, waiting: [0, 0] });
+      expect(on).toContain('class="gs-feat"');
+      expect(on).not.toContain("gs-test");
+    });
   });
 });

@@ -49,6 +49,8 @@ describe("псевдонимы разделов", () => {
     expect(routeKey("/earn?tab=friends")).toBe("tasks");
     expect(routeKey("/profile")).toBe("wallet");
     expect(routeKey("/upgrade")).toBe("miner");
+    expect(routeKey("/arena")).toBe("arena");
+    expect(routeKey("/arena/12")).toBe("arenaRoom");
   });
 });
 
