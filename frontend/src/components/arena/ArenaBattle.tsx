@@ -3,7 +3,7 @@
  * таймер хода 10 с, «Готово» по местам, лента, лёгкая анимация розыгрыша, выбывание и финал.
  * Состояние — опрос GET /state (useArenaRoom, ~1 с), план — POST /plan (черновик ready=false, «Готово» — ready=true).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ARMORS, MEDKIT_MAX, WEAPONS } from "@shared/arena/engine.js";
 import { Button } from "@/components/ui/Button";
@@ -41,6 +41,9 @@ import { assignSigils } from "./board/tokens";
 import { T, type DrawView } from "./board/types";
 
 const MAX_W = 456;
+/** строк ленты: минимум, который оставляем под поле, и максимум */
+const FEED_MIN = 2, FEED_MAX_LINES = 4, FEED_LINE = 19;
+const useIsoLayout = typeof window === "undefined" ? useEffect : useLayoutEffect;
 const DRAFT_DEBOUNCE = 300;
 
 const FEED_I: Record<string, { d: string; stroke?: boolean }> = {
@@ -111,7 +114,18 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
   const wrap = useRef<HTMLDivElement>(null);
   const R = useRef<ArenaRenderer | null>(null);
   const [width, setWidth] = useState(0);
-  const cell = b ? Math.max(16, Math.floor(Math.min(width || 334, MAX_W) / b.N)) : 0;
+  // экран боя целиком в высоту окна: поле ужимается по высоте, лента показывает столько строк, сколько влезает
+  const root = useRef<HTMLDivElement>(null);
+  const feedEl = useRef<HTMLUListElement>(null);
+  const [, setVh] = useState(0);
+  useEffect(() => {
+    const f = () => setVh(window.innerHeight);
+    window.addEventListener("resize", f);
+    return () => window.removeEventListener("resize", f);
+  }, []);
+  // fit.c — потолок клетки по высоте окна (0 — ещё не мерили), fit.lines — строк ленты
+  const [fit, setFit] = useState<{ c: number; lines: number }>({ c: 0, lines: FEED_MAX_LINES });
+  const cell = b ? Math.max(16, Math.min(Math.floor(Math.min(width || 334, MAX_W) / b.N), fit.c || Infinity)) : 0;
 
   const alive = !!me?.alive;
   const planning = alive && !locked && !b?.finished && !anim && !spectator;
@@ -184,6 +198,29 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
     // только animKey: опрос того же хода (готовность) приносит новый объект доски — розыгрыш не должен перезапускаться
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bs.animKey]);
+  // подгонка под высоту: все замеры не зависят от размера поля (верх поля, промежуток поле→лента, отступ под экраном) — без петли
+  useIsoLayout(() => {
+    const el = root.current, mp = wrap.current, fd = feedEl.current, main = el?.closest("main");
+    if (!el || !mp || !fd || !main) return;
+    const y = window.scrollY;
+    const mr = mp.getBoundingClientRect(), fr = fd.getBoundingClientRect(), mn = main.getBoundingClientRect();
+    const docH = document.documentElement.scrollHeight;
+    const above = mr.top + y;
+    const between = fr.top - mr.bottom;
+    // под лентой: нижний отступ main (+ safe-area) и всё, что идёт после main; main тянется на свободное место — его высоту не берём
+    const below = parseFloat(getComputedStyle(main).paddingBottom) + Math.max(0, docH - (mn.bottom + y));
+    const vh = window.innerHeight;
+    const N = b?.N || 9;
+    // высота блока поля при клетке c: N·c + «стена» сверху (renderer: round(0.3c) + 3) + рамка 2 px
+    const mapH = (c: number) => N * c + Math.round(c * 0.3) + 3 + 2;
+    const avail = vh - above - between - below; // под поле + ленту
+    const wC = Math.floor(Math.min(width || 334, MAX_W) / N);
+    let c = wC;
+    while (c > 16 && mapH(c) > avail - (FEED_MIN * FEED_LINE - 3)) c--;
+    const lines = Math.max(1, Math.min(FEED_MAX_LINES, Math.floor((avail - mapH(c) + 3) / FEED_LINE)));
+    setFit((o) => (o.c !== c || o.lines !== lines ? { c, lines } : o));
+  });
+
   // статичный кадр
   useEffect(() => {
     if (!anim && view && R.current && cell) R.current.draw(view);
@@ -298,10 +335,10 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
   // оверлей «Вы выбыли» прячется только на розыгрыш хода, где я выбыл (видно, как это случилось), а не мигает на каждом ходу
   const showOut = !!me && !me.alive && !finished && !watch && !(anim && me.deathTurn === b?.lastTurn?.turn);
   const tLow = clock.left <= 3 && !countdown;
-  const feed: FeedItem[] = bs.feed.slice(0, 4);
+  const feed: FeedItem[] = bs.feed.slice(0, fit.lines);
 
   return (
-    <div className="ar-bt" data-turn={b.turn} data-phase={finished ? "finished" : countdown ? "countdown" : "planning"}>
+    <div className="ar-bt" ref={root} data-turn={b.turn} data-phase={finished ? "finished" : countdown ? "countdown" : "planning"}>
       <div className="ar-mtop">
         <div className="ar-mchip">
           <span className="ui-label">Ход</span>
@@ -472,7 +509,7 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
         </div>
       ) : null}
 
-      <ul className="ar-feed">
+      <ul className="ar-feed" ref={feedEl}>
         {feed.length ? (
           feed.map((f) => (
             <li key={f.key} className={`${f.t}${f.mine ? " me" : ""}`}>

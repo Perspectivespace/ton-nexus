@@ -99,7 +99,7 @@ function Slots({ room, open }: { room: Room; open: boolean }) {
             {s ? initial(s.name) : ""}
           </span>
           <span className="ar-slot-n">
-            {s ? (s.is_me ? "вы" : s.name) : i === next ? "ждём…" : "свободно"}
+            {s ? (s.is_me ? "Вы" : s.name) : i === next ? "ждём…" : "свободно"}
           </span>
         </div>
       ))}
@@ -282,7 +282,7 @@ export function ArenaRoomView({
               >
                 <span>{r.place}</span>
                 <span className="min-w-0 flex-1 truncate">
-                  {r.seat === room.my_seat ? "вы" : r.name}
+                  {r.seat === room.my_seat ? "Вы" : r.name}
                 </span>
                 <b>
                   {Number(r.prize_nano) > 0

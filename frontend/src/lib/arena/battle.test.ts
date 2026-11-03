@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ArenaErr, ArenaMatchView } from "./api";
+import { ambientActive } from "@/components/arena/board/renderer";
 import {
   applyView,
   checkDraft,
@@ -170,6 +171,14 @@ describe("состояние между опросами", () => {
     expect(s.animKey).toBe(0);
   });
 
+  it("повторный опрос без изменений — тот же объект состояния (поле не перерисовывается)", () => {
+    const s = applyView(initialBattle(), battleRoom());
+    expect(applyView(s, battleRoom())).toBe(s);
+    const moved = applyView(s, battleRoom({ players: matchView().players!.map((p) => (p.seat === 2 ? { ...p, hp: 50 } : p)) }));
+    expect(moved).not.toBe(s);
+    expect(moved.board?.players.find((p) => p.id === 2)?.hp).toBe(50);
+  });
+
   it("ход разыгран (turn+1, last_turn = прошлый) — анимация от прошлого состояния, событие в ленту один раз", () => {
     const s0 = applyView(initialBattle(), battleRoom());
     const next = battleRoom(
@@ -221,5 +230,15 @@ describe("ошибки POST /plan", () => {
     expect(planErrorAction(err("not_playing", { status: 403 })).kind).toBe("spectate");
     expect(planErrorAction(err("network", { status: 0 }))).toEqual({ kind: "keep", text: "Нет связи — план отправим ещё раз" });
     expect(planErrorAction(err("http_502", { status: 502 })).kind).toBe("keep");
+  });
+});
+
+describe("эмбиент поля", () => {
+  const ring = { x: 0, y: 0, w: 10, h: 10 };
+  it("цикл только пока кольцо зоны живо и бой идёт", () => {
+    expect(ambientActive({ ring, finished: false, reduced: false })).toBe(true);
+    expect(ambientActive({ ring: null, finished: false, reduced: false })).toBe(false); // зона закрылась
+    expect(ambientActive({ ring, finished: true, reduced: false })).toBe(false);
+    expect(ambientActive({ ring, finished: false, reduced: true })).toBe(false);
   });
 });

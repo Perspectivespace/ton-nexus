@@ -398,7 +398,9 @@ export function applyView(st: BattleState, room: ArenaRoom): BattleState {
   const feed = add.length ? [...regroup(add), ...st.feed].slice(0, FEED_MAX) : st.feed;
   const old = st.board;
   if (old && old.turn === next.turn && old.finished === next.finished) {
-    // тот же ход: обновляем доску (готовность, мой план), анимацию не трогаем
+    // тот же ход: опрос без изменений поля — прежнее состояние (тот же объект доски → canvas не перерисовывается)
+    if (!add.length && JSON.stringify(old) === JSON.stringify(next)) return st;
+    // иначе обновляем доску, анимацию не трогаем
     return { ...st, board: next, feed, seen };
   }
   const resolvedPrev = !!old && !!next.lastTurn && next.lastTurn.turn === old.turn && next.turn > old.turn;

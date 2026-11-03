@@ -38,6 +38,9 @@ export interface Perf {
 const lootKey = (l: { kind: string; type: string | null }): LootKey => (l.kind === "medkit" ? "medkit" : ((l.type ?? "fists") as LootKey));
 export const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/** нужен ли цикл эмбиента: только пока есть живое кольцо зоны и бой идёт; закрытая зона / финал / reduced motion — один статичный кадр */
+export const ambientActive = (o: { ring: Rect | null; finished: boolean; reduced: boolean }) => !!o.ring && !o.finished && !o.reduced;
+
 export class ArenaRenderer {
   cv: HTMLCanvasElement;
   g: G;
@@ -47,6 +50,9 @@ export class ArenaRenderer {
   zones = new Map<string, ZoneLayers>();
   perf: Perf = { frames: 0, total: 0, max: 0, samples: [], shimmer: 0, shimmerN: 0 };
   shimmer = { raf: 0, last: 0, on: false };
+  /** экран хочет эмбиент (между startShimmer и stopShimmer); крутится ли цикл — решает draw() по состоянию поля */
+  ambient = false;
+  finished = false;
   tk: TokenKit;
   N = 0;
   C = 0;
@@ -266,6 +272,7 @@ export class ArenaRenderer {
     g.setTransform(D, 0, 0, D, 0, 0);
     const zNow = this.zoneFor(m), zPrev = anim && prev!.stage !== m.stage ? this.zoneFor(prev!) : null;
     this.ringRect = zNow.R;
+    this.finished = m.finished;
     const zk = zPrev ? clamp01((t - T.zone0 - 120) / 300) : 1;
     const blit = (c: HTMLCanvasElement, a: number) => {
       if (a <= 0) return;
@@ -324,6 +331,7 @@ export class ArenaRenderer {
     this.perf.total += d;
     this.perf.max = Math.max(this.perf.max, d);
     if (this.perf.samples.length < 4000) this.perf.samples.push(d);
+    this.syncAmbient();
   }
   deathTime(m: Board, id: number) {
     let at: number = T.zone0;
@@ -528,29 +536,41 @@ export class ArenaRenderer {
     }
     this.tk.breath(g, now);
   }
-  /** цикл оверлея; при reduced motion — один кадр */
+  /** цикл оверлея (≤30 к/с) — только пока он что-то меняет (см. ambientActive); иначе один статичный кадр и ни одного rAF */
   startShimmer() {
-    this.stopShimmer();
-    if (reducedMotion()) {
-      this.shimmerFrame(this.ringRect, 0.13);
-      return;
-    }
-    this.shimmer.on = true;
-    const loop = (now: number) => {
-      if (!this.shimmer.on) return;
-      this.shimmer.raf = requestAnimationFrame(loop);
-      if (document.hidden || now - this.shimmer.last < 33) return;
-      this.shimmer.last = now;
-      const a = performance.now();
-      this.shimmerFrame(this.ringRect, (now / 5200) % 1, now);
-      this.perf.shimmer += performance.now() - a;
-      this.perf.shimmerN++;
-    };
-    this.shimmer.raf = requestAnimationFrame(loop);
+    this.ambient = true;
+    this.syncAmbient();
   }
   stopShimmer() {
+    this.ambient = false;
+    this.halt();
+  }
+  private halt() {
     this.shimmer.on = false;
     cancelAnimationFrame(this.shimmer.raf);
+  }
+  /** вызывается после каждого кадра поля: включает/гасит цикл по текущей зоне и фазе боя */
+  syncAmbient() {
+    const run = this.ambient && ambientActive({ ring: this.ringRect, finished: this.finished, reduced: reducedMotion() });
+    if (run) {
+      if (this.shimmer.on) return;
+      this.shimmer.on = true;
+      const loop = (now: number) => {
+        if (!this.shimmer.on) return;
+        this.shimmer.raf = requestAnimationFrame(loop);
+        if (document.hidden || now - this.shimmer.last < 33) return;
+        this.shimmer.last = now;
+        const a = performance.now();
+        this.shimmerFrame(this.ringRect, (now / 5200) % 1, now);
+        this.perf.shimmer += performance.now() - a;
+        this.perf.shimmerN++;
+      };
+      this.shimmer.raf = requestAnimationFrame(loop);
+      return;
+    }
+    if (this.shimmer.on) this.halt();
+    // статичный оверлей: кольца нет — чистый слой (плюс ровное свечение своей фишки), есть — застывший кадр
+    this.shimmerFrame(this.ringRect, 0.13);
   }
   /** игрок вне текущей зоны (для подсказок HUD) */
   static outside(m: Pick<Board, "N" | "stage">, p: Cell) {
