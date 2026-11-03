@@ -214,7 +214,7 @@ run_deploy() {
   local changed backend_changed=0 frontend_changed=0 reqs_changed=0 lock_changed=0
   changed="$(git_ diff --name-only "$J_FROM" "$J_TO" || true)"
   grep -q '^backend/' <<<"$changed" && backend_changed=1
-  grep -q '^frontend/' <<<"$changed" && frontend_changed=1
+  grep -Eq '^(frontend|shared)/' <<<"$changed" && frontend_changed=1
   grep -qx 'backend/requirements.txt' <<<"$changed" && reqs_changed=1
   grep -qx 'frontend/package-lock.json' <<<"$changed" && lock_changed=1
   if [ "$FORCE" = "1" ]; then backend_changed=1; frontend_changed=1; reqs_changed=1; lock_changed=1; fi
