@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { arenaApi, pollMs, type ArenaRoom } from "./api";
+import { arenaApi, pollMs, type ApiPlan, type ArenaRoom } from "./api";
 
 export const arenaKeys = {
   lobby: ["arena", "rooms"] as const,
@@ -29,11 +29,26 @@ export function useArenaRoom(id: number) {
     queryKey: arenaKeys.room(id),
     queryFn: () => {
       const prev = qc.getQueryData<ArenaRoom>(arenaKeys.room(id));
-      return prev?.status === "running" ? arenaApi.state(id, prev.match?.turn ?? 0) : arenaApi.room(id);
+      // since = ход перед текущим: в журнале всегда есть последний разыгранный ход (его события — в ленту)
+      return prev?.status === "running" ? arenaApi.state(id, sinceOf(prev)) : arenaApi.room(id);
     },
     enabled: Number.isFinite(id) && id > 0,
     refetchInterval: (q) => pollMs(q.state.data),
     retry: false,
+  });
+}
+
+/** since для /state: последний разыгранный ход = текущий − 1 (журнал отдаёт ходы > since) */
+export const sinceOf = (r: ArenaRoom | undefined) => Math.max(0, (r?.match?.turn ?? 1) - 2);
+
+/** План хода: POST /rooms/{id}/plan. После «Готово» — сразу свежее состояние (ход мог разыграться) */
+export function useArenaPlan(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { turn: number; plan: ApiPlan | null; ready: boolean }) => arenaApi.plan(id, v.turn, v.plan, v.ready),
+    onSuccess: (r) => {
+      if (r.ready || r.resolved) void qc.invalidateQueries({ queryKey: arenaKeys.room(id) });
+    },
   });
 }
 

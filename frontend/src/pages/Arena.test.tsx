@@ -10,6 +10,8 @@ vi.hoisted(() => {
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { battleRoom } from "@/lib/arena/battle.fixture";
 import { ArenaLobbyView, type ArenaLobbyViewProps } from "./Arena";
 import { ArenaRoomView } from "./ArenaRoom";
 import { ArenaRules } from "@/components/arena/ArenaRules";
@@ -32,7 +34,12 @@ function room(p: Partial<ArenaRoom> = {}): ArenaRoom {
     server_time: iso(T0), skew: 0, ...p,
   };
 }
-const roomHtml = (r: ArenaRoom, now = T0) => html(<ArenaRoomView room={r} screen={roomScreen(r, now)} type={A4} />);
+const roomHtml = (r: ArenaRoom, now = T0) =>
+  html(
+    <QueryClientProvider client={new QueryClient()}>
+      <ArenaRoomView room={r} screen={roomScreen(r, now)} type={A4} battle="done" />
+    </QueryClientProvider>,
+  );
 
 describe("лобби «Арены»", () => {
   it("две комнаты из API: призы, игроки, сколько ждут; деньги выбранной", () => {
@@ -110,11 +117,34 @@ describe("комната «Арены»", () => {
     expect(h).not.toContain("ar-sock next");
   });
 
-  it("после отсчёта — заглушка: экран боя будет в следующем обновлении", () => {
-    const r = room({ status: "running", started_at: iso(T0), taken: 4, match: { id: 1, turn: 2, current: null } });
-    const h = roomHtml(r, T0 + 20_000);
-    expect(h).toContain("Бой идёт · ход 2");
-    expect(h).toContain("Экран боя появится в следующем обновлении");
+  it("после отсчёта — экран боя; ушёл к итогам до конца — «Итоги придут сами» и «Досмотреть»", () => {
+    const r = battleRoom({ turn: 2, current: { turn: 2, opens_at: iso(T0), deadline: iso(T0 + 10_000), ready_seats: [], my_plan: null } });
+    const h = roomHtml(r, T0 + 2_000);
+    expect(h).toContain('class="ar-bt"');
+    expect(h).toContain("Готово");
+    expect(h).not.toContain("Экран боя появится");
+    const out = html(
+      <QueryClientProvider client={new QueryClient()}>
+        <ArenaRoomView room={r} screen={roomScreen(r, T0 + 2_000)} type={A4} battle="out" />
+      </QueryClientProvider>,
+    );
+    expect(out).toContain("Бой идёт · ход 2");
+    expect(out).toContain("Итоги и приз придут сюда сами");
+    expect(out).toContain("Досмотреть");
+  });
+
+  it("бой закончился у меня на глазах — сначала поле с «Бой окончен», потом итоги", () => {
+    const r = battleRoom({ phase: "finished", finished: true, current: null }, { status: "finished", results: [{ seat: 0, name: "@neo", place: 1, prize_nano: "360000000" }] });
+    const live = html(
+      <QueryClientProvider client={new QueryClient()}>
+        <ArenaRoomView room={r} screen={roomScreen(r, T0)} type={A4} battle="live" />
+      </QueryClientProvider>,
+    );
+    expect(live).toContain("Бой окончен");
+    expect(live).toContain('class="ar-bt"');
+    const done = roomHtml(r);
+    expect(done).toContain("1 место · +0.36 TON");
+    expect(done).not.toContain('class="ar-bt"');
   });
 
   it("итоги: места и призы, моя строка подсвечена", () => {
