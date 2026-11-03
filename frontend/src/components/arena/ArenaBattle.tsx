@@ -3,7 +3,7 @@
  * таймер хода 10 с, «Готово» по местам, лента, лёгкая анимация розыгрыша, выбывание и финал.
  * Состояние — опрос GET /state (useArenaRoom, ~1 с), план — POST /plan (черновик ready=false, «Готово» — ready=true).
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ARMORS, MEDKIT_MAX, WEAPONS } from "@shared/arena/engine.js";
 import { Button } from "@/components/ui/Button";
@@ -65,6 +65,34 @@ function FeedIcon({ t }: { t: string }) {
   );
 }
 
+/** Запасной вид поля: canvas не поднялся. Сервер держит бой — перезагрузка безопасна */
+export function BoardFallback({ h, children }: { h: number; children?: ReactNode }) {
+  return (
+    <div className="ar-map-fail" role="alert" style={{ minHeight: Math.max(160, h) }}>
+      <b>Поле не отрисовалось</b>
+      <p>Таймер и «Готово» работают: без поля ход — стоять на месте. Обновите экран — бой сохранится.</p>
+      <Button kind="secondary" size="md" onClick={() => location.reload()}>
+        Обновить
+      </Button>
+      {children}
+    </div>
+  );
+}
+
+/** Ошибка рендера внутри блока поля не роняет экран боя — только поле уходит в запасной вид */
+class BoardBoundary extends Component<{ children: ReactNode; onError: (e: unknown) => void }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(e: unknown) {
+    this.props.onError(e);
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 export interface ArenaBattleProps {
   room: ArenaRoom;
   /** бой окончен и показан — к итогам */
@@ -108,10 +136,18 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
   // ── анимация розыгрыша ──
   // anim считается в рендере (а не ставится эффектом): иначе новый ход успевает мелькнуть статичным кадром до розыгрыша
   const [animDone, setAnimDone] = useState(bs.animKey);
-  const anim = bs.animKey !== animDone && !!bs.prev && !!bs.board && !reducedMotion();
+  // поле не отрисовалось (нет 2d-контекста, ошибка кадра): вместо canvas — запасной вид, таймер и «Готово» работают
+  const [boardErr, setBoardErr] = useState(false);
+  const anim = !boardErr && bs.animKey !== animDone && !!bs.prev && !!bs.board && !reducedMotion();
   const canvas = useRef<HTMLCanvasElement>(null);
   const over = useRef<HTMLCanvasElement>(null);
-  const wrap = useRef<HTMLDivElement>(null);
+  // блок поля: ref-колбэк — ResizeObserver цепляется, когда блок появился (первый кадр боя может прийти без поля)
+  const wrap = useRef<HTMLDivElement | null>(null);
+  const [wrapEl, setWrapEl] = useState<HTMLDivElement | null>(null);
+  const wrapRef = useCallback((el: HTMLDivElement | null) => {
+    wrap.current = el;
+    setWrapEl(el);
+  }, []);
   const R = useRef<ArenaRenderer | null>(null);
   const [width, setWidth] = useState(0);
   // экран боя целиком в высоту окна: поле ужимается по высоте, лента показывает столько строк, сколько влезает
@@ -149,9 +185,15 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
     return v;
   }, [b, me, draft, planning, locked]);
 
+  const failBoard = useCallback((e: unknown) => {
+    console.error("arena board", e);
+    R.current?.stopShimmer();
+    setBoardErr(true);
+  }, []);
+
   // canvas: размер и спрайты — при смене ширины/поля
   useEffect(() => {
-    const el = wrap.current;
+    const el = wrapEl;
     if (!el || typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver((es) => {
       const w = Math.floor(es[0].contentRect.width);
@@ -160,13 +202,21 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
     ro.observe(el);
     setWidth(Math.floor(el.getBoundingClientRect().width));
     return () => ro.disconnect();
-  }, []);
+  }, [wrapEl]);
   const setupKey = b ? `${b.N}:${cell}` : "";
   useEffect(() => {
-    if (!b || !canvas.current || !over.current || !cell) return;
-    if (!R.current) R.current = new ArenaRenderer(canvas.current, over.current);
-    R.current.setup(b, cell, Math.min(window.devicePixelRatio || 1, 2));
-    R.current.startShimmer();
+    if (!b || !canvas.current || !over.current || !cell || boardErr) return;
+    try {
+      if (!R.current) {
+        R.current = new ArenaRenderer(canvas.current, over.current);
+        R.current.onError = failBoard;
+      }
+      R.current.setup(b, cell, Math.min(window.devicePixelRatio || 1, 2));
+      R.current.startShimmer();
+    } catch (e) {
+      failBoard(e);
+      return;
+    }
     if (import.meta.env.DEV) (window as unknown as { __arenaPerf?: unknown }).__arenaPerf = R.current.perf;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setupKey]);
@@ -177,7 +227,7 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
     const key = bs.animKey;
     if (key === animDone) return;
     const r = R.current;
-    if (!r || !bs.prev || !bs.board || reducedMotion()) {
+    if (!r || !bs.prev || !bs.board || reducedMotion() || boardErr) {
       setAnimDone(key);
       return;
     }
@@ -190,7 +240,13 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
         setAnimDone(key);
         return;
       }
-      r.draw({ m, prev, meId: m.meId, t });
+      try {
+        r.draw({ m, prev, meId: m.meId, t });
+      } catch (e) {
+        setAnimDone(key);
+        failBoard(e);
+        return;
+      }
       raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
@@ -223,8 +279,13 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
 
   // статичный кадр
   useEffect(() => {
-    if (!anim && view && R.current && cell) R.current.draw(view);
-  }, [anim, view, cell, setupKey]);
+    if (anim || !view || !R.current || !cell || boardErr) return;
+    try {
+      R.current.draw(view);
+    } catch (e) {
+      failBoard(e);
+    }
+  }, [anim, view, cell, setupKey, boardErr, failBoard]);
 
   // ── отправка плана ──
   const send = useCallback(
@@ -337,6 +398,36 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
   const tLow = clock.left <= 3 && !countdown;
   const feed: FeedItem[] = bs.feed.slice(0, fit.lines);
 
+  // «Вы выбыли» / «Бой окончен» — и над полем, и над запасным видом: без них из боя не выйти к итогам
+  const overlays = (
+    <>
+      {showOut ? (
+        <div className="ar-out">
+          <h2>Вы выбыли</h2>
+          <p>
+            {outPlace(b)} место · ход {me?.deathTurn ?? b.turn - 1}
+          </p>
+          <div className="ar-out-acts">
+            <Button kind="secondary" size="md" onClick={() => setWatch(true)}>
+              Досмотреть
+            </Button>
+            <Button kind="primary" size="md" onClick={onDone}>
+              Итоги
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      {finished && !anim ? (
+        <div className="ar-out fin">
+          <h2>Бой окончен</h2>
+          <Button kind="primary" size="md" onClick={onDone}>
+            Итоги
+          </Button>
+        </div>
+      ) : null}
+    </>
+  );
+
   return (
     <div className="ar-bt" ref={root} data-turn={b.turn} data-phase={finished ? "finished" : countdown ? "countdown" : "planning"}>
       <div className="ar-mtop">
@@ -389,35 +480,18 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
         </div>
       </div>
 
-      <div className="ar-map" ref={wrap}>
-        <div className="ar-map-in" style={{ width: R.current ? undefined : "100%" }}>
-          <canvas ref={canvas} className="ar-cv" onPointerUp={onTap} aria-label="Поле боя" />
-          <canvas ref={over} className="ar-cv-over" aria-hidden="true" />
-          {showOut ? (
-            <div className="ar-out">
-              <h2>Вы выбыли</h2>
-              <p>
-                {outPlace(b)} место · ход {me?.deathTurn ?? b.turn - 1}
-              </p>
-              <div className="ar-out-acts">
-                <Button kind="secondary" size="md" onClick={() => setWatch(true)}>
-                  Досмотреть
-                </Button>
-                <Button kind="primary" size="md" onClick={onDone}>
-                  Итоги
-                </Button>
-              </div>
+      <div className="ar-map" ref={wrapRef}>
+        {boardErr ? (
+          <BoardFallback h={b.N * cell + Math.round(cell * 0.3) + 3}>{overlays}</BoardFallback>
+        ) : (
+          <BoardBoundary onError={failBoard}>
+            <div className="ar-map-in" style={{ width: R.current ? undefined : "100%" }}>
+              <canvas ref={canvas} className="ar-cv" onPointerUp={onTap} aria-label="Поле боя" />
+              <canvas ref={over} className="ar-cv-over" aria-hidden="true" />
+              {overlays}
             </div>
-          ) : null}
-          {finished && !anim ? (
-            <div className="ar-out fin">
-              <h2>Бой окончен</h2>
-              <Button kind="primary" size="md" onClick={onDone}>
-                Итоги
-              </Button>
-            </div>
-          ) : null}
-        </div>
+          </BoardBoundary>
+        )}
       </div>
 
       {me ? (

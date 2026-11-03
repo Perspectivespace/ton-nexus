@@ -6,7 +6,7 @@
  * при prefers-reduced-motion — один статичный кадр. Свечение только при запекании; backdrop-filter не используется.
  */
 import { inBox, maxStage, zoneBox, type Cell, type ZoneBox } from "@shared/arena/engine.js";
-import { RARITY, TAU, clamp01, corners, cutPath, hatch, layer, paintCover, paintLoot, paintWall, rgba, gp, type G, type LootKey } from "@/lib/arena/swatch";
+import { RARITY, TAU, clamp01, corners, ctx2d, cutPath, hatch, layer, paintCover, paintLoot, paintWall, rgba, gp, type G, type LootKey } from "@/lib/arena/swatch";
 import { TokenKit, ME_COL, type Sprite } from "./tokens";
 import { T, type Board, type BoardPlayer, type DrawView } from "./types";
 
@@ -67,11 +67,15 @@ export class ArenaRenderer {
   /** кольцо текущей зоны для цикла оверлея */
   ringRect: Rect | null = null;
 
+  /** ошибка отрисовки вне React (цикл оверлея в rAF) */
+  onError: ((e: unknown) => void) | null = null;
+
   constructor(main: HTMLCanvasElement, over: HTMLCanvasElement) {
     this.cv = main;
-    this.g = main.getContext("2d")!;
+    // нет контекста — CanvasUnavailableError (экран боя ловит и показывает «Поле не отрисовалось»)
+    this.g = ctx2d(main);
     this.ov = over;
-    this.og = over.getContext("2d")!;
+    this.og = ctx2d(over);
     this.tk = new TokenKit(this);
   }
   /** размеры поля: cell — клетка в CSS px, dpr — плотность (до 2) */
@@ -561,7 +565,14 @@ export class ArenaRenderer {
         if (document.hidden || now - this.shimmer.last < 33) return;
         this.shimmer.last = now;
         const a = performance.now();
-        this.shimmerFrame(this.ringRect, (now / 5200) % 1, now);
+        try {
+          this.shimmerFrame(this.ringRect, (now / 5200) % 1, now);
+        } catch (e) {
+          // ошибка в rAF не доходит до React — гасим цикл и сообщаем экрану
+          this.halt();
+          this.onError?.(e);
+          return;
+        }
         this.perf.shimmer += performance.now() - a;
         this.perf.shimmerN++;
       };

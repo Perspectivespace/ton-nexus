@@ -218,6 +218,13 @@
 .ar-out.fin h2 { color: var(--ar-core); text-shadow: 0 0 12px rgba(43,245,255,.8), 0 0 28px rgba(43,245,255,.35); }
 .ar-out p { margin: 0; color: var(--text-2); font: 500 13px var(--f-mono); }
 .ar-out-acts { display: flex; gap: 6px; justify-content: center; }
+/* поле не отрисовалось: тот же срез и неоновая кромка, что у поля; без backdrop-filter */
+.ar-map-fail { position: relative; isolation: isolate; width: 100%; display: grid; place-items: center; align-content: center; gap: 10px; text-align: center; padding: 20px 18px;
+  --c: 12px; clip-path: var(--ar-cut); background: var(--ar-edge-neon); }
+.ar-map-fail::before { content: ""; position: absolute; inset: 1px; z-index: -1; --c: 11px; clip-path: var(--ar-cut);
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px), radial-gradient(70% 55% at 50% 45%, rgba(84,42,8,.55), rgba(4,5,10,.94)); }
+.ar-map-fail b { font: 700 18px/22px var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: #FFE3BF; text-shadow: 0 0 12px rgba(255,181,71,.55); }
+.ar-map-fail p { margin: 0; max-width: 30ch; color: var(--text-2); font-size: 13px; line-height: 18px; }
 
 .ar-hud { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 8px; align-items: stretch; }
 .ar-bars { display: grid; gap: 6px; align-content: center; min-width: 0; }
