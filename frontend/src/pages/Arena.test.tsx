@@ -147,6 +147,17 @@ describe("комната «Арены»", () => {
     expect(done).not.toContain('class="ar-bt"');
   });
 
+  it("перед боем идёт проверка версии — «Проверяем версию…» вместо поля", () => {
+    const r = battleRoom();
+    const out = html(
+      <QueryClientProvider client={new QueryClient()}>
+        <ArenaRoomView room={r} screen={roomScreen(r, T0 + 60_000)} type={A4} battle="live" checking />
+      </QueryClientProvider>,
+    );
+    expect(out).toContain("Проверяем версию");
+    expect(out).not.toContain("ar-cv");
+  });
+
   it("итоги: места и призы, моя строка подсвечена", () => {
     const r = room({
       status: "finished",

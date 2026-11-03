@@ -40,11 +40,25 @@ export const rgba = (hex: string, a: number) => {
 const P2D: Partial<Record<GlyphKey, Path2D>> = {};
 export const gp = (k: GlyphKey) => (P2D[k] ??= new Path2D(GLYPH[k]));
 
+/** WebView не дал 2d-контекст (iOS: исчерпан лимит памяти canvas, старый Android): экран боя показывает запасной вид */
+export class CanvasUnavailableError extends Error {
+  constructor() {
+    super("canvas 2d context unavailable");
+    this.name = "CanvasUnavailableError";
+  }
+}
+/** 2d-контекст или CanvasUnavailableError — вместо «null is not an object» где-то глубже в отрисовке */
+export function ctx2d(c: HTMLCanvasElement): G {
+  const g = c.getContext("2d");
+  if (!g) throw new CanvasUnavailableError();
+  return g;
+}
+
 export function layer(w: number, h: number, d: number): [HTMLCanvasElement, G] {
   const c = document.createElement("canvas");
   c.width = Math.ceil(w * d);
   c.height = Math.ceil(h * d);
-  const g = c.getContext("2d")!;
+  const g = ctx2d(c);
   g.scale(d, d);
   return [c, g];
 }
@@ -192,9 +206,13 @@ export function drawSwatch(cv: HTMLCanvasElement, kind: SwatchKind, dpr = 2) {
     return paintCover(g, C, H);
   }
   // лут — спрайт C×C, опущен на клетку (как drawImage(s, 0, H − C·0.06) в прототипе)
-  const [sc, sg] = layer(C, C, dpr);
-  paintLoot(sg, C, kind);
-  g.drawImage(sc, 0, H - C * 0.06, C, C);
+  try {
+    const [sc, sg] = layer(C, C, dpr);
+    paintLoot(sg, C, kind);
+    g.drawImage(sc, 0, H - C * 0.06, C, C);
+  } catch {
+    /* нет контекста для спрайта — образец остаётся пустой клеткой */
+  }
 }
 
 /** Плотность образцов: как в прототипе — devicePixelRatio (до 2) × 1.5 */

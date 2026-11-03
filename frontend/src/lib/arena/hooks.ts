@@ -27,15 +27,21 @@ export function useArenaRoom(id: number) {
   const qc = useQueryClient();
   return useQuery({
     queryKey: arenaKeys.room(id),
-    queryFn: () => {
-      const prev = qc.getQueryData<ArenaRoom>(arenaKeys.room(id));
-      // since = ход перед текущим: в журнале всегда есть последний разыгранный ход (его события — в ленту)
-      return prev?.status === "running" ? arenaApi.state(id, sinceOf(prev)) : arenaApi.room(id);
-    },
+    queryFn: () => fetchArenaRoom(id, qc.getQueryData<ArenaRoom>(arenaKeys.room(id))),
     enabled: Number.isFinite(id) && id > 0,
     refetchInterval: (q) => pollMs(q.state.data),
     retry: false,
   });
+}
+
+/**
+ * Один шаг опроса комнаты. since = ход перед текущим: в журнале всегда есть последний разыгранный ход (его события — в ленту).
+ * GET /rooms/{id} отдаёт бой без поля ({id, turn}) — увидев старт, сразу берём /state, не дожидаясь следующего опроса.
+ */
+export async function fetchArenaRoom(id: number, prev: ArenaRoom | undefined): Promise<ArenaRoom> {
+  if (prev?.status === "running") return arenaApi.state(id, sinceOf(prev));
+  const r = await arenaApi.room(id);
+  return r.status === "running" ? arenaApi.state(id, sinceOf(r)) : r;
 }
 
 /** since для /state: последний разыгранный ход = текущий − 1 (журнал отдаёт ходы > since) */
@@ -58,6 +64,8 @@ export function useArenaJoin() {
     mutationFn: (type: string) => arenaApi.join(type),
     onSuccess: (room) => {
       qc.setQueryData(arenaKeys.room(room.id), room);
+      // последний вошедший запускает бой: ответ входа — без поля, состояние боя — сразу через /state
+      if (room.status === "running") void qc.invalidateQueries({ queryKey: arenaKeys.room(room.id) });
       void qc.invalidateQueries({ queryKey: ["me"] });
       void qc.invalidateQueries({ queryKey: arenaKeys.lobby });
     },

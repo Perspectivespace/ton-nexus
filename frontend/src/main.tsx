@@ -7,6 +7,7 @@ import { initTelegram, telegramReady } from "./lib/telegram";
 import { initTheme } from "./lib/theme";
 import { initRoutePrefetch } from "./lib/routes";
 import { initFps } from "./lib/fps";
+import { initVersionCheck } from "./lib/version";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +20,7 @@ function boot() {
   initTheme();
   initRoutePrefetch();
   initFps();
+  initVersionCheck();
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>

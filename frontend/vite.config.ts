@@ -26,8 +26,25 @@ function payoutTonConnect(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), tailwindcss(), payoutTonConnect()],
+/**
+ * Версия сборки: id вшивается в код (__BUILD_ID__) и кладётся рядом в /version.json. Открытый (свёрнутый) Mini App
+ * сверяет их (lib/version.ts) и перезагружается на новую сборку — иначе держит старый код до закрытия.
+ * В dev и тестах id = "dev" — проверка выключена.
+ */
+const BUILD_ID = process.env.BUILD_ID || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+function buildVersion(): Plugin {
+  return {
+    name: "tn-build-version",
+    apply: "build",
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify({ build: BUILD_ID }) + "\n" });
+    },
+  };
+}
+
+export default defineConfig(({ command }) => ({
+  define: { __BUILD_ID__: JSON.stringify(command === "build" ? BUILD_ID : "dev") },
+  plugins: [react(), tailwindcss(), payoutTonConnect(), buildVersion()],
   resolve: {
     // @shared — общий с бэкендом код в корне репозитория (движок «Арены»: shared/arena/engine.js, его же проверяют векторы Python-порта)
     alias: { "@": path.resolve(__dirname, "src"), "@shared": path.resolve(__dirname, "../shared") },
@@ -65,4 +82,4 @@ export default defineConfig({
     // dev-сервер отдаёт ../shared (импорты @shared/…)
     fs: { allow: [searchForWorkspaceRoot(process.cwd()), path.resolve(__dirname, "../shared")] },
   },
-});
+}));
