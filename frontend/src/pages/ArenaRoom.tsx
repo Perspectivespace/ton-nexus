@@ -5,6 +5,7 @@ import { BackLink } from "@/components/BackLink";
 import { IconCheck, IconChevron, IconRefresh } from "@/components/icons";
 import { ArenaBattle } from "@/components/arena/ArenaBattle";
 import { useScreenBack } from "@/lib/backButton";
+import { ensureFreshForBattle, setBattleActive } from "@/lib/version";
 import { haptic } from "@/lib/haptics";
 import {
   useArenaJoin,
@@ -27,6 +28,8 @@ import {
 import "@/styles/arena.css";
 
 const R0 = 74;
+/** сколько ждать проверки версии перед полем (сеть медленная — показываем поле, не держим игрока) */
+const FRESH_WAIT_MS = 2500;
 const GAP = 0.06;
 
 /** Кольцо радара: по сегменту на место — моё голубое, занятые магента, свободные тусклые */
@@ -149,6 +152,8 @@ export interface ArenaRoomViewProps {
   battle?: "live" | "out" | "done";
   onBattleDone?: () => void;
   onWatch?: () => void;
+  /** идёт проверка версии перед боем (lib/version) — поле ещё не показываем */
+  checking?: boolean;
 }
 const noop = () => {};
 
@@ -164,6 +169,7 @@ export function ArenaRoomView({
   battle = "live",
   onBattleDone,
   onWatch,
+  checking = false,
 }: ArenaRoomViewProps) {
   const name = `Арена ${room.seats_total}`;
   if (screen.kind === "waiting" || screen.kind === "countdown") {
@@ -258,6 +264,12 @@ export function ArenaRoomView({
         </div>
       );
     }
+    if (checking && screen.kind === "battle")
+      return (
+        <div className="ar-bt">
+          <p className="ar-note">Проверяем версию…</p>
+        </div>
+      );
     return <ArenaBattle room={room} onDone={onBattleDone ?? noop} />;
   }
   if (screen.kind === "finished") {
@@ -384,6 +396,25 @@ export default function ArenaRoomPage() {
   const [battle, setBattle] = useState<"live" | "out" | "done">("done");
   const sawBattle = useRef(false);
   const kind = screen?.kind;
+  // перед боем — сверить сборку: старый код (свёрнутый Mini App) перезагружается до показа поля, матч ждёт на сервере.
+  // Пока проверка идёт, вместо поля — короткий «Проверяем версию…» (не дольше FRESH_WAIT_MS).
+  const running = room?.status === "running";
+  const [fresh, setFresh] = useState(false);
+  useEffect(() => {
+    if (!running) return;
+    setBattleActive(true);
+    let off = false;
+    const done = () => !off && setFresh(true);
+    const t = window.setTimeout(done, FRESH_WAIT_MS);
+    void ensureFreshForBattle().then((reloading) => {
+      if (!reloading) done();
+    });
+    return () => {
+      off = true;
+      window.clearTimeout(t);
+      setBattleActive(false);
+    };
+  }, [running]);
   useEffect(() => {
     if (kind === "battle" && !sawBattle.current) {
       sawBattle.current = true;
@@ -469,6 +500,7 @@ export default function ArenaRoomPage() {
           battle={battle}
           onBattleDone={onBattleDone}
           onWatch={onWatch}
+          checking={running && !fresh}
         />
       ) : err && (err.status === 404 || err.status === 403) ? (
         <>
