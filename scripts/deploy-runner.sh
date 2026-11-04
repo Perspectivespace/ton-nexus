@@ -19,6 +19,7 @@ set -uo pipefail
 
 RUNNER_VERSION="1"
 SPOOL="${TN_DEPLOY_SPOOL:-/var/lib/ton-nexus-deploy}"
+PUBLIC_REPO_URL="${TN_DEPLOY_PUBLIC_URL:-https://github.com/Perspectivespace/ton-nexus.git}"
 LOCK_FILE="${TN_DEPLOY_LOCK:-/run/ton-nexus-deploy.lock}"
 INSTALLED_RUNNER="${TN_DEPLOY_INSTALLED_RUNNER:-/usr/local/lib/ton-nexus-deploy/runner.sh}"
 ID_RE='^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{6}$'
@@ -189,9 +190,17 @@ run_deploy() {
 
   [ -d "$APP_DIR/.git" ] || { fail "нет git-репозитория в $APP_DIR"; return; }
 
+  J_FROM="$(git_ rev-parse HEAD 2>/dev/null || true)"
   step fetch
-  git_ fetch --prune origin "$BRANCH" || { fail "git fetch не удался"; return; }
-  J_FROM="$(git_ rev-parse HEAD)"
+  if ! GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=15" git_ fetch --prune origin "$BRANCH"; then
+    # Репозиторий публичный: если ключ/доступ к origin сломался, качаем по https и чиним origin.
+    log "fetch origin failed, trying public $PUBLIC_REPO_URL"
+    GIT_TERMINAL_PROMPT=0 git_ fetch --prune "$PUBLIC_REPO_URL" "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" \
+      || { fail "git fetch не удался (и по ключу, и по https)"; return; }
+    git_ remote set-url origin "$PUBLIC_REPO_URL" || log "warn: remote set-url failed"
+    J_WARN="Доступ к GitHub по ключу не сработал: код скачан по https, адрес origin переключён на https."
+    log "$J_WARN"
+  fi
   J_TO="$(git_ rev-parse "origin/$BRANCH")"
   J_SUBJECT="$(git_ log -1 --format=%s "$J_TO")"
   J_COMMITS="$(git_ log --format='%h%x1f%s%x1f%an' -n 30 "$J_FROM..$J_TO" 2>/dev/null || true)"
@@ -202,7 +211,7 @@ run_deploy() {
   if [ -n "$(git_ status --porcelain --untracked-files=no)" ]; then
     step autosave
     git_ stash push -m "deploy $JOB_ID autosave" || { fail "не удалось сохранить локальные правки (git stash)"; return; }
-    J_WARN="На сервере были ручные правки: сохранены в git stash ('deploy $JOB_ID autosave')."
+    J_WARN="${J_WARN:+$J_WARN }На сервере были ручные правки: сохранены в git stash ('deploy $JOB_ID autosave')."
     log "$J_WARN"
     step_done
   fi
