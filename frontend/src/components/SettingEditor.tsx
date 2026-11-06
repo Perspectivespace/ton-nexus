@@ -9,6 +9,7 @@ import {
   fieldMeta,
   fromInput,
   toInput,
+  taskTariffExamples,
   towerMinBudget,
   type FieldMeta,
 } from "@/lib/settingsMeta";
@@ -329,6 +330,7 @@ export function SettingEditor({
         <ReadOnlyValue label="Значение" value={value} />
       )}
       {settingKey === "friend_rule" ? <FriendRulePreview draft={draft} /> : null}
+      {settingKey === "task_tariff" ? <TaskTariffPreview draft={draft} /> : null}
       {err && (
         <p className="ui-fhint err" role="alert">
           {err}
@@ -350,6 +352,28 @@ export function FriendRulePreview({ draft }: { draft: Record<string, string> }) 
       <span className={capsCls}>Игроки увидят</span>
       <span className="block text-[var(--text)]">{friendRuleText(rule)}</span>
       <span className="block">{`«Вас нет в топе»: ${friendJoinHint(rule)}`}</span>
+    </div>
+  );
+}
+
+/** Живой пример по черновику тарифа заданий */
+export function TaskTariffPreview({ draft }: { draft: Record<string, string> }) {
+  const pctToBp = (k: string) => {
+    const n = Number(String(draft[k] ?? "").trim().replace(",", "."));
+    return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  };
+  const examples = taskTariffExamples({
+    visit: {
+      reward: draft["visit.reward"] ?? "0",
+      commission_bp: pctToBp("visit.commission_bp"),
+    },
+    partner: { fee_bp: pctToBp("partner.fee_bp") },
+  });
+  return (
+    <div className="ui-fhint" aria-live="polite">
+      <span className={capsCls}>Пример</span>
+      <span className="block text-[var(--text)]">{examples.visit}</span>
+      <span className="block text-[var(--text)]">{examples.partner}</span>
     </div>
   );
 }

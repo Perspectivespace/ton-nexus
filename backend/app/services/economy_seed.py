@@ -69,6 +69,20 @@ DEFAULTS: dict[str, tuple[object, str]] = {
         "Удача: границы броска при сборе (bp), −100..500 = −1%..+5%; полный диапазон с 26-го уровня",
     ),
     "task_platform_commission_bp": ({"bp": 1000}, "Комиссия платформы 10%"),
+    "task_tariff": (
+        {
+            "visit": {
+                "reward": "0.01",
+                "commission_bp": 1000,
+                "xp": 5,
+                "min_slots": 1,
+                "max_slots": 10000,
+            },
+            "campaign": {"commission_bp": 1000, "xp": 10},
+            "partner": {"fee_bp": 1000, "xp": 5},
+        },
+        "Тариф заданий по типам: переход / кампания / партнёр (комиссия — в тарифе; task_platform_commission_bp — запасной для старых)",
+    ),
     "min_withdraw_ton": ({"ton": "0.2"}, "Минимальный вывод"),
     "referral_reward": ({"ton": "0.04"}, "Реферальная награда"),
     "daily_rewards": (
