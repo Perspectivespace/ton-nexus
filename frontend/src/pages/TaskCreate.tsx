@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMe, useCreateTask } from "@/api/hooks";
+import { useMe, useCreateTask, useTaskQuote } from "@/api/hooks";
 import {
   ScreenHeader,
   StatusPill,
@@ -12,6 +12,9 @@ import {
 } from "@/components/ui";
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
+import { VisitPriceBlock } from "@/components/tasks/VisitPriceBlock";
+
+type TaskType = "visit" | "manual_proof" | "link";
 
 export function TaskCreate() {
   useScreenBack("/tasks");
@@ -26,12 +29,22 @@ export function TaskCreate() {
   const [xp, setXp] = useState("10");
   const [minLevel, setMinLevel] = useState("1");
   const [targetUrl, setTargetUrl] = useState("");
-  const [taskType, setTaskType] = useState<"manual_proof" | "link">("manual_proof");
+  const [taskType, setTaskType] = useState<TaskType>("visit");
   const [publish, setPublish] = useState(false);
   const toast = useToast();
 
-  const canCreate = me?.is_owner || me?.is_admin || me?.is_ambassador;
-  const canDirectPublish = me?.is_owner || me?.is_admin;
+  const canCreateLegacy = !!(me?.is_owner || me?.is_admin || me?.is_ambassador);
+  const canDirectPublish = !!(me?.is_owner || me?.is_admin);
+  const isVisit = taskType === "visit";
+  // visit — любой вошедший; legacy — амбассадор+
+
+  const slotsN = Math.max(1, Number(slots) || 1);
+  const quoteQ = useTaskQuote(isVisit ? slotsN : null);
+  const quote = quoteQ.data ?? null;
+
+  useEffect(() => {
+    if (!canCreateLegacy && taskType !== "visit") setTaskType("visit");
+  }, [canCreateLegacy, taskType]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,12 +52,13 @@ export function TaskCreate() {
       const t = await create.mutateAsync({
         title: title.trim(),
         description: description.trim(),
-        reward,
+        ...(isVisit
+          ? {}
+          : { reward, xp_reward: Number(xp) || 0 }),
         total_slots: Number(slots) || 1,
         task_type: taskType,
         target_url: targetUrl.trim() || null,
         min_level: Number(minLevel) || 1,
-        xp_reward: Number(xp) || 0,
         publish: canDirectPublish ? publish : false,
       });
       const statusHint =
@@ -64,17 +78,26 @@ export function TaskCreate() {
 
   if (isLoading) return <LoadingPanel label="Проверка роли…" />;
 
-  if (!canCreate) {
+  if (!me) {
     return (
       <div className="space-y-4">
         <ScreenHeader eyebrow="Заработок" title="Новое задание" />
-        <ErrorPanel message="Создание доступно амбассадору, админу и владельцу." />
+        <ErrorPanel message="Войдите через Telegram, чтобы создать задание." />
         <BackLink to="/tasks" label="Лента" />
       </div>
     );
   }
 
-  const slotsN = Math.max(1, Number(slots) || 1);
+  if (!canCreateLegacy && !isVisit) {
+    return (
+      <div className="space-y-4">
+        <ScreenHeader eyebrow="Заработок" title="Новое задание" />
+        <ErrorPanel message="Этот тип доступен амбассадору, админу и владельцу. Выберите «Переход на сторонний ресурс»." />
+        <BackLink to="/tasks" label="Лента" />
+      </div>
+    );
+  }
+
   const rewardN = Number(reward) || 0;
   const budgetHint = (rewardN * slotsN * 1.1).toFixed(4);
 
@@ -84,7 +107,7 @@ export function TaskCreate() {
         eyebrow="Заработок"
         title="Новое задание"
         action={
-          <StatusPill tone={me?.is_ambassador && !canDirectPublish ? "warn" : "live"}>
+          <StatusPill tone={!canDirectPublish ? "warn" : "live"}>
             {canDirectPublish ? "сразу в ленту" : "на одобрение"}
           </StatusPill>
         }
@@ -92,17 +115,23 @@ export function TaskCreate() {
 
       <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
-          {canDirectPublish
-            ? "Админ или владелец: можно сразу опубликовать — бюджет (награда × места + ~10%) спишется с баланса."
-            : "Амбассадор: задание уйдёт на одобрение. После одобрения — публикация, бюджет уйдёт в холд."}
+          {isVisit
+            ? "Переход: цена и комиссия из тарифа владельца. Ссылка обязательна; награду исполнителю задаёт тариф."
+            : canDirectPublish
+              ? "Админ или владелец: можно сразу опубликовать — бюджет (награда × места + комиссия) спишется с баланса."
+              : "Амбассадор: задание уйдёт на одобрение. После одобрения — публикация, бюджет уйдёт в холд."}
         </p>
       </div>
 
-      {me && (
-        <div className="ui-cut grid grid-cols-2 gap-3 p-4">
-          <Readout label="Ваш баланс" value={Number(me.balance).toFixed(4)} unit="TON" />
-          <Readout label="Ориентир бюджета" value={budgetHint} unit="TON" hint="×1.1 комиссия" />
-        </div>
+      {isVisit ? (
+        <VisitPriceBlock quote={quote} loading={quoteQ.isFetching} />
+      ) : (
+        me && (
+          <div className="ui-cut grid grid-cols-2 gap-3 p-4">
+            <Readout label="Ваш баланс" value={Number(me.balance).toFixed(4)} unit="TON" />
+            <Readout label="Ориентир бюджета" value={budgetHint} unit="TON" hint="×1.1 комиссия" />
+          </div>
+        )
       )}
 
       <form onSubmit={onSubmit} className="ui-cut space-y-4 p-5">
@@ -111,7 +140,7 @@ export function TaskCreate() {
             className="ui-input sans"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Подпишись на канал / репост"
+            placeholder={isVisit ? "Перейди по ссылке / подпишись" : "Подпишись на канал / репост"}
             minLength={3}
             required
             disabled={create.isPending}
@@ -123,7 +152,7 @@ export function TaskCreate() {
             className="ui-input"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Что сделать и как подтвердить…"
+            placeholder={isVisit ? "Что открыть и как подтвердить (скрин)…" : "Что сделать и как подтвердить…"}
             minLength={3}
             required
             disabled={create.isPending}
@@ -135,11 +164,16 @@ export function TaskCreate() {
             <select
               className="ui-input"
               value={taskType}
-              onChange={(e) => setTaskType(e.target.value as "manual_proof" | "link")}
+              onChange={(e) => setTaskType(e.target.value as TaskType)}
               disabled={create.isPending}
             >
-              <option value="manual_proof">Подтверждение вручную</option>
-              <option value="link">Ссылка</option>
+              <option value="visit">Переход на сторонний ресурс</option>
+              {canCreateLegacy && (
+                <>
+                  <option value="manual_proof">Подтверждение вручную</option>
+                  <option value="link">Ссылка</option>
+                </>
+              )}
             </select>
           </Field>
           <Field label="Мин. уровень">
@@ -152,29 +186,21 @@ export function TaskCreate() {
           </Field>
         </div>
 
-        {taskType === "link" && (
-          <Field label="Ссылка на цель">
+        {(isVisit || taskType === "link") && (
+          <Field label={isVisit ? "Ссылка на ресурс" : "Ссылка на цель"}>
             <input
               className="ui-input"
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
-              placeholder="https://t.me/…"
+              placeholder="https://… или t.me/…"
+              required={isVisit}
               disabled={create.isPending}
             />
           </Field>
         )}
 
-        <div className="grid grid-cols-3 gap-2">
-          <Field label="Награда, TON">
-            <input
-              className="ui-input"
-              value={reward}
-              onChange={(e) => setReward(e.target.value)}
-              required
-              disabled={create.isPending}
-            />
-          </Field>
-          <Field label="Мест (исполнителей)">
+        {isVisit ? (
+          <Field label="Число выполнений">
             <input
               className="ui-input"
               value={slots}
@@ -183,15 +209,31 @@ export function TaskCreate() {
               disabled={create.isPending}
             />
           </Field>
-          <Field label="XP" unit="XP">
-            <input
-              className="ui-input"
-              value={xp}
-              onChange={(e) => setXp(e.target.value)}
-              disabled={create.isPending}
-            />
-          </Field>
-        </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            <Field label="Награда, TON">
+              <input
+                className="ui-input"
+                value={reward}
+                onChange={(e) => setReward(e.target.value)}
+                required
+                disabled={create.isPending}
+              />
+            </Field>
+            <Field label="Мест (исполнителей)">
+              <input
+                className="ui-input"
+                value={slots}
+                onChange={(e) => setSlots(e.target.value)}
+                required
+                disabled={create.isPending}
+              />
+            </Field>
+            <Field label="XP" unit="XP">
+              <input className="ui-input" value={xp} onChange={(e) => setXp(e.target.value)} disabled={create.isPending} />
+            </Field>
+          </div>
+        )}
 
         {canDirectPublish && (
           <label className="flex items-center gap-2 text-[13px] text-[var(--text-dim)]">
@@ -210,7 +252,11 @@ export function TaskCreate() {
           type="submit"
           className="ui-btn primary block"
           disabled={
-            create.isPending || title.trim().length < 3 || description.trim().length < 3
+            create.isPending ||
+            title.trim().length < 3 ||
+            description.trim().length < 3 ||
+            (isVisit && !targetUrl.trim()) ||
+            (isVisit && quoteQ.isError)
           }
         >
           {create.isPending
@@ -221,7 +267,6 @@ export function TaskCreate() {
                 ? "Создать черновик"
                 : "Отправить на одобрение"}
         </button>
-
       </form>
 
       <BackLink to="/tasks" label="Лента" />

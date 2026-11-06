@@ -28,7 +28,7 @@ export function Tasks() {
   const { data: me } = useMe();
   const [params, setParams] = useSearchParams();
   const tab = earnTab(params.get("tab"));
-  const canCreate = me?.is_owner || me?.is_admin || me?.is_ambassador;
+  const canCreate = !!me; // visit доступен всем; legacy-типы режет форма создания
 
   return (
     <div className="space-y-5">

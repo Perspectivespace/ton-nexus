@@ -29,6 +29,8 @@ class Task(Base):
 
     min_level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     xp_reward: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    # снимок bp комиссии при создании (visit); None — старые задания → task_platform_commission_bp
+    commission_bp: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
