@@ -71,15 +71,17 @@ DEFAULTS: dict[str, tuple[object, str]] = {
     "task_platform_commission_bp": ({"bp": 1000}, "Комиссия платформы 10%"),
     "task_tariff": (
         {
-            "levels": {
-                "easy": {"reward": "0.01", "xp": 5},
-                "normal": {"reward": "0.02", "xp": 10},
-                "hard": {"reward": "0.05", "xp": 20},
+            "visit": {
+                "reward": "0.01",
+                "commission_bp": 1000,
+                "xp": 5,
+                "min_slots": 1,
+                "max_slots": 10000,
             },
-            "min_slots": 1,
-            "max_slots": 10000,
+            "campaign": {"commission_bp": 1000, "xp": 10},
+            "partner": {"fee_bp": 1000, "xp": 5},
         },
-        "Тариф заданий: награда и XP по сложности (комиссия — task_platform_commission_bp)",
+        "Тариф заданий по типам: переход / кампания / партнёр (комиссия — в тарифе; task_platform_commission_bp — запасной для старых)",
     ),
     "min_withdraw_ton": ({"ton": "0.2"}, "Минимальный вывод"),
     "referral_reward": ({"ton": "0.04"}, "Реферальная награда"),

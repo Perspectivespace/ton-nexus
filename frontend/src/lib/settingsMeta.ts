@@ -277,34 +277,57 @@ export const SETTINGS: Record<string, SettingMeta> = {
     title: "Комиссия платформы",
     short: "Процент сверх бюджета задания",
     about:
-      "При публикации задания с автора списывается награда × количество мест плюс этот процент как комиссия платформы.",
+      "Запасной процент для уже опубликованных заданий старого формата. Для новых типов (переход / кампания / партнёр) комиссия задаётся в «Тариф заданий».",
     fields: { bp: { label: "Комиссия", kind: "pct_bp", unit: "%", min: 0, max: 100 } },
   },
   task_tariff: {
     title: "Тариф заданий",
-    short: "Награда и XP по сложности",
+    short: "Цены и комиссии по типам",
     about:
-      "Сколько TON и опыта получает исполнитель за одно выполнение задания каждого уровня сложности (лёгкое / среднее / сложное). При публикации заказчик платит награда × число мест плюс комиссию платформы из настройки «Комиссия платформы» — в тарифе комиссии нет, чтобы не было двух источников. Пока расчёт при создании задания ещё не подключён: здесь только сами суммы. Мин./макс. мест — границы, которые потом будет проверять форма создания.",
+      "Три типа заданий. «Переход на сторонний ресурс» — цену за выполнение и комиссию владельца задаёте здесь; создавать смогут пользователи и амбассадоры. «Кампания» — цену вводите вручную на задании, здесь только комиссия и XP по умолчанию (только владелец). «Партнёрская услуга» — покупатель платит из баланса в приложении, партнёр получает сумму минус комиссия с продажи (только владелец). Пока создание заданий тариф не читает — здесь только суммы.",
     fields: {
-      levels: { label: "Уровни сложности" },
-      easy: { label: "Лёгкое" },
-      normal: { label: "Среднее" },
-      hard: { label: "Сложное" },
-      reward: { label: "Награда за выполнение", kind: "ton", unit: "TON", min: 0.00000001, max: 100, hint: "Столько получит исполнитель" },
+      visit: { label: "Переход на сторонний ресурс" },
+      campaign: { label: "Кампания" },
+      partner: { label: "Партнёрская услуга" },
+      reward: {
+        label: "Цена выполнения",
+        kind: "ton",
+        unit: "TON",
+        min: 0.00000001,
+        max: 100,
+        hint: "Столько получит исполнитель за одно выполнение",
+      },
+      commission_bp: {
+        label: "Комиссия владельца",
+        kind: "pct_bp",
+        unit: "%",
+        min: 0,
+        max: 100,
+        hint: "Сверху к сумме наград — платит заказчик",
+      },
+      fee_bp: {
+        label: "Комиссия с продажи",
+        kind: "pct_bp",
+        unit: "%",
+        min: 0,
+        max: 100,
+        hint: "Доля платформы; остальное — партнёру",
+      },
       xp: { label: "Опыт", kind: "int", unit: "XP", min: 0, max: 100000 },
-      min_slots: { label: "Мин. мест", kind: "int", min: 1, max: 10000, hint: "Нижняя граница числа выполнений" },
-      max_slots: { label: "Макс. мест", kind: "int", min: 1, max: 10000, hint: "Верхняя граница числа выполнений" },
+      min_slots: { label: "Мин. выполнений", kind: "int", min: 1, max: 10000 },
+      max_slots: { label: "Макс. выполнений", kind: "int", min: 1, max: 10000 },
     },
     summary: (v) => {
       const o = v as {
-        levels?: Record<string, { reward?: unknown; xp?: unknown }>;
-        min_slots?: unknown;
-        max_slots?: unknown;
+        visit?: { reward?: unknown; commission_bp?: unknown };
+        partner?: { fee_bp?: unknown };
       };
-      const e = o.levels?.easy?.reward;
-      const h = o.levels?.hard?.reward;
-      if (e == null || h == null) return "не задан";
-      return `лёгкое ${e} · сложное ${h} TON`;
+      const r = o.visit?.reward;
+      const c = o.visit?.commission_bp;
+      const f = o.partner?.fee_bp;
+      if (r == null) return "не задан";
+      const pct = (bp: unknown) => (bp == null ? "?" : `${Number(bp) / 100}%`);
+      return `переход ${r} TON · комиссия ${pct(c)} · партнёр ${pct(f)}`;
     },
   },
   min_withdraw_ton: {
@@ -414,6 +437,32 @@ export const SETTINGS: Record<string, SettingMeta> = {
   },
 
 };
+
+
+/** Пример строки для тарифа заданий (100 выполнений / покупка 1 TON) — только UI. */
+export function taskTariffExamples(v: {
+  visit?: { reward?: unknown; commission_bp?: unknown };
+  partner?: { fee_bp?: unknown };
+}): { visit: string; partner: string } {
+  const reward = Number(v.visit?.reward ?? 0);
+  const cBp = Number(v.visit?.commission_bp ?? 0);
+  const feeBp = Number(v.partner?.fee_bp ?? 0);
+  const slots = 100;
+  const payout = reward * slots;
+  const commission = (payout * cBp) / 10000;
+  const total = payout + commission;
+  const amount = 1;
+  const fee = (amount * feeBp) / 10000;
+  const partnerGets = amount - fee;
+  const fmt = (n: number) => {
+    const s = n.toFixed(8).replace(/\.?0+$/, "");
+    return s || "0";
+  };
+  return {
+    visit: `100 выполнений: заказчик платит ${fmt(total)} TON, исполнители получают ${fmt(payout)} TON, комиссия ${fmt(commission)} TON`,
+    partner: `покупка 1 TON: партнёр получает ${fmt(partnerGets)} TON, комиссия платформы ${fmt(fee)} TON`,
+  };
+}
 
 export function fieldMeta(settingKey: string, field: string, sample: unknown): FieldMeta {
   const own = SETTINGS[settingKey]?.fields?.[field];

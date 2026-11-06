@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fieldMeta, fromInput, parseIntList, summarize, toInput, towerMinBudget } from "./settingsMeta";
+import { fieldMeta, fromInput, parseIntList, summarize, taskTariffExamples, toInput, towerMinBudget } from "./settingsMeta";
 
 describe("призы «Башни» в редакторе владельца", () => {
   const DEFAULT = {
@@ -103,36 +103,53 @@ describe("TON: сеть списком и пополнения", () => {
 
 describe("тариф заданий в редакторе владельца", () => {
   const TARIFF = {
-    levels: {
-      easy: { reward: "0.01", xp: 5 },
-      normal: { reward: "0.02", xp: 10 },
-      hard: { reward: "0.05", xp: 20 },
-    },
-    min_slots: 1,
-    max_slots: 10000,
+    visit: { reward: "0.01", commission_bp: 1000, xp: 5, min_slots: 1, max_slots: 10000 },
+    campaign: { commission_bp: 1000, xp: 10 },
+    partner: { fee_bp: 1000, xp: 5 },
   };
 
-  it("поля: русские подписи и типы", () => {
-    expect(fieldMeta("task_tariff", "easy", TARIFF.levels.easy).label).toBe("Лёгкое");
-    expect(fieldMeta("task_tariff", "normal", TARIFF.levels.normal).label).toBe("Среднее");
-    expect(fieldMeta("task_tariff", "hard", TARIFF.levels.hard).label).toBe("Сложное");
+  it("поля: типы и русские подписи", () => {
+    expect(fieldMeta("task_tariff", "visit", TARIFF.visit).label).toBe("Переход на сторонний ресурс");
+    expect(fieldMeta("task_tariff", "campaign", TARIFF.campaign).label).toBe("Кампания");
+    expect(fieldMeta("task_tariff", "partner", TARIFF.partner).label).toBe("Партнёрская услуга");
     expect(fieldMeta("task_tariff", "reward", "0.01")).toMatchObject({
       kind: "ton",
       unit: "TON",
-      label: "Награда за выполнение",
+      label: "Цена выполнения",
     });
-    expect(fieldMeta("task_tariff", "xp", 5)).toMatchObject({ kind: "int", unit: "XP", label: "Опыт" });
-    expect(fieldMeta("task_tariff", "min_slots", 1).kind).toBe("int");
-    expect(fieldMeta("task_tariff", "max_slots", 10000).kind).toBe("int");
+    expect(fieldMeta("task_tariff", "commission_bp", 1000)).toMatchObject({
+      kind: "pct_bp",
+      unit: "%",
+      label: "Комиссия владельца",
+    });
+    expect(fieldMeta("task_tariff", "fee_bp", 1000)).toMatchObject({
+      kind: "pct_bp",
+      label: "Комиссия с продажи",
+    });
+    expect(fieldMeta("task_tariff", "xp", 5).unit).toBe("XP");
   });
 
-  it("награда — строка TON, XP — целое", () => {
+  it("цена — строка TON, комиссия — bp из %", () => {
     expect(fromInput(fieldMeta("task_tariff", "reward", "0.01"), "0,03", "0.01")).toBe("0.03");
-    expect(fromInput(fieldMeta("task_tariff", "xp", 5), "15", 5)).toBe(15);
-    expect(() => fromInput(fieldMeta("task_tariff", "reward", "0.01"), "0", "0.01")).toThrow("не меньше");
+    expect(toInput(fieldMeta("task_tariff", "commission_bp", 1000), 1000)).toBe("10");
+    expect(fromInput(fieldMeta("task_tariff", "commission_bp", 1000), "10", 1000)).toBe(1000);
   });
 
   it("сводка в списке настроек", () => {
-    expect(summarize("task_tariff", TARIFF)).toBe("лёгкое 0.01 · сложное 0.05 TON");
+    expect(summarize("task_tariff", TARIFF)).toBe("переход 0.01 TON · комиссия 10% · партнёр 10%");
+  });
+});
+
+describe("пример тарифа заданий", () => {
+  it("100 выполнений и покупка 1 TON", () => {
+    const ex = taskTariffExamples({
+      visit: { reward: "0.01", commission_bp: 1000 },
+      partner: { fee_bp: 1000 },
+    });
+    expect(ex.visit).toContain("заказчик платит 1.1 TON");
+    expect(ex.visit).toContain("исполнители получают 1 TON");
+    expect(ex.visit).toContain("комиссия 0.1 TON");
+    expect(ex.partner).toContain("партнёр получает 0.9 TON");
+    expect(ex.partner).toContain("комиссия платформы 0.1 TON");
   });
 });
