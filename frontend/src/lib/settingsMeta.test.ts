@@ -100,3 +100,39 @@ describe("TON: сеть списком и пополнения", () => {
     expect(summarize("ton_payouts", { enabled: true, payout_wallet: "UQAbcdEFgh12abcdef" })).toBe("Включено · UQAbcd…cdef");
   });
 });
+
+describe("тариф заданий в редакторе владельца", () => {
+  const TARIFF = {
+    levels: {
+      easy: { reward: "0.01", xp: 5 },
+      normal: { reward: "0.02", xp: 10 },
+      hard: { reward: "0.05", xp: 20 },
+    },
+    min_slots: 1,
+    max_slots: 10000,
+  };
+
+  it("поля: русские подписи и типы", () => {
+    expect(fieldMeta("task_tariff", "easy", TARIFF.levels.easy).label).toBe("Лёгкое");
+    expect(fieldMeta("task_tariff", "normal", TARIFF.levels.normal).label).toBe("Среднее");
+    expect(fieldMeta("task_tariff", "hard", TARIFF.levels.hard).label).toBe("Сложное");
+    expect(fieldMeta("task_tariff", "reward", "0.01")).toMatchObject({
+      kind: "ton",
+      unit: "TON",
+      label: "Награда за выполнение",
+    });
+    expect(fieldMeta("task_tariff", "xp", 5)).toMatchObject({ kind: "int", unit: "XP", label: "Опыт" });
+    expect(fieldMeta("task_tariff", "min_slots", 1).kind).toBe("int");
+    expect(fieldMeta("task_tariff", "max_slots", 10000).kind).toBe("int");
+  });
+
+  it("награда — строка TON, XP — целое", () => {
+    expect(fromInput(fieldMeta("task_tariff", "reward", "0.01"), "0,03", "0.01")).toBe("0.03");
+    expect(fromInput(fieldMeta("task_tariff", "xp", 5), "15", 5)).toBe(15);
+    expect(() => fromInput(fieldMeta("task_tariff", "reward", "0.01"), "0", "0.01")).toThrow("не меньше");
+  });
+
+  it("сводка в списке настроек", () => {
+    expect(summarize("task_tariff", TARIFF)).toBe("лёгкое 0.01 · сложное 0.05 TON");
+  });
+});

@@ -280,6 +280,33 @@ export const SETTINGS: Record<string, SettingMeta> = {
       "При публикации задания с автора списывается награда × количество мест плюс этот процент как комиссия платформы.",
     fields: { bp: { label: "Комиссия", kind: "pct_bp", unit: "%", min: 0, max: 100 } },
   },
+  task_tariff: {
+    title: "Тариф заданий",
+    short: "Награда и XP по сложности",
+    about:
+      "Сколько TON и опыта получает исполнитель за одно выполнение задания каждого уровня сложности (лёгкое / среднее / сложное). При публикации заказчик платит награда × число мест плюс комиссию платформы из настройки «Комиссия платформы» — в тарифе комиссии нет, чтобы не было двух источников. Пока расчёт при создании задания ещё не подключён: здесь только сами суммы. Мин./макс. мест — границы, которые потом будет проверять форма создания.",
+    fields: {
+      levels: { label: "Уровни сложности" },
+      easy: { label: "Лёгкое" },
+      normal: { label: "Среднее" },
+      hard: { label: "Сложное" },
+      reward: { label: "Награда за выполнение", kind: "ton", unit: "TON", min: 0.00000001, max: 100, hint: "Столько получит исполнитель" },
+      xp: { label: "Опыт", kind: "int", unit: "XP", min: 0, max: 100000 },
+      min_slots: { label: "Мин. мест", kind: "int", min: 1, max: 10000, hint: "Нижняя граница числа выполнений" },
+      max_slots: { label: "Макс. мест", kind: "int", min: 1, max: 10000, hint: "Верхняя граница числа выполнений" },
+    },
+    summary: (v) => {
+      const o = v as {
+        levels?: Record<string, { reward?: unknown; xp?: unknown }>;
+        min_slots?: unknown;
+        max_slots?: unknown;
+      };
+      const e = o.levels?.easy?.reward;
+      const h = o.levels?.hard?.reward;
+      if (e == null || h == null) return "не задан";
+      return `лёгкое ${e} · сложное ${h} TON`;
+    },
+  },
   min_withdraw_ton: {
     title: "Минимальный вывод",
     short: "Наименьшая сумма заявки на вывод",
