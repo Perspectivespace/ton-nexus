@@ -98,7 +98,7 @@ describe("«Заработок»", () => {
     const t = text(render(<Tasks />, "/tasks?tab=promo", { me: player, daily: daily(false), tasks: [] }));
     expect(t).toMatch(/Задания.*Друзья.*Промокод/);
     expect(t.toLowerCase()).toContain("промокод");
-    expect(t).not.toContain("+ Создать"); // игроку кнопки нет
+    expect(t).toContain("+ Создать"); // visit доступен всем вошедшим
   });
   it("«Друзья» — честная заглушка", () => {
     const t = text(render(<Tasks />, "/tasks?tab=friends", { me: player, daily: daily(false), tasks: [] }));

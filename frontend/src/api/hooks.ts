@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import { setServerClock } from "@/lib/cityPhase";
@@ -495,14 +496,48 @@ export function usePromoCreate() {
 export type TaskCreateBody = {
   title: string;
   description: string;
-  reward: string | number;
+  reward?: string | number | null;
   total_slots: number;
   task_type?: string;
   target_url?: string | null;
   min_level?: number;
-  xp_reward?: number;
+  xp_reward?: number | null;
   publish?: boolean;
 };
+
+export type TaskQuote = {
+  task_type: string;
+  reward: string;
+  xp: number;
+  payout: string;
+  commission: string;
+  total: string;
+  commission_bp: number;
+  slots: number;
+};
+
+/** Живая цена visit: debounce 250 мс, пока места валидны */
+export function useTaskQuote(slots: number | null) {
+  const [debounced, setDebounced] = useState(slots);
+  useEffect(() => {
+    if (slots == null) {
+      setDebounced(null);
+      return;
+    }
+    const t = window.setTimeout(() => setDebounced(slots), 250);
+    return () => window.clearTimeout(t);
+  }, [slots]);
+  return useQuery({
+    queryKey: ["tasks", "quote", "visit", debounced],
+    enabled: debounced != null && debounced >= 1 && debounced <= 10000,
+    queryFn: () =>
+      api<TaskQuote>("/api/v1/tasks/quote", {
+        method: "POST",
+        body: JSON.stringify({ task_type: "visit", total_slots: debounced }),
+      }),
+    staleTime: 15_000,
+  });
+}
 
 export function useCreateTask() {
   const qc = useQueryClient();

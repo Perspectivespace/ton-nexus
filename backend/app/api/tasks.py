@@ -10,6 +10,8 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.services import tasks as tasks_svc
+from app.services import task_tariff as tariff_svc
+from app.services.economy import get_setting
 from app.services.balance import InsufficientBalanceError
 from app.services.roles import can_approve_ambassador_task
 from app.services.tasks import TaskBudgetError, TaskError, TaskPermissionError, TaskStateError
@@ -20,12 +22,12 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 class TaskCreateBody(BaseModel):
     title: str = Field(min_length=3, max_length=255)
     description: str = Field(min_length=3)
-    reward: Decimal
+    reward: Decimal | None = None  # для visit игнорируется — берётся из тарифа
     total_slots: int = Field(ge=1, le=10000)
     task_type: str = "manual_proof"
     target_url: str | None = None
     min_level: int = 1
-    xp_reward: int = 10
+    xp_reward: int | None = None  # для visit — из тарифа
     publish: bool = False
 
 
@@ -136,6 +138,50 @@ async def get_task(task_id: int, user: User = Depends(get_current_user), db: Asy
         return _task_out(t)
     except TaskError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+
+class QuoteBody(BaseModel):
+    task_type: str = "visit"
+    total_slots: int = Field(ge=1, le=10000)
+
+
+class QuoteOut(BaseModel):
+    task_type: str
+    reward: Decimal
+    xp: int
+    payout: Decimal
+    commission: Decimal
+    total: Decimal
+    commission_bp: int
+    slots: int
+
+
+@router.post("/quote", response_model=QuoteOut)
+async def quote_task(
+    body: QuoteBody,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Живая цена для формы создания. Пока только visit."""
+    if body.task_type != "visit":
+        raise HTTPException(status_code=400, detail="quote пока только для visit")
+    raw = await get_setting(db, tariff_svc.KEY)
+    try:
+        q = tariff_svc.quote_visit(raw if isinstance(raw, dict) else tariff_svc.DEFAULT, slots=body.total_slots)
+    except tariff_svc.TaskTariffError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    await db.commit()
+    return QuoteOut(
+        task_type="visit",
+        reward=Decimal(q.reward),
+        xp=q.xp,
+        payout=Decimal(q.payout),
+        commission=Decimal(q.commission),
+        total=Decimal(q.total),
+        commission_bp=q.commission_bp,
+        slots=q.slots,
+    )
 
 
 @router.post("", response_model=TaskOut)

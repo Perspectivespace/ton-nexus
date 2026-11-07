@@ -14,6 +14,7 @@ from app.models.task import Task, TaskSubmission
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services.economy import get_setting
+from app.services import task_tariff as tariff_svc
 from app.services.levels import add_xp
 from app.services.roles import (
     can_approve_ambassador_task,
@@ -55,9 +56,44 @@ def _ton(v: Decimal) -> str:
     return format(_q(v).normalize(), "f")
 
 
-async def _commission(session: AsyncSession, payout: Decimal) -> Decimal:
-    bp = int((await get_setting(session, "task_platform_commission_bp"))["bp"])
-    return _q(payout * Decimal(bp) / Decimal(10000))
+async def _platform_commission_bp(session: AsyncSession) -> int:
+    return int((await get_setting(session, "task_platform_commission_bp"))["bp"])
+
+
+def _commission_from_bp(payout: Decimal, bp: int) -> Decimal:
+    """Комиссия от payout в TON (8 знаков) — как nanoton-математика тарифа."""
+    payout_nano = int(payout * tariff_svc.NANO_PER_TON)
+    if payout_nano % tariff_svc.LEDGER_QUANTUM_NANO:
+        # payout уже с 8 знаками — должно быть кратно; иначе вниз до кванта
+        payout_nano -= payout_nano % tariff_svc.LEDGER_QUANTUM_NANO
+    raw = payout_nano * int(bp) // 10_000
+    commission_nano = raw - (raw % tariff_svc.LEDGER_QUANTUM_NANO)
+    return _q(Decimal(commission_nano) / Decimal(tariff_svc.NANO_PER_TON))
+
+
+async def _commission(session: AsyncSession, payout: Decimal, *, bp: int | None = None) -> Decimal:
+    """Комиссия: явный bp (снимок на задании) или запасной task_platform_commission_bp."""
+    if bp is None:
+        bp = await _platform_commission_bp(session)
+    return _commission_from_bp(payout, bp)
+
+
+VISIT = "visit"
+
+
+def _validate_visit_url(url: str | None) -> str:
+    if not url or not str(url).strip():
+        raise TaskError("для «Перехода» нужна ссылка на ресурс")
+    u = str(url).strip()
+    low = u.lower()
+    if low.startswith("t.me/"):
+        u = "https://" + u
+        low = u.lower()
+    if not (low.startswith("https://") or low.startswith("http://")):
+        raise TaskError("ссылка: http(s)://… или t.me/…")
+    if len(u) > 1024:
+        raise TaskError("ссылка слишком длинная")
+    return u
 
 
 async def _lock_task(session: AsyncSession, task_id: int) -> Task | None:
@@ -151,22 +187,43 @@ async def create_task(
     creator: User,
     title: str,
     description: str,
-    reward: Decimal,
+    reward: Decimal | None,
     total_slots: int,
     task_type: str = "manual_proof",
     target_url: str | None = None,
     min_level: int = 1,
-    xp_reward: int = 10,
+    xp_reward: int | None = 10,
     publish: bool = False,
 ) -> TaskView:
-    if not can_create_task(creator):
+    task_type = (task_type or "manual_proof").strip()
+    if task_type == VISIT:
+        # переход: любой авторизованный; цена/XP/комиссия — только из тарифа
+        pass
+    elif not can_create_task(creator):
         raise TaskPermissionError("need ambassador, admin or owner role")
-    if reward <= 0:
-        raise TaskError("reward must be positive")
-    if total_slots < 1 or total_slots > 10_000:
-        raise TaskError("invalid slots")
+
     if not title.strip() or not description.strip():
         raise TaskError("title and description required")
+
+    commission_bp: int | None = None
+    if task_type == VISIT:
+        raw = await get_setting(session, tariff_svc.KEY)
+        try:
+            q = tariff_svc.quote_visit(raw if isinstance(raw, dict) else tariff_svc.DEFAULT, slots=total_slots)
+        except tariff_svc.TaskTariffError as e:
+            raise TaskError(str(e)) from e
+        # клиентские reward/xp для visit игнорируем (снимок с тарифа)
+        reward = Decimal(q.reward)
+        xp_reward = int(q.xp)
+        commission_bp = int(q.commission_bp)
+        target_url = _validate_visit_url(target_url)
+    else:
+        if reward is None or reward <= 0:
+            raise TaskError("reward must be positive")
+        if total_slots < 1 or total_slots > MAX_SLOTS:
+            raise TaskError("invalid slots")
+        if xp_reward is None:
+            xp_reward = 10
 
     if can_publish_directly(creator):
         initial = "draft"
@@ -186,7 +243,8 @@ async def create_task(
         status=initial,
         budget_locked=Decimal("0"),
         min_level=max(1, min_level),
-        xp_reward=max(0, xp_reward),
+        xp_reward=max(0, int(xp_reward or 0)),
+        commission_bp=commission_bp,
     )
     session.add(task)
     await session.flush()
@@ -194,6 +252,7 @@ async def create_task(
     if publish and can_publish_directly(creator):
         return await publish_task(session, task_id=task.id, actor=creator)
     return _view(task)
+
 
 
 async def update_task(
@@ -218,6 +277,21 @@ async def update_task(
     if task.status == "completed":
         raise TaskStateError("completed task is frozen")
 
+    if task.task_type == VISIT:
+        if reward is not None and Decimal(reward) != Decimal(task.reward):
+            raise TaskStateError("Награда «Перехода» задаётся тарифом и не меняется.")
+        if xp_reward is not None and int(xp_reward) != int(task.xp_reward):
+            raise TaskStateError("XP «Перехода» задаётся тарифом и не меняется.")
+        if task_type is not None and task_type != VISIT:
+            raise TaskStateError("Тип «Переход» нельзя сменить.")
+        if target_url is not None:
+            target_url = _validate_visit_url(target_url)
+        if total_slots is not None and not (task.budget_locked and task.budget_locked > 0):
+            raw = await get_setting(session, tariff_svc.KEY)
+            cfg = tariff_svc.normalize(raw if isinstance(raw, dict) else tariff_svc.DEFAULT)["visit"]
+            if not cfg["min_slots"] <= total_slots <= cfg["max_slots"]:
+                raise TaskError(f"число выполнений: от {cfg['min_slots']} до {cfg['max_slots']}")
+
     if task.budget_locked and task.budget_locked > 0:
         # Опубликованное задание (активное или на паузе): деньги уже списаны.
         old_reward = Decimal(task.reward)
@@ -234,7 +308,7 @@ async def update_task(
         left_new = new_slots - task.filled_slots
         extra = _q(new_reward * left_new - old_reward * left_old)
         if extra > 0:
-            total = extra + await _commission(session, extra)
+            total = extra + await _commission(session, extra, bp=task.commission_bp)
             await _charge_creator(session, task, total, f"Доплата бюджета задания #{task.id}")
             task.budget_locked = _q(Decimal(task.budget_locked) + total)
         task.reward = new_reward
@@ -335,7 +409,7 @@ async def publish_task(session: AsyncSession, *, task_id: int, actor: User) -> T
         return _view(task)
 
     payout = _q(Decimal(task.reward) * task.total_slots)
-    total = payout + await _commission(session, payout)
+    total = payout + await _commission(session, payout, bp=task.commission_bp)
 
     await _charge_creator(session, task, total, f"Бюджет задания #{task.id}")
     task.budget_locked = total
