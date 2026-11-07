@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMe, useTask, useTaskBuy, useTaskClose, useTaskSubmit } from "@/api/hooks";
+import { useMe, useTask, useTaskBuy, useTaskSubmit } from "@/api/hooks";
 import {
   ScreenHeader,
   StatusPill,
@@ -14,6 +14,7 @@ import {
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
 import { PartnerBuyPanel } from "@/components/tasks/PartnerBuyPanel";
+import { OwnerTaskPanel } from "@/components/tasks/OwnerTaskPanel";
 
 const TASK_STATUS_RU: Record<string, string> = {
   active: "активно",
@@ -23,6 +24,7 @@ const TASK_STATUS_RU: Record<string, string> = {
   rejected: "отклонено",
   completed: "завершено",
   closed: "закрыто",
+  cancelled: "отменено",
 };
 
 export function TaskDetail() {
@@ -33,7 +35,6 @@ export function TaskDetail() {
   const { data: t, isLoading, error } = useTask(taskId);
   const submit = useTaskSubmit(taskId);
   const buy = useTaskBuy(taskId);
-  const close = useTaskClose(taskId);
   const [proofText, setProofText] = useState("");
   const [proofUrl, setProofUrl] = useState("");
   const [done, setDone] = useState(false);
@@ -63,15 +64,6 @@ export function TaskDetail() {
       });
     } catch (e) {
       toast({ kind: "danger", title: "Покупка не прошла", sub: e instanceof Error ? e.message : "Ошибка" });
-    }
-  }
-
-  async function onClose() {
-    try {
-      await close.mutateAsync();
-      toast({ kind: "ok", title: "Продажи закрыты" });
-    } catch (e) {
-      toast({ kind: "danger", title: "Не удалось закрыть", sub: e instanceof Error ? e.message : "Ошибка" });
     }
   }
 
@@ -148,11 +140,7 @@ export function TaskDetail() {
         />
       )}
 
-      {isPartnerTask && me?.is_owner && t.status !== "closed" && (
-        <button type="button" className="ui-btn secondary sm" disabled={close.isPending} onClick={onClose}>
-          {close.isPending ? "Закрываем…" : "Закрыть продажи"}
-        </button>
-      )}
+      {me?.is_owner && <OwnerTaskPanel taskId={t.id} />}
 
       {!isPartnerTask && (
         <div className="ui-cut space-y-4 p-5">

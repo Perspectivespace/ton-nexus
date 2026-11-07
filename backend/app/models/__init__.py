@@ -3,7 +3,7 @@ from app.models.balance import BalanceHistory
 from app.models.economy import EconomySetting
 from app.models.miner import Miner, MinerUpgradeLog
 from app.models.promo import DailyCheckIn, PromoCode, PromoRedemption
-from app.models.task import Task, TaskPurchase, TaskSubmission
+from app.models.task import Task, TaskOwnerAction, TaskPurchase, TaskSubmission
 from app.models.tower import TowerDailyAttempts, TowerGame, TowerMonth, TowerMonthlyBest, TowerMonthResult
 from app.models.user import User
 from app.models.role_change import RoleChange
@@ -29,6 +29,7 @@ __all__ = [
     "Task",
     "TaskSubmission",
     "TaskPurchase",
+    "TaskOwnerAction",
     "TowerGame",
     "TowerDailyAttempts",
     "TowerMonthlyBest",

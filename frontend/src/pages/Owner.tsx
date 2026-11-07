@@ -6,6 +6,7 @@ import {
   usePromoCreate,
   useOwnerStats,
   usePromoList,
+  useOwnerTasks,
 } from "@/api/hooks";
 import { OwnerShell } from "@/components/owner/OwnerShell";
 import { SettingsList } from "@/components/owner/SettingsList";
@@ -190,10 +191,71 @@ function PromosTab() {
   );
 }
 
-const TABS = ["overview", "promos", "economy"] as const;
+const TASK_FILTERS = [
+  { value: "all", label: "Все" },
+  { value: "active", label: "Активные" },
+  { value: "paused", label: "Пауза" },
+  { value: "draft", label: "Черновики" },
+  { value: "completed", label: "Завершены" },
+  { value: "cancelled", label: "Отменены" },
+] as const;
+type TaskFilter = (typeof TASK_FILTERS)[number]["value"];
+
+const TYPE_RU: Record<string, string> = {
+  visit: "Переход",
+  campaign: "Кампания",
+  partner: "Партнёр",
+  manual_proof: "Вручную",
+  link: "Ссылка",
+};
+
+const STATUS_RU: Record<string, string> = {
+  active: "активно",
+  draft: "черновик",
+  pending_approval: "на одобрении",
+  paused: "пауза",
+  rejected: "отклонено",
+  completed: "завершено",
+  closed: "закрыто",
+  cancelled: "отменено",
+};
+
+/** Все задания любого статуса: открыть → панель «Управление» на экране задания */
+function TasksTab() {
+  const [filter, setFilter] = useState<TaskFilter>("all");
+  const { data, isLoading, error } = useOwnerTasks(filter === "all" ? null : filter, true);
+  return (
+    <div className="space-y-4">
+      <Tabs kind="line" label="Статус заданий" items={TASK_FILTERS} value={filter} onChange={setFilter} />
+      {isLoading && <LoadingPanel label="Загрузка заданий…" />}
+      {error && <ErrorPanel message="Не удалось загрузить задания" />}
+      {data && !data.length && <EmptyPanel title="Заданий нет" body="С этим статусом пока пусто." />}
+      {!!data?.length && (
+        <List>
+          {data.map((t) => (
+            <ListRow
+              key={t.id}
+              to={`/tasks/${t.id}`}
+              title={t.title}
+              sub={`#${t.id} · ${TYPE_RU[t.task_type] ?? t.task_type} · ${t.filled_slots}/${t.total_slots} · ${Number(t.reward)} TON`}
+              trailing={
+                <StatusPill tone={t.status === "active" ? "live" : t.status === "cancelled" ? "warn" : "neutral"}>
+                  {STATUS_RU[t.status] ?? t.status}
+                </StatusPill>
+              }
+            />
+          ))}
+        </List>
+      )}
+    </div>
+  );
+}
+
+const TABS = ["overview", "tasks", "promos", "economy"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_RU: Record<Tab, string> = {
   overview: "Обзор",
+  tasks: "Задания",
   promos: "Промо",
   economy: "Экономика",
 };
@@ -248,6 +310,7 @@ export function Owner() {
           <FpsToggle />
         </div>
       )}
+      {tab === "tasks" && <TasksTab />}
       {tab === "promos" && <PromosTab />}
       {tab === "economy" && (
         <>
