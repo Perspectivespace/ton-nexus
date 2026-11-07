@@ -342,7 +342,7 @@ export function TaskCreate() {
               disabled={create.isPending}
               className="h-4 w-4 accent-[var(--accent)]"
             />
-            Сразу опубликовать (списать бюджет)
+            {isPartner ? "Сразу опубликовать (ничего не списывается)" : "Сразу опубликовать (списать бюджет)"}
           </label>
         )}
 
