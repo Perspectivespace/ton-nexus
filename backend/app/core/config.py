@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     github_repo: str = "Perspectivespace/ton-nexus"
     github_token: str = ""  # optional, only raises GitHub API rate limit
 
+    # Скриншоты-подтверждения заданий: каталог вне web root. Пусто — backend/var/proofs,
+    # а если туда нельзя писать — ~/.local/state/ton-nexus/proofs пользователя API.
+    proof_upload_dir: str = ""
+
     @field_validator("database_url", mode="before")
     @classmethod
     def _fix_db_url(cls, v: object) -> object:

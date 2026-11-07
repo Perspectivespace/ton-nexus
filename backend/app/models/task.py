@@ -3,7 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, false, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -31,6 +31,10 @@ class Task(Base):
     xp_reward: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     # снимок bp комиссии при создании (visit); None — старые задания → task_platform_commission_bp
     commission_bp: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # исполнитель обязан приложить скриншот (новые типы; старый manual_proof переносится с True)
+    proof_required: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
+    # исходный тип до переноса старых типов (manual_proof / link) — для отката миграции 017
+    legacy_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     # Учёт бюджета в нанотонах (с PR «управление заданиями»). NULL — старое задание, разбивка
     # оценивается из budget_locked при первом действии владельца (services/task_owner.ensure_accounting).
     creator_payout_nano: Mapped[int | None] = mapped_column(BigInteger, nullable=True)  # выплаты, оплаченные создателем
@@ -120,3 +124,30 @@ class TaskOwnerAction(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class TaskProof(Base):
+    """Скриншот-подтверждение: в БД только метаданные, сам файл — на диске вне web root.
+
+    Очередь удаления — поле delete_after: после проверки заявки файл удаляется не позже чем через 24 ч,
+    непривязанные и непроверенные — по своим срокам (services/task_proofs). deleted_at ставится один раз.
+    """
+
+    __tablename__ = "task_proofs"
+    __table_args__ = (Index("ix_task_proofs_due", "deleted_at", "delete_after"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    submission_id: Mapped[int | None] = mapped_column(
+        ForeignKey("task_submissions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    filename: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    mime: Mapped[str] = mapped_column(String(32), nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delete_after: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delete_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
