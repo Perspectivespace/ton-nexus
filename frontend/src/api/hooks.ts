@@ -996,3 +996,95 @@ export function useRecentHistory(limit = 3) {
     queryFn: () => api<HistoryPage>(historyUrl("all", null, limit)),
   });
 }
+
+// ── Управление заданиями (владелец) ──────────────────────────────────────────
+
+export type OwnerAction = {
+  id: number;
+  action: string;
+  mode: string | null;
+  actor_id: number | null;
+  creator_delta: string;
+  platform_delta: string;
+  details: string | null;
+  created_at: string | null;
+};
+
+export type OwnerTaskSummary = {
+  task: TaskDetail;
+  pending: number;
+  paid_out: string;
+  creator_payout: string;
+  creator_commission: string;
+  platform_payout: string;
+  charged: string;
+  refundable: string;
+  commission_bp: number;
+  log: OwnerAction[];
+};
+
+export type ManageOut = {
+  task: TaskDetail;
+  already: boolean;
+  creator_delta: string;
+  platform_delta: string;
+  note: string | null;
+};
+
+export function useOwnerTaskSummary(taskId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["task", taskId, "owner"],
+    queryFn: () => api<OwnerTaskSummary>(`/api/v1/tasks/${taskId}/owner`),
+    enabled: enabled && taskId > 0,
+  });
+}
+
+export function useOwnerTasks(status: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["tasks", "owner", status],
+    queryFn: () =>
+      api<TaskDetail[]>(`/api/v1/tasks/owner/all${status ? `?status=${encodeURIComponent(status)}` : ""}`),
+    enabled,
+  });
+}
+
+function useOwnerTaskMutation<B>(taskId: number, path: string, method = "POST") {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: B) =>
+      api<ManageOut>(`/api/v1/tasks/${taskId}/${path}`, {
+        method,
+        body: body == null ? undefined : JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["task", taskId] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["balance"] });
+    },
+  });
+}
+
+export const useOwnerCancel = (taskId: number) => useOwnerTaskMutation<null>(taskId, "owner/cancel");
+export const useOwnerAddSlots = (taskId: number) =>
+  useOwnerTaskMutation<{ count: number; mode: "charge" | "free" }>(taskId, "owner/add-slots");
+export const useOwnerPrice = (taskId: number) =>
+  useOwnerTaskMutation<{ reward: string; mode: "creator" | "absorb" }>(taskId, "owner/price");
+
+export type TaskPatch = {
+  title?: string;
+  description?: string;
+  target_url?: string | null;
+  xp_reward?: number;
+};
+
+export function useTaskUpdate(taskId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TaskPatch) =>
+      api<TaskDetail>(`/api/v1/tasks/${taskId}`, { method: "PATCH", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["task", taskId] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
