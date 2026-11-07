@@ -37,6 +37,7 @@ _KINDS: dict[str, tuple[str, str]] = {
     "arena_hold": ("arena_hold", "arena_hold"),
     "arena_refund": ("arena_refund", "arena_refund"),
     "arena_prize": ("arena_prize", "arena_prize"),
+    "partner": ("partner_sale", "partner_purchase"),
 }
 
 LABELS: dict[str, str] = {
@@ -54,6 +55,8 @@ LABELS: dict[str, str] = {
     "arena_hold": "Ставка «Арены»",
     "arena_refund": "Возврат ставки «Арены»",
     "arena_prize": "Приз «Арены»",
+    "partner_sale": "Продажа партнёрской услуги",
+    "partner_purchase": "Покупка партнёрской услуги",
     "credit": "Начисление",
     "debit": "Списание",
 }
@@ -69,7 +72,8 @@ def tx_url(tx_hash: str | None, network: str = "mainnet") -> str | None:
     return f"https://{host}/transaction/{tx_hash}"
 
 # у каких видов в подписи полезно описание из журнала (номер задания, приз рулетки, месяц «Башни», комната «Арены»)
-_DETAIL_KINDS = {"task_reward", "task_budget", "wheel", "tower_prize", "promo", "arena_hold", "arena_refund", "arena_prize"}
+_DETAIL_KINDS = {"task_reward", "task_budget", "wheel", "tower_prize", "promo", "arena_hold", "arena_refund", "arena_prize",
+                 "partner_sale", "partner_purchase"}
 
 
 def kind_of(operation_type: str, balance_type: str | None) -> str:

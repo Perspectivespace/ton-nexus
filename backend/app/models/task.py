@@ -3,7 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -31,6 +31,10 @@ class Task(Base):
     xp_reward: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     # снимок bp комиссии при создании (visit); None — старые задания → task_platform_commission_bp
     commission_bp: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # «Партнёрская услуга»: кто получает деньги с продаж (reward = цена для покупателя, commission_bp = комиссия)
+    partner_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -65,3 +69,27 @@ class TaskSubmission(Base):
     )
 
     task = relationship("Task", back_populates="submissions")
+
+
+class TaskPurchase(Base):
+    """Покупка партнёрской услуги. Одна на покупателя и задание (повторный клик — та же покупка).
+
+    Суммы в нанотонах: amount_nano = partner_nano + fee_nano. fee_nano — доход платформы
+    (как arena_rooms.commission_nano), отдельной проводки на счёт платформы нет.
+    """
+
+    __tablename__ = "task_purchases"
+    __table_args__ = (UniqueConstraint("task_id", "buyer_id", name="uq_task_purchases_task_buyer"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
+    buyer_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    partner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    amount_nano: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    fee_nano: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    partner_nano: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    fee_bp: Mapped[int] = mapped_column(Integer, nullable=False)
+    xp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
