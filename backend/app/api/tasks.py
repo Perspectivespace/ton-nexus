@@ -29,7 +29,8 @@ class TaskCreateBody(BaseModel):
     min_level: int = 1
     xp_reward: int | None = None  # для visit — из тарифа; для campaign — тариф по умолчанию
     publish: bool = False
-    commission_bp: int | None = Field(default=None, ge=0, le=10000)  # только campaign (override)
+    commission_bp: int | None = Field(default=None, ge=0, le=10000)  # campaign/partner (override)
+    partner_telegram_id: int | None = None  # только partner: кто получает деньги с продаж
 
 
 class TaskUpdateBody(BaseModel):
@@ -57,6 +58,10 @@ class TaskOut(BaseModel):
     xp_reward: int
     creator_id: int
     expires_at: str | None = None
+    commission_bp: int | None = None
+    partner_user_id: int | None = None
+    partner_name: str | None = None
+    purchased: bool | None = None  # partner: купил ли текущий пользователь
 
 
 class SubmitBody(BaseModel):
@@ -79,14 +84,27 @@ class SubmissionOut(BaseModel):
     review_note: str | None
 
 
-def _task_out(v: tasks_svc.TaskView) -> TaskOut:
-    return TaskOut(
+def _task_out(v: tasks_svc.TaskView, **extra) -> TaskOut:
+    return TaskOut(**extra,
         id=v.id, title=v.title, description=v.description, task_type=v.task_type,
         target_url=v.target_url, reward=v.reward, total_slots=v.total_slots,
         filled_slots=v.filled_slots, status=v.status, min_level=v.min_level,
         xp_reward=v.xp_reward, creator_id=v.creator_id,
         expires_at=v.expires_at.isoformat() if v.expires_at else None,
+        commission_bp=v.commission_bp, partner_user_id=v.partner_user_id,
     )
+
+
+async def _partner_extra(db: AsyncSession, v: tasks_svc.TaskView, user: User) -> dict:
+    if v.task_type != tasks_svc.PARTNER:
+        return {}
+    name = None
+    if v.partner_user_id:
+        p = await db.get(User, v.partner_user_id)
+        if p:
+            name = (f"@{p.username}" if p.username else None) or p.first_name or f"#{p.id}"
+    bought = await tasks_svc.has_purchased(db, task_id=v.id, user_id=user.id)
+    return {"partner_name": name, "purchased": bought}
 
 
 @router.get("", response_model=list[TaskOut])
@@ -135,8 +153,9 @@ async def review_submission(submission_id: int, body: ReviewBody,
 async def get_task(task_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     try:
         t = await tasks_svc.get_task(db, task_id)
+        extra = await _partner_extra(db, t, user)
         await db.commit()
-        return _task_out(t)
+        return _task_out(t, **extra)
     except TaskError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
@@ -145,8 +164,8 @@ async def get_task(task_id: int, user: User = Depends(get_current_user), db: Asy
 class QuoteBody(BaseModel):
     task_type: str = "visit"
     total_slots: int = Field(ge=1, le=10000)
-    reward: Decimal | None = None  # только campaign
-    commission_bp: int | None = Field(default=None, ge=0, le=10000)  # только campaign
+    reward: Decimal | None = None  # campaign: награда; partner: цена для покупателя
+    commission_bp: int | None = Field(default=None, ge=0, le=10000)  # campaign/partner override
 
 
 class QuoteOut(BaseModel):
@@ -167,13 +186,24 @@ async def quote_task(
     db: AsyncSession = Depends(get_db),
 ):
     """Живая цена для формы создания: visit (тариф) или campaign (ручная награда, только владелец)."""
-    if body.task_type not in ("visit", "campaign"):
-        raise HTTPException(status_code=400, detail="quote только для visit и campaign")
-    if body.task_type == "campaign" and not is_platform_owner(user):
-        raise HTTPException(status_code=403, detail="«Кампания» только для владельца")
+    if body.task_type not in ("visit", "campaign", "partner"):
+        raise HTTPException(status_code=400, detail="quote только для visit, campaign и partner")
+    if body.task_type in ("campaign", "partner") and not is_platform_owner(user):
+        raise HTTPException(status_code=403, detail="этот тип только для владельца")
     raw = await get_setting(db, tariff_svc.KEY)
     tariff = raw if isinstance(raw, dict) else tariff_svc.DEFAULT
     try:
+        if body.task_type == "partner":
+            if body.reward is None:
+                raise tariff_svc.TaskTariffError("цена: укажите сумму TON")
+            pq = tariff_svc.quote_partner(tariff, amount=body.reward, fee_bp=body.commission_bp)
+            await db.commit()
+            # reward/total — цена для покупателя, payout — партнёру, commission — платформе
+            return QuoteOut(
+                task_type="partner", reward=Decimal(pq.amount), xp=pq.xp,
+                payout=Decimal(pq.partner_gets), commission=Decimal(pq.fee),
+                total=Decimal(pq.amount), commission_bp=pq.fee_bp, slots=body.total_slots,
+            )
         if body.task_type == "campaign":
             if body.reward is None:
                 raise tariff_svc.TaskTariffError("награда за выполнение: укажите сумму TON")
@@ -204,7 +234,7 @@ async def create_task(body: TaskCreateBody, user: User = Depends(get_current_use
             db, creator=user, title=body.title, description=body.description, reward=body.reward,
             total_slots=body.total_slots, task_type=body.task_type, target_url=body.target_url,
             min_level=body.min_level, xp_reward=body.xp_reward, publish=body.publish,
-            commission_bp=body.commission_bp)
+            commission_bp=body.commission_bp, partner_telegram_id=body.partner_telegram_id)
         await db.commit()
         return _task_out(t)
     except TaskPermissionError as e:
@@ -317,4 +347,52 @@ async def submit_task(task_id: int, body: SubmitBody,
         return SubmissionOut(id=sub.id, task_id=sub.task_id, user_id=sub.user_id, status=sub.status,
                              proof_text=sub.proof_text, proof_url=sub.proof_url, review_note=sub.review_note)
     except (TaskStateError, TaskError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/{task_id}/close", response_model=TaskOut)
+async def close_task(task_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    try:
+        t = await tasks_svc.close_task(db, task_id=task_id, actor=user)
+        await db.commit()
+        return _task_out(t)
+    except TaskPermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except (TaskStateError, TaskError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+class PurchaseOut(BaseModel):
+    purchase_id: int
+    task_id: int
+    already: bool
+    amount: Decimal
+    fee: Decimal
+    partner_gets: Decimal
+    xp: int
+    balance: Decimal
+
+
+@router.post("/{task_id}/buy", response_model=PurchaseOut)
+async def buy_task(task_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Купить партнёрскую услугу с баланса. Повторный запрос возвращает ту же покупку (already=true)."""
+    try:
+        r = await tasks_svc.buy_partner(db, buyer=user, task_id=task_id)
+        p = r.purchase
+        out = PurchaseOut(
+            purchase_id=p.id, task_id=p.task_id, already=r.already,
+            amount=tasks_svc._ton_from_nano(p.amount_nano), fee=tasks_svc._ton_from_nano(p.fee_nano),
+            partner_gets=tasks_svc._ton_from_nano(p.partner_nano), xp=p.xp,
+            balance=Decimal((await db.get(User, user.id)).balance),
+        )
+        await db.commit()
+        return out
+    except TaskBudgetError as e:
+        await db.rollback()
+        raise HTTPException(status_code=402, detail=str(e)) from e
+    except TaskPermissionError as e:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except (TaskStateError, TaskError) as e:
+        await db.rollback()
         raise HTTPException(status_code=400, detail=str(e)) from e
