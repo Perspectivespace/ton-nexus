@@ -10,6 +10,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.services import tasks as tasks_svc
+from app.services import task_owner as owner_svc
 from app.services import task_tariff as tariff_svc
 from app.services.economy import get_setting
 from app.services.balance import InsufficientBalanceError
@@ -120,6 +121,19 @@ async def list_tasks_pending_approval(user: User = Depends(get_current_user), db
     if not can_approve_ambassador_task(user):
         raise HTTPException(status_code=403, detail="admin or owner required")
     items = await tasks_svc.list_pending_approval(db)
+    await db.commit()
+    return [_task_out(t) for t in items]
+
+
+@router.get("/owner/all", response_model=list[TaskOut])
+async def owner_list_tasks(status: str | None = Query(None, max_length=16), limit: int = Query(50, ge=1, le=100),
+                           offset: int = Query(0, ge=0),
+                           user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Все задания любого статуса — для владельца."""
+    try:
+        items = await owner_svc.list_all(db, actor=user, status=status, limit=limit, offset=offset)
+    except TaskPermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
     await db.commit()
     return [_task_out(t) for t in items]
 
@@ -396,3 +410,115 @@ async def buy_task(task_id: int, user: User = Depends(get_current_user), db: Asy
     except (TaskStateError, TaskError) as e:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+# ── Управление владельцем ─────────────────────────────────────────────────────
+
+
+class OwnerActionOut(BaseModel):
+    id: int
+    action: str
+    mode: str | None
+    actor_id: int | None
+    creator_delta: Decimal  # + списано с создателя, − возвращено
+    platform_delta: Decimal  # + платформа добавила, − оставила себе
+    details: str | None
+    created_at: str | None
+
+
+class OwnerSummaryOut(BaseModel):
+    task: TaskOut
+    pending: int
+    paid_out: Decimal
+    creator_payout: Decimal
+    creator_commission: Decimal
+    platform_payout: Decimal
+    charged: Decimal
+    refundable: Decimal
+    commission_bp: int
+    log: list[OwnerActionOut]
+
+
+class ManageOut(BaseModel):
+    task: TaskOut
+    already: bool
+    creator_delta: Decimal
+    platform_delta: Decimal
+    note: str | None
+
+
+class AddSlotsBody(BaseModel):
+    count: int = Field(ge=1, le=10000)
+    mode: str = "charge"  # charge — с баланса создателя; free — за счёт платформы
+
+
+class PriceBody(BaseModel):
+    reward: Decimal
+    mode: str = "creator"  # creator — доплата/возврат создателю; absorb — разницу берёт платформа
+
+
+def _d(n: int) -> Decimal:
+    return owner_svc.from_nano(n) if n >= 0 else -owner_svc.from_nano(-n)
+
+
+def _manage_out(r: owner_svc.ManageResult) -> ManageOut:
+    return ManageOut(task=_task_out(r.task), already=r.already, creator_delta=_d(r.creator_delta_nano),
+                     platform_delta=_d(r.platform_delta_nano), note=r.note)
+
+
+async def _manage(db: AsyncSession, fn):
+    try:
+        r = await fn()
+        out = _manage_out(r)
+        await db.commit()
+        return out
+    except TaskPermissionError as e:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskBudgetError as e:
+        await db.rollback()
+        raise HTTPException(status_code=402, detail=str(e)) from e
+    except (TaskStateError, TaskError) as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.get("/{task_id}/owner", response_model=OwnerSummaryOut)
+async def owner_summary(task_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    try:
+        s = await owner_svc.summary(db, task_id=task_id, actor=user)
+    except TaskPermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except TaskError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    out = OwnerSummaryOut(
+        task=_task_out(s.task), pending=s.pending, paid_out=_d(s.paid_out_nano),
+        creator_payout=_d(s.creator_payout_nano), creator_commission=_d(s.creator_commission_nano),
+        platform_payout=_d(s.platform_payout_nano), charged=_d(s.charged_nano),
+        refundable=_d(s.refundable_nano), commission_bp=s.commission_bp,
+        log=[OwnerActionOut(id=a.id, action=a.action, mode=a.mode, actor_id=a.actor_id,
+                            creator_delta=_d(a.creator_delta_nano), platform_delta=_d(a.platform_delta_nano),
+                            details=a.details, created_at=a.created_at.isoformat() if a.created_at else None)
+             for a in s.log],
+    )
+    await db.commit()
+    return out
+
+
+@router.post("/{task_id}/owner/cancel", response_model=ManageOut)
+async def owner_cancel(task_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await _manage(db, lambda: owner_svc.cancel_task(db, task_id=task_id, actor=user))
+
+
+@router.post("/{task_id}/owner/add-slots", response_model=ManageOut)
+async def owner_add_slots(task_id: int, body: AddSlotsBody,
+                          user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await _manage(db, lambda: owner_svc.add_slots(db, task_id=task_id, actor=user,
+                                                         count=body.count, mode=body.mode))
+
+
+@router.post("/{task_id}/owner/price", response_model=ManageOut)
+async def owner_price(task_id: int, body: PriceBody,
+                      user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await _manage(db, lambda: owner_svc.set_price(db, task_id=task_id, actor=user,
+                                                         reward=body.reward, mode=body.mode))

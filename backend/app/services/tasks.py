@@ -421,9 +421,14 @@ async def update_task(
         left_new = new_slots - task.filled_slots
         extra = _q(new_reward * left_new - old_reward * left_old)
         if extra > 0:
+            from app.services import task_owner as owner_svc
+
+            await owner_svc.ensure_accounting(session, task)
             total = extra + await _commission(session, extra, bp=task.commission_bp)
             await _charge_creator(session, task, total, f"Доплата бюджета задания #{task.id}")
             task.budget_locked = _q(Decimal(task.budget_locked) + total)
+            task.creator_payout_nano += int(extra * tariff_svc.NANO_PER_TON)
+            task.creator_commission_nano += int((total - extra) * tariff_svc.NANO_PER_TON)
         task.reward = new_reward
         task.total_slots = new_slots
     else:
@@ -536,6 +541,10 @@ async def publish_task(session: AsyncSession, *, task_id: int, actor: User) -> T
 
     await _charge_creator(session, task, total, f"Бюджет задания #{task.id}")
     task.budget_locked = total
+    # учёт в нанотонах (services/task_owner): выплаты и комиссия создателя
+    task.creator_payout_nano = int(payout * tariff_svc.NANO_PER_TON)
+    task.creator_commission_nano = int((total - payout) * tariff_svc.NANO_PER_TON)
+    task.platform_payout_nano = task.platform_payout_nano or 0
     task.status = "active"
     await session.flush()
     return _view(task)
@@ -681,7 +690,12 @@ async def review_submission(
         if task.filled_slots >= task.total_slots:
             raise TaskStateError("no slots left")
         reward = Decimal(task.reward)
-        if await paid_out(session, task.id) + reward > Decimal(task.budget_locked or 0):
+        if task.creator_payout_nano is not None:
+            # пул выплат: деньги создателя + платформы (без комиссии)
+            pool = Decimal(int(task.creator_payout_nano) + int(task.platform_payout_nano or 0)) / tariff_svc.NANO_PER_TON
+        else:
+            pool = Decimal(task.budget_locked or 0)
+        if await paid_out(session, task.id) + reward > pool:
             raise TaskBudgetError(
                 "Бюджет задания исчерпан: эта выплата превысила бы оплаченный бюджет. Заявка осталась на проверке."
             )
@@ -700,10 +714,18 @@ async def review_submission(
             await add_xp(session, worker, int(task.xp_reward), "task")
 
         task.filled_slots += 1
-        if task.filled_slots >= task.total_slots:
+        if task.filled_slots >= task.total_slots and task.status != "cancelled":
             task.status = "completed"
     else:
         sub.status = "rejected"
+        if task.status == "cancelled":
+            # задание отменено: резерв под эту заявку освободился — вернуть создателю
+            from app.services import task_owner as owner_svc
+
+            await session.flush()
+            await owner_svc.refund_free(
+                session, task, label=f"Возврат: заявка отклонена, задание #{task.id} отменено"
+            )
 
     await session.flush()
     return sub

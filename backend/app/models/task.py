@@ -31,6 +31,11 @@ class Task(Base):
     xp_reward: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     # снимок bp комиссии при создании (visit); None — старые задания → task_platform_commission_bp
     commission_bp: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Учёт бюджета в нанотонах (с PR «управление заданиями»). NULL — старое задание, разбивка
+    # оценивается из budget_locked при первом действии владельца (services/task_owner.ensure_accounting).
+    creator_payout_nano: Mapped[int | None] = mapped_column(BigInteger, nullable=True)  # выплаты, оплаченные создателем
+    creator_commission_nano: Mapped[int | None] = mapped_column(BigInteger, nullable=True)  # комиссия, оплаченная создателем
+    platform_payout_nano: Mapped[int | None] = mapped_column(BigInteger, nullable=True)  # выплаты за счёт платформы
     # «Партнёрская услуга»: кто получает деньги с продаж (reward = цена для покупателя, commission_bp = комиссия)
     partner_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
@@ -90,6 +95,28 @@ class TaskPurchase(Base):
     partner_nano: Mapped[int] = mapped_column(BigInteger, nullable=False)
     fee_bp: Mapped[int] = mapped_column(Integer, nullable=False)
     xp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class TaskOwnerAction(Base):
+    """Журнал действий владельца с заданиями: кто, что, когда и сколько денег сдвинулось.
+
+    creator_delta_nano: + списано с создателя, − возвращено создателю.
+    platform_delta_nano: + платформа добавила в бюджет, − платформа оставила себе (доход).
+    """
+
+    __tablename__ = "task_owner_actions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), index=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    creator_delta_nano: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    platform_delta_nano: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
