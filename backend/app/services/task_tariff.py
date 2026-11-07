@@ -282,13 +282,18 @@ def quote_campaign(
     )
 
 
-def quote_partner(tariff: dict[str, Any], *, amount: Any) -> PartnerQuote:
-    """Покупатель платит amount; партнёр получает amount − fee; fee — платформе."""
+def quote_partner(tariff: dict[str, Any], *, amount: Any, fee_bp: Any = None) -> PartnerQuote:
+    """Покупатель платит amount; партнёр получает amount − fee; fee — платформе.
+
+    Округление: fee = floor(amount_nano × bp / 10000), затем вниз до кванта баланса (10 нанотон).
+    Остаток округления уходит партнёру, поэтому amount == partner_gets + fee ровно до нанотона.
+    ``fee_bp`` — override на задании; None — ``task_tariff.partner.fee_bp``.
+    """
     cfg = normalize(tariff)["partner"]
-    amount_nano = ton_to_nano(amount, name="сумма покупки")
-    if amount_nano > MAX_AMOUNT_NANO:
-        raise TaskTariffError("сумма покупки: не больше 10000 TON")
-    bp = int(cfg["fee_bp"])
+    amount_nano = ton_to_nano(amount, name="цена")
+    if amount_nano > MAX_REWARD_NANO:
+        raise TaskTariffError("цена: не больше 100 TON")
+    bp = int(cfg["fee_bp"]) if fee_bp is None else _bp(fee_bp, "комиссия с продажи")
     fee_nano = _commission_nano(amount_nano, bp)
     partner_gets_nano = amount_nano - fee_nano
     if partner_gets_nano < 0:
