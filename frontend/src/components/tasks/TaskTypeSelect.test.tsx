@@ -20,9 +20,14 @@ describe("TaskTypeSelect", () => {
     expect(owner).toContain("Кампания");
   });
 
-  it("обычный пользователь видит только «Переход», админ ещё и старые типы", () => {
+  it("старые типы (manual_proof, link) больше нельзя выбрать никому", () => {
     expect(allowedTaskTypes({})).toEqual(["visit"]);
-    expect(allowedTaskTypes({ is_admin: true })).toEqual(["visit", "manual_proof", "link"]);
+    expect(allowedTaskTypes({ is_admin: true })).toEqual(["visit"]);
+    expect(allowedTaskTypes({ is_ambassador: true })).toEqual(["visit"]);
+    expect(allowedTaskTypes({ is_owner: true })).toEqual(["visit", "campaign", "partner"]);
+    const html = renderToStaticMarkup(<TaskTypeSelect me={{ is_owner: true }} value="visit" onChange={noop} />);
+    expect(html).not.toContain("manual_proof");
+    expect(html).not.toContain('value="link"');
   });
 
   it("блок цены показывает ручную награду кампании и override комиссии", () => {

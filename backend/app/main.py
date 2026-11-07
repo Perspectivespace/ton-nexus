@@ -53,6 +53,24 @@ async def arena_loop():
         await asyncio.sleep(ARENA_TICK_S)
 
 
+# Скриншоты-подтверждения: проверенные удаляются через 23 ч, шаг цикла 10 мин → не позже 24 ч
+PROOF_CLEANUP_S = 600
+
+
+async def proof_cleanup_loop():
+    """Фоновая очистка скриншотов заданий (очередь — task_proofs.delete_after). Ошибки не останавливают цикл."""
+    from app.services.task_proofs import cleanup_once
+
+    while True:
+        try:
+            n = await cleanup_once(SessionLocal)
+            if n:
+                logging.getLogger(__name__).info("[proofs] cleanup: удалено %s", n)
+        except Exception:
+            logging.getLogger(__name__).exception("[proofs] cleanup error")
+        await asyncio.sleep(PROOF_CLEANUP_S)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -61,7 +79,11 @@ async def lifespan(app: FastAPI):
             await session.commit()
     except Exception as e:
         print(f"[startup] seed_economy skipped: {e}")
-    tasks = [asyncio.create_task(deposit_loop()), asyncio.create_task(arena_loop())]
+    tasks = [
+        asyncio.create_task(deposit_loop()),
+        asyncio.create_task(arena_loop()),
+        asyncio.create_task(proof_cleanup_loop()),
+    ]
     yield
     for task in tasks:
         task.cancel()

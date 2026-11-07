@@ -27,3 +27,6 @@ dist/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Скриншоты-подтверждения заданий (хранятся на сервере, не в репозитории)
+backend/var/

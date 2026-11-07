@@ -33,3 +33,36 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
+
+async function rawError(res: Response): Promise<ApiError> {
+  let detail = res.statusText;
+  try {
+    const body = await res.json();
+    const d = body.detail ?? body;
+    detail = typeof d === "string" ? d || res.statusText : JSON.stringify(d);
+  } catch {
+    /* */
+  }
+  return new ApiError(res.status, String(detail));
+}
+
+/** Загрузка файла «как есть» (тело запроса — сами байты, Content-Type — тип файла). */
+export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
+  const headers = new Headers();
+  headers.set("Content-Type", file.type || "application/octet-stream");
+  const initData = getInitData();
+  if (initData) headers.set("X-Telegram-Init-Data", initData);
+  const res = await fetch(`${BASE}${path}`, { method: "POST", body: file, headers });
+  if (!res.ok) throw await rawError(res);
+  return res.json() as Promise<T>;
+}
+
+/** Закрытая картинка (только с заголовком авторизации) → Blob; в <img> её отдают через URL.createObjectURL. */
+export async function apiBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const initData = getInitData();
+  if (initData) headers.set("X-Telegram-Init-Data", initData);
+  const res = await fetch(`${BASE}${path}`, { headers, cache: "no-store" });
+  if (!res.ok) throw await rawError(res);
+  return res.blob();
+}

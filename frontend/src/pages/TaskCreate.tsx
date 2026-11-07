@@ -6,7 +6,6 @@ import {
   StatusPill,
   LoadingPanel,
   ErrorPanel,
-  Readout,
   Field,
   useToast,
 } from "@/components/ui";
@@ -14,7 +13,12 @@ import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
 import { VisitPriceBlock } from "@/components/tasks/VisitPriceBlock";
 import { PartnerPriceBlock } from "@/components/tasks/PartnerPriceBlock";
-import { TaskTypeSelect, allowedTaskTypes, type TaskType } from "@/components/tasks/TaskTypeSelect";
+import {
+  TaskTypeSelect,
+  allowedTaskTypes,
+  PROOF_TASK_TYPES,
+  type TaskType,
+} from "@/components/tasks/TaskTypeSelect";
 
 /** «12.5» (%) → 1250 bp; пусто → null (тариф); мусор → NaN */
 function pctToBp(v: string): number | null {
@@ -35,7 +39,6 @@ export function TaskCreate() {
   const [description, setDescription] = useState("");
   const [reward, setReward] = useState("0.05");
   const [slots, setSlots] = useState("10");
-  const [xp, setXp] = useState("10");
   const [minLevel, setMinLevel] = useState("1");
   const [targetUrl, setTargetUrl] = useState("");
   const [taskType, setTaskType] = useState<TaskType>("visit");
@@ -43,6 +46,7 @@ export function TaskCreate() {
   const [campaignBp, setCampaignBp] = useState("");
   const [campaignXp, setCampaignXp] = useState("");
   const [partnerTg, setPartnerTg] = useState("");
+  const [proofRequired, setProofRequired] = useState(false);
   const toast = useToast();
 
   const canDirectPublish = !!(me?.is_owner || me?.is_admin);
@@ -51,8 +55,9 @@ export function TaskCreate() {
   const isPartner = taskType === "partner";
   const isManual = isCampaign || isPartner; // цену вписывает владелец
   const isPriced = isVisit || isManual;
+  const proofAllowed = PROOF_TASK_TYPES.includes(taskType);
   const partnerTgN = /^\d{1,15}$/.test(partnerTg.trim()) ? Number(partnerTg.trim()) : null;
-  // visit — любой вошедший; campaign и partner — только владелец; legacy — амбассадор+
+  // visit — любой вошедший; campaign и partner — только владелец
 
   const slotsN = Math.max(1, Number(slots) || 1);
   const bpOverride = pctToBp(campaignBp);
@@ -77,16 +82,15 @@ export function TaskCreate() {
       const t = await create.mutateAsync({
         title: title.trim(),
         description: description.trim(),
-        ...(isVisit
-          ? {}
-          : isManual
-            ? {
-                reward: rewardClean,
-                commission_bp: bpOverride,
-                xp_reward: campaignXp.trim() ? Number(campaignXp) || 0 : null,
-                ...(isPartner ? { partner_telegram_id: partnerTgN } : {}),
-              }
-            : { reward, xp_reward: Number(xp) || 0 }),
+        ...(isManual
+          ? {
+              reward: rewardClean,
+              commission_bp: bpOverride,
+              xp_reward: campaignXp.trim() ? Number(campaignXp) || 0 : null,
+              ...(isPartner ? { partner_telegram_id: partnerTgN } : {}),
+            }
+          : {}),
+        proof_required: proofAllowed && proofRequired,
         total_slots: Number(slots) || 1,
         task_type: taskType,
         target_url: targetUrl.trim() || null,
@@ -124,14 +128,11 @@ export function TaskCreate() {
     return (
       <div className="space-y-4">
         <ScreenHeader eyebrow="Заработок" title="Новое задание" />
-        <ErrorPanel message="Этот тип доступен амбассадору, админу и владельцу. Выберите «Переход на сторонний ресурс»." />
+        <ErrorPanel message="Этот тип доступен только владельцу. Выберите «Переход на сторонний ресурс»." />
         <BackLink to="/tasks" label="Лента" />
       </div>
     );
   }
-
-  const rewardN = Number(reward) || 0;
-  const budgetHint = (rewardN * slotsN * 1.1).toFixed(4);
 
   return (
     <div className="space-y-5">
@@ -151,25 +152,14 @@ export function TaskCreate() {
             ? "Переход: цена и комиссия из тарифа владельца. Ссылка обязательна; награду исполнителю задаёт тариф."
             : isCampaign
               ? "Кампания: награду и условия вписываете вручную. Комиссия и XP по умолчанию из тарифа, можно поменять."
-              : isPartner
-                ? "Партнёрская услуга: покупатель платит цену со своего баланса, партнёр получает её за вычетом комиссии платформы."
-              : canDirectPublish
-              ? "Админ или владелец: можно сразу опубликовать — бюджет (награда × места + комиссия) спишется с баланса."
-              : "Амбассадор: задание уйдёт на одобрение. После одобрения — публикация, бюджет уйдёт в холд."}
+              : "Партнёрская услуга: покупатель платит цену со своего баланса, партнёр получает её за вычетом комиссии платформы."}
         </p>
       </div>
 
       {isPartner ? (
         <PartnerPriceBlock quote={quote} loading={quoteQ.isFetching} />
-      ) : isPriced ? (
-        <VisitPriceBlock quote={quote} loading={quoteQ.isFetching} />
       ) : (
-        me && (
-          <div className="ui-cut grid grid-cols-2 gap-3 p-4">
-            <Readout label="Ваш баланс" value={Number(me.balance).toFixed(4)} unit="TON" />
-            <Readout label="Ориентир бюджета" value={budgetHint} unit="TON" hint="×1.1 комиссия" />
-          </div>
-        )
+        <VisitPriceBlock quote={quote} loading={quoteQ.isFetching} />
       )}
 
       <form onSubmit={onSubmit} className="ui-cut space-y-4 p-5">
@@ -217,8 +207,8 @@ export function TaskCreate() {
           </Field>
         </div>
 
-        {(isVisit || isManual || taskType === "link") && (
-          <Field label={isVisit ? "Ссылка на ресурс" : isManual ? "Ссылка (необязательно)" : "Ссылка на цель"}>
+        {isPriced && (
+          <Field label={isVisit ? "Ссылка на ресурс" : "Ссылка (необязательно)"}>
             <input
               className="ui-input"
               value={targetUrl}
@@ -297,7 +287,7 @@ export function TaskCreate() {
               </p>
             )}
           </div>
-        ) : isVisit ? (
+        ) : (
           <Field label="Число выполнений">
             <input
               className="ui-input"
@@ -307,30 +297,23 @@ export function TaskCreate() {
               disabled={create.isPending}
             />
           </Field>
-        ) : (
-          <div className="grid grid-cols-3 gap-2">
-            <Field label="Награда, TON">
-              <input
-                className="ui-input"
-                value={reward}
-                onChange={(e) => setReward(e.target.value)}
-                required
-                disabled={create.isPending}
-              />
-            </Field>
-            <Field label="Мест (исполнителей)">
-              <input
-                className="ui-input"
-                value={slots}
-                onChange={(e) => setSlots(e.target.value)}
-                required
-                disabled={create.isPending}
-              />
-            </Field>
-            <Field label="XP" unit="XP">
-              <input className="ui-input" value={xp} onChange={(e) => setXp(e.target.value)} disabled={create.isPending} />
-            </Field>
-          </div>
+        )}
+
+        {proofAllowed && (
+          <label className="flex items-start gap-2 text-[13px] leading-snug text-[var(--text-dim)]" data-testid="proof-required">
+            <input
+              type="checkbox"
+              checked={proofRequired}
+              onChange={(e) => setProofRequired(e.target.checked)}
+              disabled={create.isPending}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
+            />
+            <span>
+              <span className="text-[var(--text)]">Подтверждение скриншотом</span>
+              <br />
+              Исполнитель приложит картинку; видите только вы, удаляется через 24 ч после проверки.
+            </span>
+          </label>
         )}
 
         {canDirectPublish && (

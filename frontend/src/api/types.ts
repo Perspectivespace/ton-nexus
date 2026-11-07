@@ -53,6 +53,7 @@ export type TaskOut = {
   min_level: number;
   xp_reward: number;
   creator_id: number;
+  proof_required?: boolean;
 };
 
 export type DeployStatus = "queued" | "running" | "success" | "failed";

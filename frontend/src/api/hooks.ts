@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "./client";
+import { api, apiBlob, apiUpload } from "./client";
 import { setServerClock } from "@/lib/cityPhase";
 import type {
   DeployJob,
@@ -207,6 +207,7 @@ export type TaskDetail = {
   partner_user_id?: number | null;
   partner_name?: string | null;
   purchased?: boolean | null;
+  proof_required?: boolean;
 };
 
 export type PurchaseOut = {
@@ -253,6 +254,9 @@ export type SubmissionOut = {
   proof_text: string | null;
   proof_url: string | null;
   review_note: string | null;
+  proof_image_id?: number | null;
+  proof_image_state?: "available" | "deleted" | null;
+  proof_delete_after?: string | null;
 };
 
 export function useTask(taskId: number | null) {
@@ -266,7 +270,7 @@ export function useTask(taskId: number | null) {
 export function useTaskSubmit(taskId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { proof_text?: string | null; proof_url?: string | null }) =>
+    mutationFn: (body: { proof_text?: string | null; proof_url?: string | null; proof_upload_id?: number | null }) =>
       api<SubmissionOut>(`/api/v1/tasks/${taskId}/submit`, {
         method: "POST",
         body: JSON.stringify(body),
@@ -276,6 +280,38 @@ export function useTaskSubmit(taskId: number) {
       qc.invalidateQueries({ queryKey: ["task", taskId] });
     },
   });
+}
+
+export type ProofUploadOut = { id: number; mime: string; size: number };
+
+/** Скриншот выполнения: сырые байты картинки → id загрузки для /submit */
+export function useProofUpload(taskId: number) {
+  return useMutation({
+    mutationFn: (file: Blob) => apiUpload<ProofUploadOut>(`/api/v1/tasks/${taskId}/proof-upload`, file),
+  });
+}
+
+/** Скриншот заявки для проверяющего: blob → object URL (освобождается при размонтировании) */
+export function useProofImage(proofId: number | null | undefined) {
+  const q = useQuery({
+    queryKey: ["proof-image", proofId],
+    queryFn: () => apiBlob(`/api/v1/tasks/proofs/${proofId}/image`),
+    enabled: proofId != null,
+    staleTime: Infinity,
+    gcTime: 60_000,
+    retry: false,
+  });
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!q.data) {
+      setUrl(null);
+      return;
+    }
+    const u = URL.createObjectURL(q.data);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [q.data]);
+  return { url, isLoading: q.isLoading, error: q.error };
 }
 
 export type EconomySetting = {
@@ -317,6 +353,9 @@ export type InboxSubmission = {
   proof_text: string | null;
   proof_url: string | null;
   review_note: string | null;
+  proof_image_id?: number | null;
+  proof_image_state?: "available" | "deleted" | null;
+  proof_delete_after?: string | null;
 };
 
 export function usePendingSubmissions(enabled = true, refetchInterval?: number) {
@@ -545,6 +584,7 @@ export type TaskCreateBody = {
   publish?: boolean;
   commission_bp?: number | null;
   partner_telegram_id?: number | null;
+  proof_required?: boolean;
 };
 
 export type TaskQuote = {

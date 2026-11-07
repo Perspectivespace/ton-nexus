@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.services import tasks as tasks_svc
 from app.services import task_owner as owner_svc
+from app.services import task_proofs as proofs_svc
 from app.services import task_tariff as tariff_svc
 from app.services.economy import get_setting
 from app.services.balance import InsufficientBalanceError
@@ -25,13 +26,14 @@ class TaskCreateBody(BaseModel):
     description: str = Field(min_length=3)
     reward: Decimal | None = None  # для visit игнорируется — берётся из тарифа
     total_slots: int = Field(ge=1, le=10000)
-    task_type: str = "manual_proof"
+    task_type: str = "visit"
     target_url: str | None = None
     min_level: int = 1
     xp_reward: int | None = None  # для visit — из тарифа; для campaign — тариф по умолчанию
     publish: bool = False
     commission_bp: int | None = Field(default=None, ge=0, le=10000)  # campaign/partner (override)
     partner_telegram_id: int | None = None  # только partner: кто получает деньги с продаж
+    proof_required: bool = False  # visit/campaign: исполнитель прикладывает скриншот
 
 
 class TaskUpdateBody(BaseModel):
@@ -63,11 +65,13 @@ class TaskOut(BaseModel):
     partner_user_id: int | None = None
     partner_name: str | None = None
     purchased: bool | None = None  # partner: купил ли текущий пользователь
+    proof_required: bool = False
 
 
 class SubmitBody(BaseModel):
     proof_text: str | None = None
     proof_url: str | None = None
+    proof_upload_id: int | None = None  # id из POST /tasks/{id}/proof-upload
 
 
 class ReviewBody(BaseModel):
@@ -83,6 +87,33 @@ class SubmissionOut(BaseModel):
     proof_text: str | None
     proof_url: str | None
     review_note: str | None
+    proof_image_id: int | None = None  # скриншот: GET /tasks/proofs/{id}/image (только проверяющему)
+    proof_image_state: str | None = None  # available | deleted
+    proof_delete_after: str | None = None
+
+
+class ProofUploadOut(BaseModel):
+    id: int
+    mime: str
+    size: int
+
+
+def _sub_out(s, proof=None) -> SubmissionOut:
+    extra = {}
+    if proof is not None:
+        extra = {
+            "proof_image_id": proof.id,
+            "proof_image_state": "deleted" if proof.deleted_at is not None else "available",
+            "proof_delete_after": proof.delete_after.isoformat() if proof.delete_after else None,
+        }
+    return SubmissionOut(id=s.id, task_id=s.task_id, user_id=s.user_id, status=s.status,
+                         proof_text=s.proof_text, proof_url=s.proof_url, review_note=s.review_note, **extra)
+
+
+def _reject_legacy(task_type: str | None) -> None:
+    if task_type is not None and task_type.strip() in tasks_svc.LEGACY_TYPES:
+        raise HTTPException(status_code=400, detail="Этот тип задания больше не создаётся: выберите «Переход» "
+                                                    "(можно со скриншотом) или «Кампанию».")
 
 
 def _task_out(v: tasks_svc.TaskView, **extra) -> TaskOut:
@@ -93,6 +124,7 @@ def _task_out(v: tasks_svc.TaskView, **extra) -> TaskOut:
         xp_reward=v.xp_reward, creator_id=v.creator_id,
         expires_at=v.expires_at.isoformat() if v.expires_at else None,
         commission_bp=v.commission_bp, partner_user_id=v.partner_user_id,
+        proof_required=v.proof_required,
     )
 
 
@@ -141,9 +173,9 @@ async def owner_list_tasks(status: str | None = Query(None, max_length=16), limi
 @router.get("/inbox/pending", response_model=list[SubmissionOut])
 async def pending_submissions(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     items = await tasks_svc.list_pending_for_creator(db, creator=user)
+    proofs = await proofs_svc.for_submissions(db, [s.id for s in items])
     await db.commit()
-    return [SubmissionOut(id=s.id, task_id=s.task_id, user_id=s.user_id, status=s.status,
-                          proof_text=s.proof_text, proof_url=s.proof_url, review_note=s.review_note) for s in items]
+    return [_sub_out(s, proofs.get(s.id)) for s in items]
 
 
 @router.post("/submissions/{submission_id}/review", response_model=SubmissionOut)
@@ -152,9 +184,10 @@ async def review_submission(submission_id: int, body: ReviewBody,
     try:
         sub = await tasks_svc.review_submission(db, actor=user, submission_id=submission_id,
                                                  approve=body.approve, note=body.note)
+        proofs = await proofs_svc.for_submissions(db, [sub.id])
+        out = _sub_out(sub, proofs.get(sub.id))
         await db.commit()
-        return SubmissionOut(id=sub.id, task_id=sub.task_id, user_id=sub.user_id, status=sub.status,
-                             proof_text=sub.proof_text, proof_url=sub.proof_url, review_note=sub.review_note)
+        return out
     except TaskPermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except TaskBudgetError as e:
@@ -243,12 +276,14 @@ async def quote_task(
 
 @router.post("", response_model=TaskOut)
 async def create_task(body: TaskCreateBody, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    _reject_legacy(body.task_type)
     try:
         t = await tasks_svc.create_task(
             db, creator=user, title=body.title, description=body.description, reward=body.reward,
             total_slots=body.total_slots, task_type=body.task_type, target_url=body.target_url,
             min_level=body.min_level, xp_reward=body.xp_reward, publish=body.publish,
-            commission_bp=body.commission_bp, partner_telegram_id=body.partner_telegram_id)
+            commission_bp=body.commission_bp, partner_telegram_id=body.partner_telegram_id,
+            proof_required=body.proof_required)
         await db.commit()
         return _task_out(t)
     except TaskPermissionError as e:
@@ -264,6 +299,7 @@ async def create_task(body: TaskCreateBody, user: User = Depends(get_current_use
 @router.patch("/{task_id}", response_model=TaskOut)
 async def update_task(task_id: int, body: TaskUpdateBody,
                       user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    _reject_legacy(body.task_type)
     try:
         t = await tasks_svc.update_task(
             db, task_id=task_id, actor=user, title=body.title, description=body.description,
@@ -356,12 +392,62 @@ async def submit_task(task_id: int, body: SubmitBody,
                       user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     try:
         sub = await tasks_svc.submit(db, user=user, task_id=task_id,
-                                     proof_text=body.proof_text, proof_url=body.proof_url)
+                                     proof_text=body.proof_text, proof_url=body.proof_url,
+                                     proof_upload_id=body.proof_upload_id)
+        proofs = await proofs_svc.for_submissions(db, [sub.id])
+        out = _sub_out(sub, proofs.get(sub.id))
         await db.commit()
-        return SubmissionOut(id=sub.id, task_id=sub.task_id, user_id=sub.user_id, status=sub.status,
-                             proof_text=sub.proof_text, proof_url=sub.proof_url, review_note=sub.review_note)
+        return out
     except (TaskStateError, TaskError) as e:
+        await db.rollback()
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/{task_id}/proof-upload", response_model=ProofUploadOut)
+async def upload_proof(task_id: int, request: Request,
+                       user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Скриншот выполнения: тело запроса — сама картинка (PNG/JPEG/WebP, до 5 МБ), Content-Type image/*.
+    Метаданные (EXIF и т.п.) вырезаются, файл кладётся вне web root. Затем id передаётся в /submit."""
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > proofs_svc.MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Файл больше 5 МБ")
+    buf = bytearray()
+    async for chunk in request.stream():
+        buf.extend(chunk)
+        if len(buf) > proofs_svc.MAX_BYTES:
+            raise HTTPException(status_code=413, detail="Файл больше 5 МБ")
+    task = await db.get(tasks_svc.Task, task_id)
+    if not task or task.task_type not in tasks_svc.PROOF_TYPES:
+        raise HTTPException(status_code=404, detail="task not found")
+    try:
+        proof = await proofs_svc.store_upload(db, user=user, task=task, data=bytes(buf),
+                                              declared=request.headers.get("content-type"))
+        out = ProofUploadOut(id=proof.id, mime=proof.mime, size=proof.size)
+        await db.commit()
+        return out
+    except proofs_svc.ProofTooLarge as e:
+        await db.rollback()
+        raise HTTPException(status_code=413, detail=str(e)) from e
+    except proofs_svc.ProofError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.get("/proofs/{proof_id}/image")
+async def proof_image(proof_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Скриншот заявки — только проверяющему (создатель задания, админ, владелец). Не кэшируется."""
+    try:
+        data, mime = await proofs_svc.read_for_reviewer(db, proof_id=proof_id, actor=user)
+    except proofs_svc.ProofForbidden as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except proofs_svc.ProofError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    await db.commit()
+    return Response(content=data, media_type=mime, headers={
+        "Cache-Control": "no-store, private",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Disposition": "inline",
+    })
 
 
 @router.post("/{task_id}/close", response_model=TaskOut)
