@@ -203,7 +203,47 @@ export type TaskDetail = {
   xp_reward: number;
   creator_id: number;
   expires_at?: string | null;
+  commission_bp?: number | null;
+  partner_user_id?: number | null;
+  partner_name?: string | null;
+  purchased?: boolean | null;
 };
+
+export type PurchaseOut = {
+  purchase_id: number;
+  task_id: number;
+  already: boolean;
+  amount: string;
+  fee: string;
+  partner_gets: string;
+  xp: number;
+  balance: string;
+};
+
+/** Покупка партнёрской услуги с баланса; повтор возвращает ту же покупку (already) */
+export function useTaskBuy(taskId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<PurchaseOut>(`/api/v1/tasks/${taskId}/buy`, { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["task", taskId] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+      qc.invalidateQueries({ queryKey: ["balance"] });
+    },
+  });
+}
+
+export function useTaskClose(taskId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<TaskDetail>(`/api/v1/tasks/${taskId}/close`, { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["task", taskId] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
 
 export type SubmissionOut = {
   id: number;
@@ -504,6 +544,7 @@ export type TaskCreateBody = {
   xp_reward?: number | null;
   publish?: boolean;
   commission_bp?: number | null;
+  partner_telegram_id?: number | null;
 };
 
 export type TaskQuote = {
@@ -518,7 +559,7 @@ export type TaskQuote = {
 };
 
 export type TaskQuoteReq = {
-  task_type: "visit" | "campaign";
+  task_type: "visit" | "campaign" | "partner";
   total_slots: number;
   reward?: string;
   commission_bp?: number | null;
@@ -526,7 +567,7 @@ export type TaskQuoteReq = {
 
 function quoteReqValid(r: TaskQuoteReq | null): r is TaskQuoteReq {
   if (!r || !(r.total_slots >= 1 && r.total_slots <= 10000)) return false;
-  if (r.task_type === "campaign") return !!r.reward && Number(r.reward) > 0;
+  if (r.task_type === "campaign" || r.task_type === "partner") return !!r.reward && Number(r.reward) > 0;
   return true;
 }
 

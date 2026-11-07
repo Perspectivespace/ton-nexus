@@ -13,6 +13,7 @@ import {
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
 import { VisitPriceBlock } from "@/components/tasks/VisitPriceBlock";
+import { PartnerPriceBlock } from "@/components/tasks/PartnerPriceBlock";
 import { TaskTypeSelect, allowedTaskTypes, type TaskType } from "@/components/tasks/TaskTypeSelect";
 
 /** «12.5» (%) → 1250 bp; пусто → null (тариф); мусор → NaN */
@@ -41,13 +42,17 @@ export function TaskCreate() {
   const [publish, setPublish] = useState(false);
   const [campaignBp, setCampaignBp] = useState("");
   const [campaignXp, setCampaignXp] = useState("");
+  const [partnerTg, setPartnerTg] = useState("");
   const toast = useToast();
 
   const canDirectPublish = !!(me?.is_owner || me?.is_admin);
   const isVisit = taskType === "visit";
   const isCampaign = taskType === "campaign";
-  const isPriced = isVisit || isCampaign;
-  // visit — любой вошедший; campaign — только владелец; legacy — амбассадор+
+  const isPartner = taskType === "partner";
+  const isManual = isCampaign || isPartner; // цену вписывает владелец
+  const isPriced = isVisit || isManual;
+  const partnerTgN = /^\d{1,15}$/.test(partnerTg.trim()) ? Number(partnerTg.trim()) : null;
+  // visit — любой вошедший; campaign и partner — только владелец; legacy — амбассадор+
 
   const slotsN = Math.max(1, Number(slots) || 1);
   const bpOverride = pctToBp(campaignBp);
@@ -56,8 +61,8 @@ export function TaskCreate() {
   const quoteQ = useTaskQuote(
     isVisit
       ? { task_type: "visit", total_slots: slotsN }
-      : isCampaign && !bpInvalid
-        ? { task_type: "campaign", total_slots: slotsN, reward: rewardClean, commission_bp: bpOverride }
+      : isManual && !bpInvalid
+        ? { task_type: isPartner ? "partner" : "campaign", total_slots: slotsN, reward: rewardClean, commission_bp: bpOverride }
         : null,
   );
   const quote = quoteQ.data ?? null;
@@ -74,11 +79,12 @@ export function TaskCreate() {
         description: description.trim(),
         ...(isVisit
           ? {}
-          : isCampaign
+          : isManual
             ? {
                 reward: rewardClean,
                 commission_bp: bpOverride,
                 xp_reward: campaignXp.trim() ? Number(campaignXp) || 0 : null,
+                ...(isPartner ? { partner_telegram_id: partnerTgN } : {}),
               }
             : { reward, xp_reward: Number(xp) || 0 }),
         total_slots: Number(slots) || 1,
@@ -145,13 +151,17 @@ export function TaskCreate() {
             ? "Переход: цена и комиссия из тарифа владельца. Ссылка обязательна; награду исполнителю задаёт тариф."
             : isCampaign
               ? "Кампания: награду и условия вписываете вручную. Комиссия и XP по умолчанию из тарифа, можно поменять."
+              : isPartner
+                ? "Партнёрская услуга: покупатель платит цену со своего баланса, партнёр получает её за вычетом комиссии платформы."
               : canDirectPublish
               ? "Админ или владелец: можно сразу опубликовать — бюджет (награда × места + комиссия) спишется с баланса."
               : "Амбассадор: задание уйдёт на одобрение. После одобрения — публикация, бюджет уйдёт в холд."}
         </p>
       </div>
 
-      {isPriced ? (
+      {isPartner ? (
+        <PartnerPriceBlock quote={quote} loading={quoteQ.isFetching} />
+      ) : isPriced ? (
         <VisitPriceBlock quote={quote} loading={quoteQ.isFetching} />
       ) : (
         me && (
@@ -207,8 +217,8 @@ export function TaskCreate() {
           </Field>
         </div>
 
-        {(isVisit || isCampaign || taskType === "link") && (
-          <Field label={isVisit ? "Ссылка на ресурс" : isCampaign ? "Ссылка (необязательно)" : "Ссылка на цель"}>
+        {(isVisit || isManual || taskType === "link") && (
+          <Field label={isVisit ? "Ссылка на ресурс" : isManual ? "Ссылка (необязательно)" : "Ссылка на цель"}>
             <input
               className="ui-input"
               value={targetUrl}
@@ -220,10 +230,24 @@ export function TaskCreate() {
           </Field>
         )}
 
-        {isCampaign ? (
+        {isPartner && (
+          <Field label="Партнёр: Telegram ID">
+            <input
+              className="ui-input"
+              inputMode="numeric"
+              value={partnerTg}
+              onChange={(e) => setPartnerTg(e.target.value)}
+              placeholder="кто получает деньги"
+              required
+              disabled={create.isPending}
+            />
+          </Field>
+        )}
+
+        {isManual ? (
           <div className="space-y-3" data-testid="campaign-fields">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Награда, TON">
+              <Field label={isPartner ? "Цена, TON" : "Награда, TON"}>
                 <input
                   className="ui-input"
                   inputMode="decimal"
@@ -233,7 +257,7 @@ export function TaskCreate() {
                   disabled={create.isPending}
                 />
               </Field>
-              <Field label="Число выполнений">
+              <Field label={isPartner ? "Число продаж" : "Число выполнений"}>
                 <input
                   className="ui-input"
                   inputMode="numeric"
@@ -331,7 +355,8 @@ export function TaskCreate() {
             description.trim().length < 3 ||
             (isVisit && !targetUrl.trim()) ||
             (isPriced && quoteQ.isError) ||
-            (isCampaign && (bpInvalid || !(Number(rewardClean) > 0)))
+            (isManual && (bpInvalid || !(Number(rewardClean) > 0))) ||
+            (isPartner && partnerTgN == null)
           }
         >
           {create.isPending
