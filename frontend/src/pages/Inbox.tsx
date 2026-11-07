@@ -21,6 +21,7 @@ import {
 } from "@/components/ui";
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
+import { ProofImage } from "@/components/tasks/ProofUpload";
 
 function SubmissionCard({
   item,
@@ -87,7 +88,9 @@ function SubmissionCard({
         </a>
       )}
 
-      {!item.proof_text && !item.proof_url && (
+      {item.proof_image_id != null && <ProofImage proofId={item.proof_image_id} state={item.proof_image_state} />}
+
+      {!item.proof_text && !item.proof_url && item.proof_image_id == null && (
         <p className="text-[12px] text-[var(--text-dim)]">Подтверждение не приложено</p>
       )}
 

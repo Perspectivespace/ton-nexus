@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMe, useTask, useTaskBuy, useTaskSubmit } from "@/api/hooks";
+import { useMe, useProofUpload, useTask, useTaskBuy, useTaskSubmit } from "@/api/hooks";
 import {
   ScreenHeader,
   StatusPill,
@@ -15,6 +15,7 @@ import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
 import { PartnerBuyPanel } from "@/components/tasks/PartnerBuyPanel";
 import { OwnerTaskPanel } from "@/components/tasks/OwnerTaskPanel";
+import { ProofUpload, proofFileError } from "@/components/tasks/ProofUpload";
 
 const TASK_STATUS_RU: Record<string, string> = {
   active: "активно",
@@ -38,13 +39,28 @@ export function TaskDetail() {
   const [proofText, setProofText] = useState("");
   const [proofUrl, setProofUrl] = useState("");
   const [done, setDone] = useState(false);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  // id уже загруженного файла: если сдача упала, повторно не грузим
+  const [uploaded, setUploaded] = useState<{ file: File; id: number } | null>(null);
+  const upload = useProofUpload(taskId);
   const toast = useToast();
 
   async function onSubmit() {
     try {
+      let proofUploadId: number | null = null;
+      if (proofFile) {
+        if (uploaded && uploaded.file === proofFile) {
+          proofUploadId = uploaded.id;
+        } else {
+          const up = await upload.mutateAsync(proofFile);
+          setUploaded({ file: proofFile, id: up.id });
+          proofUploadId = up.id;
+        }
+      }
       await submit.mutateAsync({
         proof_text: proofText.trim() || null,
         proof_url: proofUrl.trim() || null,
+        proof_upload_id: proofUploadId,
       });
       setDone(true);
       toast({ kind: "ok", title: "Сдано на проверку", sub: "награда придёт после одобрения" });
@@ -76,6 +92,14 @@ export function TaskDetail() {
   const isPartnerTask = t.task_type === "partner";
   const canSubmit =
     t.status === "active" && slotsLeft > 0 && levelOk && !isOwn && !done && !submit.isSuccess;
+  const proofRequired = !!t.proof_required;
+  const proofAllowed = proofRequired || t.task_type === "visit" || t.task_type === "campaign";
+  const proofErr = proofFileError(proofFile);
+  const sending = submit.isPending || upload.isPending;
+  const submitBlocked =
+    sending ||
+    !!proofErr ||
+    (proofRequired ? !proofFile : !proofText.trim() && !proofUrl.trim() && !proofFile);
 
   return (
     <div className="space-y-5">
@@ -92,6 +116,7 @@ export function TaskDetail() {
             {isPartnerTask ? "продано" : "занято"} {t.filled_slots} из {t.total_slots}
           </StatusPill>
           {!levelOk && <StatusPill tone="danger">нужен ур. {t.min_level}</StatusPill>}
+          {proofRequired && <StatusPill tone="neutral">нужен скриншот</StatusPill>}
           {isOwn && <StatusPill tone="neutral">ваше задание</StatusPill>}
         </div>
 
@@ -173,41 +198,59 @@ export function TaskDetail() {
 
           {(canSubmit || done || submit.isSuccess) && (
             <>
-              <Field label="Подтверждение (текст)">
+              {proofAllowed && !(done || submit.isSuccess) && (
+                <ProofUpload
+                  file={proofFile}
+                  onChange={(f) => setProofFile(f)}
+                  required={proofRequired}
+                  disabled={sending}
+                />
+              )}
+              <Field label={proofRequired ? "Комментарий (необязательно)" : "Подтверждение (текст)"}>
                 <textarea
                   className="ui-input"
                   value={proofText}
-                  disabled={done || submit.isSuccess || submit.isPending}
+                  disabled={done || submit.isSuccess || sending}
                   onChange={(e) => setProofText(e.target.value)}
-                  placeholder="Скрин / описание выполнения…"
+                  placeholder={proofRequired ? "Что сделано, ник/аккаунт…" : "Описание выполнения…"}
                 />
               </Field>
-              <Field label="Ссылка на подтверждение">
-                <input
-                  className="ui-input"
-                  value={proofUrl}
-                  disabled={done || submit.isSuccess || submit.isPending}
-                  onChange={(e) => setProofUrl(e.target.value)}
-                  placeholder="https://…"
-                />
-              </Field>
+              {!proofRequired && (
+                <Field label="Ссылка на подтверждение">
+                  <input
+                    className="ui-input"
+                    value={proofUrl}
+                    disabled={done || submit.isSuccess || sending}
+                    onChange={(e) => setProofUrl(e.target.value)}
+                    placeholder="https://…"
+                  />
+                </Field>
+              )}
 
               {canSubmit && (
                 <button
                   type="button"
                   className="ui-btn primary block"
-                  disabled={submit.isPending || (!proofText.trim() && !proofUrl.trim())}
+                  disabled={submitBlocked}
                   onClick={onSubmit}
                 >
-                  {submit.isPending ? "Отправка…" : "Сдать на проверку"}
+                  {upload.isPending ? "Загрузка скриншота…" : submit.isPending ? "Отправка…" : "Сдать на проверку"}
                 </button>
               )}
             </>
           )}
 
-          {submit.isError && (
+          {(submit.isError || upload.isError) && (
             <ErrorPanel
-              message={submit.error instanceof Error ? submit.error.message : "Ошибка сдачи"}
+              message={
+                upload.isError
+                  ? upload.error instanceof Error
+                    ? upload.error.message
+                    : "Скриншот не загрузился"
+                  : submit.error instanceof Error
+                    ? submit.error.message
+                    : "Ошибка сдачи"
+              }
             />
           )}
 
