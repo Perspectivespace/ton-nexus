@@ -13,7 +13,7 @@ from app.services import tasks as tasks_svc
 from app.services import task_tariff as tariff_svc
 from app.services.economy import get_setting
 from app.services.balance import InsufficientBalanceError
-from app.services.roles import can_approve_ambassador_task
+from app.services.roles import can_approve_ambassador_task, is_platform_owner
 from app.services.tasks import TaskBudgetError, TaskError, TaskPermissionError, TaskStateError
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -27,8 +27,9 @@ class TaskCreateBody(BaseModel):
     task_type: str = "manual_proof"
     target_url: str | None = None
     min_level: int = 1
-    xp_reward: int | None = None  # для visit — из тарифа
+    xp_reward: int | None = None  # для visit — из тарифа; для campaign — тариф по умолчанию
     publish: bool = False
+    commission_bp: int | None = Field(default=None, ge=0, le=10000)  # только campaign (override)
 
 
 class TaskUpdateBody(BaseModel):
@@ -144,6 +145,8 @@ async def get_task(task_id: int, user: User = Depends(get_current_user), db: Asy
 class QuoteBody(BaseModel):
     task_type: str = "visit"
     total_slots: int = Field(ge=1, le=10000)
+    reward: Decimal | None = None  # только campaign
+    commission_bp: int | None = Field(default=None, ge=0, le=10000)  # только campaign
 
 
 class QuoteOut(BaseModel):
@@ -163,17 +166,27 @@ async def quote_task(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Живая цена для формы создания. Пока только visit."""
-    if body.task_type != "visit":
-        raise HTTPException(status_code=400, detail="quote пока только для visit")
+    """Живая цена для формы создания: visit (тариф) или campaign (ручная награда, только владелец)."""
+    if body.task_type not in ("visit", "campaign"):
+        raise HTTPException(status_code=400, detail="quote только для visit и campaign")
+    if body.task_type == "campaign" and not is_platform_owner(user):
+        raise HTTPException(status_code=403, detail="«Кампания» только для владельца")
     raw = await get_setting(db, tariff_svc.KEY)
+    tariff = raw if isinstance(raw, dict) else tariff_svc.DEFAULT
     try:
-        q = tariff_svc.quote_visit(raw if isinstance(raw, dict) else tariff_svc.DEFAULT, slots=body.total_slots)
+        if body.task_type == "campaign":
+            if body.reward is None:
+                raise tariff_svc.TaskTariffError("награда за выполнение: укажите сумму TON")
+            q = tariff_svc.quote_campaign(
+                tariff, reward=body.reward, slots=body.total_slots, commission_bp=body.commission_bp
+            )
+        else:
+            q = tariff_svc.quote_visit(tariff, slots=body.total_slots)
     except tariff_svc.TaskTariffError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     await db.commit()
     return QuoteOut(
-        task_type="visit",
+        task_type=body.task_type,
         reward=Decimal(q.reward),
         xp=q.xp,
         payout=Decimal(q.payout),
@@ -190,7 +203,8 @@ async def create_task(body: TaskCreateBody, user: User = Depends(get_current_use
         t = await tasks_svc.create_task(
             db, creator=user, title=body.title, description=body.description, reward=body.reward,
             total_slots=body.total_slots, task_type=body.task_type, target_url=body.target_url,
-            min_level=body.min_level, xp_reward=body.xp_reward, publish=body.publish)
+            min_level=body.min_level, xp_reward=body.xp_reward, publish=body.publish,
+            commission_bp=body.commission_bp)
         await db.commit()
         return _task_out(t)
     except TaskPermissionError as e:
