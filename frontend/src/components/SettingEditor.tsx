@@ -10,6 +10,7 @@ import {
   fromInput,
   toInput,
   taskTariffExamples,
+  cityAdsExample,
   towerMinBudget,
   type FieldMeta,
 } from "@/lib/settingsMeta";
@@ -208,7 +209,7 @@ function collect(settingKey: string, v: unknown, path: Path, out: Map<string, [P
         if (asLeaf(m, y)) {
           const locked = m.readOnly || (row && meta?.lockField?.(row, k)) || (row && k === meta?.rowTitle);
           out.set(pkey([...p, k]), [[...p, k], locked ? { ...m, readOnly: true } : m, y]);
-        } else if (depth < 1) walk(y, [...p, k], depth + 1);
+        } else if (depth < 1 || (depth < 2 && isObj(y))) walk(y, [...p, k], depth + 1); // как в Group: объекты до двух уровней, строки-массивы — на первом
       }
     } else if (Array.isArray(x) && x.every((r) => isObj(r) && Object.values(r).every(isLeaf))) {
       x.forEach((r, i) => walk(r, [...p, i], depth + 1, r as Obj));
@@ -331,6 +332,7 @@ export function SettingEditor({
       )}
       {settingKey === "friend_rule" ? <FriendRulePreview draft={draft} /> : null}
       {settingKey === "task_tariff" ? <TaskTariffPreview draft={draft} /> : null}
+      {settingKey === "city_ads" ? <CityAdsPreview draft={draft} /> : null}
       {err && (
         <p className="ui-fhint err" role="alert">
           {err}
@@ -374,6 +376,20 @@ export function TaskTariffPreview({ draft }: { draft: Record<string, string> }) 
       <span className={capsCls}>Пример</span>
       <span className="block text-[var(--text)]">{examples.visit}</span>
       <span className="block text-[var(--text)]">{examples.partner}</span>
+    </div>
+  );
+}
+
+/** Живой пример по черновику тарифа рекламы: неделя на каждом формате */
+export function CityAdsPreview({ draft }: { draft: Record<string, string> }) {
+  const week = (k: string) => cityAdsExample(draft[`spots.${k}.price_day`] ?? "", 7) ?? "?";
+  return (
+    <div className="ui-fhint" aria-live="polite">
+      <span className={capsCls}>Неделя показа</span>
+      <span className="block text-[var(--text)]">
+        {`строка ${week("tower_line")} TON · баннер ${week("banner_sky")} TON · неон ${week("neon_left")} TON`}
+      </span>
+      <span className="block">Сутки — по МСК, одно объявление на место в сутки, каждое проверяет владелец.</span>
     </div>
   );
 }

@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { fieldMeta, fromInput, parseIntList, summarize, taskTariffExamples, toInput, towerMinBudget } from "./settingsMeta";
+import {
+  SETTINGS,
+  cityAdsExample,
+  fieldMeta,
+  fromInput,
+  parseIntList,
+  summarize,
+  taskTariffExamples,
+  toInput,
+  towerMinBudget,
+} from "./settingsMeta";
 
 describe("призы «Башни» в редакторе владельца", () => {
   const DEFAULT = {
@@ -151,5 +161,45 @@ describe("пример тарифа заданий", () => {
     expect(ex.visit).toContain("комиссия 0.1 TON");
     expect(ex.partner).toContain("партнёр получает 0.9 TON");
     expect(ex.partner).toContain("комиссия платформы 0.1 TON");
+  });
+});
+
+describe("реклама в городе в редакторе владельца", () => {
+  const CFG = {
+    min_level: 3,
+    min_days: 1,
+    max_days: 30,
+    body_max: 500,
+    spots: {
+      tower_line: { price_day: "1", enabled: true },
+      banner_sky: { price_day: "0.5", enabled: true },
+      banner_street: { price_day: "0.5", enabled: true },
+      neon_left: { price_day: "0.3", enabled: true },
+      neon_right: { price_day: "0.3", enabled: false },
+    },
+    limits: { line: { title_max: 60 }, banner: { title_max: 14, subtitle_max: 18 }, neon: { title_max: 12 } },
+  };
+
+  it("поля: русские подписи и типы", () => {
+    expect(SETTINGS.city_ads.title).toBe("Реклама в городе");
+    expect(fieldMeta("city_ads", "tower_line", CFG.spots.tower_line).label).toBe("Бегущая строка · башня");
+    expect(fieldMeta("city_ads", "price_day", "1")).toMatchObject({ kind: "ton", unit: "TON", label: "Цена за сутки" });
+    expect(fieldMeta("city_ads", "enabled", true)).toMatchObject({ kind: "bool", label: "Продаётся" });
+    expect(fieldMeta("city_ads", "min_level", 3)).toMatchObject({ kind: "int", label: "Мин. уровень" });
+    expect(fieldMeta("city_ads", "subtitle_max", 18).unit).toBe("симв");
+  });
+
+  it("цена — строка TON, флаг — булево", () => {
+    expect(fromInput(fieldMeta("city_ads", "price_day", "1"), "0,75", "1")).toBe("0.75");
+    expect(fromInput(fieldMeta("city_ads", "enabled", true), "0", true)).toBe(false);
+  });
+
+  it("сводка и пример недели без ошибок округления", () => {
+    expect(summarize("city_ads", CFG)).toBe("строка 1 · баннер 0.5 · неон 0.3 TON · снято с продажи: 1 · с 3 ур.");
+    expect(cityAdsExample("0.3", 7)).toBe("2.1");
+    expect(cityAdsExample("0.1", 3)).toBe("0.3");
+    expect(cityAdsExample("1", 30)).toBe("30");
+    expect(cityAdsExample("abc", 7)).toBeNull();
+    expect(cityAdsExample("1", 0)).toBeNull();
   });
 });
