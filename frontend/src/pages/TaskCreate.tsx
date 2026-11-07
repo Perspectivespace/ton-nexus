@@ -13,8 +13,16 @@ import {
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
 import { VisitPriceBlock } from "@/components/tasks/VisitPriceBlock";
+import { TaskTypeSelect, allowedTaskTypes, type TaskType } from "@/components/tasks/TaskTypeSelect";
 
-type TaskType = "visit" | "manual_proof" | "link";
+/** «12.5» (%) → 1250 bp; пусто → null (тариф); мусор → NaN */
+function pctToBp(v: string): number | null {
+  const s = v.trim().replace(",", ".");
+  if (!s) return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return NaN;
+  return Math.round(n * 100);
+}
 
 export function TaskCreate() {
   useScreenBack("/tasks");
@@ -31,20 +39,32 @@ export function TaskCreate() {
   const [targetUrl, setTargetUrl] = useState("");
   const [taskType, setTaskType] = useState<TaskType>("visit");
   const [publish, setPublish] = useState(false);
+  const [campaignBp, setCampaignBp] = useState("");
+  const [campaignXp, setCampaignXp] = useState("");
   const toast = useToast();
 
-  const canCreateLegacy = !!(me?.is_owner || me?.is_admin || me?.is_ambassador);
   const canDirectPublish = !!(me?.is_owner || me?.is_admin);
   const isVisit = taskType === "visit";
-  // visit — любой вошедший; legacy — амбассадор+
+  const isCampaign = taskType === "campaign";
+  const isPriced = isVisit || isCampaign;
+  // visit — любой вошедший; campaign — только владелец; legacy — амбассадор+
 
   const slotsN = Math.max(1, Number(slots) || 1);
-  const quoteQ = useTaskQuote(isVisit ? slotsN : null);
+  const bpOverride = pctToBp(campaignBp);
+  const bpInvalid = bpOverride !== null && Number.isNaN(bpOverride);
+  const rewardClean = reward.trim().replace(",", ".");
+  const quoteQ = useTaskQuote(
+    isVisit
+      ? { task_type: "visit", total_slots: slotsN }
+      : isCampaign && !bpInvalid
+        ? { task_type: "campaign", total_slots: slotsN, reward: rewardClean, commission_bp: bpOverride }
+        : null,
+  );
   const quote = quoteQ.data ?? null;
 
   useEffect(() => {
-    if (!canCreateLegacy && taskType !== "visit") setTaskType("visit");
-  }, [canCreateLegacy, taskType]);
+    if (me && !allowedTaskTypes(me).includes(taskType)) setTaskType("visit");
+  }, [me, taskType]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +74,13 @@ export function TaskCreate() {
         description: description.trim(),
         ...(isVisit
           ? {}
-          : { reward, xp_reward: Number(xp) || 0 }),
+          : isCampaign
+            ? {
+                reward: rewardClean,
+                commission_bp: bpOverride,
+                xp_reward: campaignXp.trim() ? Number(campaignXp) || 0 : null,
+              }
+            : { reward, xp_reward: Number(xp) || 0 }),
         total_slots: Number(slots) || 1,
         task_type: taskType,
         target_url: targetUrl.trim() || null,
@@ -88,7 +114,7 @@ export function TaskCreate() {
     );
   }
 
-  if (!canCreateLegacy && !isVisit) {
+  if (!allowedTaskTypes(me).includes(taskType)) {
     return (
       <div className="space-y-4">
         <ScreenHeader eyebrow="Заработок" title="Новое задание" />
@@ -117,13 +143,15 @@ export function TaskCreate() {
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
           {isVisit
             ? "Переход: цена и комиссия из тарифа владельца. Ссылка обязательна; награду исполнителю задаёт тариф."
-            : canDirectPublish
+            : isCampaign
+              ? "Кампания: награду и условия вписываете вручную. Комиссия и XP по умолчанию из тарифа, можно поменять."
+              : canDirectPublish
               ? "Админ или владелец: можно сразу опубликовать — бюджет (награда × места + комиссия) спишется с баланса."
               : "Амбассадор: задание уйдёт на одобрение. После одобрения — публикация, бюджет уйдёт в холд."}
         </p>
       </div>
 
-      {isVisit ? (
+      {isPriced ? (
         <VisitPriceBlock quote={quote} loading={quoteQ.isFetching} />
       ) : (
         me && (
@@ -152,7 +180,13 @@ export function TaskCreate() {
             className="ui-input"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder={isVisit ? "Что открыть и как подтвердить (скрин)…" : "Что сделать и как подтвердить…"}
+            placeholder={
+              isVisit
+                ? "Что открыть и как подтвердить (скрин)…"
+                : isCampaign
+                  ? "Условия кампании по договорённости…"
+                  : "Что сделать и как подтвердить…"
+            }
             minLength={3}
             required
             disabled={create.isPending}
@@ -161,20 +195,7 @@ export function TaskCreate() {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Тип">
-            <select
-              className="ui-input"
-              value={taskType}
-              onChange={(e) => setTaskType(e.target.value as TaskType)}
-              disabled={create.isPending}
-            >
-              <option value="visit">Переход на сторонний ресурс</option>
-              {canCreateLegacy && (
-                <>
-                  <option value="manual_proof">Подтверждение вручную</option>
-                  <option value="link">Ссылка</option>
-                </>
-              )}
-            </select>
+            <TaskTypeSelect me={me} value={taskType} onChange={setTaskType} disabled={create.isPending} />
           </Field>
           <Field label="Мин. уровень">
             <input
@@ -186,8 +207,8 @@ export function TaskCreate() {
           </Field>
         </div>
 
-        {(isVisit || taskType === "link") && (
-          <Field label={isVisit ? "Ссылка на ресурс" : "Ссылка на цель"}>
+        {(isVisit || isCampaign || taskType === "link") && (
+          <Field label={isVisit ? "Ссылка на ресурс" : isCampaign ? "Ссылка (необязательно)" : "Ссылка на цель"}>
             <input
               className="ui-input"
               value={targetUrl}
@@ -199,7 +220,60 @@ export function TaskCreate() {
           </Field>
         )}
 
-        {isVisit ? (
+        {isCampaign ? (
+          <div className="space-y-3" data-testid="campaign-fields">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Награда, TON">
+                <input
+                  className="ui-input"
+                  inputMode="decimal"
+                  value={reward}
+                  onChange={(e) => setReward(e.target.value)}
+                  required
+                  disabled={create.isPending}
+                />
+              </Field>
+              <Field label="Число выполнений">
+                <input
+                  className="ui-input"
+                  inputMode="numeric"
+                  value={slots}
+                  onChange={(e) => setSlots(e.target.value)}
+                  required
+                  disabled={create.isPending}
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Комиссия, %">
+                <input
+                  className="ui-input"
+                  inputMode="decimal"
+                  value={campaignBp}
+                  onChange={(e) => setCampaignBp(e.target.value)}
+                  placeholder={quote ? `тариф ${quote.commission_bp / 100}` : "из тарифа"}
+                  disabled={create.isPending}
+                />
+              </Field>
+              <Field label="XP" unit="XP">
+                <input
+                  className="ui-input"
+                  inputMode="numeric"
+                  value={campaignXp}
+                  onChange={(e) => setCampaignXp(e.target.value)}
+                  placeholder={quote ? `тариф ${quote.xp}` : "из тарифа"}
+                  disabled={create.isPending}
+                />
+              </Field>
+            </div>
+            {bpInvalid && <p className="text-[12px] text-[var(--danger-text)]">Комиссия: от 0 до 100%</p>}
+            {quoteQ.isError && (
+              <p className="text-[12px] text-[var(--danger-text)]">
+                {quoteQ.error instanceof Error ? quoteQ.error.message : "Проверьте награду и число выполнений"}
+              </p>
+            )}
+          </div>
+        ) : isVisit ? (
           <Field label="Число выполнений">
             <input
               className="ui-input"
@@ -256,7 +330,8 @@ export function TaskCreate() {
             title.trim().length < 3 ||
             description.trim().length < 3 ||
             (isVisit && !targetUrl.trim()) ||
-            (isVisit && quoteQ.isError)
+            (isPriced && quoteQ.isError) ||
+            (isCampaign && (bpInvalid || !(Number(rewardClean) > 0)))
           }
         >
           {create.isPending

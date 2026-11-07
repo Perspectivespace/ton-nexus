@@ -21,6 +21,7 @@ from app.services.roles import (
     can_create_task,
     can_manage_any_task,
     can_publish_directly,
+    is_platform_owner,
 )
 
 
@@ -79,6 +80,13 @@ async def _commission(session: AsyncSession, payout: Decimal, *, bp: int | None 
 
 
 VISIT = "visit"
+CAMPAIGN = "campaign"
+
+
+def _validate_optional_url(url: str | None) -> str | None:
+    if url is None or not str(url).strip():
+        return None
+    return _validate_visit_url(url)
 
 
 def _validate_visit_url(url: str | None) -> str:
@@ -192,21 +200,45 @@ async def create_task(
     task_type: str = "manual_proof",
     target_url: str | None = None,
     min_level: int = 1,
-    xp_reward: int | None = 10,
+    xp_reward: int | None = None,
     publish: bool = False,
+    commission_bp: int | None = None,
 ) -> TaskView:
     task_type = (task_type or "manual_proof").strip()
     if task_type == VISIT:
         # переход: любой авторизованный; цена/XP/комиссия — только из тарифа
         pass
+    elif task_type == CAMPAIGN:
+        # кампания: только владелец платформы (админы и амбассадоры — нет)
+        if not is_platform_owner(creator):
+            raise TaskPermissionError("«Кампанию» создаёт только владелец")
     elif not can_create_task(creator):
         raise TaskPermissionError("need ambassador, admin or owner role")
 
     if not title.strip() or not description.strip():
         raise TaskError("title and description required")
 
-    commission_bp: int | None = None
-    if task_type == VISIT:
+    override_bp = commission_bp
+    commission_bp = None
+    if task_type == CAMPAIGN:
+        raw = await get_setting(session, tariff_svc.KEY)
+        tariff = raw if isinstance(raw, dict) else tariff_svc.DEFAULT
+        if reward is None:
+            raise TaskError("награда за выполнение: укажите сумму TON")
+        try:
+            q = tariff_svc.quote_campaign(
+                tariff, reward=Decimal(reward), slots=total_slots, commission_bp=override_bp
+            )
+        except tariff_svc.TaskTariffError as e:
+            raise TaskError(str(e)) from e
+        reward = Decimal(q.reward)
+        commission_bp = int(q.commission_bp)
+        if xp_reward is None:
+            xp_reward = int(q.xp)
+        elif isinstance(xp_reward, bool) or not 0 <= int(xp_reward) <= tariff_svc.MAX_XP:
+            raise TaskError(f"XP: от 0 до {tariff_svc.MAX_XP}")
+        target_url = _validate_optional_url(target_url)
+    elif task_type == VISIT:
         raw = await get_setting(session, tariff_svc.KEY)
         try:
             q = tariff_svc.quote_visit(raw if isinstance(raw, dict) else tariff_svc.DEFAULT, slots=total_slots)
@@ -276,6 +308,21 @@ async def update_task(
         raise TaskPermissionError("cannot edit this task")
     if task.status == "completed":
         raise TaskStateError("completed task is frozen")
+
+    if task_type is not None and task_type != task.task_type and CAMPAIGN in (task_type, task.task_type):
+        raise TaskStateError("Тип «Кампания» нельзя сменить.")
+    if task.task_type == CAMPAIGN:
+        if not is_platform_owner(actor):
+            raise TaskPermissionError("«Кампанию» меняет только владелец")
+        if reward is not None:
+            try:
+                reward = Decimal(tariff_svc.nano_to_ton(tariff_svc.ton_to_nano(Decimal(reward), name="награда")))
+            except tariff_svc.TaskTariffError as e:
+                raise TaskError(str(e)) from e
+            if reward * tariff_svc.NANO_PER_TON > tariff_svc.MAX_REWARD_NANO:
+                raise TaskError("награда за выполнение: не больше 100 TON")
+        if target_url is not None:
+            target_url = _validate_optional_url(target_url)
 
     if task.task_type == VISIT:
         if reward is not None and Decimal(reward) != Decimal(task.reward):

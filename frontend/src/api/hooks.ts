@@ -503,6 +503,7 @@ export type TaskCreateBody = {
   min_level?: number;
   xp_reward?: number | null;
   publish?: boolean;
+  commission_bp?: number | null;
 };
 
 export type TaskQuote = {
@@ -516,26 +517,42 @@ export type TaskQuote = {
   slots: number;
 };
 
-/** Живая цена visit: debounce 250 мс, пока места валидны */
-export function useTaskQuote(slots: number | null) {
-  const [debounced, setDebounced] = useState(slots);
+export type TaskQuoteReq = {
+  task_type: "visit" | "campaign";
+  total_slots: number;
+  reward?: string;
+  commission_bp?: number | null;
+};
+
+function quoteReqValid(r: TaskQuoteReq | null): r is TaskQuoteReq {
+  if (!r || !(r.total_slots >= 1 && r.total_slots <= 10000)) return false;
+  if (r.task_type === "campaign") return !!r.reward && Number(r.reward) > 0;
+  return true;
+}
+
+/** Живая цена (visit по тарифу, campaign с ручной наградой): debounce 250 мс */
+export function useTaskQuote(req: TaskQuoteReq | null) {
+  const key = req ? JSON.stringify(req) : null;
+  const [debounced, setDebounced] = useState<string | null>(key);
   useEffect(() => {
-    if (slots == null) {
+    if (key == null) {
       setDebounced(null);
       return;
     }
-    const t = window.setTimeout(() => setDebounced(slots), 250);
+    const t = window.setTimeout(() => setDebounced(key), 250);
     return () => window.clearTimeout(t);
-  }, [slots]);
+  }, [key]);
+  const parsed: TaskQuoteReq | null = debounced ? JSON.parse(debounced) : null;
   return useQuery({
-    queryKey: ["tasks", "quote", "visit", debounced],
-    enabled: debounced != null && debounced >= 1 && debounced <= 10000,
+    queryKey: ["tasks", "quote", debounced],
+    enabled: quoteReqValid(parsed),
     queryFn: () =>
       api<TaskQuote>("/api/v1/tasks/quote", {
         method: "POST",
-        body: JSON.stringify({ task_type: "visit", total_slots: debounced }),
+        body: debounced!,
       }),
     staleTime: 15_000,
+    retry: false,
   });
 }
 
