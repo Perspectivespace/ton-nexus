@@ -85,6 +85,10 @@ CAMPAIGN = "campaign"
 PARTNER = "partner"
 # типы, которые создаёт и меняет только владелец; сменить тип с них или на них нельзя
 OWNER_ONLY_TYPES = {CAMPAIGN: "Кампания", PARTNER: "Партнёрская услуга"}
+# Скриншот-подтверждение можно требовать только в этих типах
+PROOF_TYPES = (VISIT, CAMPAIGN)
+# Старые типы: создавать через API больше нельзя (миграция 017 перевела их в visit/campaign)
+LEGACY_TYPES = ("manual_proof", "link")
 
 
 def _validate_optional_url(url: str | None) -> str | None:
@@ -165,6 +169,7 @@ class TaskView:
     expires_at: datetime | None
     partner_user_id: int | None = None
     commission_bp: int | None = None
+    proof_required: bool = False
 
 
 def _view(t: Task) -> TaskView:
@@ -184,6 +189,7 @@ def _view(t: Task) -> TaskView:
         expires_at=t.expires_at,
         partner_user_id=t.partner_user_id,
         commission_bp=t.commission_bp,
+        proof_required=bool(t.proof_required),
     )
 
 
@@ -212,8 +218,11 @@ async def create_task(
     publish: bool = False,
     commission_bp: int | None = None,
     partner_telegram_id: int | None = None,
+    proof_required: bool = False,
 ) -> TaskView:
     task_type = (task_type or "manual_proof").strip()
+    if proof_required and task_type not in PROOF_TYPES:
+        raise TaskError("скриншот-подтверждение — только для «Перехода» и «Кампании»")
     if task_type == VISIT:
         # переход: любой авторизованный; цена/XP/комиссия — только из тарифа
         pass
@@ -308,6 +317,7 @@ async def create_task(
         xp_reward=max(0, int(xp_reward or 0)),
         commission_bp=commission_bp,
         partner_user_id=partner_user_id,
+        proof_required=bool(proof_required),
     )
     session.add(task)
     await session.flush()
@@ -602,6 +612,7 @@ async def submit(
     task_id: int,
     proof_text: str | None = None,
     proof_url: str | None = None,
+    proof_upload_id: int | None = None,
 ) -> TaskSubmission:
     task = await session.get(Task, task_id)
     if task and task.task_type == PARTNER:
@@ -626,7 +637,9 @@ async def submit(
     )
     if existing:
         raise TaskStateError("already submitted")
-    if not (proof_text or proof_url):
+    if task.proof_required and proof_upload_id is None:
+        raise TaskError("Приложите скриншот выполнения.")
+    if not (proof_text or proof_url or proof_upload_id is not None):
         raise TaskError("proof required")
 
     sub = TaskSubmission(
@@ -638,6 +651,13 @@ async def submit(
     )
     session.add(sub)
     await session.flush()
+    if proof_upload_id is not None:
+        from app.services import task_proofs as proofs_svc
+
+        try:
+            await proofs_svc.attach(session, proof_id=proof_upload_id, user=user, task_id=task_id, submission=sub)
+        except proofs_svc.ProofError as e:
+            raise TaskError(str(e)) from e
     return sub
 
 
@@ -727,6 +747,10 @@ async def review_submission(
                 session, task, label=f"Возврат: заявка отклонена, задание #{task.id} отменено"
             )
 
+    # скриншот проверенной заявки — в очередь на удаление (не позже 24 ч)
+    from app.services import task_proofs as proofs_svc
+
+    await proofs_svc.schedule_after_review(session, sub.id, now=now)
     await session.flush()
     return sub
 
