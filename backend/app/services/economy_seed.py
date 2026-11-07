@@ -83,6 +83,27 @@ DEFAULTS: dict[str, tuple[object, str]] = {
         },
         "Тариф заданий по типам: переход / кампания / партнёр (комиссия — в тарифе; task_platform_commission_bp — запасной для старых)",
     ),
+    "city_ads": (
+        {
+            "min_level": 3,
+            "min_days": 1,
+            "max_days": 30,
+            "body_max": 500,
+            "spots": {
+                "tower_line": {"price_day": "1", "enabled": True},
+                "banner_sky": {"price_day": "0.5", "enabled": True},
+                "banner_street": {"price_day": "0.5", "enabled": True},
+                "neon_left": {"price_day": "0.3", "enabled": True},
+                "neon_right": {"price_day": "0.3", "enabled": True},
+            },
+            "limits": {
+                "line": {"title_max": 60},
+                "banner": {"title_max": 14, "subtitle_max": 18},
+                "neon": {"title_max": 12},
+            },
+        },
+        "Реклама в городе: цена места за сутки (TON), продаётся ли место, сроки 1–30 суток, длина текста, мин. уровень покупателя",
+    ),
     "min_withdraw_ton": ({"ton": "0.2"}, "Минимальный вывод"),
     "referral_reward": ({"ton": "0.04"}, "Реферальная награда"),
     "daily_rewards": (

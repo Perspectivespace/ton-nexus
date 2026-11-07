@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
-from app.services import ratings, task_tariff, tower_prizes
+from app.services import city_ads, ratings, task_tariff, tower_prizes
 from app.services.economy_seed import DEFAULTS, seed_economy
 
 
@@ -114,6 +114,11 @@ async def set_setting(
         try:
             value = task_tariff.normalize(value)
         except task_tariff.TaskTariffError as e:
+            raise EconomyAdminError(str(e)) from e
+    elif key == city_ads.KEY:
+        try:
+            value = city_ads.normalize(value)
+        except city_ads.CityAdError as e:
             raise EconomyAdminError(str(e)) from e
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
@@ -245,6 +250,7 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "miner_luck_roll_bp", "group": "miner", "label": "Бросок Удачи при сборе"},
     {"key": "task_platform_commission_bp", "group": "tasks", "label": "Комиссия платформы (bp)"},
     {"key": "task_tariff", "group": "tasks", "label": "Тариф заданий"},
+    {"key": "city_ads", "group": "city_ads", "label": "Реклама в городе"},
     {"key": "min_withdraw_ton", "group": "withdraw", "label": "Мин. вывод TON"},
     {"key": "referral_reward", "group": "growth", "label": "Реферальная награда"},
     {"key": "daily_rewards", "group": "daily", "label": "Награды daily/streak"},
