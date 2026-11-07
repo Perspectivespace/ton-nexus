@@ -44,8 +44,8 @@ describe("OwnerTaskPanel", () => {
     expect(html).toContain("Можно вернуть");
     expect(html).toContain("0.55");
     expect(html).toContain("С баланса создателя");
-    expect(html).toContain("За счёт платформы");
-    expect(html).toContain("Разницу берёт платформа");
+    expect(html).toContain("Создатель доплачивает разницу");
+    expect(html).toContain("Платформа");
     expect(html).toContain("Отменить задание");
     expect(html).not.toContain("Карточка услуги");
   });
@@ -63,7 +63,8 @@ describe("OwnerTaskPanel", () => {
     expect(html).toContain("Карточка услуги");
     expect(html).toContain("Закрыть продажи");
     expect(html).not.toContain("Оплатил создатель");
-    expect(html).not.toContain("За счёт платформы");
+    expect(html).not.toContain("С баланса создателя");
+    expect(html).toContain("для следующих покупок");
   });
 
   it("отменённое — без действий", () => {

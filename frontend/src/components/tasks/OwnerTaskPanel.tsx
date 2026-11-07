@@ -115,16 +115,23 @@ export function OwnerTaskPanelView({
               </Button>
             </div>
             {!isPartner && (
-              <Tabs
-                kind="line"
-                label="Кто платит за новые выполнения"
-                items={[
-                  { value: "charge", label: "С баланса создателя" },
-                  { value: "free", label: "За счёт платформы" },
-                ]}
-                value={slotMode}
-                onChange={setSlotMode}
-              />
+              <>
+                <Tabs
+                  kind="blocks"
+                  label="Кто платит за новые выполнения"
+                  items={[
+                    { value: "charge", label: "Создатель" },
+                    { value: "free", label: "Платформа" },
+                  ]}
+                  value={slotMode}
+                  onChange={setSlotMode}
+                />
+                <p className="text-[12px] text-[var(--text-dim)]">
+                  {slotMode === "charge"
+                    ? "С баланса создателя: награда × выполнения + комиссия."
+                    : "За счёт платформы: создатель ничего не платит."}
+                </p>
+              </>
             )}
           </div>
 
@@ -149,17 +156,23 @@ export function OwnerTaskPanelView({
             </div>
             {!isPartner && (
               <Tabs
-                kind="line"
-                label="Разница бюджета"
+                kind="blocks"
+                label="Кто покрывает разницу бюджета"
                 items={[
-                  { value: "creator", label: "Создатель доплачивает / получает возврат" },
-                  { value: "absorb", label: "Разницу берёт платформа" },
+                  { value: "creator", label: "Создатель" },
+                  { value: "absorb", label: "Платформа" },
                 ]}
                 value={priceMode}
                 onChange={setPriceMode}
               />
             )}
-            <p className="text-[12px] text-[var(--text-dim)]">Действует на выплаты после изменения, включая заявки на проверке.</p>
+            <p className="text-[12px] text-[var(--text-dim)]">
+              {isPartner
+                ? "Новая цена — для следующих покупок."
+                : priceMode === "creator"
+                  ? "Создатель доплачивает разницу с комиссией или получает возврат. Действует на выплаты после изменения, включая заявки на проверке."
+                  : "Разницу берёт на себя платформа (или оставляет себе при снижении). Действует на выплаты после изменения."}
+            </p>
           </div>
 
           {isPartner && onEdit && (
