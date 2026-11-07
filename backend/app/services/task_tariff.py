@@ -252,6 +252,36 @@ def quote_visit(tariff: dict[str, Any], *, slots: int) -> VisitQuote:
     )
 
 
+def quote_campaign(
+    tariff: dict[str, Any],
+    *,
+    reward: Any,
+    slots: int,
+    commission_bp: Any = None,
+) -> VisitQuote:
+    """Кампания: награду вводит владелец вручную; комиссия — override или тариф.
+
+    Заказчик платит reward × slots + commission; payout + commission == total до нанотона.
+    """
+    cfg = normalize(tariff)["campaign"]
+    reward_nano = ton_to_nano(reward, name="награда за выполнение")
+    if reward_nano > MAX_REWARD_NANO:
+        raise TaskTariffError("награда за выполнение: не больше 100 TON")
+    slots = _slots(slots, "число выполнений")
+    bp = int(cfg["commission_bp"]) if commission_bp is None else _bp(commission_bp, "комиссия")
+    payout_nano = reward_nano * slots
+    commission_nano = _commission_nano(payout_nano, bp)
+    return VisitQuote(
+        slots=slots,
+        reward_nano=reward_nano,
+        payout_nano=payout_nano,
+        commission_nano=commission_nano,
+        total_nano=payout_nano + commission_nano,
+        xp=int(cfg["xp"]),
+        commission_bp=bp,
+    )
+
+
 def quote_partner(tariff: dict[str, Any], *, amount: Any) -> PartnerQuote:
     """Покупатель платит amount; партнёр получает amount − fee; fee — платформе."""
     cfg = normalize(tariff)["partner"]
