@@ -71,6 +71,27 @@ async def proof_cleanup_loop():
         await asyncio.sleep(PROOF_CLEANUP_S)
 
 
+# Реклама в городе: закрытие объявлений с прошедшим сроком (сутки МСК) — раз в 10 минут
+CITY_ADS_EXPIRE_S = 600
+
+
+async def city_ads_expire_loop():
+    """Фоновое истечение рекламы: одобренные с прошедшим сроком → expired; так и не проверенные → expired
+    с полным возвратом и освобождением суток. Ошибки не останавливают цикл."""
+    from app.services.city_ads import expire_once
+
+    while True:
+        try:
+            async with SessionLocal() as s:
+                n = await expire_once(s)
+                await s.commit()
+            if n:
+                logging.getLogger(__name__).info("[city-ads] закрыто объявлений: %s", n)
+        except Exception:
+            logging.getLogger(__name__).exception("[city-ads] expire error")
+        await asyncio.sleep(CITY_ADS_EXPIRE_S)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -92,6 +113,7 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(deposit_loop()),
         asyncio.create_task(arena_loop()),
         asyncio.create_task(proof_cleanup_loop()),
+        asyncio.create_task(city_ads_expire_loop()),
     ]
     yield
     for task in tasks:
