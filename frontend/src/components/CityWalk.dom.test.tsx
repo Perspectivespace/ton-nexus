@@ -16,7 +16,7 @@ vi.mock("@/api/hooks", () => ({
 }));
 vi.mock("@/lib/cityAdLink", async (orig) => ({ ...(await orig<typeof import("@/lib/cityAdLink")>()), openAdLink: m.open }));
 
-import { CityAdSpots } from "./CityAdSpots";
+import { CityAdSpots, fitFont } from "./CityAdSpots";
 import { CityWalk } from "./CityWalk";
 import { cityWalk, useCityWalk } from "@/lib/cityWalk";
 
@@ -124,5 +124,13 @@ describe("CityWalk", () => {
     render();
     act(() => cityWalk.enter());
     expect(el.querySelector(".walk-hint")!.textContent).toContain("тихо");
+  });
+});
+
+describe("fitFont", () => {
+  it("короткое название — базовый кегль, длинное мельчает, но не меньше 9", () => {
+    expect(fitFont("banner", "PIXEL", 126)).toBe(20);
+    expect(fitFont("neon", "КИБЕРЧАЙ", 106)).toBeLessThan(22);
+    expect(fitFont("line", "Х".repeat(80), 154)).toBe(9);
   });
 });

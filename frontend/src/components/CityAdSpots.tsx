@@ -18,6 +18,15 @@ export const AD_SPOT_BOX: Record<string, [number, number, number, number]> = {
 const W = 720;
 const H = 1280;
 const pc = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
+/** базовый кегль заготовки по формату (px кадра) и средняя ширина знака в em (с разрядкой) */
+const FONT: Record<string, [number, number]> = { banner: [20, 0.7], line: [15, 0.78], neon: [22, 0.72] };
+
+/** кегль, при котором заголовок помещается в место (px кадра): длинные названия мельчают, а не обрезаются */
+export function fitFont(format: string, title: string, w: number): number {
+  const [base, em] = FONT[format] ?? FONT.banner;
+  const fit = (w - 14) / (Math.max(1, [...title].length) * em);
+  return Math.max(9, Math.min(base, Math.floor(fit * 10) / 10));
+}
 
 /** места с объявлением на сегодня, которые умеем нарисовать */
 export function liveSpots(spots: CityAdSpotOnBoard[] | undefined): CityAdSpotOnBoard[] {
@@ -34,7 +43,7 @@ export function CityAdSpots() {
       {live.map((s) => {
         const [x, y, w, h] = AD_SPOT_BOX[s.key];
         const ad = s.ad!;
-        const style = { left: pc(x, W), top: pc(y, H), width: pc(w, W), height: pc(h, H), ...adVars(ad.color) } as CSSProperties;
+        const style = { left: pc(x, W), top: pc(y, H), width: pc(w, W), height: pc(h, H), ...adVars(ad.color), "--fs": fitFont(s.format, ad.title, w) } as CSSProperties;
         const label = `Реклама: ${ad.title}${ad.subtitle ? `, ${ad.subtitle}` : ""}`;
         return (
           <button
