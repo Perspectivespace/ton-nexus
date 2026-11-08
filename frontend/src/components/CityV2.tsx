@@ -12,6 +12,9 @@ import { CityTrain } from "./CityTrain";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
+import { useCityAds } from "@/api/hooks";
+import { CityAdSpots } from "./CityAdSpots";
+import type { ReactNode } from "react";
 
 /**
  * Город растёт вместе с реактором (DESIGN.md п. 3.10–3.11). Облик города = облик реактора (п. 8.1.1):
@@ -95,6 +98,9 @@ export function CityV2({ tier }: { tier: number }) {
   const [prev, setPrev] = useState<string | null>(null);
 
   const { phase, upcoming } = useCityPhase();
+  // реклама в городе: если голо-баннер у мостовой продан, дневная декоративная панель на его месте не рисуется
+  const { data: board } = useCityAds();
+  const streetSold = !!board?.spots.some((s) => s.key === "banner_street" && s.ad);
   const occ = TOWER_SILHOUETTE[tier] ?? TOWER_SILHOUETTE[1];
   const light = phase === "dawn" || phase === "day"; // небо и блики — только при свете
   // ясный день (шаг 5): примерно каждый третий день по МСК на рассвете, днём и вечером (dusk, шаг 4) —
@@ -213,9 +219,11 @@ export function CityV2({ tier }: { tier: number }) {
           </>
         )}
         {/* ── днём: две небольшие светлые голо-панели со сменой слайдов (шаг 5) ── */}
-        {light && <CityAds />}
+        {light && <CityAds hide={streetSold ? [1] : undefined} />}
         {/* ── экран раздела «Майнер» на реакторной башне (на всех обликах, статичный) ── */}
         <TowerScreen />
+        {/* ── реклама в городе (PR 3: простые места; касаемы только в «Прогулке») ── */}
+        <CityAdSpots />
       </div>
       {/* ── редкая молния ночью: разовая вспышка раз в 25–60 с (п. 12.1) ── */}
       {phase === "night" && <CityLightning />}
@@ -249,7 +257,7 @@ function TowerScreen() {
 const TIER_MOOD = ["", "город спит", "город просыпается", "башня под током", "город в огнях"];
 
 /** «Окно в город» на главной: пустая полоса ~240 px, город сдвигается так, чтобы в окне была башня и вывески. */
-export function CityWindow() {
+export function CityWindow({ action }: { action?: ReactNode }) {
   const t = useCityTier();
   useEffect(() => {
     document.documentElement.classList.add("cv2-home");
@@ -260,6 +268,7 @@ export function CityWindow() {
       <span className="cv2-chip" aria-hidden="true">
         <span className="ui-label">Район</span> {TIER_MOOD[t]} · «{REACTOR_TIERS[t - 1]?.name}»
       </span>
+      {action}
     </div>
   );
 }

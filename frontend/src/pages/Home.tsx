@@ -6,6 +6,8 @@ import { useDailyStatus, useMe, useMiner } from "@/api/hooks";
 import { setServerClock } from "@/lib/cityPhase";
 import { haptic } from "@/lib/haptics";
 import { CityWindow } from "@/components/CityV2";
+import { CityWalk } from "@/components/CityWalk";
+import { cityWalk, useCityWalk } from "@/lib/cityWalk";
 import { IconChevron, IconReactor, IconUp } from "@/components/icons";
 import {
   ScreenHeader,
@@ -77,7 +79,29 @@ const rise = (order: Rise[], k: Rise): { className: string; style?: CSSPropertie
   return { className: "home-rise", style: i >= 0 ? ({ "--rise-d": `${100 + i * 80}ms` } as CSSProperties) : undefined };
 };
 
+/** Главная: обычный вид или «Прогулка» (чистый город) — панели главной в «Прогулке» размонтированы. */
 export function Home() {
+  const walk = useCityWalk();
+  return walk.active ? <CityWalk /> : <HomeMain />;
+}
+
+function WalkButton() {
+  return (
+    <button
+      type="button"
+      className="walk-enter"
+      onClick={() => {
+        haptic.tap();
+        cityWalk.enter();
+      }}
+    >
+      <i aria-hidden="true" />
+      Прогулка
+    </button>
+  );
+}
+
+function HomeMain() {
   const { data: me, isLoading, error, isFetching } = useMe();
   const { data: miner } = useMiner();
   // часы сервера поправляют смену суток в городе (раньше это делала кнопка отметки — она теперь в «Заработке»)
@@ -157,7 +181,7 @@ export function Home() {
       </div>
 
       {/* «окно в город»: полоса, где город не закрыт панелями (DESIGN.md п. 3.8) */}
-      <CityWindow />
+      <CityWindow action={<WalkButton />} />
 
       {isLoading && <LoadingPanel label="Синхронизация контура…" />}
       {error && (

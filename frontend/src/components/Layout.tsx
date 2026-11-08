@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { cityWalk } from "@/lib/cityWalk";
 import { Outlet, useLocation } from "react-router-dom";
 import { CityBackdrop } from "./CityBackdrop";
 import { Nav, isDockRoute } from "./Nav";
@@ -20,6 +21,10 @@ export function Layout() {
   // DESIGN п. 14.2: док только на четырёх разделах; на вложенных экранах — «Назад» (Telegram или ссылка)
   const loc = useLocation();
   const dock = isDockRoute(loc.pathname);
+  // «Прогулка» живёт только на главной: уход на другой экран её закрывает
+  useEffect(() => {
+    if (loc.pathname !== "/" && cityWalk.get().active) cityWalk.exit();
+  }, [loc.pathname]);
   return (
     <ToastProvider>
       <div className="app-shell flex flex-col">

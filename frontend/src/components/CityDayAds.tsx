@@ -44,12 +44,11 @@ function AdPanel({ ad, delay }: { ad: Ad; delay: number }) {
   );
 }
 
-export function CityAds() {
+/** hide — номера панелей, место которых занято проданной рекламой (реклама в городе) */
+export function CityAds({ hide }: { hide?: number[] }) {
   return (
     <>
-      {ADS.map((ad, i) => (
-        <AdPanel key={i} ad={ad} delay={i ? 9500 : 6000} />
-      ))}
+      {ADS.map((ad, i) => (hide?.includes(i) ? null : <AdPanel key={i} ad={ad} delay={i ? 9500 : 6000} />))}
     </>
   );
 }

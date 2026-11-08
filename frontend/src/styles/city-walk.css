@@ -1,0 +1,98 @@
+/* ═══ Реклама в городе: места + «Прогулка» (чистый город) + карточка объявления ═══
+ * Стиль «Ночной контур»: без backdrop-filter, анимации только разовые (появление карточки, сдвиг «камеры»).
+ * Единица --u = 1px кадра 720×1280. cqw — с запасным значением через vw (Telegram на старых WebView без container queries). */
+
+/* ── слой мест ── */
+.cv2-life > .cads-live { inset: 0; pointer-events: none; container-type: inline-size;
+  --u: calc(min(100vw, 560px) / 720); }
+html.city-walk .cv2-life > .cads-live { --u: calc(max(100vw, 100vh * 720 / 1280) / 720); }
+@supports (width: 1cqw) { .cads-live > .cad-spot { --u: calc(100cqw / 720); } }
+
+/* места — простые заготовки (полный облик — PR 4) */
+.cad-spot { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--u) * 2);
+  margin: 0; padding: 0 calc(var(--u) * 6); border: 0; overflow: hidden; pointer-events: none; cursor: default;
+  color: var(--ac-core); font: 700 calc(var(--u) * var(--fs, 20)) / 1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+  background: linear-gradient(180deg, rgba(var(--ac-rgb), .16), rgba(var(--ac-rgb), .06)), rgba(7, 9, 16, .82);
+  box-shadow: inset 0 0 0 calc(var(--u) * 1.5) rgba(var(--ac-rgb), .55), 0 0 calc(var(--u) * 14) rgba(var(--ac-rgb), .28);
+  text-shadow: 0 0 calc(var(--u) * 6) rgba(var(--ac-rgb), .8); }
+.cad-spot .t { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.cad-spot small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; color: var(--ac); font: 600 calc(var(--u) * 11) / 1 var(--f-mono); letter-spacing: .08em; text-shadow: none; }
+.cad-spot.f-banner { clip-path: polygon(calc(var(--u) * 8) 0, 100% 0, 100% calc(100% - calc(var(--u) * 8)), calc(100% - calc(var(--u) * 8)) 100%, 0 100%, 0 calc(var(--u) * 8)); }
+.cad-spot.f-line { font: 600 calc(var(--u) * var(--fs, 15)) / 1 var(--f-mono); letter-spacing: .14em; background: rgba(5, 7, 12, .9); box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(var(--ac-rgb), .35); }
+.cad-spot.f-neon { background: transparent; box-shadow: none; font-size: calc(var(--u) * var(--fs, 22));
+  text-shadow: 0 0 calc(var(--u) * 3) rgba(var(--ac-rgb), .95), 0 0 calc(var(--u) * 12) rgba(var(--ac-rgb), .7); }
+[data-theme="light"] .cad-spot.f-neon { text-shadow: 0 0 calc(var(--u) * 3) rgba(var(--ac-rgb), .6); color: var(--ac-ink); }
+
+/* в «Прогулке» места касаемы; выбранное — контур */
+html.city-walk .cad-spot { pointer-events: auto; cursor: pointer; }
+html.city-walk .cad-spot:focus-visible,
+.cad-spot.picked { outline: calc(var(--u) * 2) solid rgba(var(--ac-rgb), .95); outline-offset: calc(var(--u) * 5); overflow: visible; }
+
+/* ── «Прогулка»: город на весь экран, шапка и док скрыты, касания проходят к городу ── */
+html.city-walk .app-brand,
+html.city-walk .app-shell > .dock-layer,
+html.city-walk .ui-dock,
+html.city-walk .dock-games { display: none !important; }
+html.city-walk .app-shell,
+html.city-walk .app-stage { pointer-events: none; }
+html.city-walk .city .c-stage { width: max(100%, calc(100vh * 720 / 1280)); width: max(100%, calc(100dvh * 720 / 1280)); max-width: none;
+  transform: translate3d(-50%, var(--cam, 0px), 0); }
+
+/* вход — на окне города */
+.cv2-window { gap: 8px; }
+.walk-enter { display: inline-flex; align-items: center; gap: 8px; height: 40px; margin-left: auto; padding: 0 14px; border: 0; cursor: pointer;
+  color: #E6F9FF; font: 700 12px/1 var(--f-display); letter-spacing: .14em; text-transform: uppercase;
+  background: linear-gradient(180deg, rgba(43, 245, 255, .14), rgba(43, 245, 255, .04)), rgba(6, 9, 16, .82);
+  box-shadow: inset 0 0 0 1px rgba(43, 245, 255, .4), 0 0 14px rgba(43, 245, 255, .18);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.walk-enter i { width: 8px; height: 8px; border-radius: 50%; background: #2BF5FF; box-shadow: 0 0 8px #2BF5FF; }
+[data-theme="light"] .walk-enter { color: var(--text); background: rgba(255, 255, 255, .9); box-shadow: inset 0 0 0 1px var(--line-strong); }
+
+.walk-ui { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+.walk-ui > * { pointer-events: auto; }
+.walk-top { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; justify-content: flex-start; pointer-events: none; }
+.walk-exit { pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 10px; border: 0; cursor: pointer;
+  color: #D5E6F2; font: 600 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; background: rgba(6, 9, 16, .86);
+  box-shadow: inset 0 0 0 1px rgba(150, 170, 255, .28);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.walk-exit i { font: 400 20px/1 var(--f-sans); font-style: normal; color: #2BF5FF; }
+.walk-hint { position: fixed; left: 50%; bottom: calc(20px + var(--safe-b, 0px)); transform: translateX(-50%); margin: 0; width: max-content; max-width: calc(100% - 32px);
+  padding: 8px 14px; color: #D5E6F2; font: 500 12px/16px var(--f-sans); text-align: center; background: rgba(6, 9, 16, .82);
+  box-shadow: inset 0 0 0 1px rgba(43, 245, 255, .22); pointer-events: none !important;
+  animation: walk-hint-in .5s .3s cubic-bezier(.2, .9, .2, 1) both; }
+@keyframes walk-hint-in { from { opacity: 0; transform: translate(-50%, 10px) } to { opacity: 1; transform: translateX(-50%) } }
+
+/* ── карточка объявления (утверждённый образец F: голо-сканлайны + хрома-заголовок) ── */
+.cad-card { position: fixed; left: 12px; right: 12px; bottom: calc(16px + var(--safe-b, 0px)); z-index: 5; max-width: 536px; margin: 0 auto;
+  max-height: calc(100vh - 80px); max-height: calc(100dvh - 80px); overflow-y: auto; overscroll-behavior: contain;
+  pointer-events: auto; padding: 16px 16px 14px; color: var(--text, #E6EBF5); font: 400 14px/20px var(--f-sans);
+  background: repeating-linear-gradient(0deg, rgba(var(--ac-rgb), .035) 0 1px, transparent 1px 3px), var(--grain, none),
+    linear-gradient(180deg, rgba(14, 18, 32, .96), rgba(7, 9, 16, .98));
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  box-shadow: inset 0 0 0 1px rgba(var(--ac-rgb), .28), inset 0 1px 0 rgba(var(--ac-rgb), .7);
+  animation: cad-card-in .42s cubic-bezier(.2, .9, .2, 1) both; }
+@keyframes cad-card-in { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: none } }
+.cad-card .cc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font: 600 10px/14px var(--f-mono); letter-spacing: .14em; color: var(--ac); }
+.cad-card .cc-days { flex: none; color: var(--text-3, #8590A8); letter-spacing: .06em; }
+.cad-card .cc-title { margin: 10px 0 2px; font: 700 26px/30px var(--f-display); letter-spacing: .04em; color: var(--ac-core); overflow-wrap: anywhere;
+  text-shadow: -1.5px 0 rgba(255, 46, 126, .6), 1.5px 0 rgba(43, 245, 255, .6), 0 0 10px rgba(var(--ac-rgb), .5); }
+.cad-card .cc-sub { margin: 0; font: 500 13px/18px var(--f-sans); color: var(--ac); }
+.cad-card .cc-body { margin: 10px 0 12px; color: var(--text-2, #9AA4BA); white-space: pre-wrap; overflow-wrap: anywhere; }
+.cad-card .cc-link { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 9px 10px; font: 500 13px/18px var(--f-mono); color: var(--text, #E6EBF5);
+  background: rgba(var(--ac-rgb), .07); box-shadow: inset 0 0 0 1px rgba(var(--ac-rgb), .22); min-width: 0; }
+.cad-card .cc-link span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cad-card .cc-link em { font: 600 10px/14px var(--f-mono); font-style: normal; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3, #8590A8); }
+.cad-card .cc-ico { width: 14px; height: 14px; flex: none; border-radius: 50%; background: radial-gradient(circle at 50% 50%, var(--ac) 0 3px, transparent 3.5px), rgba(var(--ac-rgb), .25); }
+.cad-card .cc-act { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 12px; }
+.cad-card .cc-act.solo { grid-template-columns: 1fr; }
+.cad-card button { height: 44px; border: 0; font: 700 14px/1 var(--f-display); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.cad-card .cc-go { color: #0A0610; background: var(--ac); box-shadow: 0 0 16px rgba(var(--ac-rgb), .45);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+.cad-card .cc-close { padding: 0 16px; color: var(--text-2, #9AA4BA); background: transparent; box-shadow: inset 0 0 0 1px rgba(150, 170, 255, .2); }
+.cad-card .cc-confirm { margin-top: 12px; padding: 10px; background: rgba(255, 181, 71, .06); box-shadow: inset 0 0 0 1px rgba(255, 181, 71, .3); }
+.cad-card .cc-confirm p { margin: 0; font: 400 13px/18px var(--f-sans); color: var(--text-2, #9AA4BA); }
+.cad-card .cc-confirm b { color: var(--text, #E6EBF5); font-weight: 600; overflow-wrap: anywhere; }
+.cad-card .cc-confirm .cc-act { margin-top: 10px; }
+.cad-card .cc-note { margin: 10px 0 0; font: 400 11px/15px var(--f-sans); color: var(--text-3, #8590A8); }
+
+@media (prefers-reduced-motion: reduce) { .cad-card, .walk-hint { animation: none; } }
