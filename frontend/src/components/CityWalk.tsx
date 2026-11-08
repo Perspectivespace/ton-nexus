@@ -88,13 +88,14 @@ function AdCard({ spot, day }: { spot: CityAdSpotOnBoard; day: string }) {
     const card = ref.current;
     if (!stage || !el || !card) return;
     const shift = Number.parseFloat(stage.style.getPropertyValue("--cam")) || 0;
-    const bottom = el.getBoundingClientRect().bottom - shift;
-    const gap = bottom + 24 - (window.innerHeight - 12 - card.offsetHeight);
+    const r = el.getBoundingClientRect();
+    // поднять ровно настолько, чтобы место было над карточкой, но не уехало под кнопку «Выйти»
+    const gap = Math.min(r.bottom - shift + 24 - (window.innerHeight - 12 - card.offsetHeight), r.top - shift - 64);
     stage.style.setProperty("--cam", `${-Math.max(0, Math.round(gap))}px`);
     return () => {
       stage.style.removeProperty("--cam");
     };
-  }, [spot.key]);
+  }, [spot.key, confirm]);
 
   const go = () => {
     if (!link) return;
