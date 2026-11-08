@@ -1128,3 +1128,50 @@ export function useTaskUpdate(taskId: number) {
     },
   });
 }
+
+
+// ── Реклама в городе: витрина на сегодня и события «Прогулки» ─────────────────
+
+export type CityAdPalette = "cyan" | "magenta" | "amber" | "mint" | "violet";
+export type CityAdOnBoard = {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  body: string | null;
+  link_url: string | null;
+  link_kind: "telegram" | "web" | null;
+  color: CityAdPalette | string;
+  until: string;
+};
+export type CityAdSpotOnBoard = {
+  key: string;
+  format: "line" | "banner" | "neon";
+  title: string;
+  on_sale: boolean;
+  price_day: string | null;
+  ad: CityAdOnBoard | null;
+};
+export type CityAdsBoard = { day: string; spots: CityAdSpotOnBoard[]; palette: Record<string, string> };
+
+/** Публичная витрина GET /api/v1/city-ads: одобренные объявления на сегодня (МСК). */
+export function useCityAds() {
+  return useQuery({
+    queryKey: ["city-ads"],
+    queryFn: () => api<CityAdsBoard>("/api/v1/city-ads"),
+    staleTime: 60_000,
+    retry: 0,
+  });
+}
+
+export type CityAdEventKind = "impression" | "open" | "click";
+const sentEvents = new Set<string>();
+
+/** Событие «Прогулки» (сервер считает раз в сутки на человека); в пределах сессии повтор не отправляется. */
+export function sendCityAdEvent(adId: number, kind: CityAdEventKind, day: string) {
+  const key = `${day}:${adId}:${kind}`;
+  if (sentEvents.has(key)) return;
+  sentEvents.add(key);
+  void api(`/api/v1/city-ads/${adId}/events`, { method: "POST", body: JSON.stringify({ kind }) }).catch(() => {
+    sentEvents.delete(key); // не дошло — можно повторить позже
+  });
+}
