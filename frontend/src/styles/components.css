@@ -796,6 +796,8 @@ button.ui-stat.scan:disabled { opacity: 1; }
 .ow-about p + p { margin-top: 6px; }
 /* 4 раздела на 360px: ширина вкладки по подписи, без обрезки */
 .ow-tabs .ui-tab { flex: 1 1 auto; padding: 0 4px; }
+/* 5 разделов (с «Рекламой») на 360–400px: кегль и разрядка мельче, всё в одну строку */
+@media (max-width: 420px) { .ow-tabs .ui-tab { padding: 0 2px; font-size: 11.5px; letter-spacing: .03em; } }
 
 /* —— Кабинет: деплой (фаза 3) —— */
 .dp-rail { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; }

@@ -38,6 +38,8 @@ const box = (x: number, y: number, w: number, h: number): CSSProperties => ({
 const loaders = import.meta.glob<string>("../assets/city/v2/city-t*.webp", { query: "?url", import: "default" });
 const SUFFIX: Record<CityPhase, string> = { night: "", dawn: "-dawn", day: "-day", dusk: "-dusk" };
 const load = (t: number, p: CityPhase) => loaders[`../assets/city/v2/city-t${t}${SUFFIX[p]}.webp`]?.();
+/** адрес кадра города (облик × фаза) — и для превью рекламы на экране покупки */
+export const loadCityFrame = load;
 /** заранее скачать кадр (в кэш браузера), не показывая */
 const preload = (t: number, p: CityPhase) =>
   load(t, p)?.then((url) => {

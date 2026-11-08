@@ -33,7 +33,7 @@ describe("anim budget: street loops inside a building", () => {
 /* Реклама в городе: бюджет улицы занят (T4 — 18 петель), поэтому реклама и «Прогулка» — только разовые движения. */
 describe("anim budget: city ads", () => {
   it("no infinite animations and no backdrop-filter in ad styles", () => {
-    for (const name of ["city-ads.css", "city-walk.css"]) {
+    for (const name of ["city-ads.css", "city-walk.css", "city-ads-buy.css"]) {
       const css = read(name).replace(/\/\*[\s\S]*?\*\//g, ""); // без комментариев
       expect(css).not.toMatch(/infinite/);
       expect(css).not.toMatch(/backdrop-filter/);
