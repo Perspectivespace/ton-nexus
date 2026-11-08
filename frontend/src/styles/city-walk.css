@@ -16,7 +16,11 @@ html.city-walk .dock-games { display: none !important; }
 html.city-walk .app-shell,
 html.city-walk .app-stage { pointer-events: none; }
 html.city-walk .city .c-stage { width: max(100%, calc(100vh * 720 / 1280)); width: max(100%, calc(100dvh * 720 / 1280)); max-width: none;
-  transform: translate3d(-50%, var(--cam, 0px), 0); }
+  /* камера — inline transform из lib/walkCamera.ts (один rAF, только пока есть движение) */
+  transform-origin: 50% 0; transition: none; will-change: transform; }
+/* панорама пальцем: браузер не прокручивает и не масштабирует страницу, текст не выделяется */
+html.city-walk, html.city-walk body { touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+html.city-walk .cad-spot { touch-action: none; }
 
 /* вход — на окне города */
 .cv2-window { gap: 8px; }
@@ -36,6 +40,43 @@ html.city-walk .city .c-stage { width: max(100%, calc(100vh * 720 / 1280)); widt
   box-shadow: inset 0 0 0 1px rgba(150, 170, 255, .28);
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
 .walk-exit i { font: 400 20px/1 var(--f-sans); font-style: normal; color: #2BF5FF; }
+.walk-tools { margin-left: auto; display: flex; gap: 8px; pointer-events: none; }
+.walk-tilt { pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 0; cursor: pointer;
+  color: #8F9BB3; font: 600 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; background: rgba(6, 9, 16, .86);
+  box-shadow: inset 0 0 0 1px rgba(150, 170, 255, .2);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.walk-tilt i { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #5A6782; }
+.walk-tilt.on { color: #D5E6F2; box-shadow: inset 0 0 0 1px rgba(43, 245, 255, .4); }
+.walk-tilt.on i { background: #2BF5FF; box-shadow: 0 0 8px #2BF5FF; }
+
+/* ── жизнь улицы (lib/walkLife.ts): разовые события, размеры — в % кадра ── */
+.cv2-life > .walk-near, .cv2-back > .walk-far { position: absolute; inset: 0; pointer-events: none; }
+.wl-car, .wl-drone, .wl-win { position: absolute; display: block; pointer-events: none; }
+.wl-car > b { position: absolute; inset: 0; border-radius: 45% 55% 35% 35% / 60% 60% 40% 40%;
+  background: linear-gradient(90deg, transparent 30%, rgba(140, 210, 255, .45) 30% 70%, transparent 70%) 0 18% / 100% 22% no-repeat,
+    linear-gradient(180deg, #6A7690 0%, #262E40 40%, #0A0D15 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28); }
+.wl-car.rtl > b { transform: scaleX(-1); }
+/* фара спереди, стоп-сигнал сзади */
+.wl-car > b::before { content: ""; position: absolute; right: 2%; top: 32%; width: 10%; height: 30%; border-radius: 50%; background: #FFF4D6; }
+.wl-car > b::after { content: ""; position: absolute; left: 2%; top: 36%; width: 8%; height: 26%; border-radius: 40%; background: #FF3B5C; }
+/* ночью: свет фар впереди и голубая подсветка днища */
+.wl-car.lit > b { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 1px 3px rgba(43, 245, 255, .7); }
+.wl-car.lit > b::before { box-shadow: 0 0 3px 1px rgba(255, 240, 200, .9); }
+.wl-car.lit > b::after { box-shadow: 0 0 3px 1px rgba(255, 59, 92, .8); }
+.wl-car.lit::after { content: ""; position: absolute; left: 96%; top: 10%; width: 220%; height: 80%; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 240, 200, .45), rgba(255, 240, 200, 0)); clip-path: polygon(0 38%, 100% 0, 100% 100%, 0 62%); }
+.wl-car.lit.rtl::after { left: auto; right: 96%; background: linear-gradient(270deg, rgba(255, 240, 200, .45), rgba(255, 240, 200, 0)); clip-path: polygon(0 0, 100% 38%, 100% 62%, 0 100%); }
+/* у земли — отражение огней в мокрой площади */
+.wl-car.k-street.lit::before { content: ""; position: absolute; left: 0; right: 0; top: 115%; height: 260%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(43, 245, 255, .28), rgba(255, 240, 200, .12) 40%, transparent); clip-path: polygon(8% 0, 92% 0, 70% 100%, 30% 100%); }
+.wl-car.k-far > b { background: linear-gradient(180deg, #3C4558, #0A0D15); }
+.wl-car.k-far.lit::after { opacity: .6; }
+.wl-drone { width: 1.6%; height: .5%; }
+.wl-drone > b { position: absolute; inset: 0; border-radius: 40%; background: #141A26; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3); }
+.wl-drone > b::before { content: ""; position: absolute; left: -30%; right: -30%; top: -60%; height: 30%; background: rgba(160, 175, 200, .55); }
+.wl-drone > s { position: absolute; left: 40%; top: 100%; width: 20%; height: 80%; border-radius: 50%; background: #FF3B5C; text-decoration: none; }
+.wl-drone.lit > s { box-shadow: 0 0 4px 1px rgba(255, 59, 92, .9); }
+.wl-win { opacity: 0; background: #FFC56E; box-shadow: 0 0 6px 1px rgba(255, 190, 100, .55); }
 .walk-hint { position: fixed; left: 50%; bottom: calc(20px + var(--safe-b, 0px)); transform: translateX(-50%); margin: 0; width: max-content; max-width: calc(100% - 32px);
   padding: 8px 14px; color: #D5E6F2; font: 500 12px/16px var(--f-sans); text-align: center; background: rgba(6, 9, 16, .82);
   box-shadow: inset 0 0 0 1px rgba(43, 245, 255, .22); pointer-events: none !important;

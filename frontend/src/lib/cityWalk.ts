@@ -18,9 +18,21 @@ function set(next: Partial<State>) {
   subs.forEach((f) => f());
 }
 
+let leaveHook: ((done: () => void) => void) | null = null;
+
 export const cityWalk = {
   enter: () => set({ active: true, picked: null }),
   exit: () => set({ active: false, picked: null }),
+  /** выйти с обратным пролётом камеры (если камера есть), иначе сразу */
+  leave: () => {
+    if (!state.active) return;
+    if (leaveHook) leaveHook(() => set({ active: false, picked: null }));
+    else set({ active: false, picked: null });
+  },
+  /** камера «Прогулки» регистрирует обратный пролёт */
+  setLeaveHook: (f: ((done: () => void) => void) | null) => {
+    leaveHook = f;
+  },
   /** выбрать рекламное место (ключ места) — только в «Прогулке» */
   pick: (spot: string) => {
     if (state.active) set({ picked: spot });
