@@ -18,6 +18,8 @@ html.city-walk .app-stage { pointer-events: none; }
 html.city-walk .city .c-stage { width: max(100%, calc(100vh * 720 / 1280)); width: max(100%, calc(100dvh * 720 / 1280)); max-width: none;
   /* камера — inline transform из lib/walkCamera.ts (один rAF, только пока есть движение) */
   transform-origin: 50% 0; transition: none; will-change: transform; }
+/* в «Прогулке» края кадра видны при панораме — боковое растворение в «пол» убрано (нижнее остаётся) */
+html.city-walk .city .c-stage::after { background: linear-gradient(180deg, transparent 74%, var(--city-floor) 99%); }
 /* панорама пальцем: браузер не прокручивает и не масштабирует страницу, текст не выделяется */
 html.city-walk, html.city-walk body { touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
 html.city-walk .cad-spot { touch-action: none; }
@@ -34,6 +36,9 @@ html.city-walk .cad-spot { touch-action: none; }
 
 .walk-ui { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
 .walk-ui > * { pointer-events: auto; }
+/* обратный пролёт: кнопки и подсказка гаснут (разовый переход) */
+html.city-walk-out .walk-ui { opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+html.city-walk-out .walk-ui > * { pointer-events: none; }
 .walk-top { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; justify-content: flex-start; pointer-events: none; }
 .walk-exit { pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 10px; border: 0; cursor: pointer;
   color: #D5E6F2; font: 600 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; background: rgba(6, 9, 16, .86);

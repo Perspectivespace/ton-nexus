@@ -123,7 +123,7 @@ describe("CityWalk", () => {
     m.board = { ...BOARD, spots: [] };
     render();
     act(() => cityWalk.enter());
-    expect(el.querySelector(".walk-hint")!.textContent).toContain("рекламы сегодня нет");
+    expect(el.querySelector(".walk-hint")!.textContent).toBe("Ведите пальцем — осмотритесь");
   });
 });
 

@@ -150,7 +150,7 @@ export class WalkCamera {
       done?.();
       return;
     }
-    this.tw = { from: { ...this.cam }, to, t0: performance.now(), dur, done };
+    this.tw = { from: { ...this.cam }, to, t0: -1, dur, done }; // отсчёт — с первого кадра (тяжёлый кадр входа не съедает пролёт)
     this.wake();
   }
 
@@ -216,6 +216,7 @@ export class WalkCamera {
     this.last = now;
     let busy = !!this.drag;
     if (this.tw) {
+      if (this.tw.t0 < 0) this.tw.t0 = now;
       const t = clamp((now - this.tw.t0) / this.tw.dur, 0, 1);
       this.cam = lerpCam(this.tw.from, this.tw.to, easeInOut(t));
       if (t >= 1) {

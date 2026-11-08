@@ -139,7 +139,7 @@ export function CityWalk() {
       </div>
       {!spot && (
         <p className="walk-hint" role="status">
-          {live.length ? "Ведите пальцем — осмотритесь · коснитесь вывески" : "Ведите пальцем — осмотритесь · рекламы сегодня нет"}
+          {live.length ? "Ведите пальцем · коснитесь вывески" : "Ведите пальцем — осмотритесь"}
         </p>
       )}
       {spot && data && <AdCard key={spot.key} spot={spot} day={data.day} />}
