@@ -330,6 +330,48 @@ export const SETTINGS: Record<string, SettingMeta> = {
       return `переход ${r} TON · комиссия ${pct(c)} · партнёр ${pct(f)}`;
     },
   },
+  city_ads: {
+    title: "Реклама в городе",
+    short: "Цены мест за сутки, сроки, длина текста",
+    about:
+      "Платная реклама прямо в городе: бегущая строка на реакторной башне, два голо-баннера и две неоновые вывески. Рекламодатель выбирает место и даты (сутки по МСК, одно объявление на место в сутки) и платит с баланса в приложении: цена места за сутки × число суток. Каждое объявление сначала проверяет владелец. «Продаётся» — выключите, чтобы место временно не покупали (уже одобренные показы останутся). Мин. уровень — кто может покупать. Длина текста — сколько символов помещается на месте в городе. Пока это только тариф: покупка появится следующим обновлением.",
+    fields: {
+      min_level: { label: "Мин. уровень", kind: "int", min: 1, max: 1000, hint: "Кто может покупать рекламу" },
+      min_days: { label: "Мин. срок", kind: "int", unit: "сут", min: 1, max: 30 },
+      max_days: { label: "Макс. срок", kind: "int", unit: "сут", min: 1, max: 30 },
+      body_max: {
+        label: "Текст объявления",
+        kind: "int",
+        unit: "симв",
+        min: 0,
+        max: 2000,
+        hint: "Подробный текст в карточке при нажатии",
+      },
+      spots: { label: "Места и цены" },
+      tower_line: { label: "Бегущая строка · башня" },
+      banner_sky: { label: "Голо-баннер · над площадью" },
+      banner_street: { label: "Голо-баннер · у мостовой" },
+      neon_left: { label: "Неон · слева" },
+      neon_right: { label: "Неон · справа" },
+      price_day: { label: "Цена за сутки", kind: "ton", unit: "TON", min: 0.00000001, max: 1000 },
+      enabled: { label: "Продаётся", kind: "bool" },
+      limits: { label: "Длина текста в городе" },
+      line: { label: "Бегущая строка" },
+      banner: { label: "Голо-баннер" },
+      neon: { label: "Неоновая вывеска" },
+      title_max: { label: "Текст", kind: "int", unit: "симв", min: 1, max: 64 },
+      subtitle_max: { label: "Подпись", kind: "int", unit: "симв", min: 0, max: 32 },
+    },
+    summary: (v) => {
+      const o = v as { spots?: Record<string, { price_day?: unknown; enabled?: boolean }>; min_level?: unknown };
+      const sp = o.spots ?? {};
+      const p = (k: string) => (sp[k]?.price_day == null ? "?" : String(sp[k]!.price_day));
+      const off = Object.values(sp).filter((x) => x && x.enabled === false).length;
+      return `строка ${p("tower_line")} · баннер ${p("banner_sky")} · неон ${p("neon_left")} TON${
+        off ? ` · снято с продажи: ${off}` : ""
+      } · с ${String(o.min_level ?? "?")} ур.`;
+    },
+  },
   min_withdraw_ton: {
     title: "Минимальный вывод",
     short: "Наименьшая сумма заявки на вывод",
@@ -626,3 +668,15 @@ export function summarize(key: string, v: unknown): string {
 }
 
 // ton_wallet: настройки привязки кошелька (enabled, network, unique_address)
+
+/** Пример по тарифу рекламы: сколько стоит место на N суток (точно, через нанотоны) */
+export function cityAdsExample(priceDay: string, days: number): string | null {
+  const s = String(priceDay ?? "").trim().replace(",", ".");
+  if (!/^\d+(\.\d{1,9})?$/.test(s) || !Number.isInteger(days) || days < 1) return null;
+  const [i, f = ""] = s.split(".");
+  const NANO = BigInt(1_000_000_000);
+  const total = (BigInt(i) * NANO + BigInt(f.padEnd(9, "0"))) * BigInt(days);
+  const whole = total / NANO;
+  const frac = (total % NANO).toString().padStart(9, "0").replace(/0+$/, "");
+  return frac ? `${whole}.${frac}` : `${whole}`;
+}

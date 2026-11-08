@@ -1,0 +1,121 @@
+"""Реклама в городе: места, объявления, занятые дни (одно объявление на место в сутки МСК), события для статистики.
+
+PR 1 — только схема и расчёт цены: деньги по этим таблицам ещё не двигаются.
+Суммы — в нанотонах (1 TON = 10⁹), как task_purchases.fee_nano: оплата объявления — доход платформы.
+"""
+
+from datetime import date, datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+    func,
+    true,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db.base import Base
+
+AD_STATUSES = ("pending", "approved", "rejected", "cancelled", "expired")
+AD_EVENT_KINDS = ("impression", "open", "click")
+
+
+class CityAdSpot(Base):
+    """Рекламное место в кадре города. Координаты живут во фронтенде (кадр 720×1280), здесь — ключ и формат.
+
+    enabled — технический выключатель места (например, место убрано из рисунка); продажу места владелец
+    включает и выключает в настройке city_ads. Место продаётся, только если включено и там, и там.
+    """
+
+    __tablename__ = "city_ad_spots"
+    __table_args__ = (CheckConstraint("format IN ('line', 'banner', 'neon')", name="ck_city_ad_spots_format"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    format: Mapped[str] = mapped_column(String(16), nullable=False)
+    title: Mapped[str] = mapped_column(String(64), nullable=False)
+    sort: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true(), nullable=False)
+
+
+class CityAd(Base):
+    __tablename__ = "city_ads"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected', 'cancelled', 'expired')", name="ck_city_ads_status"
+        ),
+        CheckConstraint("end_day >= start_day", name="ck_city_ads_days"),
+        Index("ix_city_ads_status_start", "status", "start_day"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    advertiser_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    spot_id: Mapped[int] = mapped_column(ForeignKey("city_ad_spots.id", ondelete="RESTRICT"), index=True, nullable=False)
+    format: Mapped[str] = mapped_column(String(16), nullable=False)  # снимок формата места
+    # что видно в городе: строка/вывеска — title; баннер — title + subtitle
+    title: Mapped[str] = mapped_column(String(64), nullable=False)
+    subtitle: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # подробное объявление (карточка в «Прогулке»)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    link_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    color: Mapped[str] = mapped_column(String(16), nullable=False)  # ключ палитры города
+    status: Mapped[str] = mapped_column(String(16), default="pending", server_default="pending", nullable=False)
+    # сутки МСК, оба края включительно
+    start_day: Mapped[date] = mapped_column(Date, nullable=False)
+    end_day: Mapped[date] = mapped_column(Date, nullable=False)
+    days: Mapped[int] = mapped_column(Integer, nullable=False)
+    # снимок цены на момент брони и суммы в нанотонах
+    price_day_nano: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    total_nano: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    paid_nano: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0", nullable=False)
+    refunded_nano: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0", nullable=False)
+    is_free: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)  # промо владельца
+    # модерация
+    moderated_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    moderated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    moderation_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    link_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class CityAdDay(Base):
+    """Занятые сутки места: строка на каждый день брони. UNIQUE(spot, day) — двух объявлений на месте в один день нет."""
+
+    __tablename__ = "city_ad_days"
+    __table_args__ = (UniqueConstraint("spot_id", "day", name="uq_city_ad_days_spot_day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    spot_id: Mapped[int] = mapped_column(ForeignKey("city_ad_spots.id", ondelete="RESTRICT"), nullable=False)
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    ad_id: Mapped[int] = mapped_column(ForeignKey("city_ads.id", ondelete="CASCADE"), index=True, nullable=False)
+
+
+class CityAdEvent(Base):
+    """Статистика: показ / открытие карточки / переход. Одно событие вида на человека, объявление и сутки МСК."""
+
+    __tablename__ = "city_ad_events"
+    __table_args__ = (
+        UniqueConstraint("ad_id", "user_id", "day", "kind", name="uq_city_ad_events_once"),
+        CheckConstraint("kind IN ('impression', 'open', 'click')", name="ck_city_ad_events_kind"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ad_id: Mapped[int] = mapped_column(ForeignKey("city_ads.id", ondelete="CASCADE"), index=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

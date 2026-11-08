@@ -79,6 +79,15 @@ async def lifespan(app: FastAPI):
             await session.commit()
     except Exception as e:
         print(f"[startup] seed_economy skipped: {e}")
+    try:
+        # места рекламы в городе (их же сеет миграция 018; здесь — на случай базы без alembic)
+        from app.services.city_ads import ensure_spots
+
+        async with SessionLocal() as session:
+            await ensure_spots(session)
+            await session.commit()
+    except Exception as e:
+        print(f"[startup] city ad spots skipped: {e}")
     tasks = [
         asyncio.create_task(deposit_loop()),
         asyncio.create_task(arena_loop()),
