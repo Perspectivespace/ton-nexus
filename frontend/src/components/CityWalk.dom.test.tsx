@@ -119,11 +119,11 @@ describe("CityWalk", () => {
     expect(spot("neon_right").tabIndex).toBe(-1);
   });
 
-  it("без рекламы — подсказка «тихо»", () => {
+  it("без рекламы — подсказка без рекламы", () => {
     m.board = { ...BOARD, spots: [] };
     render();
     act(() => cityWalk.enter());
-    expect(el.querySelector(".walk-hint")!.textContent).toContain("тихо");
+    expect(el.querySelector(".walk-hint")!.textContent).toBe("Ведите пальцем — осмотритесь");
   });
 });
 

@@ -18,9 +18,32 @@ function set(next: Partial<State>) {
   subs.forEach((f) => f());
 }
 
+let leaveHook: ((done: () => void) => void) | null = null;
+
 export const cityWalk = {
   enter: () => set({ active: true, picked: null }),
-  exit: () => set({ active: false, picked: null }),
+  exit: () => {
+    document.documentElement.classList.remove("city-walk-out");
+    set({ active: false, picked: null });
+  },
+  /** выйти с обратным пролётом камеры (если камера есть), иначе сразу */
+  leave: () => {
+    if (!state.active) return;
+    const c = document.documentElement.classList;
+    const done = () => {
+      c.remove("city-walk-out");
+      set({ active: false, picked: null });
+    };
+    if (!leaveHook) return done();
+    // обратный пролёт: карточка закрывается, кнопки гаснут, город возвращается к виду главной
+    c.add("city-walk-out");
+    set({ picked: null });
+    leaveHook(done);
+  },
+  /** камера «Прогулки» регистрирует обратный пролёт */
+  setLeaveHook: (f: ((done: () => void) => void) | null) => {
+    leaveHook = f;
+  },
   /** выбрать рекламное место (ключ места) — только в «Прогулке» */
   pick: (spot: string) => {
     if (state.active) set({ picked: spot });
