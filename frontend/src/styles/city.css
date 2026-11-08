@@ -173,7 +173,7 @@
 @keyframes cv2-beam { from { transform: rotate(-16deg) } to { transform: rotate(4deg) } }
 
 html.app-hidden .cv2 *, html.app-hidden .cv2 *::before, html.app-hidden .cv2 *::after { animation-play-state: paused; }
-html.low-end .cv2-life > :not(.fog):not(.mfog):not(.ad):not(.pdl):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon):not(.dk-win):not(.dk-wet) { display: none; }
+html.low-end .cv2-life > :not(.fog):not(.mfog):not(.ad):not(.pdl):not(.sign):not(.win):not(.bcn):not(.tw-scr):not(.neon):not(.dk-win):not(.dk-wet):not(.cads-live) { display: none; }
 html.low-end .cv2 .win, html.low-end .cv2 .bcn, html.low-end .cv2 .sign.cut { animation: none; opacity: .5; }
 html.low-end .cv2 .sign::after { animation: none; display: none; }
 html.low-end .cv2-back { display: none; }
