@@ -89,8 +89,8 @@ function AdCard({ spot, day }: { spot: CityAdSpotOnBoard; day: string }) {
     if (!stage || !el || !card) return;
     const shift = Number.parseFloat(stage.style.getPropertyValue("--cam")) || 0;
     const r = el.getBoundingClientRect();
-    // поднять ровно настолько, чтобы место было над карточкой, но не уехало под кнопку «Выйти»
-    const gap = Math.min(r.bottom - shift + 24 - (window.innerHeight - 12 - card.offsetHeight), r.top - shift - 64);
+    // поднять ровно настолько, чтобы место (с лучом проектора) было над карточкой, но не уехало под кнопку «Выйти»
+    const gap = Math.min(r.bottom - shift + 36 - (window.innerHeight - 12 - card.offsetHeight), r.top - shift - 64);
     stage.style.setProperty("--cam", `${-Math.max(0, Math.round(gap))}px`);
     return () => {
       stage.style.removeProperty("--cam");

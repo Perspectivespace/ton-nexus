@@ -1,0 +1,86 @@
+/* ═══ Реклама в городе — утверждённый облик «F» (голо-проекция B + LED-строка A) ═══
+ * Без backdrop-filter и filter, без бесконечных анимаций: свечение статичное (градиенты и тени),
+ * движение — разовые WAAPI-прогоны из CityAdSpots.tsx. Размеры — в пикселях кадра: --u = 1 px кадра 720×1280
+ * (container query по ширине сцены, запасное значение через vw — в city-walk.css). */
+.cads-live > * { position: absolute; display: block; }
+.cad-spot { appearance: none; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; text-align: center;
+  white-space: nowrap; overflow: visible; contain: layout style; pointer-events: none; cursor: default; -webkit-tap-highlight-color: transparent; }
+.cad-spot .t, .cad-spot small { position: relative; display: block; line-height: 1; }
+/* кегль подогнан в JS (fitFont), поэтому текст не обрезается многоточием: при оценке впритык заходит на поля, как в макете */
+
+/* ── голо-проекция: HUD-уголки, развёртка, подсветка снизу ── */
+.cad-holo.f-banner { gap: calc(var(--u) * 4); padding: 0 calc(var(--u) * 6);
+  background:
+    linear-gradient(90deg, var(--ac) calc(var(--u)*7), transparent 0) 0 0 / 100% calc(var(--u)*1.2) no-repeat,
+    linear-gradient(270deg, var(--ac) calc(var(--u)*7), transparent 0) 0 0 / 100% calc(var(--u)*1.2) no-repeat,
+    linear-gradient(90deg, var(--ac) calc(var(--u)*7), transparent 0) 0 100% / 100% calc(var(--u)*1.2) no-repeat,
+    linear-gradient(270deg, var(--ac) calc(var(--u)*7), transparent 0) 0 100% / 100% calc(var(--u)*1.2) no-repeat,
+    linear-gradient(var(--ac), var(--ac)) 0 0 / calc(var(--u)*1.2) calc(var(--u)*7) no-repeat,
+    linear-gradient(var(--ac), var(--ac)) 100% 0 / calc(var(--u)*1.2) calc(var(--u)*7) no-repeat,
+    linear-gradient(var(--ac), var(--ac)) 0 100% / calc(var(--u)*1.2) calc(var(--u)*7) no-repeat,
+    linear-gradient(var(--ac), var(--ac)) 100% 100% / calc(var(--u)*1.2) calc(var(--u)*7) no-repeat,
+    repeating-linear-gradient(0deg, rgba(var(--ac-rgb), .2) 0 calc(var(--u)*1), transparent calc(var(--u)*1) calc(var(--u)*3)),
+    linear-gradient(180deg, rgba(var(--ac-rgb), .1), rgba(var(--ac-rgb), .26)); }
+.cad-holo.f-neon { padding: 0 calc(var(--u) * 6);
+  background: repeating-linear-gradient(0deg, rgba(var(--ac-rgb), .14) 0 calc(var(--u)*1), transparent calc(var(--u)*1) calc(var(--u)*3)),
+    radial-gradient(closest-side, rgba(var(--ac-rgb), .22), transparent); }
+/* тёмная плашка под текстом — читаемость мелкого текста на фоне города */
+.cad-holo::before { content: ""; position: absolute; inset: calc(var(--u)*4) calc(var(--u)*4.5); pointer-events: none; border-radius: calc(var(--u)*2);
+  background: radial-gradient(120% 100% at 50% 50%, rgba(3, 7, 18, .62), rgba(3, 7, 18, .38) 70%, rgba(3, 7, 18, .18)); }
+/* луч проектора от эмиттера снизу */
+.cad-holo::after { content: ""; position: absolute; left: 6%; right: 6%; top: 100%; height: calc(var(--u) * 16); pointer-events: none;
+  background: linear-gradient(0deg, rgba(var(--ac-rgb), .5), rgba(var(--ac-rgb), 0)); clip-path: polygon(0 0, 100% 0, 58% 100%, 42% 100%); opacity: .7; }
+.cad-holo.f-neon::after { height: calc(var(--u) * 10); }
+.cad-holo .emit { position: absolute; left: 40%; right: 40%; top: calc(100% + var(--u)*15); height: calc(var(--u)*3);
+  background: linear-gradient(90deg, #1A2030, var(--ac-core), #1A2030); border-radius: 1px; }
+/* хроматическая кромка — только на заголовке; подпись чистая */
+.cad-holo .t { color: #F2FDFF;
+  text-shadow: calc(var(--u)*-.7) 0 rgba(255, 46, 126, .55), calc(var(--u)*.7) 0 rgba(43, 245, 255, .55), 0 0 calc(var(--u)*2.5) rgba(var(--ac-rgb), .95), 0 0 calc(var(--u)*9) rgba(var(--ac-rgb), .6); }
+.cad-holo.f-banner .t { font: 700 calc(var(--u) * var(--fs, 14.5)) / 1 var(--f-display); letter-spacing: .02em; }
+.cad-holo.f-banner small { font: 700 calc(var(--u) * var(--fs2, 10.5)) / 1 var(--f-sans); letter-spacing: .01em; color: var(--ac-core);
+  text-shadow: 0 0 calc(var(--u)*1.5) rgba(2, 5, 14, .95), 0 0 calc(var(--u)*4) rgba(2, 5, 14, .7); }
+.cad-holo.f-neon .t { color: var(--ac-core); font: 700 calc(var(--u) * var(--fs, 17.5)) / 1 var(--f-display); letter-spacing: .07em; }
+
+/* ореол за вывеской — отдельный слой с радиальным градиентом (не тень, не filter) */
+.cads-live .cad-halo { pointer-events: none; opacity: 0; transform: scale(1.55, 2.3);
+  background: radial-gradient(closest-side, rgba(var(--ac-rgb), .34), rgba(var(--ac-rgb), .12) 55%, transparent); }
+.cads-live.is-lit .cad-halo { opacity: .45; }
+
+/* день: проекция в солнце бледнеет — светлое стекло и плашка, тёмные цветные буквы, кромка еле заметна */
+.cads-live.is-unlit .cad-holo.f-banner { background-color: rgba(244, 250, 255, .78); }
+.cads-live.is-unlit .cad-holo.f-neon { background: repeating-linear-gradient(0deg, rgba(var(--ac-rgb), .18) 0 calc(var(--u)*1), transparent calc(var(--u)*1) calc(var(--u)*3)), rgba(236, 246, 255, .72); }
+.cads-live.is-unlit .cad-holo::before { background: radial-gradient(120% 100% at 50% 50%, rgba(255,255,255,.7), rgba(255,255,255,.45) 75%, rgba(255,255,255,.25)); }
+.cads-live.is-unlit .cad-holo .t { color: var(--ac-ink); text-shadow: calc(var(--u)*-.5) 0 rgba(255,46,126,.25), calc(var(--u)*.5) 0 rgba(0,160,190,.3); }
+.cads-live.is-unlit .cad-holo.f-banner small { color: #142238; text-shadow: none; }
+.cads-live.is-unlit .cad-holo::after { opacity: .35; }
+
+/* ── LED-матрица на башне (вместо экрана «МАЙНЕР», чередуется с ним) ── */
+.cad-tick { overflow: hidden; background: #05060A; box-shadow: inset 0 0 0 calc(var(--u)*1) #2A3040, 0 0 0 calc(var(--u)*1) rgba(0,0,0,.6); }
+.cads-live.is-unlit .cad-tick { background: #10141E; }
+.cad-tick::before { content: ""; position: absolute; inset: calc(var(--u)*2.5); pointer-events: none;
+  background: radial-gradient(circle, rgba(var(--ac-rgb), .13) 45%, transparent 52%) 0 0 / calc(var(--u)*3) calc(var(--u)*3); }
+.cad-tick .tk, .cad-tick .own, .cad-tick .tw-win { position: absolute; inset: 0; display: flex; align-items: center; }
+.cad-tick .own, .cad-tick .tw-win { transition: opacity .45s ease;
+  /* сетка светодиодов неподвижна: маска на окне, буквы «перескакивают» по точкам, а не едут вместе с ними */
+  -webkit-mask: radial-gradient(circle, #000 52%, transparent 60%) 0 0 / calc(var(--u)*3) calc(var(--u)*3);
+          mask: radial-gradient(circle, #000 52%, transparent 60%) 0 0 / calc(var(--u)*3) calc(var(--u)*3); }
+.cad-tick .own { justify-content: center; color: #E2FEFF; font: 800 calc(var(--u) * 15) / 1 var(--f-mono); letter-spacing: .3em; padding-left: .3em;
+  text-shadow: 0 0 calc(var(--u)*3) #2BF5FF, 0 0 calc(var(--u)*8) rgba(43,245,255,.6); }
+.cad-tick .tw-win { justify-content: flex-start; overflow: hidden; }
+.cad-tick .trk { display: inline-block; white-space: nowrap; will-change: transform; transform: translateX(200%);
+  font: 800 calc(var(--u) * 18) / 1 var(--f-mono); letter-spacing: .02em; color: #FFF3DC;
+  text-shadow: 0 0 calc(var(--u)*1.5) #fff, 0 0 calc(var(--u)*4) var(--ac), 0 0 calc(var(--u)*9) var(--ac); }
+.cad-tick .tk.m-own .tw-win, .cad-tick .tk:is(.m-ad, .m-still) .own { opacity: 0; }
+/* без движения: строка стоит в окне (с многоточием), потом уступает «МАЙНЕР» */
+.cad-tick .tk.m-still .tw-win { justify-content: center; padding: 0 calc(var(--u)*6); }
+.cad-tick .tk.m-still .trk { transform: none; will-change: auto; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: calc(var(--u) * 15); }
+
+/* выбранное место в «Прогулке» — контур */
+html.city-walk .cad-spot { pointer-events: auto; cursor: pointer; }
+html.city-walk .cad-spot:focus-visible,
+.cad-spot.picked { outline: calc(var(--u) * 1.5) solid rgba(var(--ac-rgb), .9); outline-offset: calc(var(--u) * 5); }
+.cad-tick.picked { overflow: hidden; }
+
+/* дождь идёт перед рекламой (и перед вывесками города) — z-index дешевле, чем перестановка слоёв */
+.cv2 .cv2-life > .rain { z-index: 1; }

@@ -101,6 +101,8 @@ export function CityV2({ tier }: { tier: number }) {
   // реклама в городе: если голо-баннер у мостовой продан, дневная декоративная панель на его месте не рисуется
   const { data: board } = useCityAds();
   const streetSold = !!board?.spots.some((s) => s.key === "banner_street" && s.ad);
+  // строка на башне продана — экран «МАЙНЕР» показывает сама строка (чередуется с рекламой)
+  const towerSold = !!board?.spots.some((s) => s.key === "tower_line" && s.ad);
   const occ = TOWER_SILHOUETTE[tier] ?? TOWER_SILHOUETTE[1];
   const light = phase === "dawn" || phase === "day"; // небо и блики — только при свете
   // ясный день (шаг 5): примерно каждый третий день по МСК на рассвете, днём и вечером (dusk, шаг 4) —
@@ -221,9 +223,9 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── днём: две небольшие светлые голо-панели со сменой слайдов (шаг 5) ── */}
         {light && <CityAds hide={streetSold ? [1] : undefined} />}
         {/* ── экран раздела «Майнер» на реакторной башне (на всех обликах, статичный) ── */}
-        <TowerScreen />
-        {/* ── реклама в городе (PR 3: простые места; касаемы только в «Прогулке») ── */}
-        <CityAdSpots />
+        {!towerSold && <TowerScreen />}
+        {/* ── реклама в городе: голо-баннеры и вывески, LED-строка на башне; касаемы только в «Прогулке» ── */}
+        <CityAdSpots phase={phase} />
       </div>
       {/* ── редкая молния ночью: разовая вспышка раз в 25–60 с (п. 12.1) ── */}
       {phase === "night" && <CityLightning />}
