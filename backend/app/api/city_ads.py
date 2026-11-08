@@ -145,6 +145,8 @@ class AdOut(BaseModel):
     moderation_note: str | None
     moderated: bool  # уже проверялось владельцем — отменить самому нельзя
     created_at: datetime | None
+    # счётчики «Прогулки»: impression / open / click (уникальные человеко-сутки)
+    stats: dict[str, int] | None = None
 
 
 class OwnerAdOut(AdOut):
@@ -231,7 +233,8 @@ async def city_ads_book(body: BookBody, user: User = Depends(get_current_user), 
 async def city_ads_mine(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     items = await ads_svc.my_ads(db, user=user)
     keys = {s.id: s.key for s in (await db.execute(select(CityAdSpot))).scalars().all()}
-    return [AdOut(**_ad(a, keys.get(a.spot_id, ""))) for a in items]
+    stats = await ads_svc.event_counts(db, [a.id for a in items])
+    return [AdOut(**_ad(a, keys.get(a.spot_id, "")), stats=stats[a.id]) for a in items]
 
 
 @router.post("/{ad_id}/cancel", response_model=AdOut)
@@ -263,8 +266,9 @@ async def city_ads_moderation(
     except ads_svc.CityAdError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     total = await ads_svc.revenue_total_nano(db)
+    stats = await ads_svc.event_counts(db, [a.id for a, _ in rows])
     return ModerationOut(
-        items=[_owner_ad(a, k) for a, k in rows], revenue_total=ads_svc.nano_to_ton(total), revenue_total_nano=total
+        items=[_owner_ad(a, k).model_copy(update={"stats": stats[a.id]}) for a, k in rows], revenue_total=ads_svc.nano_to_ton(total), revenue_total_nano=total
     )
 
 
@@ -283,3 +287,23 @@ async def city_ads_reject(
     _require_owner(user)
     ad = await _tx(db, lambda: ads_svc.reject(db, owner=user, ad_id=ad_id, note=body.note))
     return _owner_ad(ad, await _spot_key(db, ad.spot_id))
+
+
+# ── PR 3: статистика «Прогулки» ──────────────────────────────────────────────
+
+
+class EventBody(BaseModel):
+    kind: str = Field(pattern="^(impression|open|click)$")
+
+
+class EventOut(BaseModel):
+    counted: bool
+
+
+@router.post("/{ad_id}/events", response_model=EventOut)
+async def city_ads_event(
+    ad_id: int, body: EventBody, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    """Показ / открытие карточки / переход по ссылке — только из «Прогулки». Раз в сутки на человека и вид."""
+    counted = await _tx(db, lambda: ads_svc.record_event(db, user=user, ad_id=ad_id, kind=body.kind))
+    return EventOut(counted=counted)

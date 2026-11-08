@@ -27,7 +27,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.city_ad import AD_STATUSES as AD_STATUSES_ALL
-from app.models.city_ad import CityAd, CityAdDay, CityAdSpot
+from app.models.city_ad import AD_EVENT_KINDS, CityAd, CityAdDay, CityAdEvent, CityAdSpot
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services.economy import get_setting
@@ -766,3 +766,58 @@ async def revenue_total_nano(session: AsyncSession) -> int:
     """Доход платформы с рекламы за всё время, нанотоны."""
     v = await session.scalar(select(func.coalesce(func.sum(CityAd.revenue_nano), 0)))
     return int(v or 0)
+
+
+# ── Статистика «Прогулки» (PR 3): показ / открытие карточки / переход ───────
+#
+# Счётчики пишутся только из режима «Прогулка» (клиент шлёт события лишь там). Одно событие вида на человека,
+# объявление и сутки МСК (UNIQUE в city_ad_events); повторы не ошибка, а «не засчитано». Сверху — дневной
+# потолок на человека, чтобы скрипт не раздувал таблицу.
+
+EVENTS_PER_USER_DAY = 60
+
+
+async def record_event(
+    session: AsyncSession, *, user: User, ad_id: int, kind: str, today: date | None = None
+) -> bool:
+    """Засчитать событие. True — записано впервые сегодня; False — уже было (или дневной потолок)."""
+    if kind not in AD_EVENT_KINDS:
+        raise CityAdError("неизвестное событие")
+    today = today or game_day()
+    ad = await session.get(CityAd, ad_id)
+    if not ad or ad.status != "approved" or not ad.start_day <= today <= ad.end_day:
+        raise CityAdNotFoundError("объявление сейчас не показывается")
+    seen = await session.scalar(
+        select(CityAdEvent.id).where(
+            CityAdEvent.ad_id == ad_id, CityAdEvent.user_id == user.id, CityAdEvent.day == today, CityAdEvent.kind == kind
+        )
+    )
+    if seen:
+        return False
+    used = await session.scalar(
+        select(func.count()).select_from(CityAdEvent).where(CityAdEvent.user_id == user.id, CityAdEvent.day == today)
+    )
+    if int(used or 0) >= EVENTS_PER_USER_DAY:
+        return False
+    try:
+        async with session.begin_nested():
+            session.add(CityAdEvent(ad_id=ad_id, user_id=user.id, day=today, kind=kind))
+            await session.flush()
+    except IntegrityError:
+        return False  # параллельный такой же запрос успел первым
+    return True
+
+
+async def event_counts(session: AsyncSession, ad_ids: list[int]) -> dict[int, dict[str, int]]:
+    """Счётчики по объявлениям: {ad_id: {impression, open, click}} (уникальные люди-сутки)."""
+    out: dict[int, dict[str, int]] = {i: {k: 0 for k in AD_EVENT_KINDS} for i in ad_ids}
+    if not ad_ids:
+        return out
+    rows = await session.execute(
+        select(CityAdEvent.ad_id, CityAdEvent.kind, func.count())
+        .where(CityAdEvent.ad_id.in_(ad_ids))
+        .group_by(CityAdEvent.ad_id, CityAdEvent.kind)
+    )
+    for ad_id, kind, n in rows.all():
+        out[ad_id][kind] = int(n)
+    return out
