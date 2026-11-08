@@ -1,7 +1,8 @@
 """Реклама в городе: места, объявления, занятые дни (одно объявление на место в сутки МСК), события для статистики.
 
-PR 1 — только схема и расчёт цены: деньги по этим таблицам ещё не двигаются.
-Суммы — в нанотонах (1 TON = 10⁹), как task_purchases.fee_nano: оплата объявления — доход платформы.
+Суммы — в нанотонах (1 TON = 10⁹). Оплата списывается с баланса при брони (paid_nano) и до одобрения
+только удерживается; при одобрении становится доходом платформы (revenue_nano), возвраты — refunded_nano.
+Всегда refunded_nano + revenue_nano ≤ paid_nano (остаток — удержание по объявлению на модерации).
 """
 
 from datetime import date, datetime
@@ -55,6 +56,10 @@ class CityAd(Base):
             "status IN ('pending', 'approved', 'rejected', 'cancelled', 'expired')", name="ck_city_ads_status"
         ),
         CheckConstraint("end_day >= start_day", name="ck_city_ads_days"),
+        CheckConstraint(
+            "paid_nano >= 0 AND refunded_nano >= 0 AND revenue_nano >= 0 AND refunded_nano + revenue_nano <= paid_nano",
+            name="ck_city_ads_money",
+        ),
         Index("ix_city_ads_status_start", "status", "start_day"),
     )
 
@@ -79,6 +84,7 @@ class CityAd(Base):
     total_nano: Mapped[int] = mapped_column(BigInteger, nullable=False)
     paid_nano: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0", nullable=False)
     refunded_nano: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0", nullable=False)
+    revenue_nano: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0", nullable=False)  # доход платформы
     is_free: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)  # промо владельца
     # модерация
     moderated_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
