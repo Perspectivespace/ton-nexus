@@ -46,7 +46,7 @@ const render = () =>
   act(() =>
     root.render(
       <>
-        <CityAdSpots />
+        <CityAdSpots phase="night" />
         <WalkHost />
       </>,
     ),
@@ -128,9 +128,27 @@ describe("CityWalk", () => {
 });
 
 describe("fitFont", () => {
-  it("короткое название — базовый кегль, длинное мельчает, но не меньше 9", () => {
-    expect(fitFont("banner", "PIXEL", 126)).toBe(20);
-    expect(fitFont("neon", "КИБЕРЧАЙ", 106)).toBeLessThan(22);
-    expect(fitFont("line", "Х".repeat(80), 154)).toBe(9);
+  it("короткое название — базовый кегль, длинное мельчает, но не меньше 7", () => {
+    expect(fitFont("banner", "PIXEL", 126)).toBe(14.5);
+    expect(fitFont("neon", "КИБЕРЧАЙ НОЧЬЮ", 106)).toBeLessThan(17.5);
+    expect(fitFont("sub", "Х".repeat(80), 124)).toBe(7);
+  });
+});
+
+describe("строка на башне", () => {
+  it("продана — рисуется LED-строка с «МАЙНЕР» и текстом рекламы, в «Прогулке» касаема", () => {
+    m.board = {
+      ...BOARD,
+      spots: [{ key: "tower_line", format: "line", title: "Строка", on_sale: true, price_day: "1", ad: ad(7, "telegram", "https://t.me/nexus_test") }],
+    };
+    render();
+    const tick = spot("tower_line");
+    expect(tick.classList.contains("cad-tick")).toBe(true);
+    expect(tick.querySelector(".own")!.textContent).toBe("МАЙНЕР");
+    expect(tick.querySelector(".trk")!.textContent).toBe("AD7 · подзаголовок");
+    expect(tick.querySelector(".tk")!.classList.contains("m-own")).toBe(true);
+    act(() => cityWalk.enter());
+    act(() => spot("tower_line").click());
+    expect(el.querySelector(".cad-card")!.textContent).toContain("БЕГУЩАЯ СТРОКА");
   });
 });

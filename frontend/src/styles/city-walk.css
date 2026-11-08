@@ -1,4 +1,4 @@
-/* ═══ Реклама в городе: места + «Прогулка» (чистый город) + карточка объявления ═══
+/* ═══ Реклама в городе: слой мест (облик — city-ads.css) + «Прогулка» (чистый город) + карточка объявления ═══
  * Стиль «Ночной контур»: без backdrop-filter, анимации только разовые (появление карточки, сдвиг «камеры»).
  * Единица --u = 1px кадра 720×1280. cqw — с запасным значением через vw (Telegram на старых WebView без container queries). */
 
@@ -6,27 +6,7 @@
 .cv2-life > .cads-live { inset: 0; pointer-events: none; container-type: inline-size;
   --u: calc(min(100vw, 560px) / 720); }
 html.city-walk .cv2-life > .cads-live { --u: calc(max(100vw, 100vh * 720 / 1280) / 720); }
-@supports (width: 1cqw) { .cads-live > .cad-spot { --u: calc(100cqw / 720); } }
-
-/* места — простые заготовки (полный облик — PR 4) */
-.cad-spot { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--u) * 2);
-  margin: 0; padding: 0 calc(var(--u) * 6); border: 0; overflow: hidden; pointer-events: none; cursor: default;
-  color: var(--ac-core); font: 700 calc(var(--u) * var(--fs, 20)) / 1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
-  background: linear-gradient(180deg, rgba(var(--ac-rgb), .16), rgba(var(--ac-rgb), .06)), rgba(7, 9, 16, .82);
-  box-shadow: inset 0 0 0 calc(var(--u) * 1.5) rgba(var(--ac-rgb), .55), 0 0 calc(var(--u) * 14) rgba(var(--ac-rgb), .28);
-  text-shadow: 0 0 calc(var(--u) * 6) rgba(var(--ac-rgb), .8); }
-.cad-spot .t { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.cad-spot small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; color: var(--ac); font: 600 calc(var(--u) * 11) / 1 var(--f-mono); letter-spacing: .08em; text-shadow: none; }
-.cad-spot.f-banner { clip-path: polygon(calc(var(--u) * 8) 0, 100% 0, 100% calc(100% - calc(var(--u) * 8)), calc(100% - calc(var(--u) * 8)) 100%, 0 100%, 0 calc(var(--u) * 8)); }
-.cad-spot.f-line { font: 600 calc(var(--u) * var(--fs, 15)) / 1 var(--f-mono); letter-spacing: .14em; background: rgba(5, 7, 12, .9); box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(var(--ac-rgb), .35); }
-.cad-spot.f-neon { background: transparent; box-shadow: none; font-size: calc(var(--u) * var(--fs, 22));
-  text-shadow: 0 0 calc(var(--u) * 3) rgba(var(--ac-rgb), .95), 0 0 calc(var(--u) * 12) rgba(var(--ac-rgb), .7); }
-[data-theme="light"] .cad-spot.f-neon { text-shadow: 0 0 calc(var(--u) * 3) rgba(var(--ac-rgb), .6); color: var(--ac-ink); }
-
-/* в «Прогулке» места касаемы; выбранное — контур */
-html.city-walk .cad-spot { pointer-events: auto; cursor: pointer; }
-html.city-walk .cad-spot:focus-visible,
-.cad-spot.picked { outline: calc(var(--u) * 2) solid rgba(var(--ac-rgb), .95); outline-offset: calc(var(--u) * 5); overflow: visible; }
+@supports (width: 1cqw) { .cads-live > * { --u: calc(100cqw / 720); } }
 
 /* ── «Прогулка»: город на весь экран, шапка и док скрыты, касания проходят к городу ── */
 html.city-walk .app-brand,
