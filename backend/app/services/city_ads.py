@@ -629,6 +629,7 @@ async def book(
         reference_type=REF_TYPE,
         reference_id=ad.id,
     )
+    await session.refresh(ad)  # created_at/updated_at ставит база
     return ad
 
 
