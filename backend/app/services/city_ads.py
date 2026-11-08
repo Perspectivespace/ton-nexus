@@ -1,6 +1,6 @@
 """Реклама в городе — места, тариф `city_ads`, расчёт цены и свободных дат, проверка текста и ссылки.
 
-PR 1: только расчёт. Бронирование, оплата с баланса, модерация и возвраты — следующим PR.
+PR 1: расчёт. PR 2: бронь с оплатой с баланса, модерация владельцем, возвраты, смена ссылки, истечение срока.
 
 Форматы и места (координаты — во фронтенде, кадр 720×1280):
 - ``line``   «Бегущая строка» — LED-полоса на реакторной башне (tower_line);
@@ -17,15 +17,19 @@ from __future__ import annotations
 import ipaddress
 import re
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.city_ad import AD_STATUSES as AD_STATUSES_ALL
 from app.models.city_ad import CityAd, CityAdDay, CityAdSpot
 from app.models.user import User
+from app.services import balance as balance_svc
 from app.services.economy import get_setting
 from app.services.economy_seed import DEFAULTS
 from app.services.gameday import game_day
@@ -84,6 +88,18 @@ class CityAdError(ValueError):
 
 
 class CityAdPermissionError(PermissionError):
+    pass
+
+
+class CityAdBusyError(CityAdError):
+    """Хотя бы одни сутки уже заняты другим объявлением."""
+
+
+class CityAdFundsError(CityAdError):
+    """Не хватает TON на балансе."""
+
+
+class CityAdNotFoundError(LookupError):
     pass
 
 
@@ -388,6 +404,7 @@ async def quote(
     days: int,
     content: AdContent | None = None,
     today: date | None = None,
+    strict: bool = False,
 ) -> Quote:
     """Цена и свободные даты для брони. Всё пересчитывается на сервере из тарифа и занятых дней."""
     cfg = await load_config(session)
@@ -411,7 +428,8 @@ async def quote(
     busy = await busy_days(session, spot.id, earliest, horizon_end)
     occupied = sorted(d for d in busy if start <= d <= end)
     nxt = next_free_start(busy, frm=start, latest=latest, days=days)
-    checked = validate_content(cfg, spot.format, content) if content is not None else None
+    # strict — бронь: текст и цвет обязательны; без strict — живой расчёт, проверяется только заполненное
+    checked = validate_content(cfg, spot.format, content, partial=not strict) if content is not None else None
     return Quote(
         spot_key=spot.key,
         format=spot.format,
@@ -479,3 +497,271 @@ async def board(session: AsyncSession, *, today: date | None = None) -> dict[str
         "body_max": cfg["body_max"],
         "limits": cfg["limits"],
     }
+
+
+# ── Бронь, оплата, модерация, возвраты (PR 2) ─────────────────────────────────
+#
+# Деньги (нанотоны, целые): при брони с баланса списывается total_nano (paid_nano) — это удержание.
+# Одобрение переводит удержание в доход платформы (revenue_nano). Возвраты — refunded_nano.
+# Инвариант: refunded_nano + revenue_nano ≤ paid_nano; удержание = paid − refunded − revenue.
+# Каждая функция работает в транзакции вызывающего: он делает commit, при ошибке — rollback.
+
+PAY_TYPE = "city_ads"  # списание за рекламу (balance_history.balance_type)
+REFUND_TYPE = "city_ads_refund"  # возврат за рекламу
+REF_TYPE = "city_ad"
+NOTE_MAX = 500
+_NANO = Decimal(10**9)
+
+
+def _ton(nano: int) -> Decimal:
+    """Нанотоны → TON для журнала баланса (кратно 10 нанотонам — кванту баланса, проверено в тарифе)."""
+    return (Decimal(int(nano)) / _NANO).quantize(Decimal("0.00000001"))
+
+
+def held_nano(ad: CityAd) -> int:
+    return int(ad.paid_nano) - int(ad.refunded_nano) - int(ad.revenue_nano)
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+async def _lock_ad(session: AsyncSession, ad_id: int) -> CityAd:
+    await session.flush()
+    ad = await session.scalar(
+        select(CityAd).where(CityAd.id == ad_id).with_for_update().execution_options(populate_existing=True)
+    )
+    if not ad:
+        raise CityAdNotFoundError("объявление не найдено")
+    return ad
+
+
+async def _free_days(session: AsyncSession, ad: CityAd) -> None:
+    """Освободить сутки объявления: место снова можно купить (UNIQUE(spot, day) держит только живые брони)."""
+    await session.execute(delete(CityAdDay).where(CityAdDay.ad_id == ad.id))
+
+
+async def _refund(session: AsyncSession, ad: CityAd, nano: int, why: str) -> int:
+    if nano <= 0:
+        return 0
+    await balance_svc.credit(
+        session,
+        user_id=ad.advertiser_id,
+        amount=_ton(nano),
+        balance_type=REFUND_TYPE,
+        description=f"Возврат за рекламу в городе: {why} (объявление #{ad.id})",
+        reference_type=REF_TYPE,
+        reference_id=ad.id,
+    )
+    ad.refunded_nano = int(ad.refunded_nano) + nano
+    return nano
+
+
+def _days_ru(n: int) -> str:
+    if n % 10 == 1 and n % 100 != 11:
+        return f"{n} сутки"
+    return f"{n} суток"
+
+
+async def book(
+    session: AsyncSession,
+    *,
+    user: User,
+    spot_key: str,
+    start: date,
+    days: int,
+    content: AdContent,
+    today: date | None = None,
+) -> CityAd:
+    """Купить показ: цена пересчитывается на сервере, сутки резервируются атомарно, оплата — с баланса.
+
+    Порядок: расчёт и проверки (уровень, место, срок, текст, ссылка) → блокировка пользователя и проверка баланса →
+    объявление и его сутки в точке сохранения (гонка за те же сутки → UNIQUE → «занято», ничего не списано) →
+    списание. Объявление ждёт модерации (pending); деньги до одобрения — удержание.
+    """
+    q = await quote(session, user=user, spot_key=spot_key, start=start, days=days, content=content, today=today, strict=True)
+    if not q.available:
+        raise CityAdBusyError("Эти сутки уже заняты — выберите другие даты")
+    c = q.content
+    assert c is not None and c.title and c.color
+    spot = await _spot(session, q.spot_key)
+    total = q.total_nano
+    fresh = await balance_svc.get_user_for_update(session, user.id)
+    if Decimal(fresh.balance) < _ton(total):
+        raise CityAdFundsError(f"Недостаточно TON: нужно {q.total} TON")
+    ad = CityAd(
+        advertiser_id=user.id,
+        spot_id=spot.id,
+        format=spot.format,
+        title=c.title,
+        subtitle=c.subtitle,
+        body=c.body,
+        link_url=c.link_url,
+        color=c.color,
+        status="pending",
+        start_day=q.start,
+        end_day=q.end,
+        days=q.days,
+        price_day_nano=q.price_day_nano,
+        total_nano=total,
+        paid_nano=total,
+        refunded_nano=0,
+        revenue_nano=0,
+    )
+    try:
+        async with session.begin_nested():
+            session.add(ad)
+            await session.flush()
+            for i in range(q.days):
+                session.add(CityAdDay(spot_id=spot.id, day=q.start + timedelta(days=i), ad_id=ad.id))
+            await session.flush()
+    except IntegrityError as e:
+        # параллельная бронь успела занять хотя бы одни из этих суток
+        raise CityAdBusyError("Эти сутки только что заняли — выберите другие даты") from e
+    await balance_svc.debit(
+        session,
+        user_id=user.id,
+        amount=_ton(total),
+        balance_type=PAY_TYPE,
+        description=(
+            f"Реклама в городе: {FORMAT_RU[spot.format]}, {_days_ru(q.days)} с {q.start:%d.%m} (объявление #{ad.id})"
+        ),
+        reference_type=REF_TYPE,
+        reference_id=ad.id,
+    )
+    return ad
+
+
+async def cancel(session: AsyncSession, *, user: User, ad_id: int) -> CityAd:
+    """Отменить своё объявление до модерации — полный возврат, сутки освобождаются."""
+    ad = await _lock_ad(session, ad_id)
+    if ad.advertiser_id != user.id:
+        raise CityAdNotFoundError("объявление не найдено")
+    if ad.status != "pending" or ad.moderated_at is not None:
+        raise CityAdError("Отменить можно только до проверки владельцем")
+    await _refund(session, ad, held_nano(ad), "отмена до проверки")
+    ad.status = "cancelled"
+    ad.cancelled_at = _now()
+    await _free_days(session, ad)
+    await session.flush()
+    return ad
+
+
+async def edit_link(session: AsyncSession, *, user: User, ad_id: int, link_url: str | None, today: date | None = None) -> CityAd:
+    """Сменить ссылку. Одобренное объявление снова уходит на модерацию и до одобрения не показывается."""
+    today = today or game_day()
+    ad = await _lock_ad(session, ad_id)
+    if ad.advertiser_id != user.id:
+        raise CityAdNotFoundError("объявление не найдено")
+    if ad.status not in BUSY_STATUSES or ad.end_day < today:
+        raise CityAdError("Ссылку можно менять только у действующего объявления")
+    new = normalize_link(link_url)
+    if new == ad.link_url:
+        return ad
+    ad.link_url = new
+    ad.link_changed_at = _now()
+    if ad.status == "approved":
+        ad.status = "pending"
+        ad.moderation_note = None
+    await session.flush()
+    return ad
+
+
+async def approve(session: AsyncSession, *, owner: User, ad_id: int, today: date | None = None) -> CityAd:
+    """Одобрить: объявление выходит в город в свои сутки; удержание становится доходом платформы."""
+    today = today or game_day()
+    ad = await _lock_ad(session, ad_id)
+    if ad.status != "pending":
+        raise CityAdError("Одобрить можно только объявление на проверке")
+    if ad.end_day < today:
+        raise CityAdError("Срок показа уже прошёл")
+    ad.revenue_nano = int(ad.revenue_nano) + held_nano(ad)
+    ad.status = "approved"
+    ad.moderated_by_id = owner.id
+    ad.moderated_at = _now()
+    ad.moderation_note = None
+    await session.flush()
+    return ad
+
+
+def unshown_days(ad: CityAd, today: date) -> int:
+    """Сутки, которые ещё не показаны (сегодня — тоже: снятое объявление сегодня уже не видно)."""
+    frm = max(ad.start_day, today)
+    return max((ad.end_day - frm).days + 1, 0)
+
+
+async def reject(
+    session: AsyncSession, *, owner: User, ad_id: int, note: str | None = None, today: date | None = None
+) -> CityAd:
+    """Отклонить (на проверке) или снять (уже одобренное). Возврат на баланс, сутки освобождаются.
+
+    Ни разу не одобренное — полный возврат. Уже показанное (одобрено, потом сменили ссылку, или снято владельцем) —
+    возврат за непоказанные сутки, начиная с сегодняшних; показанные остаются доходом платформы.
+    """
+    today = today or game_day()
+    note = _line(note, "Причина", NOTE_MAX, required=False)
+    ad = await _lock_ad(session, ad_id)
+    if ad.status not in BUSY_STATUSES:
+        raise CityAdError("Объявление уже закрыто")
+    held = held_nano(ad)
+    take_back = min(int(ad.revenue_nano), int(ad.price_day_nano) * unshown_days(ad, today))
+    ad.revenue_nano = int(ad.revenue_nano) - take_back
+    await _refund(session, ad, held + take_back, "объявление отклонено" if held else "объявление снято")
+    ad.status = "rejected"
+    ad.moderated_by_id = owner.id
+    ad.moderated_at = _now()
+    ad.moderation_note = note
+    await _free_days(session, ad)
+    await session.flush()
+    return ad
+
+
+async def expire_once(session: AsyncSession, *, today: date | None = None) -> int:
+    """Закрыть объявления с прошедшим сроком. Одобренные → expired. Так и не проверенные → expired с полным
+    возвратом удержания и освобождением суток. Возвращает число закрытых."""
+    today = today or game_day()
+    ids = (
+        await session.execute(
+            select(CityAd.id).where(CityAd.status.in_(BUSY_STATUSES), CityAd.end_day < today).order_by(CityAd.id)
+        )
+    ).scalars().all()
+    n = 0
+    for ad_id in ids:
+        ad = await _lock_ad(session, ad_id)
+        if ad.status not in BUSY_STATUSES or ad.end_day >= today:
+            continue
+        if ad.status == "pending":
+            await _refund(session, ad, held_nano(ad), "объявление не успели проверить")
+            if not ad.moderation_note:
+                ad.moderation_note = "Срок показа прошёл до проверки"
+            await _free_days(session, ad)
+        ad.status = "expired"
+        n += 1
+    await session.flush()
+    return n
+
+
+async def my_ads(session: AsyncSession, *, user: User) -> list[CityAd]:
+    rows = await session.execute(
+        select(CityAd).where(CityAd.advertiser_id == user.id).order_by(CityAd.created_at.desc(), CityAd.id.desc()).limit(100)
+    )
+    return list(rows.scalars().all())
+
+
+async def moderation_queue(session: AsyncSession, *, status: str = "pending", limit: int = 100) -> list[tuple[CityAd, str]]:
+    if status not in AD_STATUSES_ALL:
+        raise CityAdError("неизвестный статус")
+    rows = await session.execute(
+        select(CityAd, CityAdSpot.key)
+        .join(CityAdSpot, CityAdSpot.id == CityAd.spot_id)
+        .where(CityAd.status == status)
+        .order_by(CityAd.start_day, CityAd.id)
+        .limit(limit)
+    )
+    return [(a, k) for a, k in rows.all()]
+
+
+async def revenue_total_nano(session: AsyncSession) -> int:
+    """Доход платформы с рекламы за всё время, нанотоны."""
+    v = await session.scalar(select(func.coalesce(func.sum(CityAd.revenue_nano), 0)))
+    return int(v or 0)
