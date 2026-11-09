@@ -2,6 +2,8 @@ import {
   camBounds, clamp, clampCam, easeInOut, glideStep, inBounds, isDrag, layerShift, lerpCam, releaseVelocity, rubber,
   WALK_STREET, WALK_ZOOM, type Bounds, type Cam, type Sample, type Vec,
 } from "@/lib/walkMath";
+import { ARRIVE_MS, edgePull, nearEdge, type Dir } from "@/lib/districtNav";
+import type { EdgeState } from "@/lib/districtCamera";
 
 /**
  * Камера «Прогулки» (DOM-часть; математика — walkMath.ts).
@@ -59,7 +61,13 @@ export class WalkCamera {
 
   constructor(
     private stage: HTMLElement,
-    private opts: { flight: boolean; inertia: boolean },
+    private opts: {
+      flight: boolean;
+      inertia: boolean;
+      /** районы (PR 3): протяжка за край кадра — к соседу; true — переход начался */
+      onEdge?: (dir: Dir) => boolean;
+      onPull?: (s: EdgeState) => void;
+    },
   ) {
     current = this;
     window.addEventListener("pointerdown", this.onDown, { passive: true });
@@ -91,10 +99,20 @@ export class WalkCamera {
     return { ...this.cam };
   }
 
-  /** вход: с вида главной — пролёт к улице */
-  enter() {
+  /**
+   * вход: с вида главной — пролёт к улице. arrive — пришли из соседнего района (полоска или край улицы):
+   * камера уже на улице у ближнего края кадра и проезжает к середине (как вход в район).
+   */
+  enter(arrive?: Dir) {
     this.home = this.homeCam();
     this.rest = this.walkCam();
+    if (arrive) {
+      const b = this.bounds(this.rest.s);
+      this.cam = { ...this.rest, x: arrive === 1 ? b.maxX : b.minX };
+      this.render();
+      this.tween(this.rest, this.opts.flight ? ARRIVE_MS : 0);
+      return;
+    }
     this.cam = { ...this.home };
     this.render();
     if (this.opts.flight) this.tween(this.rest, FLY_IN);
@@ -181,6 +199,13 @@ export class WalkCamera {
     this.drag = null;
     if (!g.moved) return; // касание — его обработает кнопка вывески
     this.suppressUntil = performance.now() + 400; // протяжка — не касание: гасим следующий click
+    const b = this.bounds();
+    const pull = edgePull(this.cam.x, b.minX, b.maxX);
+    if (e.type === "pointerup" && pull.dir !== 0 && pull.p >= 1 && this.opts.onEdge?.(pull.dir)) {
+      this.v = { x: 0, y: 0 };
+      this.gliding = false;
+      return;
+    }
     const v = e.type === "pointerup" && this.opts.inertia ? releaseVelocity(g.samples, performance.now()) : { x: 0, y: 0 };
     this.v = v;
     this.gliding = true;
@@ -256,6 +281,10 @@ export class WalkCamera {
     for (const { el, k } of this.layers) {
       const sh = layerShift(k, c, this.rest, { x: -this.tilt.x, y: -this.tilt.y });
       el.style.translate = `${((sh.x * w) / c.s).toFixed(2)}px ${((sh.y * w) / c.s).toFixed(2)}px`;
+    }
+    if (this.opts.onPull) {
+      const pull = edgePull(c.x, b.minX, b.maxX);
+      this.opts.onPull({ dir: pull.dir, p: this.drag ? pull.p : 0, ...nearEdge(c.x, b.minX, b.maxX) });
     }
     this.rendered++;
   }

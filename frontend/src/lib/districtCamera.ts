@@ -1,11 +1,15 @@
-import { clamp, glideStep, isDrag, releaseVelocity, rubber, type Bounds, type Sample } from "@/lib/walkMath";
+import { clamp, easeInOut, glideStep, isDrag, releaseVelocity, rubber, type Bounds, type Sample } from "@/lib/walkMath";
 import { layerX } from "@/lib/districts";
+import { edgePull, nearEdge, type Dir } from "@/lib/districtNav";
 
 /**
  * Камера сцены района: только по горизонтали. Механика — из «Прогулки» (walkMath): порог касания, «резинка» за краем,
  * скорость отпускания, инерция с затуханием и пружина обратно в границы. Вход — в центре улицы.
  * Один requestAnimationFrame, который крутится только пока есть движение; слои двигаются transform'ом.
+ * PR 3: протяжка за край дальше EDGE_PULL и отпускание — переход к соседнему району (onEdge); onPull — подсказка у края;
+ * arrive(dir) — проезд от ближнего края к центру при входе из соседнего района.
  */
+export type EdgeState = { dir: Dir | 0; p: number; l: boolean; r: boolean };
 type Drag = { id: number; x0: number; cam0: number; samples: Sample[]; moved: boolean };
 export type CamLayer = { el: HTMLElement; k: number };
 
@@ -15,6 +19,7 @@ export class DistrictCamera {
   private range = 0;
   private drag: Drag | null = null;
   private gliding = false;
+  private tw: { from: number; to: number; t0: number; dur: number } | null = null;
   private raf = 0;
   private last = 0;
   /** кадров отрисовано (для проверок) */
@@ -23,7 +28,7 @@ export class DistrictCamera {
   constructor(
     private host: HTMLElement,
     private layers: () => CamLayer[],
-    private opts: { inertia: boolean },
+    private opts: { inertia: boolean; onEdge?: (dir: Dir) => boolean; onPull?: (s: EdgeState) => void },
   ) {
     host.addEventListener("pointerdown", this.onDown);
     window.addEventListener("pointermove", this.onMove, { passive: true });
@@ -50,6 +55,18 @@ export class DistrictCamera {
     this.render();
   }
 
+  /**
+   * вход из соседнего района: камера стоит у ближнего края улицы и за dur мс проезжает к центру.
+   * dir = +1 — шли вправо (пришли слева): видим левый конец улицы, т. е. сдвиг +range.
+   */
+  arrive(dir: Dir, dur: number) {
+    const from = dir === 1 ? this.range : -this.range;
+    this.jump(from);
+    if (dur <= 0 || this.range === 0) return this.jump(0);
+    this.tw = { from, to: 0, t0: -1, dur };
+    this.wake();
+  }
+
   /** протяжка по сдвигу (для тестов и клавиатуры): как палец, с инерцией vx (px/мс) */
   nudge(dx: number, vx = 0) {
     this.x = rubber(this.x + dx, -this.range, this.range);
@@ -62,6 +79,7 @@ export class DistrictCamera {
     if (!e.isPrimary || e.button > 0) return;
     if (e.target instanceof Element && e.target.closest("button, a")) return;
     this.gliding = false;
+    this.tw = null; // палец перехватывает проезд
     this.v = 0;
     this.drag = { id: e.pointerId, x0: e.clientX, cam0: this.x, samples: [{ t: performance.now(), x: e.clientX, y: 0 }], moved: false };
   };
@@ -81,6 +99,13 @@ export class DistrictCamera {
     if (!g || e.pointerId !== g.id) return;
     this.drag = null;
     if (!g.moved) return;
+    // протянули за край достаточно — к соседнему району (если он есть), иначе — пружина назад
+    const pull = edgePull(this.x, -this.range, this.range);
+    if (e.type === "pointerup" && pull.dir !== 0 && pull.p >= 1 && this.opts.onEdge?.(pull.dir)) {
+      this.v = 0;
+      this.gliding = false;
+      return;
+    }
     this.v = e.type === "pointerup" && this.opts.inertia ? releaseVelocity(g.samples, performance.now()).x : 0;
     this.gliding = true;
     this.wake();
@@ -97,7 +122,13 @@ export class DistrictCamera {
     const dt = Math.min(48, Math.max(0, now - this.last));
     this.last = now;
     let busy = !!this.drag;
-    if (this.gliding && !this.drag) {
+    if (this.tw) {
+      if (this.tw.t0 < 0) this.tw.t0 = now;
+      const t = clamp((now - this.tw.t0) / this.tw.dur, 0, 1);
+      this.x = this.tw.from + (this.tw.to - this.tw.from) * easeInOut(t);
+      if (t >= 1) this.tw = null;
+      else busy = true;
+    } else if (this.gliding && !this.drag) {
       const r = glideStep({ x: this.x, y: 0, s: 1 }, { x: this.v, y: 0 }, dt, this.bounds());
       this.x = r.cam.x;
       this.v = r.v.x;
@@ -110,6 +141,11 @@ export class DistrictCamera {
 
   render() {
     for (const { el, k } of this.layers()) el.style.transform = `translate3d(${layerX(k, this.x).toFixed(2)}px,0,0)`;
+    if (this.opts.onPull) {
+      const pull = edgePull(this.x, -this.range, this.range);
+      const near = nearEdge(this.x, -this.range, this.range);
+      this.opts.onPull({ dir: pull.dir, p: this.drag ? pull.p : 0, ...near });
+    }
     this.rendered++;
   }
 

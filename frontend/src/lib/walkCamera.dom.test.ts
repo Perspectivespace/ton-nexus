@@ -109,6 +109,42 @@ describe("WalkCamera", () => {
   });
 });
 
+describe("WalkCamera: районы (PR 3)", () => {
+  it("протяжка влево за правый край кадра — к правому соседу (Неон-ряды); вправо за левый край — соседа нет, пружина", () => {
+    cam.destroy();
+    const onEdge = vi.fn((dir: number) => dir === 1);
+    cam = new WalkCamera(stage, { flight: false, inertia: true, onEdge });
+    cam.enter();
+    ptr("pointerdown", 300, 400, spot);
+    ptr("pointermove", 280, 400);
+    ptr("pointermove", -300, 400); // далеко влево — за правый край кадра
+    ptr("pointerup", -300, 400);
+    expect(onEdge).toHaveBeenCalledWith(1);
+    onEdge.mockClear();
+    cam.destroy();
+    cam = new WalkCamera(stage, { flight: false, inertia: true, onEdge });
+    cam.enter();
+    ptr("pointerdown", 10, 400, spot);
+    ptr("pointermove", 30, 400);
+    ptr("pointermove", 600, 400);
+    ptr("pointerup", 600, 400);
+    expect(onEdge).toHaveBeenCalledWith(-1);
+    flush(200);
+    expect(cam.state.x).toBeCloseTo(cam.bounds().maxX, 0); // соседа слева нет — пружина в кадр
+  });
+
+  it("вход из района: камера уже на улице у края и проезжает к середине", () => {
+    cam.destroy();
+    cam = new WalkCamera(stage, { flight: true, inertia: true });
+    cam.enter(-1); // шли влево из Неон-рядов — видим правый край Центра
+    const b = cam.bounds();
+    expect(cam.state.s).toBeCloseTo(1.32);
+    expect(cam.state.x).toBeCloseTo(b.minX);
+    flush(200);
+    expect(cam.state.x).toBeCloseTo(0);
+  });
+});
+
 describe("walkLife.pickKind", () => {
   it("окна зажигаются только в темноте", () => {
     expect(pickKind(true, 0.9)).toBe("window");
