@@ -1,0 +1,45 @@
+/* ═══ Районы: навигация в «Прогулке» (components/DistrictNav.tsx, PR 3 районов) ═══
+ * «Ночной контур»: плотные тёмные плашки со скошенными углами и тонкой кромкой, без backdrop-filter и filter.
+ * Анимации только разовые (переходы); бесконечных нет. */
+
+/* полоска районов внизу */
+.dz-strip { position: fixed; left: 12px; right: 12px; bottom: calc(14px + var(--safe-b, 0px)); z-index: 6; max-width: 420px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; pointer-events: auto;
+  background: rgba(6, 9, 16, .9); box-shadow: inset 0 0 0 1px rgba(150, 170, 255, .22);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+.dz-strip > button { height: 40px; min-width: 0; padding: 0 4px; border: 0; cursor: pointer; background: transparent; color: #8F9BB3;
+  font: 700 11px/1 var(--f-display, sans-serif); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; transition: color .15s ease, background-color .15s ease; }
+.dz-strip > button.on { background: #2BF5FF; color: #00161A; cursor: default; }
+.dz-strip > button:not(.on):active { color: #E6F9FF; background: rgba(43, 245, 255, .12); }
+.dz-strip > button:focus-visible { outline: 2px solid #2BF5FF; outline-offset: -2px; }
+@media (max-width: 370px) { .dz-strip > button { letter-spacing: .06em; font-size: 10.5px; } }
+
+/* с полоской подсказка «Ведите пальцем» стоит над ней; открытая карточка объявления полоску прячет */
+.walk-ui.has-strip .walk-hint { bottom: calc(70px + var(--safe-b, 0px)); }
+html.city-walk-card .dz-strip { display: none; }
+
+/* подсказки соседа у краёв улицы: --pull 0…1 — насколько протянули за край */
+.dz-edge { --pull: 0; position: fixed; top: 50%; z-index: 6; display: flex; align-items: center; gap: 6px; padding: 10px 10px; pointer-events: none;
+  color: #D5E6F2; background: rgba(6, 9, 16, .86); box-shadow: inset 0 0 0 1px rgba(43, 245, 255, calc(.18 + var(--pull) * .5));
+  opacity: 0; transition: opacity .2s ease; translate: 0 -50%; }
+.dz-edge.l { left: 0; transform: translateX(-24px); clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%); }
+.dz-edge.r { right: 0; transform: translateX(24px); clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px)); }
+/* у края улицы подсказка выезжает; при протяжке за край — подрастает и ярче кромка */
+.dz-edge.near { opacity: 1; transform: none; scale: calc(1 + var(--pull) * .1); transition: opacity .2s ease, transform .2s ease; }
+.dz-edge.l.near { transform-origin: 0 50%; }
+.dz-edge.r.near { transform-origin: 100% 50%; }
+.dz-edge > i { font: 400 22px/1 var(--f-sans, sans-serif); font-style: normal; color: #2BF5FF; }
+.dz-edge > span { display: grid; }
+.dz-edge b, .dz-edge em { grid-area: 1 / 1; font: 700 11px/14px var(--f-display, sans-serif); font-style: normal; letter-spacing: .12em;
+  text-transform: uppercase; white-space: nowrap; transition: opacity .15s ease; }
+.dz-edge em { opacity: 0; color: #2BF5FF; }
+.dz-edge.ready b { opacity: 0; }
+.dz-edge.ready em { opacity: 1; }
+
+/* переход между районами: уходящая сцена гаснет (~0.2 с), камера новой проезжает от края к центру */
+html.dz-going .dz, html.dz-going .city .c-stage, html.dz-going .walk-ui { opacity: 0; transition: opacity .2s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-edge, .dz-edge b, .dz-edge em, .dz-strip > button { transition: none; }
+}
