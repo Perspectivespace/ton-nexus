@@ -14,6 +14,8 @@ export function CityBackdrop() {
   const tier = useCityTier();
   const loc = useLocation();
   const inside = buildingAt(loc.pathname);
+  // экран района закрывает город целиком: улица размонтирована — её петли и таймеры не работают под ним
+  const district = loc.pathname === "/district";
   const [anim, setAnim] = useState<InteriorAnim>("still");
   const seen = useRef(false);
 
@@ -35,9 +37,11 @@ export function CityBackdrop() {
   return (
     <div className={`city${inside ? " inside" : ""}`}>
       <div className="c-stage" aria-hidden={inside ? "true" : undefined}>
-        <div aria-hidden="true">
-          <CityV2 tier={tier} />
-        </div>
+        {!district && (
+          <div aria-hidden="true">
+            <CityV2 tier={tier} />
+          </div>
+        )}
       </div>
       {inside && <Interior key={inside.id + anim} id={inside.id} anim={anim} />}
       <div className="c-scrim" aria-hidden="true" />
