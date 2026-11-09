@@ -118,3 +118,41 @@ describe("district street life", () => {
     expect(host.querySelectorAll(".dz-mover").length).toBe(0);
   });
 });
+
+describe("district camera: neighbours (PR 3)", () => {
+  it("pulling far enough past the edge and releasing asks for the neighbour; a short pull springs back", () => {
+    cam.destroy();
+    const onEdge = vi.fn(() => true);
+    const pulls: number[] = [];
+    cam = new DistrictCamera(host, () => els.map((el, i) => ({ el, k: KS[i] })), { inertia: true, onEdge, onPull: (s) => pulls.push(s.p) });
+    cam.setRange(367);
+    cam.jump(-367); // у правого конца улицы
+    ptr("pointerdown", 300, host);
+    ptr("pointermove", 280);
+    ptr("pointermove", 200); // 100 px пальцем → ~35 px за краем: мало
+    flush(1);
+    ptr("pointerup", 200);
+    flush();
+    expect(onEdge).not.toHaveBeenCalled();
+    expect(cam.x).toBe(-367);
+    ptr("pointerdown", 380, host);
+    ptr("pointermove", 360);
+    ptr("pointermove", 100); // 280 px → ~98 px за краем
+    flush(1);
+    expect(Math.max(...pulls)).toBe(1);
+    ptr("pointerup", 100);
+    expect(onEdge).toHaveBeenCalledWith(1); // правый сосед
+  });
+
+  it("arrive(): from the near edge to the centre in ~0.6 s", () => {
+    cam.arrive(1, 600);
+    expect(cam.x).toBe(367); // пришли слева — видим левый конец улицы
+    flush(20); // ~320 мс
+    expect(cam.x).toBeGreaterThan(0);
+    expect(cam.x).toBeLessThan(367);
+    flush();
+    expect(cam.x).toBe(0);
+    cam.arrive(-1, 0);
+    expect(cam.x).toBe(0);
+  });
+});

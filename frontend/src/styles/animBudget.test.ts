@@ -35,11 +35,20 @@ describe("anim budget: street loops inside a building", () => {
 /* Реклама в городе: бюджет улицы занят (T4 — 18 петель), поэтому реклама и «Прогулка» — только разовые движения. */
 describe("anim budget: city ads", () => {
   it("no infinite animations and no backdrop-filter in ad styles", () => {
-    for (const name of ["city-ads.css", "city-walk.css", "city-ads-buy.css", "districts.css"]) {
+    for (const name of ["city-ads.css", "city-walk.css", "city-ads-buy.css", "districts.css", "district-nav.css"]) {
       const css = read(name).replace(/\/\*[\s\S]*?\*\//g, ""); // без комментариев
       expect(css).not.toMatch(/infinite/);
       expect(css).not.toMatch(/backdrop-filter/);
       expect(css).not.toMatch(/\bfilter\s*:/);
     }
+  });
+});
+
+/* Районы (PR 3): полоска районов не мешает карточке объявления, переход — разовое затухание. */
+describe("district nav styles", () => {
+  it("the ad card hides the strip; the scene switch is a one-shot fade", () => {
+    const css = read("district-nav.css");
+    expect(css).toMatch(/html\.city-walk-card \.dz-strip \{ display: none; \}/);
+    expect(css).toMatch(/html\.dz-going[^{]*\{ opacity: 0; transition: opacity \.2s ease; \}/);
   });
 });

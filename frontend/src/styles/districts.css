@@ -41,7 +41,7 @@ html.district-open, html.district-open body { overscroll-behavior: none; }
 .dz-ui { position: absolute; inset: 0; pointer-events: none; }
 .dz-ui > * { pointer-events: auto; }
 .dz-ui .walk-top { position: absolute; }
-.dz-badge { position: absolute; left: 50%; bottom: calc(18px + var(--safe-b, 0px)); translate: -50% 0; margin: 0; padding: 7px 12px;
+.dz-badge { position: absolute; right: 12px; top: 21px; margin: 0; padding: 7px 10px;
   pointer-events: none; white-space: nowrap; background: rgba(6, 9, 16, .78); border: 1px solid rgba(150, 170, 255, .28);
   color: #D5E6F2; font: 600 11px/1 var(--f-display, sans-serif); letter-spacing: .14em; text-transform: uppercase; }
 

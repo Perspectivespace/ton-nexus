@@ -22,6 +22,8 @@ vi.mock("@/lib/districtLife", () => ({ startDistrictLife: m.life }));
 vi.mock("@/lib/cityPhase", () => ({ useCityPhase: () => ({ phase: m.phase, upcoming: null }) }));
 
 import { District } from "./District";
+import { cityWalk } from "@/lib/cityWalk";
+import { districtNav } from "@/lib/districtNav";
 
 let root: Root;
 let el: HTMLDivElement;
@@ -54,6 +56,7 @@ beforeEach(() => {
     lite ? { flat: `/flat-${art}.webp` } : { sky: `/sky-${art}`, far: `/far-${art}`, mid: `/mid-${art}`, near: `/near-${art}` },
   );
   m.life.mockClear();
+  districtNav.reset();
   vi.stubGlobal("requestAnimationFrame", () => 0);
   vi.stubGlobal("cancelAnimationFrame", () => {});
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
@@ -83,7 +86,8 @@ describe("district screen", () => {
     expect(el.querySelector(".dz")?.getAttribute("data-tint")).toBeNull();
     expect(document.documentElement.classList.contains("district-open")).toBe(true);
     expect(m.life).toHaveBeenCalledTimes(1);
-    expect(el.querySelector(".dz-badge")?.textContent).toContain("Порт");
+    expect(el.querySelector(".dz")?.getAttribute("aria-label")).toContain("Порт");
+    expect(el.querySelector(".dz-strip [aria-current=page]")?.textContent).toBe("Порт");
   });
 
   it("dawn = day art + tint, dusk = night art + tint", async () => {
@@ -136,6 +140,32 @@ describe("district screen", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it("strip: Порт → Неон-ряды and Центр (walk mode on the main page); edges show the neighbours", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true })); // «меньше движения» — переход сразу
+    await render("/district?d=port");
+    expect(el.querySelector(".dz-edge.l")?.textContent).toContain("Неон-ряды");
+    expect(el.querySelector(".dz-edge.r")).toBeNull(); // Порт — крайний справа
+    const btn = (t: string) => [...el.querySelectorAll<HTMLButtonElement>(".dz-strip button")].find((b) => b.textContent === t)!;
+    await act(async () => btn("Неон-ряды").click());
+    expect(path).toBe("/district");
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(el.querySelector(".dz-strip [aria-current=page]")?.textContent).toBe("Неон-ряды");
+    expect(districtNav.takeArrival()).toBeNull(); // новая сцена забрала направление прихода для камеры
+    await act(async () => btn("Центр").click());
+    expect(path).toBe("/");
+    expect(cityWalk.get().active).toBe(true);
+    act(() => cityWalk.exit());
+  });
+
+  it("«Выйти» — на главную без «Прогулки»", async () => {
+    await render("/district?d=rows");
+    await act(async () => el.querySelector<HTMLButtonElement>(".walk-exit")!.click());
+    expect(path).toBe("/");
+    expect(cityWalk.get().active).toBe(false);
   });
 
   it("unknown district falls back to Неон-ряды", async () => {

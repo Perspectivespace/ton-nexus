@@ -10,16 +10,18 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const m = vi.hoisted(() => ({ send: vi.fn(), open: vi.fn(() => true), board: null as unknown }));
+const m = vi.hoisted(() => ({ send: vi.fn(), open: vi.fn(() => true), board: null as unknown, owner: false }));
 vi.mock("@/api/hooks", () => ({
   useCityAds: () => ({ data: m.board, refetch: vi.fn(async () => ({})) }),
   sendCityAdEvent: m.send,
+  useMe: () => ({ data: { is_owner: m.owner }, isLoading: false }),
 }));
 vi.mock("@/lib/cityAdLink", async (orig) => ({ ...(await orig<typeof import("@/lib/cityAdLink")>()), openAdLink: m.open }));
 
 import { CityAdSpots, fitFont } from "./CityAdSpots";
 import { CityWalk } from "./CityWalk";
 import { cityWalk, useCityWalk } from "@/lib/cityWalk";
+import { districtNav } from "@/lib/districtNav";
 
 const ad = (id: number, link_kind: "web" | "telegram", link_url: string) => ({
   id,
@@ -74,6 +76,8 @@ const btn = (t: string) => [...el.querySelectorAll("button")].find((b) => b.text
 
 beforeEach(() => {
   m.board = BOARD;
+  m.owner = false;
+  districtNav.reset();
   m.send.mockClear();
   m.open.mockClear();
   el = document.createElement("div");
@@ -187,5 +191,44 @@ describe("строка на башне", () => {
     act(() => cityWalk.enter());
     act(() => spot("tower_line").click());
     expect(el.querySelector(".cad-card")!.textContent).toContain("БЕГУЩАЯ СТРОКА");
+  });
+});
+
+/* Районы (PR 3): полоска «Центр · Неон-ряды · Порт» в «Прогулке» — пока только владельцу (и dev-сборке). */
+describe("районы в «Прогулке»", () => {
+  const strip = () => el.querySelector(".dz-strip");
+
+  it("в продакшене игрок полоски не видит, владелец — видит; Центр отмечен", () => {
+    vi.stubEnv("DEV", false);
+    try {
+      render();
+      act(() => cityWalk.enter());
+      expect(strip()).toBeNull();
+      expect(el.querySelector(".walk-ui")?.classList.contains("has-strip")).toBe(false);
+      act(() => cityWalk.exit());
+      m.owner = true;
+      render();
+      act(() => cityWalk.enter());
+      expect([...strip()!.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["Центр", "Неон-ряды", "Порт"]);
+      expect(strip()!.querySelector("[aria-current=page]")?.textContent).toBe("Центр");
+      expect(el.querySelector(".dz-edge.r")?.textContent).toContain("Неон-ряды");
+      expect(el.querySelector(".dz-edge.l")).toBeNull(); // левее Центра ничего нет
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("касание «Неон-ряды» открывает район (с «меньше движения» — сразу)", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    try {
+      m.owner = true;
+      render();
+      act(() => cityWalk.enter());
+      act(() => btn("Неон-ряды").click());
+      expect(el.querySelector("[data-testid=loc]")?.textContent).toBe("/district?d=rows");
+      expect(districtNav.takeArrival()).toEqual({ dir: 1 });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
