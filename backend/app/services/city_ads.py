@@ -2,10 +2,16 @@
 
 PR 1: расчёт. PR 2: бронь с оплатой с баланса, модерация владельцем, возвраты, смена ссылки, истечение срока.
 
-Форматы и места (координаты — во фронтенде, кадр 720×1280):
-- ``line``   «Бегущая строка» — LED-полоса на реакторной башне (tower_line);
-- ``banner`` «Голо-баннер» — две голо-панели на фасадах (banner_sky, banner_street);
-- ``neon``   «Неоновая вывеска» — две вывески (neon_left, neon_right).
+Форматы и места (координаты — во фронтенде):
+- ``line``          «Бегущая строка» — LED-полоса (tower_line; в районах — rows_line, port_line);
+- ``banner``        «Голо-баннер» — голо-панель (banner_sky, banner_street; rows_banner, port_banner_cargo/tram);
+- ``neon``          «Неоновая вывеска» (neon_left, neon_right; rows_neon, port_neon);
+- ``facade_screen`` «Экран на фасаде» — большой экран на рынке «Неон-рядов» (rows_facade). Пока только текст:
+  заголовок + подпись; картинка-постер — отдельным обновлением (загрузка и модерация изображения).
+
+Районы: centre — главная страница города (все места до районов), rows — «Неон-ряды», port — «Порт».
+Цена за сутки — по типу места (настройка ``prices``); у места может быть своя цена (``spots.<место>.price_day``).
+У мест Центра своя цена задана, как и раньше, — их цены не меняются. Места районов засеяны снятыми с продажи.
 
 Сутки — по МСК (app.services.gameday). Одно объявление на место в сутки (city_ad_days, UNIQUE(spot, day)).
 Начать показ можно не раньше завтрашнего дня (до начала владелец успевает проверить объявление)
@@ -27,7 +33,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.city_ad import AD_STATUSES as AD_STATUSES_ALL
-from app.models.city_ad import AD_EVENT_KINDS, CityAd, CityAdDay, CityAdEvent, CityAdSpot
+from app.models.city_ad import AD_EVENT_KINDS, DISTRICTS, SPOT_FORMATS, CityAd, CityAdDay, CityAdEvent, CityAdSpot
 from app.models.user import User
 from app.services import balance as balance_svc
 from app.services.economy import get_setting
@@ -36,18 +42,50 @@ from app.services.gameday import game_day
 from app.services.task_tariff import TaskTariffError, nano_to_ton, ton_to_nano
 
 KEY = "city_ads"
-FORMATS = ("line", "banner", "neon")
-FORMAT_RU = {"line": "Бегущая строка", "banner": "Голо-баннер", "neon": "Неоновая вывеска"}
+FORMATS = SPOT_FORMATS
+FORMAT_RU = {
+    "line": "Бегущая строка",
+    "banner": "Голо-баннер",
+    "neon": "Неоновая вывеска",
+    "facade_screen": "Экран на фасаде",
+}
+DEFAULT_DISTRICT = "centre"
+DISTRICT_RU = {"centre": "Центр", "rows": "Неон-ряды", "port": "Порт"}
 
-# места: ключ, формат, подпись, порядок (то же сеет миграция 018)
+# места: ключ, формат, подпись, порядок (Центр сеет миграция 018, районы — 020)
 SPOTS: tuple[tuple[str, str, str, int], ...] = (
     ("tower_line", "line", "Бегущая строка на реакторной башне", 10),
     ("banner_sky", "banner", "Голо-баннер над площадью", 20),
     ("banner_street", "banner", "Голо-баннер у мостовой", 30),
     ("neon_left", "neon", "Неоновая вывеска слева", 40),
     ("neon_right", "neon", "Неоновая вывеска справа", 50),
+    ("rows_facade", "facade_screen", "Экран на фасаде рынка", 110),
+    ("rows_line", "line", "Бегущая строка над навесами", 120),
+    ("rows_neon", "neon", "Неоновая вывеска у входа на рынок", 130),
+    ("rows_banner", "banner", "Голо-баннер над крышей рынка", 140),
+    ("port_line", "line", "Бегущая строка на стреле крана", 210),
+    ("port_banner_cargo", "banner", "Голо-баннер на контейнерах", 220),
+    ("port_banner_tram", "banner", "Голо-баннер на станции трамвая", 230),
+    ("port_neon", "neon", "Неоновая вывеска над воротами склада", 240),
 )
 SPOT_KEYS = tuple(s[0] for s in SPOTS)
+# район места по ключу (места без префикса района — Центр)
+SPOT_DISTRICT: dict[str, str] = {
+    k: ("rows" if k.startswith("rows_") else "port" if k.startswith("port_") else "centre") for k in SPOT_KEYS
+}
+
+
+def district_keys(district: str) -> tuple[str, ...]:
+    return tuple(k for k in SPOT_KEYS if SPOT_DISTRICT[k] == district)
+
+
+def check_district(district: str | None) -> str | None:
+    """None — район не указан; иначе один из DISTRICTS."""
+    if district in (None, ""):
+        return None
+    if district not in DISTRICTS:
+        raise CityAdError("неизвестный район")
+    return district
 
 # палитра города (styles/tokens.css): ключ → цвет; во фронтенде те же ключи
 PALETTE: dict[str, str] = {
@@ -114,6 +152,16 @@ def _int(v: Any, name: str, lo: int, hi: int) -> int:
     return v
 
 
+def _price(v: Any, name: str) -> str:
+    try:
+        nano = ton_to_nano(v, name=name)
+    except TaskTariffError as e:
+        raise CityAdError(str(e)) from e
+    if nano > MAX_PRICE_NANO:
+        raise CityAdError(f"{name}: не больше 1000 TON")
+    return nano_to_ton(nano)
+
+
 def normalize(value: Any) -> dict[str, Any]:
     """Каноническая настройка: недостающие поля берутся из DEFAULT, лишние и неверные — ошибка."""
     if not isinstance(value, dict):
@@ -138,21 +186,39 @@ def normalize(value: Any) -> dict[str, Any]:
         raise CityAdError(f"неизвестные места {sorted(extra)}")
     out["spots"] = {}
     for key in SPOT_KEYS:
-        raw = spots.get(key, DEFAULT["spots"][key])
+        base = DEFAULT["spots"][key]
+        raw = spots.get(key, base)
         if not isinstance(raw, dict):
             raise CityAdError(f"{key}: нужен объект")
         if set(raw) - {"price_day", "enabled"}:
             raise CityAdError(f"{key}: лишние поля {sorted(set(raw) - {'price_day', 'enabled'})}")
-        try:
-            nano = ton_to_nano(raw.get("price_day", DEFAULT["spots"][key]["price_day"]), name=f"{key} · цена за сутки")
-        except TaskTariffError as e:
-            raise CityAdError(str(e)) from e
-        if nano > MAX_PRICE_NANO:
-            raise CityAdError(f"{key} · цена за сутки: не больше 1000 TON")
-        enabled = raw.get("enabled", True)
+        # своя цена места: не задана (нет поля, null или пусто) — берётся цена типа места из prices
+        own = raw.get("price_day", base.get("price_day"))
+        enabled = raw.get("enabled", base.get("enabled", True))
         if not isinstance(enabled, bool):
             raise CityAdError(f"{key} · продаётся: да/нет")
-        out["spots"][key] = {"price_day": nano_to_ton(nano), "enabled": enabled}
+        item: dict[str, Any] = {}
+        if own not in (None, ""):
+            item["price_day"] = _price(own, f"{key} · цена за сутки")
+        item["enabled"] = enabled
+        out["spots"][key] = item
+
+    prices = value.get("prices", {})
+    if not isinstance(prices, dict):
+        raise CityAdError("prices: нужен объект")
+    extra = set(prices) - set(FORMATS)
+    if extra:
+        raise CityAdError(f"неизвестные форматы {sorted(extra)}")
+    out["prices"] = {}
+    for fmt in FORMATS:
+        raw = prices.get(fmt, DEFAULT["prices"][fmt])
+        if not isinstance(raw, dict):
+            raise CityAdError(f"{fmt}: нужен объект")
+        if set(raw) - {"price_day"}:
+            raise CityAdError(f"{fmt}: лишние поля {sorted(set(raw) - {'price_day'})}")
+        out["prices"][fmt] = {
+            "price_day": _price(raw.get("price_day", DEFAULT["prices"][fmt]["price_day"]), f"{FORMAT_RU[fmt]} · цена за сутки")
+        }
 
     limits = value.get("limits", {})
     if not isinstance(limits, dict):
@@ -186,9 +252,18 @@ async def load_config(session: AsyncSession) -> dict[str, Any]:
         return normalize(DEFAULT)
 
 
+def spot_price_day(cfg: dict[str, Any], spot_key: str) -> str:
+    """Цена места за сутки (TON строкой): своя цена места, иначе — цена его типа."""
+    own = cfg["spots"].get(spot_key, {}).get("price_day")
+    if own is not None:
+        return own
+    fmt = next(f for k, f, _, _ in SPOTS if k == spot_key)
+    return cfg["prices"][fmt]["price_day"]
+
+
 def price_nano(cfg: dict[str, Any], spot_key: str, days: int) -> tuple[int, int]:
     """(цена за сутки, итого) в нанотонах."""
-    per_day = ton_to_nano(cfg["spots"][spot_key]["price_day"], name="цена за сутки")
+    per_day = ton_to_nano(spot_price_day(cfg, spot_key), name="цена за сутки")
     return per_day, per_day * int(days)
 
 
@@ -196,12 +271,14 @@ def price_nano(cfg: dict[str, Any], spot_key: str, days: int) -> tuple[int, int]
 
 
 async def ensure_spots(session: AsyncSession) -> int:
-    """Добавить недостающие места (то же делает миграция 018; нужно тестам и локальному запуску без alembic)."""
+    """Добавить недостающие места (то же делают миграции 018 и 020; нужно тестам и запуску без alembic)."""
     have = set((await session.execute(select(CityAdSpot.key))).scalars().all())
     n = 0
     for key, fmt, title, sort in SPOTS:
         if key not in have:
-            session.add(CityAdSpot(key=key, format=fmt, title=title, sort=sort, enabled=True))
+            session.add(
+                CityAdSpot(key=key, format=fmt, title=title, sort=sort, enabled=True, district=SPOT_DISTRICT[key])
+            )
             n += 1
     if n:
         await session.flush()
@@ -325,8 +402,8 @@ def validate_content(cfg: dict[str, Any], fmt: str, c: AdContent, *, partial: bo
     title = _line(c.title, "Текст в городе", lim["title_max"], required=not partial)
     subtitle = None
     if c.subtitle not in (None, ""):
-        if fmt != "banner":
-            raise CityAdError("Подпись бывает только у баннера")
+        if "subtitle_max" not in lim:
+            raise CityAdError("Подпись бывает только у баннера и экрана на фасаде")
         subtitle = _line(c.subtitle, "Подпись баннера", lim.get("subtitle_max", 0), required=False)
     body = _body(c.body, cfg["body_max"])
     link = normalize_link(c.link_url)
@@ -372,6 +449,7 @@ def next_free_start(busy: set[date], *, frm: date, latest: date, days: int) -> d
 class Quote:
     spot_key: str
     format: str
+    district: str
     start: date
     end: date
     days: int
@@ -405,12 +483,18 @@ async def quote(
     content: AdContent | None = None,
     today: date | None = None,
     strict: bool = False,
+    district: str | None = None,
 ) -> Quote:
-    """Цена и свободные даты для брони. Всё пересчитывается на сервере из тарифа и занятых дней."""
+    """Цена и свободные даты для брони. Всё пересчитывается на сервере из тарифа и занятых дней.
+
+    district — необязательно: если указан, место должно быть в этом районе."""
     cfg = await load_config(session)
     if int(user.level or 1) < cfg["min_level"]:
         raise CityAdPermissionError(f"Реклама в городе доступна с {cfg['min_level']}-го уровня")
+    district = check_district(district)
     spot = await _spot(session, spot_key)
+    if district is not None and spot.district != district:
+        raise CityAdError("Это место в другом районе")
     if not spot_on_sale(cfg, spot):
         raise CityAdError("Это место сейчас не продаётся")
     if isinstance(days, bool) or not isinstance(days, int) or not cfg["min_days"] <= days <= cfg["max_days"]:
@@ -433,6 +517,7 @@ async def quote(
     return Quote(
         spot_key=spot.key,
         format=spot.format,
+        district=spot.district,
         start=start,
         end=end,
         days=days,
@@ -452,11 +537,19 @@ async def quote(
 # ── Публичная витрина: места и объявления на сегодня ─────────────────────────
 
 
-async def board(session: AsyncSession, *, today: date | None = None) -> dict[str, Any]:
-    """Что показывать в городе сегодня (МСК): места, цены, одобренные объявления. Без персональных данных."""
+async def board(
+    session: AsyncSession, *, today: date | None = None, district: str | None = DEFAULT_DISTRICT
+) -> dict[str, Any]:
+    """Что показывать в городе сегодня (МСК): места, цены, одобренные объявления. Без персональных данных.
+
+    district — район (по умолчанию Центр, как было до районов); "all" — все районы сразу."""
     cfg = await load_config(session)
     today = today or game_day()
-    spots = (await session.execute(select(CityAdSpot).order_by(CityAdSpot.sort, CityAdSpot.id))).scalars().all()
+    q = select(CityAdSpot).order_by(CityAdSpot.sort, CityAdSpot.id)
+    if district != "all":
+        district = check_district(district) or DEFAULT_DISTRICT
+        q = q.where(CityAdSpot.district == district)
+    spots = (await session.execute(q)).scalars().all()
     rows = await session.execute(
         select(CityAdDay.spot_id, CityAd)
         .join(CityAd, CityAd.id == CityAdDay.ad_id)
@@ -470,9 +563,10 @@ async def board(session: AsyncSession, *, today: date | None = None) -> dict[str
             {
                 "key": s.key,
                 "format": s.format,
+                "district": s.district,
                 "title": s.title,
                 "on_sale": spot_on_sale(cfg, s),
-                "price_day": cfg["spots"].get(s.key, {}).get("price_day"),
+                "price_day": spot_price_day(cfg, s.key) if s.key in SPOT_DISTRICT else None,
                 "ad": None
                 if ad is None
                 else {
@@ -489,7 +583,9 @@ async def board(session: AsyncSession, *, today: date | None = None) -> dict[str
         )
     return {
         "day": today.isoformat(),
+        "district": district,
         "spots": out,
+        "prices": {f: p["price_day"] for f, p in cfg["prices"].items()},
         "palette": PALETTE,
         "min_level": cfg["min_level"],
         "min_days": cfg["min_days"],
@@ -572,6 +668,7 @@ async def book(
     days: int,
     content: AdContent,
     today: date | None = None,
+    district: str | None = None,
 ) -> CityAd:
     """Купить показ: цена пересчитывается на сервере, сутки резервируются атомарно, оплата — с баланса.
 
@@ -579,7 +676,10 @@ async def book(
     объявление и его сутки в точке сохранения (гонка за те же сутки → UNIQUE → «занято», ничего не списано) →
     списание. Объявление ждёт модерации (pending); деньги до одобрения — удержание.
     """
-    q = await quote(session, user=user, spot_key=spot_key, start=start, days=days, content=content, today=today, strict=True)
+    q = await quote(
+        session, user=user, spot_key=spot_key, start=start, days=days, content=content, today=today, strict=True,
+        district=district,
+    )
     if not q.available:
         raise CityAdBusyError("Эти сутки уже заняты — выберите другие даты")
     c = q.content
@@ -749,11 +849,13 @@ async def my_ads(session: AsyncSession, *, user: User) -> list[CityAd]:
     return list(rows.scalars().all())
 
 
-async def moderation_queue(session: AsyncSession, *, status: str = "pending", limit: int = 100) -> list[tuple[CityAd, str]]:
+async def moderation_queue(
+    session: AsyncSession, *, status: str = "pending", limit: int = 100
+) -> list[tuple[CityAd, CityAdSpot]]:
     if status not in AD_STATUSES_ALL:
         raise CityAdError("неизвестный статус")
     rows = await session.execute(
-        select(CityAd, CityAdSpot.key)
+        select(CityAd, CityAdSpot)
         .join(CityAdSpot, CityAdSpot.id == CityAd.spot_id)
         .where(CityAd.status == status)
         .order_by(CityAd.start_day, CityAd.id)

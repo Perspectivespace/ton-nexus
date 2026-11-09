@@ -335,7 +335,7 @@ class Board(unittest.TestCase):
             data = await ads_api.city_ads_board(resp, db=s)
             self.assertIn("public", resp.headers["cache-control"])
             spots = {x["key"]: x for x in data["spots"]}
-            self.assertEqual(list(spots), list(ads.SPOT_KEYS))
+            self.assertEqual(list(spots), list(ads.district_keys("centre")))  # по умолчанию — Центр, как до районов
             self.assertEqual(data["day"], ads.game_day().isoformat())
             if data["day"] == TODAY.isoformat():
                 self.assertEqual(spots["tower_line"]["ad"]["title"], "TON NEXUS · NEW")
