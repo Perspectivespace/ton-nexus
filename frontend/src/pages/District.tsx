@@ -9,7 +9,7 @@ import { DistrictStrip, EdgeHints, type EdgeHintsHandle } from "@/components/Dis
 import { loadDistrict, preloadWhenIdle, type LayerUrls } from "@/lib/districtAssets";
 import { startDistrictLife } from "@/lib/districtLife";
 import {
-  DISTRICT_RU, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, streetWidth, type SceneDistrict,
+  DISTRICT_RU, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, streetWidth, type SceneDistrict,
 } from "@/lib/districts";
 import { haptic } from "@/lib/haptics";
 import { WebApp } from "@/lib/telegram";
@@ -190,9 +190,11 @@ export function DistrictScene({ district, forceLite = false }: { district: Scene
             <i aria-hidden="true">×</i> Выйти
           </button>
         </div>
-        <p className="dz-badge" role="status">
-          {failed ? "Не удалось загрузить" : urls ? "Черновик" : "Загрузка…"}
-        </p>
+        {failed || !urls || !isFinalArt(district) ? (
+          <p className="dz-badge" role="status">
+            {failed ? "Не удалось загрузить" : urls ? "Черновик" : "Загрузка…"}
+          </p>
+        ) : null}
         <EdgeHints ref={hintsRef} current={district} />
         <DistrictStrip current={district} onGo={go} />
       </div>

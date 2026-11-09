@@ -72,6 +72,16 @@ afterEach(() => {
 });
 
 describe("district screen", () => {
+  it("final art (Неон-ряды) shows no «Черновик» badge; the sketch (Порт) still does", async () => {
+    await render("/district?d=rows");
+    expect(el.querySelector(".dz-badge")).toBeNull();
+    expect(el.querySelector(".dz-far img")?.getAttribute("src")).toBe("/far-night");
+    act(() => root.unmount());
+    root = createRoot(el);
+    await render("/district?d=port");
+    expect(el.querySelector(".dz-badge")?.textContent).toBe("Черновик");
+  });
+
   it("renders 4 layers at their speeds, entered at the centre, and hides the app chrome", async () => {
     await render("/district?d=port");
     const layers = [...el.querySelectorAll<HTMLElement>(".dz-layer")];
