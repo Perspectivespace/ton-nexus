@@ -36,6 +36,9 @@ html.district-open, html.district-open body { overscroll-behavior: none; }
 .dz-mover.boat { border-radius: 2px 2px 10px 10px; background: linear-gradient(180deg, #FFB547 0 30%, #1A2233 31% 100%);
   box-shadow: 0 0 8px rgba(255, 181, 71, .55); }
 .dz[data-art="day"] .dz-mover { box-shadow: none; }
+/* финальные районы: нарисованные спрайты (ховер-кар, дрон-курьер, прохожий) — без свечения и скруглений */
+.dz-mover.sprite { border-radius: 0; box-shadow: none; background-color: transparent; background-repeat: no-repeat;
+  background-size: 100% 100%; background-position: center; }
 
 /* интерфейс поверх сцены */
 .dz-ui { position: absolute; inset: 0; pointer-events: none; }

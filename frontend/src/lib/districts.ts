@@ -7,6 +7,7 @@ import type { CityPhase } from "@/lib/cityPhase";
  * поэтому по ширине она ~2,9 экрана телефона: её ведут пальцем (инерция и «резинка» — как в «Прогулке»).
  * Слои едут с разной скоростью: небо 0.25, горизонт 0.55, улица 1, ближний план 1.3 (параллакс).
  * Нарисованы только день и ночь; рассвет и вечер — подкраска поверх (день + розовая дымка, ночь + тёплый закат).
+ * «Неон-ряды» — финальный рисунок (PR 4 районов, свой дальний план и спрайты жизни улицы); «Порт» — пока эскиз.
  * На слабых устройствах — одна сведённая картинка без параллакса и без уличных событий.
  */
 export type DistrictId = "centre" | "rows" | "port";
@@ -40,19 +41,39 @@ export function lookFor(phase: CityPhase): { art: Art; tint: Tint } {
   return { art: "night", tint: null };
 }
 
+/** районы с собственным дальним планом (финальный рисунок); у остальных — общий горизонт skyline-<день/ночь> */
+export const OWN_FAR: SceneDistrict[] = ["rows"];
+/** у района финальный рисунок (свой дальний план) — значок «Черновик» не показывается */
+export const isFinalArt = (d: SceneDistrict) => OWN_FAR.includes(d);
+
 /**
- * Имена файлов (src/assets/districts/*.webp). Дальний горизонт общий у всех районов (skyline-<день/ночь>).
- * lite — слабое устройство: одна сведённая картинка района.
+ * Имена файлов (src/assets/districts/*.webp). Дальний горизонт — свой у районов с финальным рисунком (OWN_FAR),
+ * у черновых — общий (skyline-<день/ночь>). lite — слабое устройство: одна сведённая картинка района.
  */
 export function layerFiles(d: SceneDistrict, art: Art, lite: boolean): { id: LayerId | "flat"; file: string }[] {
   if (lite) return [{ id: "flat", file: `${d}-${art}-flat` }];
   return [
     { id: "sky", file: `${d}-${art}-sky` },
-    { id: "far", file: `skyline-${art}` },
+    { id: "far", file: OWN_FAR.includes(d) ? `${d}-${art}-far` : `skyline-${art}` },
     { id: "mid", file: `${d}-${art}-mid` },
     { id: "near", file: `${d}-${art}-near` },
   ];
 }
+
+/**
+ * Рекламные поверхности на рисунке улицы (доли рисунка слоя «улица», 4:3; одинаковы днём и ночью).
+ * Рисунок здесь пустой (тёмная панель / чистое небо) — реклама ляжет поверх в PR 6. Ключи — места бэкенда.
+ * Пока только у «Неон-рядов» (финальный рисунок); у Порта — после его финала (PR 5).
+ */
+export type Surface = { spot: string; kind: "facade_screen" | "line" | "neon" | "banner"; x: number; y: number; w: number; h: number };
+export const SURFACES: Partial<Record<SceneDistrict, Surface[]>> = {
+  rows: [
+    { spot: "rows_facade", kind: "facade_screen", x: 0.423, y: 0.398, w: 0.16, h: 0.174 }, // экран на фасаде рынка
+    { spot: "rows_line", kind: "line", x: 0.395, y: 0.588, w: 0.228, h: 0.058 }, // строка над навесами
+    { spot: "rows_neon", kind: "neon", x: 0.288, y: 0.554, w: 0.066, h: 0.076 }, // вывеска у входа
+    { spot: "rows_banner", kind: "banner", x: 0.535, y: 0.27, w: 0.09, h: 0.09 }, // голо-баннер над крышей (чистое небо)
+  ],
+};
 
 /** соседние районы со своей сценой (их слои подкачиваются в простое) */
 export function neighbours(d: SceneDistrict): SceneDistrict[] {
@@ -82,14 +103,38 @@ export function districtFromStart(startParam: string | null | undefined): SceneD
   return m ? (m[1] as SceneDistrict) : null;
 }
 
-/** трасса разового уличного события: высота (доля кадра), размер (доля ширины кадра), длительность (мс) */
-export type Lane = { kind: "car" | "tram" | "boat" | "drone"; y: number; w: number; h: number; dur: [number, number] };
-/** трассы событий по районам (в долях рисунка улицы) */
+/**
+ * Трасса разового уличного события: высота (доля кадра), размер (доля ширины / высоты кадра), длительность (мс).
+ * sprite — нарисованный спрайт (src/assets/districts/life), bob — покачивание шага (доля высоты спрайта).
+ */
+export type Sprite = "car" | "drone" | "walker";
+export type Lane = {
+  kind: "car" | "tram" | "boat" | "drone" | "walker";
+  y: number;
+  w: number;
+  h: number;
+  dur: [number, number];
+  sprite?: Sprite;
+  bob?: number;
+};
+/** пропорции спрайтов (ширина / высота) — по ним h трассы = w · 4/3 / пропорция */
+export const SPRITE_ASPECT: Record<Sprite, number> = { car: 4.098, drone: 1.574, walker: 0.546 };
+const sized = (sprite: Sprite, y: number, w: number, dur: [number, number], bob?: number): Lane => ({
+  kind: sprite,
+  sprite,
+  y,
+  w,
+  h: Number(((w * ART_ASPECT) / SPRITE_ASPECT[sprite]).toFixed(4)),
+  dur,
+  ...(bob ? { bob } : {}),
+});
+/** трассы событий по районам (в долях рисунка улицы); не пересекают рекламные поверхности (SURFACES) */
 export const LANES: Record<SceneDistrict, Lane[]> = {
   rows: [
-    { kind: "car", y: 0.335, w: 0.022, h: 0.008, dur: [7000, 9000] }, // воздушная трасса за рынком
-    { kind: "car", y: 0.39, w: 0.03, h: 0.01, dur: [5200, 6800] },
-    { kind: "drone", y: 0.22, w: 0.012, h: 0.006, dur: [9000, 12000] },
+    sized("car", 0.21, 0.05, [6500, 8500]), // ховер-кар над куполом рынка
+    sized("car", 0.15, 0.028, [9000, 12000]), // дальняя воздушная трасса
+    sized("drone", 0.105, 0.026, [11000, 14000]), // дрон-курьер с посылкой
+    sized("walker", 0.75, 0.0614, [20000, 26000], 0.02), // прохожий под зонтом по мостовой
   ],
   port: [
     { kind: "tram", y: 0.455, w: 0.09, h: 0.03, dur: [9000, 11000] }, // по эстакаде к станции

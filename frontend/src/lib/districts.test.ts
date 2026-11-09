@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  ART_ASPECT, districtFromStart, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, panRange,
-  SCENE_DISTRICTS, streetScreens, streetWidth,
+  ART_ASPECT, districtFromStart, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
+  SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES,
 } from "./districts";
 
-type Fs = { existsSync(path: URL): boolean; statSync(path: URL): { size: number } };
+type Fs = { existsSync(path: URL): boolean; statSync(path: URL): { size: number }; readFileSync(path: URL): Uint8Array };
 const fs = (globalThis as unknown as { process: { getBuiltinModule(id: string): Fs } }).process.getBuiltinModule("node:fs");
 const asset = (file: string) => new URL(`../assets/districts/${file}.webp`, import.meta.url);
 
@@ -25,8 +25,9 @@ describe("districts: layers and speeds", () => {
     expect(lookFor("dusk")).toEqual({ art: "night", tint: "dusk" });
   });
 
-  it("files: 4 layers with a shared far skyline, one flattened image on low-end; every file exists", () => {
-    expect(layerFiles("rows", "night", false).map((f) => f.file)).toEqual(["rows-night-sky", "skyline-night", "rows-night-mid", "rows-night-near"]);
+  it("files: 4 layers (own far plan for final districts, shared skyline for sketches), one flattened image on low-end; every file exists", () => {
+    expect(OWN_FAR).toEqual(["rows"]);
+    expect(layerFiles("rows", "night", false).map((f) => f.file)).toEqual(["rows-night-sky", "rows-night-far", "rows-night-mid", "rows-night-near"]);
     expect(layerFiles("port", "day", false)[1].file).toBe("skyline-day");
     expect(layerFiles("port", "day", true)).toEqual([{ id: "flat", file: "port-day-flat" }]);
     let total = 0;
@@ -37,11 +38,12 @@ describe("districts: layers and speeds", () => {
             expect(fs.existsSync(asset(file)), file).toBe(true);
             total += fs.statSync(asset(file)).size;
           }
-    // черновые рисунки: один район в одном облике — в пределах ~300 КБ
+    // финальный район — ~220 КБ на облик (слои вместе), сведённая картинка — до 100 КБ; черновой — до ~300 КБ
     for (const d of SCENE_DISTRICTS)
       for (const art of ["day", "night"] as const) {
         const one = layerFiles(d, art, false).reduce((s, { file }) => s + fs.statSync(asset(file)).size, 0);
-        expect(one, `${d}-${art}`).toBeLessThan(300 * 1024);
+        expect(one, `${d}-${art}`).toBeLessThan((OWN_FAR.includes(d) ? 232 : 300) * 1024);
+        if (OWN_FAR.includes(d)) expect(fs.statSync(asset(`${d}-${art}-flat`)).size).toBeLessThan(100 * 1024);
       }
     expect(total).toBeGreaterThan(0);
   });
@@ -97,5 +99,56 @@ describe("districts: launch link and street lanes", () => {
         expect(l.dur[0]).toBeLessThanOrEqual(l.dur[1]);
       }
     }
+  });
+});
+
+/** размер картинки WebP по заголовку (VP8X / VP8L / VP8) */
+function webpSize(b: Uint8Array): { w: number; h: number } {
+  const tag = String.fromCharCode(...b.slice(12, 16));
+  if (tag === "VP8X") return { w: 1 + (b[24] | (b[25] << 8) | (b[26] << 16)), h: 1 + (b[27] | (b[28] << 8) | (b[29] << 16)) };
+  if (tag === "VP8L") {
+    const v = b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24);
+    return { w: (v & 0x3fff) + 1, h: ((v >> 14) & 0x3fff) + 1 };
+  }
+  return { w: (b[26] | (b[27] << 8)) & 0x3fff, h: (b[28] | (b[29] << 8)) & 0x3fff };
+}
+
+describe("districts: final «Неон-ряды» — ad surfaces and street life", () => {
+  it("four ad surfaces on the street art, one per backend spot, inside the frame", () => {
+    const rows = SURFACES.rows ?? [];
+    expect(rows.map((s) => s.spot).sort()).toEqual(["rows_banner", "rows_facade", "rows_line", "rows_neon"]);
+    expect(rows.map((s) => s.kind).sort()).toEqual(["banner", "facade_screen", "line", "neon"]);
+    for (const s of rows) {
+      expect(s.x).toBeGreaterThan(0);
+      expect(s.y).toBeGreaterThan(0);
+      expect(s.x + s.w).toBeLessThan(1);
+      expect(s.y + s.h).toBeLessThan(1);
+    }
+    expect(SURFACES.port).toBeUndefined(); // Порт — после финального рисунка
+  });
+
+  it("street-life lanes never cross an ad surface (movers ride the full street width)", () => {
+    for (const d of SCENE_DISTRICTS)
+      for (const l of LANES[d])
+        for (const s of SURFACES[d] ?? []) {
+          const apart = l.y + l.h <= s.y || l.y >= s.y + s.h;
+          expect(apart, `${d} ${l.kind}@${l.y} × ${s.spot}`).toBe(true);
+        }
+  });
+
+  it("rows street life is drawn sprites whose lane size matches the sprite proportions", () => {
+    const rows = LANES.rows;
+    expect(rows.every((l) => l.sprite)).toBe(true);
+    expect(new Set(rows.map((l) => l.sprite))).toEqual(new Set(["car", "drone", "walker"]));
+    for (const l of rows) {
+      const file = new URL(`../assets/districts/life/rows-${l.sprite}.webp`, import.meta.url);
+      const { w, h } = webpSize(fs.readFileSync(file));
+      expect(w / h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
+      expect((l.w * ART_ASPECT) / l.h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
+      expect(fs.statSync(file).size).toBeLessThan(12 * 1024);
+    }
+    const walker = rows.find((l) => l.sprite === "walker")!;
+    expect(walker.y + walker.h).toBeLessThan(0.93); // ноги на мостовой, не под ближним планом
+    expect(walker.bob).toBeGreaterThan(0);
   });
 });
