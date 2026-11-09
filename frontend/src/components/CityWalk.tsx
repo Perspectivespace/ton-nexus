@@ -10,8 +10,12 @@ import { liveSpots } from "./CityAdSpots";
 import { getWalkCamera, WalkCamera } from "@/lib/walkCamera";
 import { startStreetLife } from "@/lib/walkLife";
 import { startTilt } from "@/lib/walkTilt";
-import { motionAllowed, reducedMotion, setTiltPref, tiltOffered, tiltPref } from "@/lib/walkPrefs";
+import { lowEnd, motionAllowed, reducedMotion, setTiltPref, tiltOffered, tiltPref } from "@/lib/walkPrefs";
 import { WebApp } from "@/lib/telegram";
+import { districtNav, neighbourOf } from "@/lib/districtNav";
+import { lookFor, type DistrictId } from "@/lib/districts";
+import { useCityPhase } from "@/lib/cityPhase";
+import { DistrictStrip, EdgeHints, useDistrictsOpen, type EdgeHintsHandle } from "./DistrictNav";
 
 /**
  * «Прогулка» — чистый город (реклама в городе, PR 3; живая камера — PR 5).
@@ -34,6 +38,29 @@ export function CityWalk() {
   const navigate = useNavigate();
   const { data, refetch } = useCityAds();
   const live = useMemo(() => liveSpots(data?.spots), [data]);
+  // районы (PR 3): полоска и протяжка за край — пока только владельцу (до финальных рисунков)
+  const districts = useDistrictsOpen();
+  const districtsRef = useRef(districts);
+  districtsRef.current = districts;
+  const hintsRef = useRef<EdgeHintsHandle>(null);
+  const goDistrict = (to: DistrictId) => districtNav.go("centre", to, navigate);
+  const goRef = useRef(goDistrict);
+  goRef.current = goDistrict;
+  // соседний район (Неон-ряды) подкачивается в простое — переход краем без экрана «Загрузка»
+  const { phase } = useCityPhase();
+  useEffect(() => {
+    if (!districts) return;
+    let stop = () => {};
+    let live = true;
+    void import("@/lib/districtAssets").then((m) => {
+      if (!live) return;
+      stop = m.preloadWhenIdle(() => void m.loadDistrict("rows", lookFor(phase).art, lowEnd()).catch(() => undefined));
+    });
+    return () => {
+      live = false;
+      stop();
+    };
+  }, [districts, phase]);
 
   // вход: свежая витрина (выход при уходе с главной — в Layout)
   useEffect(() => {
@@ -61,8 +88,17 @@ export function CityWalk() {
     const stage = document.querySelector<HTMLElement>(".city .c-stage");
     if (!stage) return;
     const still = reducedMotion();
-    const cam = new WalkCamera(stage, { flight: !still, inertia: !still });
-    cam.enter();
+    const cam = new WalkCamera(stage, {
+      flight: !still,
+      inertia: !still,
+      onEdge: (dir) => {
+        const to = neighbourOf("centre", dir);
+        return districtsRef.current && !!to && goRef.current(to);
+      },
+      onPull: (st) => hintsRef.current?.update(st),
+    });
+    // пришли из района — камера уже на улице и проезжает от края; иначе — обычный пролёт с вида главной
+    cam.enter(districtNav.takeArrival()?.dir);
     cityWalk.setLeaveHook((done) => cam.leave(done));
     // вертикальный свайп в Telegram сворачивает приложение — на время «Прогулки» он выключен
     let swipes = false;
@@ -109,7 +145,7 @@ export function CityWalk() {
   const spot = live.find((s) => s.key === walk.picked) ?? null;
 
   return (
-    <div className="walk-ui">
+    <div className={`walk-ui${districts ? " has-strip" : ""}`}>
       <div className="walk-top">
         <button
           type="button"
@@ -160,6 +196,8 @@ export function CityWalk() {
               : "Ведите пальцем — осмотритесь"}
         </p>
       )}
+      {districts && <EdgeHints ref={hintsRef} current="centre" />}
+      {districts && <DistrictStrip current="centre" onGo={goDistrict} />}
       {spot && data && <AdCard key={spot.key} spot={spot} day={data.day} />}
     </div>
   );
