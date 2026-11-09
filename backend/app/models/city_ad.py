@@ -29,17 +29,22 @@ from app.db.base import Base
 
 AD_STATUSES = ("pending", "approved", "rejected", "cancelled", "expired")
 AD_EVENT_KINDS = ("impression", "open", "click")
+SPOT_FORMATS = ("line", "banner", "neon", "facade_screen")
+DISTRICTS = ("centre", "rows", "port")  # Центр, «Неон-ряды», «Порт»
 
 
 class CityAdSpot(Base):
-    """Рекламное место в кадре города. Координаты живут во фронтенде (кадр 720×1280), здесь — ключ и формат.
+    """Рекламное место в кадре города. Координаты живут во фронтенде, здесь — ключ, формат и район.
 
     enabled — технический выключатель места (например, место убрано из рисунка); продажу места владелец
     включает и выключает в настройке city_ads. Место продаётся, только если включено и там, и там.
     """
 
     __tablename__ = "city_ad_spots"
-    __table_args__ = (CheckConstraint("format IN ('line', 'banner', 'neon')", name="ck_city_ad_spots_format"),)
+    __table_args__ = (
+        CheckConstraint("format IN ('line', 'banner', 'neon', 'facade_screen')", name="ck_city_ad_spots_format"),
+        CheckConstraint("district IN ('centre', 'rows', 'port')", name="ck_city_ad_spots_district"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     key: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
@@ -47,6 +52,8 @@ class CityAdSpot(Base):
     title: Mapped[str] = mapped_column(String(64), nullable=False)
     sort: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true(), nullable=False)
+    # район города: centre — главная страница (все места до районов), rows — «Неон-ряды», port — «Порт»
+    district: Mapped[str] = mapped_column(String(16), default="centre", server_default="centre", nullable=False)
 
 
 class CityAd(Base):
