@@ -33,6 +33,8 @@ const LOADERS: Record<string, Loader> = {
   arenaRoom: () => import("@/pages/ArenaRoom").then((m) => m.default),
   ratings: () => import("@/pages/Ratings").then((m) => m.default),
   cityAds: () => import("@/pages/CityAds").then((m) => m.CityAds),
+  // районы города — пока только dev и владелец (экран сам проверяет доступ)
+  district: () => import("@/pages/District").then((m) => m.District),
 };
 type Key = keyof typeof LOADERS;
 

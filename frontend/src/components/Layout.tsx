@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { cityWalk } from "@/lib/cityWalk";
-import { Outlet, useLocation } from "react-router-dom";
+import { districtFromStart } from "@/lib/districts";
+import { WebApp } from "@/lib/telegram";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { CityBackdrop } from "./CityBackdrop";
 import { Nav, isDockRoute } from "./Nav";
 import { AppHeader } from "./Brand";
@@ -25,6 +27,19 @@ export function Layout() {
   useEffect(() => {
     if (loc.pathname !== "/" && cityWalk.get().active) cityWalk.exit();
   }, [loc.pathname]);
+  // прямая ссылка на район (start_param «district-rows» / «district-port») — экран района сам пускает только владельца
+  const navigate = useNavigate();
+  useEffect(() => {
+    let sp: string | null | undefined = null;
+    try {
+      sp = new URLSearchParams(location.search).get("tgWebAppStartParam") ?? WebApp?.initDataUnsafe?.start_param;
+    } catch {
+      /* вне Telegram */
+    }
+    const d = districtFromStart(sp);
+    if (d && window.location.pathname === "/") navigate(`/district?d=${d}`, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <ToastProvider>
       <div className="app-shell flex flex-col">

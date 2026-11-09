@@ -31,6 +31,7 @@ export default function App() {
           <Route path="/arena/:id" element={route("arenaRoom")} />
           <Route path="/ratings" element={route("ratings")} />
           <Route path="/ads" element={route("cityAds")} />
+          <Route path="/district" element={route("district")} />
           {/* старые/короткие адреса: /earn, /profile, /upgrade (шторка на Майнере) */}
           {Object.keys(ALIASES).map((p) => (
             <Route key={p} path={p} element={<Alias />} />

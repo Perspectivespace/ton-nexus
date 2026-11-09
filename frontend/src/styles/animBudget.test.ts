@@ -30,10 +30,12 @@ describe("anim budget: street loops inside a building", () => {
   });
 });
 
+/* Районы (districts.css) — тоже только разовые движения: под экраном района улица Центра размонтирована (CityBackdrop),
+ * своих петель у района нет. */
 /* Реклама в городе: бюджет улицы занят (T4 — 18 петель), поэтому реклама и «Прогулка» — только разовые движения. */
 describe("anim budget: city ads", () => {
   it("no infinite animations and no backdrop-filter in ad styles", () => {
-    for (const name of ["city-ads.css", "city-walk.css", "city-ads-buy.css"]) {
+    for (const name of ["city-ads.css", "city-walk.css", "city-ads-buy.css", "districts.css"]) {
       const css = read(name).replace(/\/\*[\s\S]*?\*\//g, ""); // без комментариев
       expect(css).not.toMatch(/infinite/);
       expect(css).not.toMatch(/backdrop-filter/);
