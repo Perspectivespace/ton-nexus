@@ -1,0 +1,288 @@
+"""Районы города (PR 1 районов): район у места, цена по типу места и своя цена места, экран на фасаде,
+места «Неон-рядов» и «Порта» засеяны снятыми с продажи, витрина/расчёт/бронь принимают район."""
+
+from __future__ import annotations
+
+import asyncio
+import importlib.util
+import pathlib
+import unittest
+import warnings
+from datetime import date, timedelta
+from decimal import Decimal
+
+from fastapi import HTTPException, Response
+from pydantic import ValidationError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from app.api import city_ads as ads_api
+from app.db.base import Base
+from app.models import CityAd, CityAdDay, CityAdEvent, CityAdSpot, User  # noqa: F401
+from app.services import city_ads as ads
+from app.services.economy_admin import set_setting
+from app.services.economy_seed import DEFAULTS, seed_economy
+
+warnings.filterwarnings("ignore", message=".*Decimal objects natively.*")
+NANO = 10**9
+TODAY = date(2026, 11, 9)
+D = lambda n: TODAY + timedelta(days=n)  # noqa: E731
+CENTRE = ("tower_line", "banner_sky", "banner_street", "neon_left", "neon_right")
+ROWS = ("rows_facade", "rows_line", "rows_neon", "rows_banner")
+PORT = ("port_line", "port_banner_cargo", "port_banner_tram", "port_neon")
+# так выглядела настройка city_ads до районов (её хранит действующая база)
+OLD_SETTING = {
+    "min_level": 3,
+    "min_days": 1,
+    "max_days": 30,
+    "body_max": 500,
+    "spots": {
+        "tower_line": {"price_day": "1", "enabled": True},
+        "banner_sky": {"price_day": "0.5", "enabled": True},
+        "banner_street": {"price_day": "0.5", "enabled": True},
+        "neon_left": {"price_day": "0.3", "enabled": True},
+        "neon_right": {"price_day": "0.3", "enabled": True},
+    },
+    "limits": {"line": {"title_max": 60}, "banner": {"title_max": 14, "subtitle_max": 18}, "neon": {"title_max": 12}},
+}
+
+
+def _run(fn):
+    async def wrap():
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        Session = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with Session() as s:
+                await seed_economy(s)
+                await ads.ensure_spots(s)
+                await s.commit()
+                await fn(s)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(wrap())
+
+
+_tg = [12000]
+
+
+async def _user(s, level=3, balance="10"):
+    _tg[0] += 1
+    u = User(telegram_id=_tg[0], level=level, balance=Decimal(balance))
+    s.add(u)
+    await s.commit()
+    return u
+
+
+async def _sell(s, *keys, **extra):
+    spots = {k: {"enabled": True} for k in keys}
+    await set_setting(s, key="city_ads", value={"spots": spots, **extra})
+    await s.commit()
+
+
+class Spots(unittest.TestCase):
+    def test_spot_list(self):
+        self.assertEqual(ads.district_keys("centre"), CENTRE)
+        self.assertEqual(ads.district_keys("rows"), ROWS)
+        self.assertEqual(ads.district_keys("port"), PORT)
+        fmt = {k: f for k, f, _, _ in ads.SPOTS}
+        self.assertEqual([fmt[k] for k in ROWS], ["facade_screen", "line", "neon", "banner"])
+        self.assertEqual([fmt[k] for k in PORT], ["line", "banner", "banner", "neon"])
+        self.assertEqual(sum(1 for f in fmt.values() if f == "facade_screen"), 1)  # экран — только в «Неон-рядах»
+        self.assertEqual(ads.FORMAT_RU["facade_screen"], "Экран на фасаде")
+
+    def test_migration_copy_matches_code(self):
+        path = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions" / "020_city_districts.py"
+        spec = importlib.util.spec_from_file_location("mig020", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.assertEqual((mod.revision, mod.down_revision), ("020", "019"))
+        code = {k: (f, t, srt, ads.SPOT_DISTRICT[k]) for k, f, t, srt in ads.SPOTS if ads.SPOT_DISTRICT[k] != "centre"}
+        self.assertEqual({k: (f, t, srt, d) for k, f, t, srt, d in mod.NEW_SPOTS}, code)
+
+    def test_ensure_spots_sets_district(self):
+        async def body(s):
+            rows = (await s.execute(select(CityAdSpot.key, CityAdSpot.district, CityAdSpot.enabled))).all()
+            got = {k: (d, e) for k, d, e in rows}
+            self.assertEqual(len(got), 13)
+            for k in CENTRE:
+                self.assertEqual(got[k], ("centre", True))
+            for k in ROWS:
+                self.assertEqual(got[k][0], "rows")
+            for k in PORT:
+                self.assertEqual(got[k][0], "port")
+            self.assertEqual(await ads.ensure_spots(s), 0)
+
+        _run(body)
+
+
+class Pricing(unittest.TestCase):
+    def test_defaults(self):
+        cfg = ads.normalize(DEFAULTS["city_ads"][0])
+        self.assertEqual(
+            {f: p["price_day"] for f, p in cfg["prices"].items()},
+            {"line": "1", "banner": "0.5", "neon": "0.3", "facade_screen": "1.5"},
+        )
+        # Центр — прежние цены; районы — по типу места
+        self.assertEqual([ads.spot_price_day(cfg, k) for k in CENTRE], ["1", "0.5", "0.5", "0.3", "0.3"])
+        self.assertEqual([ads.spot_price_day(cfg, k) for k in ROWS], ["1.5", "1", "0.3", "0.5"])
+        self.assertEqual([ads.spot_price_day(cfg, k) for k in PORT], ["1", "0.5", "0.5", "0.3"])
+        self.assertEqual(ads.price_nano(cfg, "rows_facade", 7), (1_500_000_000, 10_500_000_000))
+        # места районов не продаются, пока их не включит владелец
+        for k in ROWS + PORT:
+            self.assertEqual(cfg["spots"][k], {"enabled": False})
+        self.assertEqual(cfg["limits"]["facade_screen"], {"title_max": 24, "subtitle_max": 32})
+
+    def test_old_setting_back_compat(self):
+        cfg = ads.normalize(OLD_SETTING)
+        self.assertEqual(cfg["spots"]["tower_line"], {"price_day": "1", "enabled": True})
+        self.assertEqual(cfg["spots"]["neon_right"], {"price_day": "0.3", "enabled": True})
+        self.assertEqual(cfg["spots"]["rows_facade"], {"enabled": False})
+        self.assertEqual(cfg["prices"]["facade_screen"]["price_day"], "1.5")
+        self.assertEqual(ads.normalize(cfg), cfg)  # повторная нормализация ничего не меняет
+
+    def test_type_price_and_override(self):
+        cfg = ads.normalize(
+            {
+                "prices": {"banner": {"price_day": "0.6"}, "facade_screen": {"price_day": "2"}},
+                "spots": {"port_neon": {"price_day": "0,7"}, "banner_street": {"price_day": ""}},
+            }
+        )
+        self.assertEqual(ads.spot_price_day(cfg, "port_banner_cargo"), "0.6")  # цена типа
+        self.assertEqual(ads.spot_price_day(cfg, "banner_sky"), "0.5")  # у места Центра своя цена
+        self.assertEqual(ads.spot_price_day(cfg, "banner_street"), "0.6")  # своя цена убрана → цена типа
+        self.assertEqual(ads.spot_price_day(cfg, "port_neon"), "0.7")  # своя цена места
+        self.assertEqual(ads.spot_price_day(cfg, "rows_facade"), "2")
+        self.assertEqual(cfg["spots"]["port_neon"], {"price_day": "0.7", "enabled": False})
+
+    def test_bad_values(self):
+        for bad in (
+            {"prices": {"moon": {"price_day": "1"}}},
+            {"prices": {"line": {"price_day": "0"}}},
+            {"prices": {"line": {"price_day": "1001"}}},
+            {"prices": {"line": {"price": "1"}}},
+            {"prices": {"line": "1"}},
+            {"prices": []},
+            {"spots": {"rows_facade": {"price_day": "-1"}}},
+            {"spots": {"rows_facade": {"enabled": "yes"}}},
+        ):
+            with self.subTest(bad=bad), self.assertRaises(ads.CityAdError):
+                ads.normalize(bad)
+
+
+class Board(unittest.TestCase):
+    def test_default_is_centre(self):
+        async def body(s):
+            data = await ads_api.city_ads_board(Response(), db=s)
+            self.assertEqual([x["key"] for x in data["spots"]], list(CENTRE))
+            self.assertEqual({x["district"] for x in data["spots"]}, {"centre"})
+            self.assertEqual(data["district"], "centre")
+            self.assertEqual(data["prices"]["facade_screen"], "1.5")
+
+        _run(body)
+
+    def test_districts(self):
+        async def body(s):
+            rows = await ads_api.city_ads_board(Response(), db=s, district="rows")
+            spots = {x["key"]: x for x in rows["spots"]}
+            self.assertEqual(list(spots), list(ROWS))
+            self.assertEqual(spots["rows_facade"]["format"], "facade_screen")
+            self.assertEqual(spots["rows_facade"]["price_day"], "1.5")
+            self.assertFalse(any(x["on_sale"] for x in rows["spots"]))
+            port = await ads_api.city_ads_board(Response(), db=s, district="port")
+            self.assertEqual([x["key"] for x in port["spots"]], list(PORT))
+            every = await ads_api.city_ads_board(Response(), db=s, district="all")
+            self.assertEqual(len(every["spots"]), 13)
+            with self.assertRaises(HTTPException) as e:
+                await ads_api.city_ads_board(Response(), db=s, district="moon")
+            self.assertEqual(e.exception.status_code, 400)
+
+        _run(body)
+
+
+class QuoteAndBook(unittest.TestCase):
+    def test_not_on_sale_until_owner_enables(self):
+        async def body(s):
+            u = await _user(s)
+            for k in ROWS + PORT:
+                with self.subTest(k=k), self.assertRaises(ads.CityAdError):
+                    await ads.quote(s, user=u, spot_key=k, start=D(1), days=1, today=TODAY)
+            await _sell(s, "rows_facade")
+            q = await ads.quote(s, user=u, spot_key="rows_facade", start=D(1), days=3, today=TODAY, district="rows")
+            self.assertEqual((q.district, q.format, q.price_day, q.total), ("rows", "facade_screen", "1.5", "4.5"))
+
+        _run(body)
+
+    def test_district_must_match(self):
+        async def body(s):
+            u = await _user(s)
+            await _sell(s, "port_line")
+            with self.assertRaises(ads.CityAdError):
+                await ads.quote(s, user=u, spot_key="port_line", start=D(1), days=1, today=TODAY, district="rows")
+            with self.assertRaises(ads.CityAdError):
+                await ads.quote(s, user=u, spot_key="tower_line", start=D(1), days=1, today=TODAY, district="moon")
+            q = await ads.quote(s, user=u, spot_key="tower_line", start=D(1), days=1, today=TODAY, district="centre")
+            self.assertEqual((q.district, q.price_day), ("centre", "1"))
+            q = await ads.quote(s, user=u, spot_key="port_line", start=D(1), days=1, today=TODAY)  # без района — как раньше
+            self.assertEqual(q.district, "port")
+
+        _run(body)
+
+    def test_book_facade_screen(self):
+        async def body(s):
+            u = await _user(s)
+            await _sell(s, "rows_facade", "rows_neon")
+            c = ads.AdContent(title="PIXEL CAFE", subtitle="второй кофе в подарок", color="amber")
+            ad = await ads.book(s, user=u, spot_key="rows_facade", start=D(1), days=2, content=c, today=TODAY, district="rows")
+            await s.commit()
+            self.assertEqual((ad.format, ad.price_day_nano, ad.paid_nano), ("facade_screen", 1_500_000_000, 3_000_000_000))
+            self.assertEqual(ad.subtitle, "второй кофе в подарок")
+            await s.refresh(u)
+            self.assertEqual(Decimal(u.balance), Decimal("7"))
+            with self.assertRaises(ads.CityAdError):  # подпись — только у баннера и экрана
+                await ads.book(
+                    s, user=u, spot_key="rows_neon", start=D(1), days=1, today=TODAY,
+                    content=ads.AdContent(title="NEON", subtitle="нет", color="cyan"),
+                )
+            with self.assertRaises(ads.CityAdError):  # заголовок экрана — до 24 символов
+                await ads.quote(
+                    s, user=u, spot_key="rows_facade", start=D(5), days=1, today=TODAY, strict=True,
+                    content=ads.AdContent(title="Ж" * 25, color="cyan"),
+                )
+
+        _run(body)
+
+    def test_api_district(self):
+        async def body(s):
+            u = await _user(s)
+            await _sell(s, "port_banner_tram")
+            with self.assertRaises(ValidationError):
+                ads_api.QuoteBody(spot="port_banner_tram", start=D(1), days=1, district="moon")
+            with self.assertRaises(ValidationError):
+                ads_api.BookBody(spot="port_banner_tram", start=D(1), days=1, title="X", color="cyan", district="moon")
+            self.assertIsNone(ads_api.QuoteBody(spot="tower_line", start=D(1), days=1).district)
+            bb = ads_api.BookBody(
+                spot="port_banner_tram", start=ads.game_day() + timedelta(days=1), days=1, title="TRAM", color="cyan",
+                district="port",
+            )
+            out = await ads_api.city_ads_book(bb, user=u, db=s)
+            self.assertEqual((out.spot, out.district, out.price_day), ("port_banner_tram", "port", "0.5"))
+            mine = await ads_api.city_ads_mine(user=u, db=s)
+            self.assertEqual([(a.spot, a.district) for a in mine], [("port_banner_tram", "port")])
+            with self.assertRaises(HTTPException) as e:
+                await ads_api.city_ads_book(
+                    ads_api.BookBody(
+                        spot="port_banner_tram", start=ads.game_day() + timedelta(days=2), days=1, title="TRAM",
+                        color="cyan", district="rows",
+                    ),
+                    user=u, db=s,
+                )
+            self.assertEqual(e.exception.status_code, 400)
+
+        _run(body)
+
+
+if __name__ == "__main__":
+    unittest.main()
