@@ -10,6 +10,7 @@ import {
 } from "@/api/hooks";
 import { OwnerShell } from "@/components/owner/OwnerShell";
 import { SettingsList } from "@/components/owner/SettingsList";
+import { CityAdsOwner } from "@/components/owner/CityAdsOwner";
 import {
   StatusPill,
   LoadingPanel,
@@ -251,12 +252,13 @@ function TasksTab() {
   );
 }
 
-const TABS = ["overview", "tasks", "promos", "economy"] as const;
+const TABS = ["overview", "tasks", "promos", "ads", "economy"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_RU: Record<Tab, string> = {
   overview: "Обзор",
   tasks: "Задания",
   promos: "Промо",
+  ads: "Реклама",
   economy: "Экономика",
 };
 
@@ -312,6 +314,7 @@ export function Owner() {
       )}
       {tab === "tasks" && <TasksTab />}
       {tab === "promos" && <PromosTab />}
+      {tab === "ads" && <CityAdsOwner />}
       {tab === "economy" && (
         <>
           {isLoading && <LoadingPanel label="Загрузка настроек…" />}

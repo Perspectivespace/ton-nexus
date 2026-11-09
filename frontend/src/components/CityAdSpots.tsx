@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCityAds, type CityAdOnBoard, type CityAdSpotOnBoard } from "@/api/hooks";
 import { cityWalk, useCityWalk } from "@/lib/cityWalk";
 import { adVars } from "@/lib/cityAdPalette";
@@ -88,10 +89,13 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
   const { data } = useCityAds();
   const walk = useCityWalk();
   const host = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const live = liveSpots(data?.spots);
   const holo = live.filter((s) => s.format !== "line");
+  // в «Прогулке» свободные места видны рамкой «Свободно»: касание — покупка этого места (PR 5)
+  const free = walk.active ? (data?.spots ?? []).filter((s) => s.on_sale && !s.ad && AD_SPOT_BOX[s.key]) : [];
   useHoloLife(host, phase, holo.length);
-  if (!live.length) return null;
+  if (!live.length && !free.length) return null;
   const spotProps = (s: CityAdSpotOnBoard) => {
     const ad = s.ad!;
     return {
@@ -126,6 +130,19 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
           </button>
         );
       })}
+      {free.map((s) => (
+        <button
+          key={`f-${s.key}`}
+          type="button"
+          data-free={s.key}
+          className={`cad-free f-${s.format}`}
+          style={box(AD_SPOT_BOX[s.key])}
+          aria-label={`Свободное место: ${s.title}. Разместить рекламу`}
+          onClick={() => navigate(`/ads?spot=${s.key}`)}
+        >
+          <span>+ свободно</span>
+        </button>
+      ))}
       {live
         .filter((s) => s.format === "line")
         .map((s) => (

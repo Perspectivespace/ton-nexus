@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, apiBlob, apiUpload } from "./client";
 import { setServerClock } from "@/lib/cityPhase";
 import type {
@@ -1151,7 +1151,19 @@ export type CityAdSpotOnBoard = {
   price_day: string | null;
   ad: CityAdOnBoard | null;
 };
-export type CityAdsBoard = { day: string; spots: CityAdSpotOnBoard[]; palette: Record<string, string> };
+export type CityAdFormat = "line" | "banner" | "neon";
+export type CityAdLimits = { title_max: number; subtitle_max?: number };
+export type CityAdsBoard = {
+  day: string;
+  spots: CityAdSpotOnBoard[];
+  palette: Record<string, string>;
+  /** покупка: уровень, сроки и длина текста — из настройки city_ads (PR 5) */
+  min_level?: number;
+  min_days?: number;
+  max_days?: number;
+  body_max?: number;
+  limits?: Partial<Record<CityAdFormat, CityAdLimits>>;
+};
 
 /** Публичная витрина GET /api/v1/city-ads: одобренные объявления на сегодня (МСК). */
 export function useCityAds() {
@@ -1175,3 +1187,169 @@ export function sendCityAdEvent(adId: number, kind: CityAdEventKind, day: string
     sentEvents.delete(key); // не дошло — можно повторить позже
   });
 }
+
+
+// ── Реклама в городе: покупка, «Мои объявления», модерация (PR 5) ───────────
+
+export type CityAdContentIn = {
+  title?: string;
+  subtitle?: string;
+  body?: string;
+  link_url?: string;
+  color?: string;
+};
+export type CityAdQuoteIn = CityAdContentIn & { spot: string; start: string; days: number };
+export type CityAdQuote = {
+  spot: string;
+  format: CityAdFormat;
+  start: string;
+  end: string;
+  days: number;
+  price_day: string;
+  total: string;
+  price_day_nano: number;
+  total_nano: number;
+  available: boolean;
+  occupied: string[];
+  busy: string[];
+  next_free: string | null;
+  earliest: string;
+  latest: string;
+  content: {
+    title: string | null;
+    subtitle: string | null;
+    body: string | null;
+    link_url: string | null;
+    link_kind: "telegram" | "web" | null;
+    color: string | null;
+  } | null;
+};
+export type CityAdStatus = "pending" | "approved" | "rejected" | "cancelled" | "expired";
+export type CityAdStats = { impression?: number; open?: number; click?: number };
+export type CityAdMine = {
+  id: number;
+  spot: string;
+  format: CityAdFormat;
+  status: CityAdStatus | string;
+  title: string;
+  subtitle: string | null;
+  body: string | null;
+  link_url: string | null;
+  link_kind: "telegram" | "web" | null;
+  color: string;
+  start: string;
+  end: string;
+  days: number;
+  price_day: string;
+  total: string;
+  paid: string;
+  refunded: string;
+  total_nano: number;
+  paid_nano: number;
+  refunded_nano: number;
+  moderation_note: string | null;
+  moderated: boolean;
+  created_at: string | null;
+  stats: CityAdStats | null;
+};
+export type CityAdOwner = CityAdMine & {
+  advertiser_id: number;
+  revenue_nano: number;
+  held_nano: number;
+  link_changed_at: string | null;
+};
+export type CityAdModeration = { items: CityAdOwner[]; revenue_total: string; revenue_total_nano: number };
+
+/**
+ * Живой расчёт POST /city-ads/quote: цена, занятые сутки, ближайшая свободная дата и (если передан текст) его проверка.
+ * Пока ждём новый ответ — показываем прошлый (цена не мигает). null — запрос не нужен.
+ */
+export function useCityAdQuote(body: CityAdQuoteIn | null, tag = "dates") {
+  return useQuery({
+    queryKey: ["city-ad-quote", tag, body],
+    queryFn: () => api<CityAdQuote>("/api/v1/city-ads/quote", { method: "POST", body: JSON.stringify(body) }),
+    enabled: !!body,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+    retry: 0,
+  });
+}
+
+/** Купить показ: списание с баланса, объявление уходит на проверку. */
+export function useCityAdBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Required<Pick<CityAdQuoteIn, "spot" | "start" | "days" | "title" | "color">> & CityAdContentIn) =>
+      api<CityAdMine>("/api/v1/city-ads", { method: "POST", body: JSON.stringify(body) }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["city-ad-quote"] });
+      qc.invalidateQueries({ queryKey: ["city-ads-mine"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export function useMyCityAds(enabled = true) {
+  return useQuery({
+    queryKey: ["city-ads-mine"],
+    queryFn: () => api<CityAdMine[]>("/api/v1/city-ads/mine"),
+    enabled,
+    retry: 0,
+  });
+}
+
+/** Отменить своё объявление до проверки — полный возврат. */
+export function useCityAdCancel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api<CityAdMine>(`/api/v1/city-ads/${id}/cancel`, { method: "POST" }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["city-ads-mine"] });
+      qc.invalidateQueries({ queryKey: ["city-ad-quote"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+/** Сменить ссылку (одобренное снова уходит на проверку). */
+export function useCityAdLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, link_url }: { id: number; link_url: string | null }) =>
+      api<CityAdMine>(`/api/v1/city-ads/${id}/link`, { method: "PATCH", body: JSON.stringify({ link_url }) }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["city-ads-mine"] });
+      qc.invalidateQueries({ queryKey: ["city-ads"] });
+    },
+  });
+}
+
+/** Владелец: объявления по статусу + доход платформы с рекламы. */
+export function useCityAdModeration(status: CityAdStatus, enabled = true) {
+  return useQuery({
+    queryKey: ["city-ads-moderation", status],
+    queryFn: () => api<CityAdModeration>(`/api/v1/city-ads/moderation?status=${status}`),
+    enabled,
+    retry: 0,
+  });
+}
+
+function useOwnerAdAction<V>(fn: (v: V) => Promise<CityAdOwner>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["city-ads-moderation"] });
+      qc.invalidateQueries({ queryKey: ["city-ads"] });
+    },
+  });
+}
+
+export const useCityAdApprove = () =>
+  useOwnerAdAction((id: number) => api<CityAdOwner>(`/api/v1/city-ads/${id}/approve`, { method: "POST" }));
+
+/** Отклонить на проверке или снять одобренное (возврат за непоказанные сутки — на сервере). */
+export const useCityAdReject = () =>
+  useOwnerAdAction(({ id, note }: { id: number; note: string }) =>
+    api<CityAdOwner>(`/api/v1/city-ads/${id}/reject`, { method: "POST", body: JSON.stringify({ note: note || null }) }),
+  );

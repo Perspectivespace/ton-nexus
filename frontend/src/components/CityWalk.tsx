@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { sendCityAdEvent, useCityAds, type CityAdSpotOnBoard } from "@/api/hooks";
 import { cityWalk, useCityWalk } from "@/lib/cityWalk";
 import { adVars } from "@/lib/cityAdPalette";
@@ -30,6 +31,7 @@ function daysLeft(until: string, today: string): number {
 
 export function CityWalk() {
   const walk = useCityWalk();
+  const navigate = useNavigate();
   const { data, refetch } = useCityAds();
   const live = useMemo(() => liveSpots(data?.spots), [data]);
 
@@ -117,10 +119,22 @@ export function CityWalk() {
             cityWalk.leave();
           }}
         >
-          <i aria-hidden="true">×</i> Выйти из прогулки
+          <i aria-hidden="true">×</i> Выйти<span className="walk-long"> из прогулки</span>
         </button>
-        {offered && (
-          <div className="walk-tools">
+        <div className="walk-tools">
+          {/* покупка рекламы (PR 5): уход с главной сам выключает «Прогулку» (Layout) */}
+          <button
+            type="button"
+            className="walk-buy"
+            onClick={() => {
+              haptic.tap();
+              navigate("/ads");
+            }}
+          >
+            <i aria-hidden="true">+</i>
+            Реклама
+          </button>
+          {offered && (
             <button
               type="button"
               className={`walk-tilt${tilt ? " on" : ""}`}
@@ -134,12 +148,16 @@ export function CityWalk() {
               <i aria-hidden="true" />
               Наклон
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       {!spot && (
         <p className="walk-hint" role="status">
-          {live.length ? "Ведите пальцем · коснитесь вывески" : "Ведите пальцем — осмотритесь"}
+          {live.length
+            ? "Ведите пальцем · коснитесь вывески"
+            : data?.spots.some((s) => s.on_sale && !s.ad)
+              ? "Ведите пальцем · свободное место можно занять"
+              : "Ведите пальцем — осмотритесь"}
         </p>
       )}
       {spot && data && <AdCard key={spot.key} spot={spot} day={data.day} />}

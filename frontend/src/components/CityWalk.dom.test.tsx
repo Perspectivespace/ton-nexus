@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -45,12 +46,26 @@ let el: HTMLDivElement;
 const render = () =>
   act(() =>
     root.render(
-      <>
-        <CityAdSpots phase="night" />
-        <WalkHost />
-      </>,
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route
+            path="*"
+            element={
+              <>
+                <CityAdSpots phase="night" />
+                <WalkHost />
+                <Where />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
     ),
   );
+function Where() {
+  const loc = useLocation();
+  return <output data-testid="loc">{loc.pathname + loc.search}</output>;
+}
 function WalkHost() {
   return useCityWalk().active ? <CityWalk /> : null;
 }
@@ -124,6 +139,28 @@ describe("CityWalk", () => {
     render();
     act(() => cityWalk.enter());
     expect(el.querySelector(".walk-hint")!.textContent).toBe("Ведите пальцем — осмотритесь");
+  });
+});
+
+describe("покупка из «Прогулки» (PR 5)", () => {
+  const loc = () => el.querySelector('[data-testid="loc"]')!.textContent;
+  it("свободные места видны только в «Прогулке», касание ведёт к покупке этого места", () => {
+    render();
+    expect(el.querySelector(".cad-free")).toBeNull();
+    act(() => cityWalk.enter());
+    const free = el.querySelectorAll<HTMLButtonElement>(".cad-free");
+    expect([...free].map((b) => b.dataset.free)).toEqual(["neon_left"]);
+    act(() => free[0].click());
+    expect(loc()).toBe("/ads?spot=neon_left");
+  });
+
+  it("кнопка «Реклама» открывает экран покупки; подсказка про свободное место без рекламы", () => {
+    m.board = { ...BOARD, spots: [BOARD.spots[2]] };
+    render();
+    act(() => cityWalk.enter());
+    expect(el.querySelector(".walk-hint")!.textContent).toBe("Ведите пальцем · свободное место можно занять");
+    act(() => btn("+Реклама").click());
+    expect(loc()).toBe("/ads");
   });
 });
 
