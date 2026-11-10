@@ -8,6 +8,7 @@ import { ARRIVE_MS, districtNav, neighbourOf } from "@/lib/districtNav";
 import { DistrictStrip, EdgeHints, type EdgeHintsHandle } from "@/components/DistrictNav";
 import { loadDistrict, preloadWhenIdle, type LayerUrls } from "@/lib/districtAssets";
 import { startDistrictLife } from "@/lib/districtLife";
+import { DistrictIdleAds } from "@/components/DistrictIdleAds";
 import {
   DISTRICT_RU, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, streetWidth, type SceneDistrict,
 } from "@/lib/districts";
@@ -173,6 +174,7 @@ export function DistrictScene({ district, forceLite = false }: { district: Scene
               style={{ width: w, marginLeft: -w / 2 }}
             >
               <img src={urls[id]} alt="" draggable={false} />
+              {(id === "mid" || id === "flat") && <DistrictIdleAds district={district} still={lite || !motionAllowed()} />}
             </div>
           );
         })}

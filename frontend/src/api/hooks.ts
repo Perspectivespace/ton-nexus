@@ -1157,6 +1157,8 @@ export type CityAdsBoard = {
   day: string;
   spots: CityAdSpotOnBoard[];
   palette: Record<string, string>;
+  /** цены типов мест за сутки (TON строкой): line / banner / neon / facade_screen */
+  prices?: Record<string, string>;
   /** покупка: уровень, сроки и длина текста — из настройки city_ads (PR 5) */
   min_level?: number;
   min_days?: number;
@@ -1172,6 +1174,17 @@ export function useCityAds() {
     queryFn: () => api<CityAdsBoard>("/api/v1/city-ads"),
     staleTime: 60_000,
     retry: 0,
+  });
+}
+
+/** Витрина района (?district=rows|port): места района и их цены за сутки — для самопрезентации свободных мест. */
+export function useDistrictAds(district: string, enabled = true) {
+  return useQuery({
+    queryKey: ["city-ads", district],
+    queryFn: () => api<CityAdsBoard>(`/api/v1/city-ads?district=${encodeURIComponent(district)}`),
+    staleTime: 5 * 60_000,
+    retry: 0,
+    enabled,
   });
 }
 
