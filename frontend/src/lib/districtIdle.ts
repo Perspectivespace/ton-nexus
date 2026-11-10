@@ -23,9 +23,14 @@ export const priceLine = (price: string | null | undefined) => {
   return t ? `от ${t} TON/сутки` : null;
 };
 
-/** слоганы места по типу; первый — неподвижный вариант (слабое устройство, «меньше движения») */
-export function idleSlogans(kind: IdleKind, price?: string | null): string[] {
+/**
+ * Слоганы места по типу; первый — неподвижный вариант (слабое устройство, «меньше движения»).
+ * compact — маленькие места Центра: вывеска в одну строку (до 9 знаков), баннер — короче.
+ */
+export function idleSlogans(kind: IdleKind, price?: string | null, compact = false): string[] {
   const p = priceLine(price);
+  if (compact && kind === "neon") return ["Засветись", "Свободно", "Твой неон"];
+  if (compact && kind === "banner") return ["Засветись тут", "Место для рекламы", "Твой баннер тут"];
   switch (kind) {
     case "facade_screen":
       return ["Место для рекламы", "Засветись тут", "Твой бренд — на весь рынок", "Этот экран ждёт тебя"];

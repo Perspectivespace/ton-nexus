@@ -28,6 +28,13 @@ describe("districtIdle: self-promo of free spots", () => {
     expect(idleSlogans("line")[0]).toBe("Место для рекламы");
   });
 
+  it("compact (места Центра): вывеска в одну короткую строку, баннер — короче", () => {
+    expect(idleSlogans("neon", null, true)).toEqual(["Засветись", "Свободно", "Твой неон"]);
+    for (const t of idleSlogans("neon", null, true)) expect(t.length).toBeLessThanOrEqual(9);
+    expect(idleSlogans("banner", null, true)[0]).toBe("Засветись тут");
+    for (const t of idleSlogans("banner", null, true)) expect(t.length).toBeLessThanOrEqual(17);
+  });
+
   it("swaps are one-shot and staggered; transitions animate transform/opacity only", () => {
     expect(idleDelay(0, 0)).toBe(7000);
     expect(idleDelay(0, 1)).toBe(10000);
