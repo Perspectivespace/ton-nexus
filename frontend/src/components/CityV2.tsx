@@ -11,7 +11,7 @@ import { isClearSky } from "@/lib/cityWeather";
 import { CityTrain } from "./CityTrain";
 import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
-import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
+import { TOWER_SILHOUETTE, towerRim } from "@/lib/towerSilhouette";
 import { useCityAds } from "@/api/hooks";
 import { CityAdSpots, idleTower } from "./CityAdSpots";
 import type { ReactNode } from "react";
@@ -108,6 +108,8 @@ export function CityV2({ tier }: { tier: number }) {
   const towerSold = !!board?.spots.some((s) => s.key === "tower_line" && s.ad) || !!idleTower(board?.spots);
   const occ = TOWER_SILHOUETTE[tier] ?? TOWER_SILHOUETTE[1];
   const light = phase === "dawn" || phase === "day"; // небо и блики — только при свете
+  // кромка света — полоса у бока башни (рассвет: солнце слева, день: справа), не зависит от копии кадра
+  const rim = phase === "day" ? towerRim(tier, "r", 0.3) : towerRim(tier, "l", 0.45);
   // ясный день (шаг 5): примерно каждый третий день по МСК на рассвете, днём и вечером (dusk, шаг 4) —
   // без дождя, блики в лужах. Ночь всегда дождливая.
   const clear = (light || phase === "dusk") && isClearSky();
@@ -166,9 +168,9 @@ export function CityV2({ tier }: { tier: number }) {
         {/* вечер (dusk, шаг 3): первые звёзды и серп луны — за облаками и копией башни */}
         {phase === "dusk" && <CityDuskStars />}
         {(light || phase === "dusk") && <CityClouds />}
-        <i className="rim" style={{ clipPath: occ }} />
+        <i className="rim" style={{ clipPath: rim }} />
         {/* вечер (dusk, шаг 1): низкое солнце за крышами и тёплая кромка — только вечером */}
-        <CityDuskSun tier={tier} clip={occ} />
+        <CityDuskSun tier={tier} clip={towerRim(tier, "r", 0.45)} />
       </div>
       {prev && prev !== src && <img className="cv2-img prev cv2-occ" src={prev} alt="" style={{ clipPath: occ }} />}
       {src && <img key={`o${src}`} className={`cv2-img cv2-occ${slow ? " slow" : ""}`} src={src} alt="" decoding="async" style={{ clipPath: occ }} />}
