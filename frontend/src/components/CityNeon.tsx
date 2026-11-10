@@ -35,6 +35,7 @@ type Sign = {
   frame?: boolean; // тонкий LED-контур панели
   panel?: boolean; // тёмная стеклянная подложка (голо-панель)
   buzz?: number; // какая буква «больная»
+  lw?: number; // множитель толщины линии (мелкой вывеске — толще, иначе на телефоне она блёклая)
 };
 
 // тонкий «LED»-шрифт: ячейка 10 × 14, пути SVG, геометричные латинские буквы + знаки
@@ -62,8 +63,8 @@ const G: Record<string, string> = {
 export const SIGNS: Sign[] = [
   // HOTEL — узкая вертикальная голо-панель на фасаде башни слева, загорается по букве
   { id: "hotel", from: 1, x: 126, y: 540, s: 0.85, v: true, glyphs: ["H", "O", "T", "E", "L"], c: [255, 92, 170], kind: "seq", panel: true, frame: true },
-  // BAR — тонкие буквы под крышей низкого дома (с проектором голограммы); «A» — сбоящий диод
-  { id: "bar", from: 1, x: 217, y: 640, s: 0.95, glyphs: ["B", "A", "R"], c: [255, 70, 210], kind: "buzz", buzz: 1 },
+  // BAR — буквы под крышей низкого дома (с проектором голограммы); «A» — сбоящий диод; крупнее, толще и на тёмной подложке — на закатном небе тонкие розовые буквы терялись
+  { id: "bar", from: 1, x: 209, y: 633, s: 1.3, glyphs: ["B", "A", "R"], c: [255, 70, 210], kind: "buzz", buzz: 1, lw: 1.4, panel: true },
   // LED-полоса по фасаду низкого дома под BAR — ровный холодный свет
   { id: "edge-c", from: 1, x: 214, y: 662, s: 1, glyphs: [], paths: ["M0 0H42"], pw: 42, ph: 0, c: [80, 230, 255], kind: "still" },
   // NEXUS — горизонтальная строка на правом корпусе, изредка моргает
@@ -169,7 +170,7 @@ function paintSign(cv: HTMLCanvasElement, s: Sign, wCss: number, hCss: number, k
     const [x, y] = cellAt(s, i);
     const p = new Path2D();
     p.addPath(new Path2D((s.paths ? s.paths[i] : G[s.glyphs[i]]) ?? ""), new DOMMatrix([1, 0, 0, 1, x, y]));
-    const lw = s.paths ? LW * 1.6 : LW; // LED-полосы чуть толще букв
+    const lw = (s.paths ? LW * 1.6 : LW) * (s.lw ?? 1); // LED-полосы чуть толще букв
     if (part === "off") glass(g, p, lw);
     else tube(g, p, s.c, lw);
   }
@@ -327,7 +328,8 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
       const sz = `${sw}x${sh}`;
       if (sz === last) return;
       last = sz;
-      const k = Math.min(window.devicePixelRatio || 1, 2);
+      // вывески — тонкие линии: рисуем с запасом под зум «Прогулки» (×1.32), иначе на телефоне они размыты и блёклые
+      const k = Math.min((window.devicePixelRatio || 1) * 1.32, 3);
       const fx = sw / W;
       const fy = sh / H;
       const jobs: (() => void)[] = [];
