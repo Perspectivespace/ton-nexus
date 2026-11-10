@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AD_PALETTE, adVars } from "@/lib/cityAdPalette";
+import { IDLE_COLOR } from "@/lib/districtIdle";
+import { SCENE_DISTRICTS, SURFACES } from "@/lib/districts";
 
 /* Реклама читается в любое время суток: контраст букв и плашки по WCAG (мелкий текст — ≥ 4.5:1).
  * Цвета берём из самих CSS (токены --ad-*, подкраски рассвета/вечера районов, дневные панели города), поэтому
@@ -126,5 +128,17 @@ describe("реклама читается в любое время суток (�
     }
     expect(bad).toEqual([]);
     expect(city).not.toMatch(/\.cv2 \.ad \{[^}]*opacity:\s*\./);
+  });
+
+  it("места районов (Неон-ряды, Порт) рисуются проверенными здесь стилями и цветами — контраст держится во всех фазах", () => {
+    const kinds = new Set(["facade_screen", "line", "banner", "neon"]);
+    for (const d of SCENE_DISTRICTS) {
+      const list = SURFACES[d] ?? [];
+      expect(list.length, d).toBe(4);
+      for (const s of list) {
+        expect(kinds.has(s.kind), `${d} ${s.spot}`).toBe(true);
+        expect(Object.keys(AD_PALETTE)).toContain(IDLE_COLOR[s.kind]);
+      }
+    }
   });
 });
