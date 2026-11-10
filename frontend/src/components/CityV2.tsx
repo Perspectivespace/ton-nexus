@@ -13,7 +13,7 @@ import { REACTOR_TIERS, reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { TOWER_SILHOUETTE } from "@/lib/towerSilhouette";
 import { useCityAds } from "@/api/hooks";
-import { CityAdSpots } from "./CityAdSpots";
+import { CityAdSpots, idleTower } from "./CityAdSpots";
 import type { ReactNode } from "react";
 
 /**
@@ -104,7 +104,8 @@ export function CityV2({ tier }: { tier: number }) {
   const { data: board } = useCityAds();
   const streetSold = !!board?.spots.some((s) => s.key === "banner_street" && s.ad);
   // строка на башне продана — экран «МАЙНЕР» показывает сама строка (чередуется с рекламой)
-  const towerSold = !!board?.spots.some((s) => s.key === "tower_line" && s.ad);
+  // свободную строку на башне тоже рисует строка (МАЙНЕР ↔ самореклама места), поэтому экран не нужен и тогда
+  const towerSold = !!board?.spots.some((s) => s.key === "tower_line" && s.ad) || !!idleTower(board?.spots);
   const occ = TOWER_SILHOUETTE[tier] ?? TOWER_SILHOUETTE[1];
   const light = phase === "dawn" || phase === "day"; // небо и блики — только при свете
   // ясный день (шаг 5): примерно каждый третий день по МСК на рассвете, днём и вечером (dusk, шаг 4) —

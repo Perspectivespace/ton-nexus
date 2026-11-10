@@ -131,16 +131,11 @@ html.city-walk-out .walk-ui > * { pointer-events: none; }
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
 .walk-buy i { font: 400 18px/1 var(--f-sans); font-style: normal; color: #2BF5FF; }
 @media (max-width: 400px) { .walk-long { display: none; } }
-.cads-live > .cad-free { box-sizing: border-box; margin: 0; padding: 0; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+/* свободное место в «Прогулке»: кнопка покупки, внутри — самореклама места (IdleSpot, стили — idle-ads.css) */
+.cads-live > .cad-free { box-sizing: border-box; margin: 0; padding: 0; border: 0; background: none; cursor: pointer;
   pointer-events: auto; touch-action: none; -webkit-tap-highlight-color: transparent;
-  background: repeating-linear-gradient(0deg, rgba(43, 245, 255, .1) 0 calc(var(--u) * 1), transparent calc(var(--u) * 1) calc(var(--u) * 3)), rgba(4, 8, 18, .5);
-  outline: calc(var(--u) * 1.6) dashed rgba(43, 245, 255, .75); outline-offset: calc(var(--u) * 2);
   animation: cad-free-in .5s .6s ease both; }
-.cad-free span { font: 700 calc(var(--u) * 10) / 1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: #CFFBFF; white-space: nowrap;
-  text-shadow: 0 0 calc(var(--u) * 4) rgba(43, 245, 255, .9); }
-.cad-free.f-line span { font-size: calc(var(--u) * 12); }
+.cad-free > .dz-idle { inset: 0; }
+.cad-free:focus-visible { outline: calc(var(--u) * 1.5) solid rgba(43, 245, 255, .9); outline-offset: calc(var(--u) * 5); }
 @keyframes cad-free-in { from { opacity: 0 } to { opacity: 1 } }
 @media (prefers-reduced-motion: reduce) { .cads-live > .cad-free { animation: none; } }
-/* строка на башне: экран «МАЙНЕР» остаётся виден, подпись — над рамкой */
-.cads-live > .cad-free.f-line { background: none; }
-.cad-free.f-line span { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, calc(var(--u) * -6)); padding: calc(var(--u) * 3) calc(var(--u) * 5); background: rgba(4, 8, 18, .8); }
