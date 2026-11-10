@@ -87,6 +87,23 @@ describe("WalkCamera", () => {
     expect(cam.state.x).toBeCloseTo(b.maxX, 0);
   });
 
+  it("протяжка и инерция: размеры сцены читаются из вёрстки раз за жест, а не каждый кадр", () => {
+    let reads = 0;
+    Object.defineProperty(stage, "offsetWidth", { configurable: true, get: () => (reads++, 475) });
+    ptr("pointerdown", 100, 400, spot);
+    for (let x = 110; x <= 300; x += 10) {
+      ptr("pointermove", x, 400);
+      flush(1);
+    }
+    ptr("pointerup", 300, 400);
+    flush(200);
+    expect(reads).toBeLessThanOrEqual(2);
+    // после остановки — снова свежее чтение (сцена могла смениться)
+    reads = 0;
+    cam.bounds();
+    expect(reads).toBe(1);
+  });
+
   it("выход: обратный путь, потом done; пальцы после этого не двигают город", () => {
     const done = vi.fn();
     cam.leave(done);

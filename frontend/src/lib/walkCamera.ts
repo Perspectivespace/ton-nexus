@@ -56,6 +56,10 @@ export class WalkCamera {
   private suppressUntil = 0;
   private layers: { el: HTMLElement; k: number }[] = [];
   private leaving = false;
+  /** размеры сцены и окна: читаются из вёрстки один раз за жест/пролёт, а не каждый кадр (иначе — принудительный пересчёт стилей) */
+  private dimsCache: { sw: number; sh: number; vw: number; vh: number } | null = null;
+  private ro: ResizeObserver | null = null;
+  private moving = false;
   /** кадров отрисовано (для замеров) */
   rendered = 0;
 
@@ -76,11 +80,20 @@ export class WalkCamera {
     window.addEventListener("pointercancel", this.onUp, { passive: true });
     window.addEventListener("click", this.onClick, true);
     window.addEventListener("resize", this.onResize);
+    if (typeof ResizeObserver !== "undefined") {
+      this.ro = new ResizeObserver(() => (this.dimsCache = null));
+      this.ro.observe(stage);
+      if (stage.parentElement) this.ro.observe(stage.parentElement);
+    }
   }
 
   private dims() {
+    if (this.dimsCache) return this.dimsCache;
     const box = this.stage.parentElement ?? document.documentElement;
-    return { sw: this.stage.offsetWidth, sh: this.stage.offsetHeight, vw: box.clientWidth || innerWidth, vh: box.clientHeight || innerHeight };
+    const d = { sw: this.stage.offsetWidth, sh: this.stage.offsetHeight, vw: box.clientWidth || innerWidth, vh: box.clientHeight || innerHeight };
+    // кэш живёт только пока идёт движение (rAF); вне его — свежее чтение
+    if (this.moving) this.dimsCache = d;
+    return d;
   }
   bounds(s = this.cam.s): Bounds {
     const d = this.dims();
@@ -219,6 +232,7 @@ export class WalkCamera {
     }
   };
   private onResize = () => {
+    this.dimsCache = null;
     this.rest = this.walkCam();
     this.cam = clampCam(this.cam, this.bounds());
     this.render();
@@ -226,6 +240,8 @@ export class WalkCamera {
 
   private wake() {
     if (this.raf) return;
+    this.dimsCache = null;
+    this.moving = true;
     this.layers = this.findLayers();
     this.last = performance.now();
     this.raf = requestAnimationFrame(this.tick);
@@ -262,6 +278,10 @@ export class WalkCamera {
     if (++this.frames % 60 === 0) this.layers = this.findLayers(); // кадр сцены мог смениться (фаза/облик)
     this.render();
     if (busy && current === this) this.raf = requestAnimationFrame(this.tick);
+    else {
+      this.moving = false;
+      this.dimsCache = null;
+    }
   };
 
   private render() {
@@ -299,6 +319,10 @@ export class WalkCamera {
     window.removeEventListener("pointercancel", this.onUp);
     window.removeEventListener("click", this.onClick, true);
     window.removeEventListener("resize", this.onResize);
+    this.ro?.disconnect();
+    this.ro = null;
+    this.moving = false;
+    this.dimsCache = null;
     for (const { el } of this.findLayers()) el.style.translate = "";
     // вид главной уже совпадает с последним кадром пролёта — без CSS-перехода, чтобы город не дёрнулся
     const st = this.stage.style;
