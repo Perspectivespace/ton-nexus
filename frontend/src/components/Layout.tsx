@@ -27,7 +27,7 @@ export function Layout() {
   useEffect(() => {
     if (loc.pathname !== "/" && cityWalk.get().active) cityWalk.exit();
   }, [loc.pathname]);
-  // прямая ссылка на район (start_param «district-rows» / «district-port») — экран района сам пускает только владельца
+  // прямая ссылка на район (start_param «district-rows» / «district-port») — открыта всем игрокам
   const navigate = useNavigate();
   useEffect(() => {
     let sp: string | null | undefined = null;

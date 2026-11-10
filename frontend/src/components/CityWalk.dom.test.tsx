@@ -243,21 +243,17 @@ describe("строка на башне", () => {
   });
 });
 
-/* Районы (PR 3): полоска «Центр · Неон-ряды · Порт» в «Прогулке» — пока только владельцу (и dev-сборке). */
+/* Районы (PR 3): полоска «Центр · Неон-ряды · Порт» в «Прогулке» — открыта всем игрокам. */
 describe("районы в «Прогулке»", () => {
   const strip = () => el.querySelector(".dz-strip");
 
-  it("в продакшене игрок полоски не видит, владелец — видит; Центр отмечен", () => {
+  it("в продакшене полоску видит любой игрок (не только владелец); Центр отмечен", () => {
     vi.stubEnv("DEV", false);
     try {
+      m.owner = false;
       render();
       act(() => cityWalk.enter());
-      expect(strip()).toBeNull();
-      expect(el.querySelector(".walk-ui")?.classList.contains("has-strip")).toBe(false);
-      act(() => cityWalk.exit());
-      m.owner = true;
-      render();
-      act(() => cityWalk.enter());
+      expect(el.querySelector(".walk-ui")?.classList.contains("has-strip")).toBe(true);
       expect([...strip()!.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["Центр", "Неон-ряды", "Порт"]);
       expect(strip()!.querySelector("[aria-current=page]")?.textContent).toBe("Центр");
       expect(el.querySelector(".dz-edge.r")?.textContent).toContain("Неон-ряды");
@@ -267,10 +263,11 @@ describe("районы в «Прогулке»", () => {
     }
   });
 
-  it("касание «Неон-ряды» открывает район (с «меньше движения» — сразу)", () => {
+  it("касание «Неон-ряды» открывает район игроку (с «меньше движения» — сразу)", () => {
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    vi.stubEnv("DEV", false);
     try {
-      m.owner = true;
+      m.owner = false;
       render();
       act(() => cityWalk.enter());
       act(() => btn("Неон-ряды").click());
@@ -278,6 +275,7 @@ describe("районы в «Прогулке»", () => {
       expect(districtNav.takeArrival()).toEqual({ dir: 1 });
     } finally {
       vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
     }
   });
 });

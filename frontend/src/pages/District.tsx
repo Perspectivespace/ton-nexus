@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { useMe } from "@/api/hooks";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { pushBack } from "@/lib/backButton";
 import { useCityPhase } from "@/lib/cityPhase";
 import { DistrictCamera, type CamLayer } from "@/lib/districtCamera";
@@ -18,18 +17,15 @@ import { lowEnd, motionAllowed, reducedMotion } from "@/lib/walkPrefs";
 import "@/styles/districts.css";
 
 /**
- * Экран района (PR 2 районов — движок сцены). Пока скрыт от игроков: открывается только в dev-сборке
- * или владельцу — по адресу /district?d=rows|port (или прямой ссылкой с start_param «district-rows» / «district-port»).
+ * Экран района (PR 2 районов — движок сцены). Открыт всем игрокам: /district?d=rows|port
+ * (или прямой ссылкой с start_param «district-rows» / «district-port»).
  * PR 3: полоска «Центр · Неон-ряды · Порт», протяжка за край улицы — к соседу, «Назад» — в Центр («Прогулка»),
  * «Выйти» — на главную. Рисунки обоих районов — финальные (свой дальний план, значка «Черновик» нет).
  *
  * ?lite=1 — показать вариант слабого устройства; ?phase=dawn|day|dusk|night — фаза суток (как у города).
  */
 export function District() {
-  const me = useMe();
   const [sp] = useSearchParams();
-  const allowed = import.meta.env.DEV || me.data?.is_owner === true;
-  if (!allowed) return me.isLoading ? null : <Navigate to="/" replace />;
   const q = sp.get("d");
   const d: SceneDistrict = isSceneDistrict(q) ? q : "rows";
   return <DistrictScene key={d} district={d} forceLite={sp.get("lite") === "1"} />;

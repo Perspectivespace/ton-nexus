@@ -1,5 +1,4 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { useMe } from "@/api/hooks";
 import { DISTRICT_ORDER, DISTRICT_RU, type DistrictId } from "@/lib/districts";
 import { neighbourOf } from "@/lib/districtNav";
 import type { EdgeState } from "@/lib/districtCamera";
@@ -7,11 +6,12 @@ import { haptic } from "@/lib/haptics";
 
 /**
  * Навигация между районами в «Прогулке» (PR 3 районов): полоска «Центр · Неон-ряды · Порт» внизу экрана
- * и подсказки соседа у краёв улицы. Пока районы видит только владелец (и dev-сборка) — до финальных рисунков.
+ * и подсказки соседа у краёв улицы. Оба района — финальный рисунок, поэтому районы открыты всем игрокам
+ * (раньше — только владельцу). Покупка мест в районах выключена до PR 6 (места не продаются).
  */
+export const DISTRICTS_OPEN = true;
 export function useDistrictsOpen(): boolean {
-  const me = useMe();
-  return import.meta.env.DEV || me.data?.is_owner === true;
+  return DISTRICTS_OPEN;
 }
 
 export function DistrictStrip({ current, onGo }: { current: DistrictId; onGo: (to: DistrictId) => void }) {
