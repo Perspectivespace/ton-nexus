@@ -168,6 +168,55 @@ describe("покупка из «Прогулки» (PR 5)", () => {
   });
 });
 
+describe("самореклама свободных мест Центра", () => {
+  const loc = () => el.querySelector('[data-testid="loc"]')!.textContent;
+  const TOWER = { key: "tower_line", format: "line", title: "Строка на башне", on_sale: true, price_day: "1.20", ad: null };
+
+  it("в «Прогулке» свободное место рекламирует себя (вместо рамки «+ свободно»), касание — покупка", () => {
+    render();
+    expect(el.querySelector(".dz-idle")).toBeNull(); // на главной вне «Прогулки» — пусто
+    act(() => cityWalk.enter());
+    const free = el.querySelector<HTMLButtonElement>('.cad-free[data-free="neon_left"]')!;
+    const idle = free.querySelector<HTMLElement>(".dz-idle")!;
+    expect(idle.className).toContain("k-neon");
+    expect(idle.className).toContain("compact");
+    expect(idle.textContent).toBe("Засветись");
+    expect(el.textContent).not.toContain("свободно");
+    act(() => free.click());
+    expect(loc()).toBe("/ads?spot=neon_left");
+  });
+
+  it("свободный баннер — голо-баннер с короткими слоганами", () => {
+    m.board = { ...BOARD, spots: [{ key: "banner_street", format: "banner", title: "Баннер", on_sale: true, price_day: "1", ad: null }] };
+    render();
+    act(() => cityWalk.enter());
+    const idle = el.querySelector<HTMLElement>('.cad-free[data-free="banner_street"] .dz-idle')!;
+    expect(idle.className).toContain("k-banner");
+    expect(idle.textContent).toBe("Засветись тут");
+  });
+
+  it("свободная строка на башне: «МАЙНЕР» ↔ «Место для рекламы · от X TON/сутки» и на главной; касание — только в «Прогулке»", () => {
+    m.board = { ...BOARD, spots: [...BOARD.spots, TOWER] };
+    render();
+    const tick = () => el.querySelector<HTMLButtonElement>(".cad-idle-tick")!;
+    expect(tick().textContent).toContain("МАЙНЕР");
+    expect(tick().textContent).toContain("Место для рекламы · от 1,2 TON/сутки");
+    expect(tick().tabIndex).toBe(-1);
+    act(() => tick().click());
+    expect(loc()).toBe("/");
+    act(() => cityWalk.enter());
+    expect(tick().tabIndex).toBe(0);
+    act(() => tick().click());
+    expect(loc()).toBe("/ads?spot=tower_line");
+  });
+
+  it("строка на башне не продаётся или куплена — саморекламы нет", () => {
+    m.board = { ...BOARD, spots: [...BOARD.spots, { ...TOWER, on_sale: false }] };
+    render();
+    expect(el.querySelector(".cad-idle-tick")).toBeNull();
+  });
+});
+
 describe("fitFont", () => {
   it("короткое название — базовый кегль, длинное мельчает, но не меньше 7", () => {
     expect(fitFont("banner", "PIXEL", 126)).toBe(14.5);

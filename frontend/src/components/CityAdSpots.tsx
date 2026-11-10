@@ -5,6 +5,9 @@ import { cityWalk, useCityWalk } from "@/lib/cityWalk";
 import { adVars } from "@/lib/cityAdPalette";
 import type { CityPhase } from "@/lib/cityPhase";
 import { blocked, rnd } from "./CityDaySky";
+import { IdleSurface } from "./IdleSpot";
+import { priceLine } from "@/lib/districtIdle";
+import { lowEnd, reducedMotion } from "@/lib/walkPrefs";
 
 /**
  * Реклама в городе — утверждённый облик (дизайн «F»): голо-баннеры и вывески — проекция (HUD-уголки, развёртка, луч
@@ -39,6 +42,18 @@ export function fitFont(kind: keyof typeof FONT, text: string, w: number): numbe
 /** места с объявлением на сегодня, которые умеем нарисовать */
 export function liveSpots(spots: CityAdSpotOnBoard[] | undefined): CityAdSpotOnBoard[] {
   return (spots ?? []).filter((s) => s.ad && AD_SPOT_BOX[s.key]);
+}
+
+/**
+ * Свободная строка на башне, которую можно купить: экран «МАЙНЕР» чередуется с саморекламой места
+ * («Место для рекламы · от X TON/сутки») — и на главной, и в «Прогулке» (это одна строка, а не новые рамки).
+ */
+export function idleTower(spots: CityAdSpotOnBoard[] | undefined): CityAdSpotOnBoard | null {
+  return (spots ?? []).find((s) => s.key === "tower_line" && s.on_sale && !s.ad) ?? null;
+}
+/** объявление-самореклама для строки на башне (рисуется тем же AdTicker, что и купленная строка) */
+export function towerPromo(price: string | null): CityAdOnBoard {
+  return { id: 0, title: "Место для рекламы", subtitle: priceLine(price), body: null, link_url: null, link_kind: null, color: "cyan", until: "" };
 }
 
 const lit = (p: CityPhase) => p === "night" || p === "dusk";
@@ -92,10 +107,13 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
   const navigate = useNavigate();
   const live = liveSpots(data?.spots);
   const holo = live.filter((s) => s.format !== "line");
-  // в «Прогулке» свободные места видны рамкой «Свободно»: касание — покупка этого места (PR 5)
-  const free = walk.active ? (data?.spots ?? []).filter((s) => s.on_sale && !s.ad && AD_SPOT_BOX[s.key]) : [];
+  // в «Прогулке» свободные места рекламируют сами себя (слоганы по очереди): касание — покупка этого места.
+  // Строка на башне — отдельно (idleTower), на главной вне «Прогулки» свободные места пустые.
+  const free = walk.active ? (data?.spots ?? []).filter((s) => s.on_sale && !s.ad && AD_SPOT_BOX[s.key] && s.format !== "line") : [];
+  const tower = idleTower(data?.spots);
+  const still = lowEnd() || reducedMotion();
   useHoloLife(host, phase, holo.length);
-  if (!live.length && !free.length) return null;
+  if (!live.length && !free.length && !tower) return null;
   const spotProps = (s: CityAdSpotOnBoard) => {
     const ad = s.ad!;
     return {
@@ -130,7 +148,7 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
           </button>
         );
       })}
-      {free.map((s) => (
+      {free.map((s, i) => (
         <button
           key={`f-${s.key}`}
           type="button"
@@ -140,9 +158,24 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
           aria-label={`Свободное место: ${s.title}. Разместить рекламу`}
           onClick={() => navigate(`/ads?spot=${s.key}`)}
         >
-          <span>+ свободно</span>
+          <IdleSurface spot={s.key} kind={s.format === "banner" ? "banner" : "neon"} i={i} price={s.price_day} still={still} compact />
         </button>
       ))}
+      {tower && (
+        <button
+          key="idle-tower"
+          type="button"
+          data-free={tower.key}
+          className="cad-spot cad-tick cad-idle-tick"
+          style={{ ...box(AD_SPOT_BOX.tower_line), ...adVars("cyan") }}
+          tabIndex={walk.active ? 0 : -1}
+          aria-hidden={walk.active ? undefined : true}
+          aria-label={`Свободное место: ${tower.title}. Разместить рекламу`}
+          onClick={() => walk.active && navigate(`/ads?spot=${tower.key}`)}
+        >
+          <AdTicker ad={towerPromo(tower.price_day)} />
+        </button>
+      )}
       {live
         .filter((s) => s.format === "line")
         .map((s) => (
