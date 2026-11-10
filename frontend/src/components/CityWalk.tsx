@@ -1,9 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { sendCityAdEvent, useCityAds, type CityAdSpotOnBoard } from "@/api/hooks";
+import { sendCityAdEvent, useCityAds } from "@/api/hooks";
 import { cityWalk, useCityWalk } from "@/lib/cityWalk";
-import { adVars } from "@/lib/cityAdPalette";
-import { isSafeAdLink, linkHost, openAdLink } from "@/lib/cityAdLink";
 import { pushBack } from "@/lib/backButton";
 import { haptic } from "@/lib/haptics";
 import { liveSpots } from "./CityAdSpots";
@@ -15,6 +13,7 @@ import { WebApp } from "@/lib/telegram";
 import { districtNav, neighbourOf } from "@/lib/districtNav";
 import { lookFor, type DistrictId } from "@/lib/districts";
 import { useCityPhase } from "@/lib/cityPhase";
+import { AdCard } from "./AdCard";
 import { DistrictStrip, EdgeHints, useDistrictsOpen, type EdgeHintsHandle } from "./DistrictNav";
 
 /**
@@ -25,13 +24,6 @@ import { DistrictStrip, EdgeHints, useDistrictsOpen, type EdgeHintsHandle } from
  * Реклама касаема только здесь: касание места → подробная карточка; показы/открытия/переходы считаются только здесь.
  * Анимации — разовые (появление карточки, сдвиг «камеры» через transition); бесконечных нет.
  */
-const FORMAT_RU: Record<string, string> = { line: "БЕГУЩАЯ СТРОКА", banner: "ГОЛО-БАННЕР", neon: "ВЫВЕСКА" };
-
-function daysLeft(until: string, today: string): number {
-  const a = Date.parse(`${today}T00:00:00Z`);
-  const b = Date.parse(`${until}T00:00:00Z`);
-  return Number.isFinite(a) && Number.isFinite(b) ? Math.max(1, Math.round((b - a) / 86_400_000) + 1) : 1;
-}
 
 export function CityWalk() {
   const walk = useCityWalk();
@@ -198,84 +190,21 @@ export function CityWalk() {
       )}
       {districts && <EdgeHints ref={hintsRef} current="centre" />}
       {districts && <DistrictStrip current="centre" onGo={goDistrict} />}
-      {spot && data && <AdCard key={spot.key} spot={spot} day={data.day} />}
-    </div>
-  );
-}
-
-function AdCard({ spot, day }: { spot: CityAdSpotOnBoard; day: string }) {
-  const ad = spot.ad!;
-  const ref = useRef<HTMLDivElement>(null);
-  const [confirm, setConfirm] = useState(false);
-  const link = isSafeAdLink(ad.link_url) ? ad.link_url : null;
-
-  useEffect(() => sendCityAdEvent(ad.id, "open", day), [ad.id, day]);
-
-  // камера: вывеска — по центру и над карточкой (с учётом панорамы); после закрытия город возвращается в кадр
-  useLayoutEffect(() => {
-    const el = document.querySelector<HTMLElement>(`.cad-spot[data-spot="${spot.key}"]`);
-    const card = ref.current;
-    const cam = getWalkCamera();
-    if (!el || !card || !cam) return;
-    cam.focus(el, card.offsetHeight);
-  }, [spot.key, confirm]);
-  useEffect(() => () => getWalkCamera()?.unfocus(), []);
-
-  const go = () => {
-    if (!link) return;
-    sendCityAdEvent(ad.id, "click", day);
-    haptic.tap();
-    openAdLink(link, ad.link_kind);
-    setConfirm(false);
-  };
-
-  return (
-    <div ref={ref} className="cad-card" style={adVars(ad.color)} role="dialog" aria-modal="false" aria-labelledby="cad-title">
-      <div className="cc-top">
-        <span className="cc-kicker">РЕКЛАМА · {FORMAT_RU[spot.format] ?? "ОБЪЯВЛЕНИЕ"}</span>
-        <span className="cc-days">ещё {daysLeft(ad.until, day)} дн.</span>
-      </div>
-      <h3 id="cad-title" className="cc-title">{ad.title}</h3>
-      {ad.subtitle && <p className="cc-sub">{ad.subtitle}</p>}
-      {ad.body && <p className="cc-body">{ad.body}</p>}
-      {link && (
-        <div className="cc-link">
-          <i className="cc-ico" aria-hidden="true" />
-          <span>{linkHost(link)}</span>
-          <em>{ad.link_kind === "telegram" ? "Telegram" : "Сайт"}</em>
-        </div>
+      {spot && data && (
+        <AdCard
+          key={spot.key}
+          spot={spot}
+          day={data.day}
+          onClose={() => cityWalk.close()}
+          // камера: вывеска — по центру и над карточкой (с учётом панорамы); после закрытия город возвращается в кадр
+          onLayout={(card) => {
+            const el = document.querySelector<HTMLElement>(`.cad-spot[data-spot="${spot.key}"]`);
+            const cam = getWalkCamera();
+            if (el && cam) cam.focus(el, card.offsetHeight);
+          }}
+          onGone={() => getWalkCamera()?.unfocus()}
+        />
       )}
-      {confirm && link ? (
-        <div className="cc-confirm" role="alertdialog" aria-label="Переход на сайт">
-          <p>
-            Откроется внешний сайт <b>{linkHost(link)}</b>. Мы его не проверяем — будьте внимательны с платежами и данными.
-          </p>
-          <div className="cc-act">
-            <button type="button" className="cc-go" onClick={go}>
-              Открыть сайт
-            </button>
-            <button type="button" className="cc-close" onClick={() => setConfirm(false)}>
-              Отмена
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className={`cc-act${link ? "" : " solo"}`}>
-          {link && (
-            <button
-              type="button"
-              className="cc-go"
-              onClick={() => (ad.link_kind === "telegram" ? go() : setConfirm(true))}
-            >
-              Перейти
-            </button>
-          )}
-          <button type="button" className="cc-close" onClick={() => cityWalk.close()}>
-            Закрыть
-          </button>
-        </div>
-      )}
-      <p className="cc-note">Объявление прошло модерацию. Реклама в городе — от жителей Nexus.</p>
     </div>
   );
 }
