@@ -310,6 +310,19 @@ describe("покупка в районах (PR 6)", () => {
 });
 
 describe("Мои объявления", () => {
+  it("в эфире в районе — ссылка «На улице» к месту; в Центре и не в эфире — нет (PR 6b)", async () => {
+    const live = { status: "approved", moderated: true, start: "2026-11-06", end: "2026-11-12" };
+    mine = [
+      { ...AD, ...live, id: 60, spot: "rows_facade", district: "rows", spot_title: "Экран на фасаде рынка", format: "facade_screen" },
+      { ...AD, ...live, id: 61, district: "centre" },
+      { ...AD, id: 62, spot: "port_neon", district: "port", format: "neon" }, // на проверке
+      { ...AD, ...live, id: 63, spot: "port_neon", district: "port", format: "neon", start: "2026-11-09" }, // ещё не начался
+    ];
+    await render(<CityAds />, "/ads?tab=mine");
+    const links = [...document.querySelectorAll("a")].filter((a) => a.textContent === "На улице");
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/district?d=rows&spot=rows_facade"]);
+  });
+
   it("район и русское название места, не ключ", async () => {
     mine = [
       { ...AD, id: 50, spot: "rows_facade", district: "rows", spot_title: "Экран на фасаде рынка", format: "facade_screen" },

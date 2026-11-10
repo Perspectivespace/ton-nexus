@@ -198,3 +198,14 @@ export function refundOnReject(ad: CityAdOwner, today: string): number {
   const perDay = ad.days > 0 ? Math.round(ad.total_nano / ad.days) : 0;
   return ad.held_nano + Math.min(ad.revenue_nano, perDay * unshownDays(ad, today));
 }
+
+/**
+ * Где посмотреть объявление на улице (PR 6b): одобренное и в эфире сегодня, в районе со своей сценой —
+ * ссылка на район с местом (камера подъедет к месту и откроет карточку). Центр — «Прогулка» без ссылки на место.
+ */
+export function streetLink(ad: Pick<CityAdMine, "status" | "start" | "end" | "spot" | "district">, today: string): string | null {
+  if (ad.status !== "approved" || ad.start > today || ad.end < today) return null;
+  const d = isAdDistrict(ad.district) ? ad.district : districtOfSpot(ad.spot);
+  if (d === "centre") return null;
+  return `/district?d=${d}&spot=${encodeURIComponent(ad.spot)}`;
+}

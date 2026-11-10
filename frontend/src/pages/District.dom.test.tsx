@@ -389,3 +389,77 @@ describe("district: taps on ad spots (PR 6b)", () => {
     expect(el.querySelector(".cad-card .cc-link")).toBeNull();
   });
 });
+
+describe("district: link to a spot (?spot=, PR 6b)", () => {
+  let frames: FrameRequestCallback[] = [];
+  const flush = (n = 120) => {
+    let t = performance.now();
+    for (let i = 0; i < n && frames.length; i++) {
+      const f = frames.splice(0);
+      t += 16;
+      f.forEach((cb) => cb(t));
+    }
+  };
+  const midX = () => Number(/translate3d\((-?[\d.]+)px/.exec(el.querySelector<HTMLElement>(".dz-mid")!.style.transform)?.[1]);
+  beforeEach(() => {
+    frames = [];
+    vi.stubGlobal("innerWidth", 390);
+    vi.stubGlobal("innerHeight", 844);
+    vi.stubGlobal("requestAnimationFrame", (f: FrameRequestCallback) => frames.push(f));
+    m.event.mockClear();
+    m.ads = {
+      data: {
+        day: "2026-11-10",
+        spots: [
+          { key: "port_line", format: "line", price_day: "1", on_sale: true, ad: null },
+          { key: "port_neon", format: "neon", price_day: "0.3", on_sale: true, ad: { id: 24, title: "BAR 24", subtitle: null, color: "violet", until: "2026-11-12" } },
+        ],
+      },
+    };
+  });
+
+  it("an off-screen spot: one smooth rAF pan to it, then the ad card opens", async () => {
+    await render("/district?d=port&spot=port_neon");
+    expect(el.querySelector(".cad-card")).toBeNull();
+    flush(3);
+    const mid = midX();
+    expect(mid).toBeLessThan(0); // едет вправо по улице (к воротам склада)
+    expect(mid).toBeGreaterThan(-367);
+    flush();
+    expect(midX()).toBe(-367.5); // у правого края панорамы: (844·4/3 − 390) / 2
+    expect(frames.length).toBe(0); // проезд кончился — кадров больше нет
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 700));
+    });
+    expect(el.querySelector(".cad-card .cc-title")?.textContent).toBe("BAR 24");
+    expect(m.event).toHaveBeenCalledWith(24, "open", "2026-11-10");
+  });
+
+  it("reduced motion: no pan animation — the street jumps there and the card opens at once", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({ matches: q.includes("reduce") }));
+    await render("/district?d=port&spot=port_neon");
+    expect(midX()).toBe(-367.5);
+    expect(el.querySelector(".cad-card .cc-title")?.textContent).toBe("BAR 24");
+  });
+
+  it("a free spot: only the pan, no card", async () => {
+    m.ads.data!.spots[1].ad = null;
+    await render("/district?d=port&spot=port_neon");
+    flush();
+    expect(midX()).toBe(-367.5);
+    expect(el.querySelector(".cad-card")).toBeNull();
+  });
+
+  it("a spot already on screen: the street stays put, the card opens at once", async () => {
+    m.ads = {
+      data: {
+        day: "2026-11-10",
+        spots: [{ key: "rows_facade", format: "facade_screen", price_day: "1.5", on_sale: true, ad: { id: 11, title: "PIXEL CAFE", subtitle: null, color: "mint", until: "2026-11-12" } }],
+      },
+    };
+    await render("/district?d=rows&spot=rows_facade");
+    expect(frames.length).toBe(0);
+    expect(midX()).toBe(0);
+    expect(el.querySelector(".cad-card .cc-title")?.textContent).toBe("PIXEL CAFE");
+  });
+});

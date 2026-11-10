@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useCityAdCancel, useCityAdLink, useMyCityAds, type CityAdMine } from "@/api/hooks";
 import { Button, EmptyState, ErrorState, Field, Panel, Sheet, SkeletonCard, Tag } from "@/components/ui";
 import { adVars } from "@/lib/cityAdPalette";
@@ -13,6 +14,7 @@ import {
   linkHint,
   spotName,
   statusView,
+  streetLink,
   ton,
 } from "@/lib/cityAdBuy";
 import { PlaceScene } from "./DistrictAdScene";
@@ -73,6 +75,7 @@ function MyAdItem({ ad, today, onEdit }: { ad: CityAdMine; today: string; onEdit
   const [ask, setAsk] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const closed = ["rejected", "cancelled", "expired"].includes(ad.status);
+  const street = streetLink(ad, today);
   return (
     <Panel className={`cab-ad space-y-3 p-3${closed ? " closed" : ""}`} style={adVars(ad.color)}>
       <div className="cab-ad-head">
@@ -141,8 +144,13 @@ function MyAdItem({ ad, today, onEdit }: { ad: CityAdMine; today: string; onEdit
           </div>
         </div>
       ) : (
-        (canCancel(ad) || canEditLink(ad, today)) && (
+        (canCancel(ad) || canEditLink(ad, today) || street) && (
           <div className="cab-ad-act">
+            {street && (
+              <Link to={street} className="ui-btn secondary sm no-underline">
+                На улице
+              </Link>
+            )}
             {canEditLink(ad, today) && (
               <Button kind="secondary" size="sm" onClick={onEdit}>
                 Изменить ссылку
