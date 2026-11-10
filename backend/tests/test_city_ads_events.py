@@ -82,6 +82,30 @@ class Events(unittest.TestCase):
 
         _run(body)
 
+    def test_district_ads_counted_like_centre(self):
+        """PR 6b: показы, открытия и переходы в «Неон-рядах» и «Порту» считаются так же; район — у места объявления.
+        Все 13 мест города × 3 вида событий за сутки помещаются в дневной потолок одного человека."""
+
+        async def body(s):
+            live = [await _live_ad(s, spot=k) for k in ads.SPOT_KEYS]
+            u = await _user(s)
+            got = [
+                await ads.record_event(s, user=u, ad_id=ad.id, kind=k, today=D(1)) for ad in live for k in ("impression", "open", "click")
+            ]
+            await s.commit()
+            self.assertTrue(all(got))
+            self.assertLessEqual(len(got), ads.EVENTS_PER_USER_DAY)
+            counts = await ads.event_counts(s, [a.id for a in live])
+            self.assertEqual({c["impression"] for c in counts.values()}, {1})
+            spots = {sp.id: sp for sp in (await s.scalars(select(CityAdSpot))).all()}
+            by_district: dict[str, int] = {}
+            for ad in live:
+                d = spots[ad.spot_id].district
+                by_district[d] = by_district.get(d, 0) + counts[ad.id]["click"]
+            self.assertEqual(by_district, {"centre": 5, "rows": 4, "port": 4})
+
+        _run(body)
+
     def test_only_live_approved_ads(self):
         async def body(s):
             pending = await _live_ad(s, spot="banner_sky", status="pending")

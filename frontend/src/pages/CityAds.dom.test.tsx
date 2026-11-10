@@ -374,6 +374,7 @@ describe("Кабинет → Реклама", () => {
     // в эфире: снятие — 8..12 ноября, показано 6–7 → вернём 5 суток × 0.5
     await click(btn("В эфире"));
     expect(text()).toContain("показы");
+    expect(document.querySelector(".cab-own-dz")?.textContent).toBe("Центр 120 пок. · 12 перех.");
     await click(btn("Снять с показа"));
     expect(text()).toContain("Вернём 2.5 TON за 5 суток без показа");
   });
