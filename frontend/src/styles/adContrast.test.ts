@@ -130,6 +130,25 @@ describe("реклама читается в любое время суток (�
     expect(city).not.toMatch(/\.cv2 \.ad \{[^}]*opacity:\s*\./);
   });
 
+  it("купленные места районов (PR 6): экран фасада цвета объявления — светлые буквы на тёмном экране; подпись баннера — на плашке", () => {
+    const fac = rule(idle, ".dz-idle.dz-ad.k-facade_screen");
+    const a = Number(fac.match(/rgba\(var\(--ac-rgb\), ([\d.]+)\)/)![1]);
+    const base = css(fac.match(/#[0-9A-Fa-f]{6}/)![0]);
+    // буквы заголовка и подписи — токен --ad-ink, не цвет объявления
+    expect(rule(idle, ".dz-ad.k-facade_screen .t")).toMatch(/color: var\(--ad-ink\)/);
+    expect(rule(idle, ".dz-ad.k-facade_screen .p")).toMatch(/color: var\(--ad-ink\)/);
+    expect(rule(idle, ".dz-ad.k-banner .s")).toMatch(/color: var\(--ad-ink\)/);
+    // днём у подписи баннера — тёмная обводка, как у заголовка
+    expect(idle).toMatch(/\.cads-live\.is-unlit\) \.dz-ad\.k-banner \.s \{[^}]*var\(--ad-outline\)/);
+    const bad: string[] = [];
+    for (const phase of PHASES)
+      for (const c of Object.keys(AD_PALETTE)) {
+        const r = seen(css(token("--ad-ink")), over(hex(AD_PALETTE[c]), a, base), phase);
+        if (r < MIN) bad.push(`${phase} ${c} ${r.toFixed(2)}`);
+      }
+    expect(bad).toEqual([]);
+  });
+
   it("места районов (Неон-ряды, Порт) рисуются проверенными здесь стилями и цветами — контраст держится во всех фазах", () => {
     const kinds = new Set(["facade_screen", "line", "banner", "neon"]);
     for (const d of SCENE_DISTRICTS) {

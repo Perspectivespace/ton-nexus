@@ -15,24 +15,30 @@ import { AD_PALETTE, adVars } from "@/lib/cityAdPalette";
 import { haptic } from "@/lib/haptics";
 import {
   COLOR_RU,
+  AD_DISTRICTS,
+  AD_DISTRICT_RU,
   FORMAT_RU,
-  SPOT_SHORT,
   addDays,
   contentField,
   daysWord,
   fmtDay,
   fmtRange,
+  hasSubtitle,
   linkHint,
+  spotName,
   ton,
   tonToNano,
+  type AdDistrict,
   type ContentField,
 } from "@/lib/cityAdBuy";
 import { AdCalendar } from "./AdCalendar";
 import { AdCardPreview } from "./AdCardPreview";
-import { AdScene, CROP_ALL, cropAround, type SceneSlot } from "./AdScene";
+import { type SceneSlot } from "./AdScene";
+import { PlaceScene } from "./DistrictAdScene";
 
 /**
- * Покупка рекламы в городе: место → даты → текст → проверка и оплата с баланса.
+ * Покупка рекламы в городе: район и место → даты → текст → проверка и оплата с баланса.
+ * Районы (PR 6): Центр, «Неон-ряды», «Порт» — по четыре-пять мест; цена — по типу места, экран на фасаде — только текст.
  * Цена, занятые сутки и проверка текста — живой расчёт сервера (POST /city-ads/quote); бронь — POST /city-ads.
  */
 export type Step = 0 | 1 | 2 | 3;
@@ -41,6 +47,7 @@ const SAMPLE: Record<CityAdFormat, { title: string; subtitle?: string }> = {
   line: { title: "ВАША РЕКЛАМА НА БАШНЕ" },
   banner: { title: "ВАШ БРЕНД", subtitle: "здесь подпись" },
   neon: { title: "ВЫВЕСКА" },
+  facade_screen: { title: "ВАШ ЭКРАН НА РЫНКЕ", subtitle: "подпись под заголовком" },
 };
 const DURATIONS = [1, 3, 7, 14, 30];
 
@@ -61,13 +68,17 @@ type BookFail = { kind: "busy" | "funds" | "other"; text: string };
 export function BuyFlow({
   board,
   me,
+  district = "centre",
   initialSpot,
+  onDistrict,
   onLocked,
   onDone,
 }: {
   board: CityAdsBoard;
   me: MeOut;
+  district?: AdDistrict;
   initialSpot?: string | null;
+  onDistrict?: (d: AdDistrict) => void;
   onLocked: () => void;
   onDone: () => void;
 }) {
@@ -95,7 +106,8 @@ export function BuyFlow({
   const top = useRef<HTMLDivElement>(null);
 
   // ── живой расчёт: даты и цена ──
-  const datesBody: CityAdQuoteIn | null = spotKey ? { spot: spotKey, start, days } : null;
+  const datesBody: CityAdQuoteIn | null = spotKey ? { spot: spotKey, start, days, district } : null;
+  const sub = hasSubtitle(fmt);
   const dq = useCityAdQuote(datesBody);
   const quote = dq.data && dq.data.spot === spotKey ? dq.data : null;
   // сервер проверил уровень сам (данные /me могли устареть)
@@ -114,12 +126,12 @@ export function BuyFlow({
   const content = useMemo(
     () => ({
       title: title.trim() || undefined,
-      subtitle: fmt === "banner" ? subtitle.trim() || undefined : undefined,
+      subtitle: sub ? subtitle.trim() || undefined : undefined,
       body: body.trim() || undefined,
       link_url: link.trim() || undefined,
       color,
     }),
-    [title, subtitle, body, link, color, fmt],
+    [title, subtitle, body, link, color, sub],
   );
   const contentDeb = useDebounced(content, 350);
   const cq = useCityAdQuote(step >= 2 && datesBody ? { ...datesBody, ...contentDeb } : null, "content");
@@ -151,10 +163,11 @@ export function BuyFlow({
     try {
       await book.mutateAsync({
         spot: spotKey,
+        district,
         start,
         days,
         title: title.trim(),
-        subtitle: fmt === "banner" ? subtitle.trim() || undefined : undefined,
+        subtitle: sub ? subtitle.trim() || undefined : undefined,
         body: body.trim() || undefined,
         link_url: link.trim() || undefined,
         color,
@@ -174,13 +187,15 @@ export function BuyFlow({
 
   const titleOk = title.trim().length > 0 && !fieldErr("title");
   const contentOk = titleOk && !hint && !(serverErr && settled) && !cq.isError;
+  // образец строки: в Центре — «на башне», в районах — просто «здесь»
+  const sample = fmt === "line" && district !== "centre" ? "ВАША РЕКЛАМА ЗДЕСЬ" : SAMPLE[fmt].title;
   const sign = spot
     ? {
         spot: spot.key,
         format: fmt,
         ad: {
-          title: title.trim() || SAMPLE[fmt].title,
-          subtitle: fmt === "banner" ? subtitle.trim() || (title.trim() ? "" : SAMPLE.banner.subtitle) : null,
+          title: title.trim() || sample,
+          subtitle: sub ? subtitle.trim() || (title.trim() ? "" : SAMPLE[fmt].subtitle) : null,
           color,
         },
       }
@@ -200,7 +215,7 @@ export function BuyFlow({
       </ol>
 
       {step === 0 && (
-        <SpotStep board={board} spotKey={spotKey} onPick={setSpotKey} color={color} sign={sign} />
+        <SpotStep board={board} district={district} onDistrict={onDistrict} spotKey={spotKey} onPick={setSpotKey} sign={sign} />
       )}
 
       {step === 1 && !quote && <Panel className="cab-step p-4"><p className="cab-note">Считаем свободные даты…</p></Panel>}
@@ -255,19 +270,40 @@ export function BuyFlow({
       {step === 2 && spot && (
         <div className="space-y-3" key="content">
           {sign && (
-            <AdScene crop={cropAround(spot.key, fmt === "line" ? 2.4 : 2.6, 2)} sign={sign} className="cab-mini" label="Так вывеска будет выглядеть в городе" />
+            <PlaceScene
+              district={district}
+              spot={spot.key}
+              zoom={fmt === "line" ? 2.4 : 2.6}
+              aspect={2}
+              sign={sign}
+              className="cab-mini"
+              label="Так вывеска будет выглядеть в городе"
+            />
           )}
           <Panel className="cab-step space-y-4 p-4">
             <Field
-              label={fmt === "line" ? "Текст бегущей строки" : "Надпись на вывеске"}
+              label={fmt === "line" ? "Текст бегущей строки" : fmt === "facade_screen" ? "Заголовок на экране" : "Надпись на вывеске"}
               unit={<Count n={title.length} max={lim.title_max} />}
               error={fieldErr("title")}
-              hint={fmt === "line" ? "Проезжает по башне между показами «МАЙНЕР»" : "Коротко и крупно — её читают на ходу"}
+              hint={
+                fmt === "line"
+                  ? district === "centre"
+                    ? "Проезжает по башне между показами «МАЙНЕР»"
+                    : "Проезжает по строке раз за разом"
+                  : fmt === "facade_screen"
+                    ? "Экран — только текст: заголовок и подпись. Картинки — позже"
+                    : "Коротко и крупно — её читают на ходу"
+              }
             >
-              <input className="ui-input" value={title} maxLength={lim.title_max} placeholder={SAMPLE[fmt].title} onChange={(e) => setTitle(e.target.value)} />
+              <input className="ui-input" value={title} maxLength={lim.title_max} placeholder={sample} onChange={(e) => setTitle(e.target.value)} />
             </Field>
-            {fmt === "banner" && (
-              <Field label="Подпись под надписью" unit={<Count n={subtitle.length} max={lim.subtitle_max ?? 18} />} error={fieldErr("subtitle")} hint="Необязательно">
+            {sub && (
+              <Field
+                label={fmt === "facade_screen" ? "Подпись на экране" : "Подпись под надписью"}
+                unit={<Count n={subtitle.length} max={lim.subtitle_max ?? 18} />}
+                error={fieldErr("subtitle")}
+                hint="Необязательно"
+              >
                 <input className="ui-input" value={subtitle} maxLength={lim.subtitle_max ?? 18} placeholder="например, «скидка 20 %»" onChange={(e) => setSubtitle(e.target.value)} />
               </Field>
             )}
@@ -330,11 +366,12 @@ export function BuyFlow({
 
       {step === 3 && spot && quote && (
         <ReviewStep
+          district={district}
           spot={spot}
           fmt={fmt}
           sign={sign}
           title={title.trim()}
-          subtitle={fmt === "banner" ? subtitle.trim() : ""}
+          subtitle={sub ? subtitle.trim() : ""}
           body={body.trim()}
           link={normLink ?? (link.trim() || null)}
           linkKind={linkKind}
@@ -384,7 +421,7 @@ export function BuyFlow({
         open={confirm}
         onClose={() => setConfirm(false)}
         title="Оплата с баланса"
-        sub={spot ? `${SPOT_SHORT[spot.key] ?? spot.title} · ${quote ? fmtRange(quote.start, quote.end) : ""}` : undefined}
+        sub={spot ? `${spotName(spot.key, spot.title, district)} · ${quote ? fmtRange(quote.start, quote.end) : ""}` : undefined}
         footer={
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <Button size="lg" onClick={pay} disabled={book.isPending} haptics="heavy">
@@ -425,17 +462,21 @@ export function Row({ k, v, strong }: { k: string; v: React.ReactNode; strong?: 
 
 function SpotStep({
   board,
+  district,
+  onDistrict,
   spotKey,
   onPick,
   sign,
 }: {
   board: CityAdsBoard;
+  district: AdDistrict;
+  onDistrict?: (d: AdDistrict) => void;
   spotKey: string | null;
   onPick: (k: string) => void;
-  color: string;
   sign: { spot: string; format: CityAdFormat; ad: { title: string; subtitle?: string | null; color: string } } | null;
 }) {
   const spots = board.spots;
+  const none = !spots.some((s) => s.on_sale);
   const slots: SceneSlot[] = spots.map((s, i) => ({
     key: s.key,
     n: i + 1,
@@ -444,7 +485,35 @@ function SpotStep({
   }));
   return (
     <div className="space-y-3" key="spot">
-      <AdScene crop={CROP_ALL} slots={slots} onPick={(k) => (haptic.select(), onPick(k))} sign={sign} label="Места для рекламы в городе" />
+      {onDistrict && (
+        <div className="cab-district" role="radiogroup" aria-label="Район">
+          {AD_DISTRICTS.map((d) => (
+            <button
+              key={d}
+              type="button"
+              role="radio"
+              aria-checked={d === district}
+              className={d === district ? "on" : undefined}
+              onClick={() => {
+                if (d === district) return;
+                haptic.select();
+                onDistrict(d);
+              }}
+            >
+              {AD_DISTRICT_RU[d]}
+            </button>
+          ))}
+        </div>
+      )}
+      <PlaceScene
+        key={district}
+        district={district}
+        slots={slots}
+        onPick={(k) => (haptic.select(), onPick(k))}
+        sign={sign}
+        label={`Места для рекламы: ${AD_DISTRICT_RU[district]}`}
+      />
+      {none && <p className="cab-note">Сейчас в этом районе нет мест в продаже — выберите другой район.</p>}
       <div className="cab-spots" role="radiogroup" aria-label="Место">
         {spots.map((s, i) => (
           <SpotRow key={s.key} s={s} n={i + 1} on={s.key === spotKey} onPick={onPick} />
@@ -481,6 +550,7 @@ function SpotRow({ s, n, on, onPick }: { s: CityAdSpotOnBoard; n: number; on: bo
 }
 
 function ReviewStep({
+  district,
   spot,
   fmt,
   sign,
@@ -496,6 +566,7 @@ function ReviewStep({
   fail,
   onDates,
 }: {
+  district: AdDistrict;
   spot: CityAdSpotOnBoard;
   fmt: CityAdFormat;
   sign: { spot: string; format: CityAdFormat; ad: { title: string; subtitle?: string | null; color: string } } | null;
@@ -516,7 +587,15 @@ function ReviewStep({
     <div className="space-y-3" key="review">
       <div className="cab-prev">
         {sign && (
-          <AdScene crop={cropAround(spot.key, fmt === "line" ? 2.4 : 2.2, 1.7)} phase={night ? "night" : "day"} sign={sign} label="Превью вывески в городе">
+          <PlaceScene
+            district={district}
+            spot={spot.key}
+            zoom={fmt === "line" ? 2.4 : 2.2}
+            aspect={1.7}
+            phase={night ? "night" : "day"}
+            sign={sign}
+            label="Превью вывески в городе"
+          >
             <div className="cab-daynight" role="group" aria-label="Время суток превью">
               <button type="button" aria-pressed={night} className={night ? "on" : undefined} onClick={() => setNight(true)}>
                 Ночью
@@ -525,14 +604,14 @@ function ReviewStep({
                 Днём
               </button>
             </div>
-          </AdScene>
+          </PlaceScene>
         )}
       </div>
       <AdCardPreview format={fmt} title={title} subtitle={subtitle} body={body} link={link} linkKind={linkKind} color={color} days={quote.days} />
       {fail && <FailPanel fail={fail} onDates={onDates} />}
       <Panel className="space-y-1 p-4">
         <div className="cab-rows">
-          <Row k="Место" v={SPOT_SHORT[spot.key] ?? spot.title} />
+          <Row k="Место" v={spotName(spot.key, spot.title, district)} />
           <Row k="Показ" v={`${fmtRange(quote.start, quote.end)} · ${daysWord(quote.days)}`} />
           <Row k="Цена за сутки" v={ton(quote.price_day_nano)} />
           <Row k="Итого" v={ton(quote.total_nano)} strong />

@@ -8,7 +8,10 @@ import { IDLE_COLOR, IDLE_IN, IDLE_OUT, idleDelay, idleSlogans, idleTickerMs, pr
  * Смена — разовые WAAPI-прогоны по JS-таймеру, бесконечных CSS-анимаций нет; still — первый слоган неподвижно.
  * compact — маленькие места Центра (вывеска в одну строку, баннер крупнее), см. idleSlogans.
  * Положение задаёт style (проценты кадра); касание обрабатывает обёртка (в Центре — кнопка покупки места).
+ * ad — купленное место района (PR 6): тот же облик места, но текст и цвет покупателя (заголовок, подпись у баннера
+ * и экрана); LED-строка проезжает заголовок по кругу, остальные стоят без смены (класс dz-ad).
  */
+export type SurfaceAd = { title: string; subtitle?: string | null; color: string };
 type IdleProps = {
   spot: string;
   kind: IdleKind;
@@ -17,11 +20,12 @@ type IdleProps = {
   still: boolean;
   style?: CSSProperties;
   compact?: boolean;
+  ad?: SurfaceAd | null;
 };
 const can = (el: Element | null): el is HTMLElement => !!el && typeof (el as HTMLElement).animate === "function";
 
-export function IdleSurface({ spot, kind, i, price, still, style, compact = false }: IdleProps) {
-  const slogans = idleSlogans(kind, price, compact);
+export function IdleSurface({ spot, kind, i, price, still, style, compact = false, ad = null }: IdleProps) {
+  const slogans = ad ? [ad.title] : idleSlogans(kind, price, compact);
   const [n, setN] = useState(0);
   const text = useRef<HTMLSpanElement>(null);
   const win = useRef<HTMLSpanElement>(null);
@@ -30,7 +34,7 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
 
   // layout-эффект: проявление нового слогана стартует до первой отрисовки — без вспышки текста
   useLayoutEffect(() => {
-    if (still) return;
+    if (still || (count < 2 && kind !== "line")) return; // один текст (купленное место) — без смены
     let alive = true;
     let t = 0;
     let raf = 0;
@@ -55,7 +59,8 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
           easing: "linear",
           fill: "both",
         });
-        anim.finished.then(() => (t = window.setTimeout(next, 700))).catch(() => {});
+        // один текст (купленная строка) — снова тот же заголовок после паузы; иначе — следующий слоган
+        anim.finished.then(() => (t = window.setTimeout(count < 2 ? run : next, count < 2 ? 1600 : 700))).catch(() => {});
       };
       t = window.setTimeout(() => (raf = requestAnimationFrame(run)), wasFirst ? 600 + i * 1300 : 0);
     } else {
@@ -80,20 +85,34 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
     };
   }, [n, still, count, kind, i]);
 
-  const slogan = still && kind === "line" ? slogans[0].split(" · ")[0] : slogans[n];
+  const slogan = ad ? ad.title : still && kind === "line" ? slogans[0].split(" · ")[0] : slogans[n % count];
   const p = priceLine(price);
-  const look = { ...style, ...adVars(IDLE_COLOR[kind]) } as CSSProperties;
+  const sub = ad?.subtitle || null;
+  const look = { ...style, ...adVars(ad?.color ?? IDLE_COLOR[kind]) } as CSSProperties;
   return (
-    <div className={`dz-idle k-${kind}${still ? " still" : ""}${compact ? " compact" : ""}`} style={look} data-spot={spot} data-n={n}>
+    <div
+      className={`dz-idle k-${kind}${still ? " still" : ""}${compact ? " compact" : ""}${ad ? " dz-ad" : ""}`}
+      style={look}
+      data-spot={spot}
+      data-n={n}
+    >
       {/* поля — у внутреннего блока: единицы cq* считаются от места, а не от поля самого места */}
       <span className="in">
-      {kind === "facade_screen" && (
+      {kind === "facade_screen" && !ad && (
         <>
           <span className="tag">Свободный экран</span>
           <span className="t" ref={text}>
             {slogan}
           </span>
           <span className="p">{p ?? "Неон-ряды"}</span>
+        </>
+      )}
+      {kind === "facade_screen" && ad && (
+        <>
+          <span className="t" ref={text}>
+            {slogan}
+          </span>
+          {sub && <span className="p">{sub}</span>}
         </>
       )}
       {kind === "line" && (
@@ -108,6 +127,7 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
           {slogan}
         </span>
       )}
+      {kind === "banner" && sub && <small className="s">{sub}</small>}
       </span>
     </div>
   );
