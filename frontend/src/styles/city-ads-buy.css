@@ -211,7 +211,7 @@
 .cab-pic-drop .s { font: 500 12px/1.2 var(--f-sans); color: #A9B3C7; }
 .cab-pic-drop:disabled { opacity: .7; cursor: progress; }
 .cab-pic-frame { border: 1px solid rgba(255, 181, 71, .45); background: #0A0716; }
-.cab-pic-img { display: block; width: 100%; aspect-ratio: 640 / 520; object-fit: cover; max-height: 220px; }
+.cab-pic-img { display: block; width: 100%; aspect-ratio: 640 / 520; object-fit: cover; }
 .cab-pic-wait { background: linear-gradient(180deg, #120A22, #07050F); }
 .cab-pic-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
 .cab-pic-meta { flex: 1; min-width: 0; font: 500 11px/1.2 var(--f-mono); color: #A9B3C7; }
