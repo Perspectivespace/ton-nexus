@@ -4,7 +4,7 @@ from app.models.economy import EconomySetting
 from app.models.miner import Miner, MinerUpgradeLog
 from app.models.promo import DailyCheckIn, PromoCode, PromoRedemption
 from app.models.task import Task, TaskOwnerAction, TaskProof, TaskPurchase, TaskSubmission
-from app.models.city_ad import CityAd, CityAdDay, CityAdEvent, CityAdSpot
+from app.models.city_ad import CityAd, CityAdDay, CityAdEvent, CityAdImage, CityAdSpot
 from app.models.tower import TowerDailyAttempts, TowerGame, TowerMonth, TowerMonthlyBest, TowerMonthResult
 from app.models.user import User
 from app.models.role_change import RoleChange
@@ -35,6 +35,7 @@ __all__ = [
     "CityAd",
     "CityAdDay",
     "CityAdEvent",
+    "CityAdImage",
     "CityAdSpot",
     "TowerGame",
     "TowerDailyAttempts",

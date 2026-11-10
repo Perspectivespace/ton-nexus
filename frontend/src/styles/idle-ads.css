@@ -90,4 +90,18 @@
 .dz-ad.k-banner .s { position: relative; display: block; max-width: 100%; margin-top: 4cqh; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
   font: 600 min(13cqh, 8cqw) / 1.1 var(--f-sans); color: var(--ad-ink); text-shadow: 0 0 3px rgba(var(--ac-rgb), .8); }
 :is(.dz[data-art="day"], .cads-live.is-unlit) .dz-ad.k-banner .s { text-shadow: var(--ad-outline); }
+
+/* экран фасада с картинкой покупателя (после проверки владельцем): картинка во весь экран (сервер уже привёл её
+ * к пропорции экрана, 640×520), заголовок и подпись — на тёмной плашке внизу. Плашка почти непрозрачная: буквы
+ * --ad-ink читаются при любой картинке, днём и ночью (adContrast.test.ts считает худший случай — белую картинку).
+ * Без движения: ни развёртки, ни анимаций; растр экрана (::after) лежит поверх картинки, как у текста. */
+.dz-ad.k-facade_screen.has-pic > .in { justify-content: flex-end; gap: 0; padding: 0; }
+.dz-ad.k-facade_screen .pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+  user-select: none; -webkit-user-drag: none; }
+.dz-ad.k-facade_screen .cap { position: relative; display: flex; flex-direction: column; gap: 2cqh; width: 100%; box-sizing: border-box;
+  padding: 4.5cqh 6cqw 5cqh; background: rgba(7, 5, 15, .9); border-top: 1px solid rgba(var(--ac-rgb), .7); }
+.dz-ad.k-facade_screen .cap .t { font-size: min(11cqh, 8cqw); line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 0 4px rgba(var(--ac-rgb), .8); }
+.dz-ad.k-facade_screen .cap .p { padding-top: 0; border-top: 0; font-size: min(8cqh, 5.6cqw); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
 .dz-ad:is(.k-banner, .k-neon) .t { overflow-wrap: anywhere; }

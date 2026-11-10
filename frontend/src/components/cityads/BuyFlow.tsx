@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  useAuthImage,
   useCityAdBook,
   useCityAdQuote,
   type CityAdFormat,
@@ -33,12 +34,15 @@ import {
 } from "@/lib/cityAdBuy";
 import { AdCalendar } from "./AdCalendar";
 import { AdCardPreview } from "./AdCardPreview";
+import { FacadeImagePicker, type FacadePick } from "./FacadeImage";
 import { type SceneSlot } from "./AdScene";
-import { PlaceScene } from "./DistrictAdScene";
+import { PlaceScene, type PlaceSign } from "./DistrictAdScene";
 
 /**
  * Покупка рекламы в городе: район и место → даты → текст → проверка и оплата с баланса.
- * Районы (PR 6): Центр, «Неон-ряды», «Порт» — по четыре-пять мест; цена — по типу места, экран на фасаде — только текст.
+ * Районы (PR 6): Центр, «Неон-ряды», «Порт» — по четыре-пять мест; цена — по типу места.
+ * Экран на фасаде «Неон-рядов» — заголовок, подпись и (по желанию) картинка: сервер пережимает её, превью — на рисунке
+ * района днём и ночью; картинка уходит на проверку вместе с текстом (POST /city-ads/images → image_id в брони).
  * Цена, занятые сутки и проверка текста — живой расчёт сервера (POST /city-ads/quote); бронь — POST /city-ads.
  */
 export type Step = 0 | 1 | 2 | 3;
@@ -101,6 +105,8 @@ export function BuyFlow({
   const [body, setBody] = useState("");
   const [link, setLink] = useState("");
   const [color, setColor] = useState("cyan");
+  const [image, setImage] = useState<FacadePick | null>(null);
+  const [night, setNight] = useState(true);
   const [confirm, setConfirm] = useState(false);
   const [fail, setFail] = useState<BookFail | null>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -108,6 +114,8 @@ export function BuyFlow({
   // ── живой расчёт: даты и цена ──
   const datesBody: CityAdQuoteIn | null = spotKey ? { spot: spotKey, start, days, district } : null;
   const sub = hasSubtitle(fmt);
+  const canPic = fmt === "facade_screen" && board.image_upload !== false;
+  const pic = useAuthImage(canPic ? image?.path : null).url;
   const dq = useCityAdQuote(datesBody);
   const quote = dq.data && dq.data.spot === spotKey ? dq.data : null;
   // сервер проверил уровень сам (данные /me могли устареть)
@@ -171,6 +179,7 @@ export function BuyFlow({
         body: body.trim() || undefined,
         link_url: link.trim() || undefined,
         color,
+        image_id: canPic && image ? image.id : undefined,
       });
       haptic.collect();
       setConfirm(false);
@@ -197,6 +206,7 @@ export function BuyFlow({
           title: title.trim() || sample,
           subtitle: sub ? subtitle.trim() || (title.trim() ? "" : SAMPLE[fmt].subtitle) : null,
           color,
+          image: canPic ? pic : null,
         },
       }
     : null;
@@ -276,9 +286,12 @@ export function BuyFlow({
               zoom={fmt === "line" ? 2.4 : 2.6}
               aspect={2}
               sign={sign}
+              phase={canPic ? (night ? "night" : "day") : undefined}
               className="cab-mini"
               label="Так вывеска будет выглядеть в городе"
-            />
+            >
+              {canPic && <DayNight night={night} onNight={setNight} />}
+            </PlaceScene>
           )}
           <Panel className="cab-step space-y-4 p-4">
             <Field
@@ -291,7 +304,9 @@ export function BuyFlow({
                     ? "Проезжает по башне между показами «МАЙНЕР»"
                     : "Проезжает по строке раз за разом"
                   : fmt === "facade_screen"
-                    ? "Экран — только текст: заголовок и подпись. Картинки — позже"
+                    ? canPic
+                      ? "С картинкой — подпись на тёмной плашке внизу экрана"
+                      : "Экран — заголовок и подпись"
                     : "Коротко и крупно — её читают на ходу"
               }
             >
@@ -307,6 +322,7 @@ export function BuyFlow({
                 <input className="ui-input" value={subtitle} maxLength={lim.subtitle_max ?? 18} placeholder="например, «скидка 20 %»" onChange={(e) => setSubtitle(e.target.value)} />
               </Field>
             )}
+            {canPic && <FacadeImagePicker value={image} onChange={setImage} />}
             <Field label="Текст карточки" unit={<Count n={body.length} max={bodyMax} />} error={fieldErr("body")} hint="Открывается по касанию вывески в «Прогулке». Необязательно">
               <textarea className="ui-input cab-ta" value={body} maxLength={bodyMax} rows={3} placeholder="Что вы предлагаете и почему стоит перейти" onChange={(e) => setBody(e.target.value)} />
             </Field>
@@ -370,6 +386,9 @@ export function BuyFlow({
           spot={spot}
           fmt={fmt}
           sign={sign}
+          night={night}
+          onNight={setNight}
+          hasImage={canPic && !!image}
           title={title.trim()}
           subtitle={sub ? subtitle.trim() : ""}
           body={body.trim()}
@@ -473,7 +492,7 @@ function SpotStep({
   onDistrict?: (d: AdDistrict) => void;
   spotKey: string | null;
   onPick: (k: string) => void;
-  sign: { spot: string; format: CityAdFormat; ad: { title: string; subtitle?: string | null; color: string } } | null;
+  sign: PlaceSign | null;
 }) {
   const spots = board.spots;
   const none = !spots.some((s) => s.on_sale);
@@ -554,6 +573,9 @@ function ReviewStep({
   spot,
   fmt,
   sign,
+  night,
+  onNight,
+  hasImage,
   title,
   subtitle,
   body,
@@ -569,7 +591,10 @@ function ReviewStep({
   district: AdDistrict;
   spot: CityAdSpotOnBoard;
   fmt: CityAdFormat;
-  sign: { spot: string; format: CityAdFormat; ad: { title: string; subtitle?: string | null; color: string } } | null;
+  sign: PlaceSign | null;
+  night: boolean;
+  onNight: (v: boolean) => void;
+  hasImage: boolean;
   title: string;
   subtitle: string;
   body: string;
@@ -582,7 +607,6 @@ function ReviewStep({
   fail: BookFail | null;
   onDates: () => void;
 }) {
-  const [night, setNight] = useState(true);
   return (
     <div className="space-y-3" key="review">
       <div className="cab-prev">
@@ -596,14 +620,7 @@ function ReviewStep({
             sign={sign}
             label="Превью вывески в городе"
           >
-            <div className="cab-daynight" role="group" aria-label="Время суток превью">
-              <button type="button" aria-pressed={night} className={night ? "on" : undefined} onClick={() => setNight(true)}>
-                Ночью
-              </button>
-              <button type="button" aria-pressed={!night} className={!night ? "on" : undefined} onClick={() => setNight(false)}>
-                Днём
-              </button>
-            </div>
+            <DayNight night={night} onNight={onNight} />
           </PlaceScene>
         )}
       </div>
@@ -612,6 +629,7 @@ function ReviewStep({
       <Panel className="space-y-1 p-4">
         <div className="cab-rows">
           <Row k="Место" v={spotName(spot.key, spot.title, district)} />
+          {fmt === "facade_screen" && <Row k="Картинка" v={hasImage ? "есть · проверит владелец" : "нет · только текст"} />}
           <Row k="Показ" v={`${fmtRange(quote.start, quote.end)} · ${daysWord(quote.days)}`} />
           <Row k="Цена за сутки" v={ton(quote.price_day_nano)} />
           <Row k="Итого" v={ton(quote.total_nano)} strong />
@@ -634,6 +652,19 @@ function ReviewStep({
           Владелец проверяет каждое объявление. До одобрения его не видно в городе.
         </p>
       </Panel>
+    </div>
+  );
+}
+
+function DayNight({ night, onNight }: { night: boolean; onNight: (v: boolean) => void }) {
+  return (
+    <div className="cab-daynight" role="group" aria-label="Время суток превью">
+      <button type="button" aria-pressed={night} className={night ? "on" : undefined} onClick={() => onNight(true)}>
+        Ночью
+      </button>
+      <button type="button" aria-pressed={!night} className={!night ? "on" : undefined} onClick={() => onNight(false)}>
+        Днём
+      </button>
     </div>
   );
 }

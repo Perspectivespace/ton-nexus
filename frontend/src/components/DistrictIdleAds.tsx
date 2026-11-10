@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { useDistrictAds } from "@/api/hooks";
+import { apiUrl } from "@/api/client";
 import { IdleSurface } from "@/components/IdleSpot";
 import { SPOT_SHORT } from "@/lib/cityAdBuy";
 import { SURFACES, type SceneDistrict, type Surface } from "@/lib/districts";
@@ -40,7 +41,14 @@ export function DistrictIdleAds({
       {surfaces.map((s, i) => {
         const spot = spots.get(s.spot);
         // купленное место: тот же облик, текст и цвет покупателя (PR 6)
-        const ad = spot?.ad ? { title: spot.ad.title, subtitle: spot.ad.subtitle, color: spot.ad.color } : null;
+        const ad = spot?.ad
+          ? {
+              title: spot.ad.title,
+              subtitle: spot.ad.subtitle,
+              color: spot.ad.color,
+              image: spot.ad.image_url ? apiUrl(spot.ad.image_url) : null,
+            }
+          : null;
         // цена места, иначе — цена его типа
         const price = spot?.price_day ?? data?.prices?.[s.kind] ?? null;
         return <IdleSurface key={s.spot} spot={s.spot} kind={s.kind} style={boxOf(s)} i={i} price={price} still={still} ad={ad} />;

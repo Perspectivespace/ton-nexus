@@ -24,7 +24,7 @@ const m = vi.hoisted(() => ({
         price_day: string | null;
         on_sale?: boolean;
         format?: string;
-        ad: { id: number; title: string; subtitle: string | null; color: string; body?: string | null; link_url?: string | null; link_kind?: string | null; until?: string } | null;
+        ad: { id: number; title: string; subtitle: string | null; color: string; body?: string | null; link_url?: string | null; link_kind?: string | null; until?: string; image_url?: string | null } | null;
       }[];
       prices?: Record<string, string>;
     };
@@ -320,6 +320,17 @@ describe("district: taps on ad spots (PR 6b)", () => {
     expect(hits[0].getAttribute("aria-label")).toBe("Реклама: PIXEL CAFE, второй кофе в подарок");
     expect(hits[1].getAttribute("aria-label")).toContain("Свободное место");
     expect(hits[0].style.left).toBe("42.3%");
+  });
+
+  it("facade screen with an approved image: the image fills the screen, the caption sits on the plate", async () => {
+    m.ads.data!.spots[0].ad!.image_url = "/api/v1/city-ads/images/0123456789abcdef0123456789abcdef.webp";
+    await render("/district?d=rows");
+    const scr = el.querySelector<HTMLElement>('.dz-idle.dz-ad.k-facade_screen[data-spot="rows_facade"]')!;
+    expect(scr.classList.contains("has-pic")).toBe(true);
+    expect(scr.querySelector("img.pic")!.getAttribute("src")).toMatch(/\/api\/v1\/city-ads\/images\/[0-9a-f]{32}\.webp$/);
+    expect(scr.querySelector(".cap .t")!.textContent).toBe("PIXEL CAFE");
+    // остальные места — без картинок
+    expect(el.querySelectorAll(".dz-idle img").length).toBe(1);
   });
 
   it("an impression is counted once the street is on screen", async () => {

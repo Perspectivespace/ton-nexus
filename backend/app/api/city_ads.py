@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable
 from datetime import date, datetime
 from typing import TypeVar
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.city_ad import CityAdSpot
 from app.models.user import User
+from app.services import city_ad_images as images_svc
 from app.services import city_ads as ads_svc
 from app.services.roles import is_platform_owner
 
@@ -127,6 +128,12 @@ class BookBody(BaseModel):
     body: str | None = Field(default=None, max_length=10_000)
     link_url: str | None = Field(default=None, max_length=2048)
     color: str = Field(min_length=1, max_length=32)
+    # картинка экрана на фасаде: id из POST /city-ads/images (необязательно)
+    image_id: int | None = Field(default=None, ge=1)
+
+
+class ImageBody(BaseModel):
+    image_id: int | None = Field(default=None, ge=1)  # null — убрать картинку (экран снова только с текстом)
 
 
 class LinkBody(BaseModel):
@@ -164,6 +171,8 @@ class AdOut(BaseModel):
     moderation_note: str | None
     moderated: bool  # уже проверялось владельцем — отменить самому нельзя
     created_at: datetime | None
+    # картинка экрана на фасаде: адрес для автора и владельца (с авторизацией, до одобрения тоже)
+    image_url: str | None = None
     # счётчики «Прогулки»: impression / open / click (уникальные человеко-сутки)
     stats: dict[str, int] | None = None
 
@@ -173,6 +182,7 @@ class OwnerAdOut(AdOut):
     revenue_nano: int
     held_nano: int
     link_changed_at: datetime | None
+    image_changed_at: datetime | None = None
 
 
 class ModerationOut(BaseModel):
@@ -181,9 +191,10 @@ class ModerationOut(BaseModel):
     revenue_total_nano: int
 
 
-def _ad(ad, spot: CityAdSpot | None) -> dict:
+def _ad(ad, spot: CityAdSpot | None, image_key: str | None = None) -> dict:
     t = ads_svc.nano_to_ton
     return dict(
+        image_url=images_svc.private_path(image_key) if image_key else None,
         id=ad.id, spot=spot.key if spot else "", district=spot.district if spot else ads_svc.DEFAULT_DISTRICT,
         spot_title=spot.title if spot else "",
         format=ad.format, status=ad.status, title=ad.title, subtitle=ad.subtitle, body=ad.body,
@@ -195,11 +206,15 @@ def _ad(ad, spot: CityAdSpot | None) -> dict:
     )
 
 
-def _owner_ad(ad, spot: CityAdSpot | None) -> OwnerAdOut:
+def _owner_ad(ad, spot: CityAdSpot | None, image_key: str | None = None) -> OwnerAdOut:
     return OwnerAdOut(
-        **_ad(ad, spot), advertiser_id=ad.advertiser_id, revenue_nano=ad.revenue_nano,
-        held_nano=ads_svc.held_nano(ad), link_changed_at=ad.link_changed_at,
+        **_ad(ad, spot, image_key), advertiser_id=ad.advertiser_id, revenue_nano=ad.revenue_nano,
+        held_nano=ads_svc.held_nano(ad), link_changed_at=ad.link_changed_at, image_changed_at=ad.image_changed_at,
     )
+
+
+async def _image_key(db: AsyncSession, ad_id: int) -> str | None:
+    return (await images_svc.keys_for(db, [ad_id])).get(ad_id)
 
 
 async def _spot(db: AsyncSession, spot_id: int) -> CityAdSpot | None:
@@ -246,10 +261,11 @@ async def city_ads_book(body: BookBody, user: User = Depends(get_current_user), 
     ad = await _tx(
         db,
         lambda: ads_svc.book(
-            db, user=user, spot_key=body.spot, start=body.start, days=body.days, content=content, district=body.district
+            db, user=user, spot_key=body.spot, start=body.start, days=body.days, content=content, district=body.district,
+            image_id=body.image_id,
         ),
     )
-    return AdOut(**_ad(ad, await _spot(db, ad.spot_id)))
+    return AdOut(**_ad(ad, await _spot(db, ad.spot_id), await _image_key(db, ad.id)))
 
 
 @router.get("/mine", response_model=list[AdOut])
@@ -257,7 +273,8 @@ async def city_ads_mine(user: User = Depends(get_current_user), db: AsyncSession
     items = await ads_svc.my_ads(db, user=user)
     spots = {s.id: s for s in (await db.execute(select(CityAdSpot))).scalars().all()}
     stats = await ads_svc.event_counts(db, [a.id for a in items])
-    return [AdOut(**_ad(a, spots.get(a.spot_id)), stats=stats[a.id]) for a in items]
+    pics = await images_svc.keys_for(db, [a.id for a in items])
+    return [AdOut(**_ad(a, spots.get(a.spot_id), pics.get(a.id)), stats=stats[a.id]) for a in items]
 
 
 @router.post("/{ad_id}/cancel", response_model=AdOut)
@@ -273,7 +290,17 @@ async def city_ads_link(
 ):
     """Сменить ссылку: одобренное объявление снова уходит на проверку."""
     ad = await _tx(db, lambda: ads_svc.edit_link(db, user=user, ad_id=ad_id, link_url=body.link_url))
-    return AdOut(**_ad(ad, await _spot(db, ad.spot_id)))
+    return AdOut(**_ad(ad, await _spot(db, ad.spot_id), await _image_key(db, ad.id)))
+
+
+@router.put("/{ad_id}/image", response_model=AdOut)
+async def city_ads_image(
+    ad_id: int, body: ImageBody, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    """Заменить картинку экрана (id из POST /city-ads/images) — одобренное объявление снова уходит на проверку;
+    image_id = null — убрать картинку (экран только с текстом, без проверки)."""
+    ad = await _tx(db, lambda: images_svc.set_image(db, user=user, ad_id=ad_id, image_id=body.image_id))
+    return AdOut(**_ad(ad, await _spot(db, ad.spot_id), await _image_key(db, ad.id)))
 
 
 @router.get("/moderation", response_model=ModerationOut)
@@ -290,8 +317,10 @@ async def city_ads_moderation(
         raise HTTPException(status_code=400, detail=str(e)) from e
     total = await ads_svc.revenue_total_nano(db)
     stats = await ads_svc.event_counts(db, [a.id for a, _ in rows])
+    pics = await images_svc.keys_for(db, [a.id for a, _ in rows])
     return ModerationOut(
-        items=[_owner_ad(a, sp).model_copy(update={"stats": stats[a.id]}) for a, sp in rows], revenue_total=ads_svc.nano_to_ton(total), revenue_total_nano=total
+        items=[_owner_ad(a, sp, pics.get(a.id)).model_copy(update={"stats": stats[a.id]}) for a, sp in rows],
+        revenue_total=ads_svc.nano_to_ton(total), revenue_total_nano=total,
     )
 
 
@@ -299,7 +328,7 @@ async def city_ads_moderation(
 async def city_ads_approve(ad_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     _require_owner(user)
     ad = await _tx(db, lambda: ads_svc.approve(db, owner=user, ad_id=ad_id))
-    return _owner_ad(ad, await _spot(db, ad.spot_id))
+    return _owner_ad(ad, await _spot(db, ad.spot_id), await _image_key(db, ad.id))
 
 
 @router.post("/{ad_id}/reject", response_model=OwnerAdOut)
@@ -309,7 +338,7 @@ async def city_ads_reject(
     """Отклонить (или снять одобренное): возврат на баланс, сутки освобождаются."""
     _require_owner(user)
     ad = await _tx(db, lambda: ads_svc.reject(db, owner=user, ad_id=ad_id, note=body.note))
-    return _owner_ad(ad, await _spot(db, ad.spot_id))
+    return _owner_ad(ad, await _spot(db, ad.spot_id), await _image_key(db, ad.id))
 
 
 # ── PR 3: статистика «Прогулки» ──────────────────────────────────────────────
@@ -330,3 +359,86 @@ async def city_ads_event(
     """Показ / открытие карточки / переход по ссылке — только из «Прогулки». Раз в сутки на человека и вид."""
     counted = await _tx(db, lambda: ads_svc.record_event(db, user=user, ad_id=ad_id, kind=body.kind))
     return EventOut(counted=counted)
+
+
+# ── Картинка экрана на фасаде «Неон-рядов» ───────────────────────────────────
+
+KEY_PATTERN = "^[0-9a-f]{32}$"
+IMAGE_HEADERS = {"X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'"}
+
+
+class ImageOut(BaseModel):
+    id: int
+    width: int
+    height: int
+    size: int
+    # превью для автора (с авторизацией): уже пережатая картинка — ровно то, что увидят на экране
+    preview_url: str
+
+
+@router.post("/images", response_model=ImageOut, status_code=201)
+async def city_ads_image_upload(
+    request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    """Картинка для экрана на фасаде: тело — сама картинка (PNG / JPEG / WebP, до 5 МБ), Content-Type image/*.
+    Сервер проверяет содержимое и пережимает в WebP 640×520 без метаданных. Не больше 10 загрузок в час.
+    Затем id передаётся в бронь (POST /city-ads, image_id) или в замену (PUT /city-ads/{id}/image)."""
+    if not images_svc.available():
+        raise HTTPException(status_code=503, detail="Загрузка картинок пока недоступна — экран будет с текстом")
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > images_svc.MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Файл больше 5 МБ")
+    buf = bytearray()
+    async for chunk in request.stream():
+        buf.extend(chunk)
+        if len(buf) > images_svc.MAX_BYTES:
+            raise HTTPException(status_code=413, detail="Файл больше 5 МБ")
+    try:
+        img = await images_svc.store_upload(db, user=user, data=bytes(buf), declared=request.headers.get("content-type"))
+        out = ImageOut(id=img.id, width=img.width, height=img.height, size=img.size,
+                       preview_url=images_svc.private_path(img.key))
+        await db.commit()
+        return out
+    except images_svc.ImageForbidden as e:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except images_svc.ImageRateLimited as e:
+        await db.rollback()
+        raise HTTPException(status_code=429, detail=str(e)) from e
+    except images_svc.ImageTooLarge as e:
+        await db.rollback()
+        raise HTTPException(status_code=413, detail=str(e)) from e
+    except images_svc.ImageUnavailable as e:
+        await db.rollback()
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except images_svc.ImageError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.get("/images/{key}.webp")
+async def city_ads_image_public(key: str = Path(pattern=KEY_PATTERN), db: AsyncSession = Depends(get_db)):
+    """Картинка на экране в городе — публично, но только пока объявление одобрено и не закончилось."""
+    data = await images_svc.read_public(db, key)
+    await db.commit()
+    if data is None:
+        raise HTTPException(status_code=404, detail="not found")
+    # адрес меняется при каждой замене картинки; час кэша — снятое объявление пропадает и из витрины
+    return Response(content=data, media_type="image/webp",
+                    headers={**IMAGE_HEADERS, "Cache-Control": "public, max-age=3600"})
+
+
+@router.get("/images/{key}/private")
+async def city_ads_image_private(
+    key: str = Path(pattern=KEY_PATTERN), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    """Картинка до одобрения — автору (превью) и владельцу (модерация). Не кэшируется."""
+    try:
+        data = await images_svc.read_private(db, key, actor=user)
+    except images_svc.ImageForbidden as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except images_svc.ImageError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    await db.commit()
+    return Response(content=data, media_type="image/webp",
+                    headers={**IMAGE_HEADERS, "Cache-Control": "no-store, private"})

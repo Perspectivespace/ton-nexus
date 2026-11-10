@@ -78,15 +78,19 @@ CITY_ADS_EXPIRE_S = 600
 async def city_ads_expire_loop():
     """Фоновое истечение рекламы: одобренные с прошедшим сроком → expired; так и не проверенные → expired
     с полным возвратом и освобождением суток. Ошибки не останавливают цикл."""
+    from app.services.city_ad_images import purge_once
     from app.services.city_ads import expire_once
 
     while True:
         try:
             async with SessionLocal() as s:
                 n = await expire_once(s)
+                p = await purge_once(s)  # неприложенные и заменённые картинки экрана, старые — у закрытых
                 await s.commit()
             if n:
                 logging.getLogger(__name__).info("[city-ads] закрыто объявлений: %s", n)
+            if p:
+                logging.getLogger(__name__).info("[city-ads] удалено картинок: %s", p)
         except Exception:
             logging.getLogger(__name__).exception("[city-ads] expire error")
         await asyncio.sleep(CITY_ADS_EXPIRE_S)

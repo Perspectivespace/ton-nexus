@@ -556,6 +556,9 @@ async def board(
         .where(CityAdDay.day == today, CityAd.status == "approved")
     )
     ads = {spot_id: ad for spot_id, ad in rows.all()}
+    from app.services import city_ad_images as images_svc
+
+    pics = await images_svc.keys_for(session, [a.id for a in ads.values() if a.format == images_svc.FORMAT])
     out = []
     for s in spots:
         ad = ads.get(s.id) if s.enabled else None
@@ -578,6 +581,8 @@ async def board(
                     "link_kind": link_kind(ad.link_url),
                     "color": ad.color,
                     "until": ad.end_day.isoformat(),
+                    # картинка экрана на фасаде (одобрена вместе с объявлением); нет — экран только с текстом
+                    "image_url": images_svc.public_path(pics[ad.id]) if ad.id in pics else None,
                 },
             }
         )
@@ -592,6 +597,8 @@ async def board(
         "max_days": cfg["max_days"],
         "body_max": cfg["body_max"],
         "limits": cfg["limits"],
+        # можно ли загрузить картинку на экран фасада (на сервере есть Pillow с WebP)
+        "image_upload": images_svc.available(),
     }
 
 
@@ -669,12 +676,14 @@ async def book(
     content: AdContent,
     today: date | None = None,
     district: str | None = None,
+    image_id: int | None = None,
 ) -> CityAd:
     """Купить показ: цена пересчитывается на сервере, сутки резервируются атомарно, оплата — с баланса.
 
     Порядок: расчёт и проверки (уровень, место, срок, текст, ссылка) → блокировка пользователя и проверка баланса →
     объявление и его сутки в точке сохранения (гонка за те же сутки → UNIQUE → «занято», ничего не списано) →
     списание. Объявление ждёт модерации (pending); деньги до одобрения — удержание.
+    image_id — загруженная заранее картинка (только экран на фасаде), прикладывается в той же транзакции.
     """
     q = await quote(
         session, user=user, spot_key=spot_key, start=start, days=days, content=content, today=today, strict=True,
@@ -685,6 +694,16 @@ async def book(
     c = q.content
     assert c is not None and c.title and c.color
     spot = await _spot(session, q.spot_key)
+    if image_id is not None:
+        # картинку проверяем до брони и списания: чужая, просроченная или не к экрану — ничего не создаётся
+        from app.services import city_ad_images as images_svc
+
+        if spot.format != images_svc.FORMAT:
+            raise CityAdError("Картинка — только для экрана на фасаде")
+        try:
+            await images_svc._own_fresh(session, user=user, image_id=image_id, now=images_svc._now())
+        except images_svc.ImageError as e:
+            raise CityAdError(str(e)) from e
     total = q.total_nano
     fresh = await balance_svc.get_user_for_update(session, user.id)
     if Decimal(fresh.balance) < _ton(total):
@@ -718,6 +737,11 @@ async def book(
     except IntegrityError as e:
         # параллельная бронь успела занять хотя бы одни из этих суток
         raise CityAdBusyError("Эти сутки только что заняли — выберите другие даты") from e
+    if image_id is not None:
+        try:
+            await images_svc.attach(session, user=user, image_id=image_id, ad=ad)
+        except images_svc.ImageError as e:
+            raise CityAdError(str(e)) from e
     await balance_svc.debit(
         session,
         user_id=user.id,

@@ -37,14 +37,17 @@ const AD = {
 };
 
 type Call = { method: string; path: string; body: unknown };
+const PIC = "/api/v1/city-ads/images/0123456789abcdef0123456789abcdef/private";
 let calls: Call[] = [];
 let me: Record<string, unknown> = ME;
 let bookStatus = 201;
 let mine: unknown[] = [];
+let queue: unknown[] | null = null; // очередь проверки (по умолчанию — [AD])
 
 const ROWS_BOARD = {
   ...BOARD,
   district: "rows",
+  image_upload: true as boolean,
   limits: { ...BOARD.limits, facade_screen: { title_max: 24, subtitle_max: 32 } },
   spots: [
     { key: "rows_facade", format: "facade_screen", district: "rows", title: "Экран на фасаде рынка", on_sale: true, price_day: "1.5", ad: null },
@@ -90,11 +93,13 @@ function route(method: string, path: string, body: unknown): [number, unknown] {
     if (bookStatus === 402) return [402, { detail: "Недостаточно TON: нужно 3.5 TON" }];
     return [201, AD];
   }
+  if (path === "/api/v1/city-ads/images" && method === "POST") return [201, { id: 77, width: 640, height: 520, size: 31000, preview_url: PIC }];
+  if (/\/city-ads\/\d+\/image$/.test(path)) return [200, { ...AD, status: "pending", image_url: PIC }];
   if (path === "/api/v1/city-ads/mine") return [200, mine];
   if (path.endsWith("/cancel")) return [200, { ...AD, status: "cancelled" }];
   if (path.startsWith("/api/v1/city-ads/moderation")) {
     const st = new URL(`http://x${path}`).searchParams.get("status");
-    const items = st === "pending" ? [AD] : [{ ...AD, id: 42, status: "approved", start: "2026-11-06", end: "2026-11-12", moderated: true, revenue_nano: 3.5e9, held_nano: 0, stats: { impression: 120, open: 30, click: 12 } }];
+    const items = st === "pending" ? (queue ?? [AD]) : [{ ...AD, id: 42, status: "approved", start: "2026-11-06", end: "2026-11-12", moderated: true, revenue_nano: 3.5e9, held_nano: 0, stats: { impression: 120, open: 30, click: 12 } }];
     return [200, { items, revenue_total: "3.5", revenue_total_nano: 3.5e9 }];
   }
   if (/\/(approve|reject)$/.test(path)) return [200, { ...AD, status: path.endsWith("approve") ? "approved" : "rejected" }];
@@ -139,10 +144,14 @@ beforeEach(() => {
   me = ME;
   bookStatus = 201;
   mine = [];
+  queue = null;
+  URL.createObjectURL = vi.fn(() => "blob:pic");
+  URL.revokeObjectURL = vi.fn();
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit = {}) => {
     const method = (init.method ?? "GET").toUpperCase();
-    const body = init.body ? JSON.parse(String(init.body)) : undefined;
+    const body = typeof init.body === "string" ? JSON.parse(init.body) : init.body;
     calls.push({ method, path: url, body });
+    if (url.endsWith("/private")) return new Response(new Blob([new Uint8Array([82, 73, 70, 70])], { type: "image/webp" }), { status: 200 });
     const [status, json] = route(method, url, body);
     return new Response(JSON.stringify(json), { status, headers: { "Content-Type": "application/json" } });
   }));
@@ -246,7 +255,7 @@ describe("покупка рекламы", () => {
 });
 
 describe("покупка в районах (PR 6)", () => {
-  it("касание места района (?spot=rows_facade): выбран район «Неон-ряды» и экран; экран — только текст 24/32; район уходит в расчёт и бронь", async () => {
+  it("касание места района (?spot=rows_facade): выбран район «Неон-ряды» и экран; заголовок 24 / подпись 32, картинка — по желанию; район уходит в расчёт и бронь", async () => {
     me = { ...ME, balance: "20" };
     await render(<CityAds />, "/ads?spot=rows_facade");
     expect(btn("Неон-ряды").getAttribute("aria-checked")).toBe("true");
@@ -264,8 +273,8 @@ describe("покупка в районах (PR 6)", () => {
     await click(btn("К тексту"));
     expect(text()).toContain("Заголовок на экране");
     expect(text()).toContain("Подпись на экране");
-    expect(text()).toContain("только текст");
-    expect(document.querySelector('input[type="file"]')).toBeNull();
+    expect(text()).toContain("Картинка на экране");
+    expect(document.querySelector<HTMLInputElement>('input[type="file"]')?.accept).toBe("image/png,image/jpeg,image/webp");
     const [title, sub] = [...document.querySelectorAll<HTMLInputElement>(".cab-step input.ui-input")];
     expect([title.maxLength, sub.maxLength]).toEqual([24, 32]);
     await type(title, "PIXEL CAFE");
@@ -282,6 +291,66 @@ describe("покупка в районах (PR 6)", () => {
     await until(() => text().includes("Оплачено — объявление на проверке"));
     const book = calls.find((c) => c.method === "POST" && c.path === "/api/v1/city-ads")!;
     expect(book.body).toMatchObject({ spot: "rows_facade", district: "rows", title: "PIXEL CAFE", subtitle: "второй кофе в подарок" });
+    expect((book.body as { image_id?: number }).image_id).toBeUndefined();
+  });
+
+  it("картинка экрана: загрузка → превью пережатой картинки на рисунке района днём и ночью → id в брони", async () => {
+    me = { ...ME, balance: "20" };
+    await render(<CityAds />, "/ads?spot=rows_facade");
+    await click(btn("Выбрать даты"));
+    await wait(30);
+    await click(btn("К тексту"));
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    // не тот тип — ошибка, на сервер ничего не уходит
+    const gif = new File([new Uint8Array([71, 73, 70])], "a.gif", { type: "image/gif" });
+    Object.defineProperty(input, "files", { value: [gif], configurable: true });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await wait(20);
+    expect(text()).toContain("Нужна картинка PNG, JPG или WebP");
+    expect(calls.some((c) => c.path === "/api/v1/city-ads/images")).toBe(false);
+    const png = new File([new Uint8Array([137, 80, 78, 71])], "poster.png", { type: "image/png" });
+    Object.defineProperty(input, "files", { value: [png], configurable: true });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await until(() => !!document.querySelector(".cab-dz .dz-ad.k-facade_screen.has-pic img.pic"));
+    const up = calls.find((c) => c.path === "/api/v1/city-ads/images")!;
+    expect(up.method).toBe("POST");
+    expect(up.body).toBe(png); // без canvas (jsdom) — исходный файл
+    expect(calls.some((c) => c.path === PIC)).toBe(true); // превью — уже пережатая сервером картинка
+    expect(document.querySelector(".cab-dz .has-pic img.pic")!.getAttribute("src")).toBe("blob:pic");
+    expect(document.querySelector<HTMLImageElement>(".cab-pic-img")!.src).toBe("blob:pic");
+    // день и ночь — на том же рисунке района
+    expect(document.querySelector(".cab-mini.ph-night")).not.toBeNull();
+    await click(btn("Днём"));
+    expect(document.querySelector(".cab-mini.ph-day .has-pic")).not.toBeNull();
+    const [title] = [...document.querySelectorAll<HTMLInputElement>(".cab-step input.ui-input")];
+    await type(title, "PIXEL CAFE");
+    await wait(450);
+    await until(() => !btn("Проверить").disabled);
+    await click(btn("Проверить"));
+    expect(text()).toContain("есть · проверит владелец");
+    expect(document.querySelector(".cab-prev .ph-day .has-pic")).not.toBeNull(); // выбор «Днём» сохранился
+    await click(btn("Ночью"));
+    expect(document.querySelector(".cab-prev .ph-night .has-pic")).not.toBeNull();
+    await click(btn(/^Оплатить/));
+    await click(btn(/^Списать/));
+    await until(() => text().includes("Оплачено — объявление на проверке"));
+    const book = calls.find((c) => c.method === "POST" && c.path === "/api/v1/city-ads")!;
+    expect(book.body).toMatchObject({ spot: "rows_facade", image_id: 77 });
+  });
+
+  it("на сервере нет обработки картинок — выбора картинки нет, экран только с текстом", async () => {
+    const saved = ROWS_BOARD.image_upload;
+    ROWS_BOARD.image_upload = false;
+    try {
+      await render(<CityAds />, "/ads?spot=rows_facade");
+      await click(btn("Выбрать даты"));
+      await wait(30);
+      await click(btn("К тексту"));
+      expect(document.querySelector('input[type="file"]')).toBeNull();
+      expect(text()).toContain("Экран — заголовок и подпись");
+    } finally {
+      ROWS_BOARD.image_upload = saved;
+    }
   });
 
   it("выбор района: Центр → Порт — места Порта с ценами по типу; выбор сохраняется в адресе", async () => {
@@ -357,7 +426,49 @@ describe("Мои объявления", () => {
   });
 });
 
+describe("Мои объявления: картинка экрана", () => {
+  it("заменить картинку одобренного экрана — предупреждение, загрузка, PUT; убрать — без проверки", async () => {
+    const live = { status: "approved", moderated: true, start: "2026-11-06", end: "2026-11-12" };
+    mine = [
+      { ...AD, ...live, id: 70, spot: "rows_facade", district: "rows", spot_title: "Экран на фасаде рынка", format: "facade_screen", image_url: PIC },
+      { ...AD, ...live, id: 71 }, // баннер Центра — без картинки
+    ];
+    await render(<CityAds />, "/ads?tab=mine");
+    await until(() => !!document.querySelector(".cab-thumb .has-pic img.pic"));
+    expect(calls.some((c) => c.path === PIC)).toBe(true); // своя картинка — с авторизацией
+    expect([...document.querySelectorAll("button")].filter((b) => /картинку/.test(b.textContent ?? "")).length).toBe(1);
+    await click(btn("Заменить картинку"));
+    expect(text()).toContain("С новой картинкой объявление снова уйдёт на проверку");
+    expect(btn("Сохранить и отправить на проверку").disabled).toBe(true);
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const png = new File([new Uint8Array([137, 80, 78, 71])], "new.png", { type: "image/png" });
+    Object.defineProperty(input, "files", { value: [png], configurable: true });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await until(() => !btn("Сохранить и отправить на проверку").disabled);
+    await click(btn("Сохранить и отправить на проверку"));
+    const put = calls.find((c) => c.method === "PUT")!;
+    expect(put).toMatchObject({ path: "/api/v1/city-ads/70/image", body: { image_id: 77 } });
+    await click(btn("Заменить картинку"));
+    await click(btn(/^Убрать картинку/));
+    expect(calls.filter((c) => c.method === "PUT").at(-1)!.body).toEqual({ image_id: null });
+  });
+});
+
 describe("Кабинет → Реклама", () => {
+  it("картинка экрана на проверке — владелец видит её целиком и на месте; после замены — «Новая картинка»", async () => {
+    queue = [
+      { ...AD, id: 80, spot: "rows_facade", district: "rows", spot_title: "Экран на фасаде рынка", format: "facade_screen",
+        title: "PIXEL CAFE", image_url: PIC, moderated: true, link_changed_at: null, image_changed_at: "2026-11-08T10:00:00Z" },
+    ];
+    await render(<CityAdsOwner />, "/owner?tab=ads");
+    await until(() => !!document.querySelector(".cab-mod-pic img"));
+    expect(document.querySelector(".cab-mod-pic img")!.getAttribute("src")).toBe("blob:pic");
+    expect(text()).toContain("видна игрокам только после одобрения");
+    expect(document.querySelector('.cab-dz[data-district="rows"] .has-pic img.pic')).not.toBeNull();
+    expect(text()).toContain("Новая картинка");
+    expect(calls.some((c) => c.path === PIC)).toBe(true);
+  });
+
   it("очередь с превью, одобрение, отклонение с причиной, снятие с возвратом за непоказанные сутки", async () => {
     await render(<CityAdsOwner />, "/owner?tab=ads");
     expect(text()).toContain("Доход с рекламы");

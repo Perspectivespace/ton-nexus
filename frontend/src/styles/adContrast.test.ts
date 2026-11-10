@@ -149,6 +149,23 @@ describe("реклама читается в любое время суток (�
     expect(bad).toEqual([]);
   });
 
+  it("экран фасада с картинкой: заголовок и подпись на тёмной плашке читаются при любой картинке (белой тоже)", () => {
+    const cap = rule(idle, ".dz-ad.k-facade_screen .cap");
+    const m = cap.match(/background: rgba\((\d+), (\d+), (\d+), ([\d.]+)\)/)!;
+    const plate = over([+m[1], +m[2], +m[3]], +m[4], WHITE);
+    // буквы — светлый токен, не цвет объявления
+    expect(rule(idle, ".dz-ad.k-facade_screen .t")).toMatch(/color: var\(--ad-ink\)/);
+    expect(rule(idle, ".dz-ad.k-facade_screen .p")).toMatch(/color: var\(--ad-ink\)/);
+    const bad: string[] = [];
+    for (const phase of PHASES) {
+      const r = seen(css(token("--ad-ink")), plate, phase);
+      if (r < MIN) bad.push(`${phase} ${r.toFixed(2)}`);
+    }
+    expect(bad).toEqual([]);
+    // картинка — без движения
+    expect(rule(idle, ".dz-ad.k-facade_screen .pic")).not.toMatch(/animation|transition/);
+  });
+
   it("места районов (Неон-ряды, Порт) рисуются проверенными здесь стилями и цветами — контраст держится во всех фазах", () => {
     const kinds = new Set(["facade_screen", "line", "banner", "neon"]);
     for (const d of SCENE_DISTRICTS) {

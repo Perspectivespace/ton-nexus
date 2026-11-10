@@ -1142,6 +1142,8 @@ export type CityAdOnBoard = {
   link_kind: "telegram" | "web" | null;
   color: CityAdPalette | string;
   until: string;
+  /** картинка экрана на фасаде (одобрена вместе с объявлением), путь API; нет — экран только с текстом */
+  image_url?: string | null;
 };
 export type CityAdSpotOnBoard = {
   key: string;
@@ -1169,6 +1171,8 @@ export type CityAdsBoard = {
   max_days?: number;
   body_max?: number;
   limits?: Partial<Record<CityAdFormat, CityAdLimits>>;
+  /** на сервере можно загрузить картинку на экран фасада (false — только текст) */
+  image_upload?: boolean;
 };
 
 /** Публичная витрина GET /api/v1/city-ads: одобренные объявления на сегодня (МСК). */
@@ -1272,12 +1276,15 @@ export type CityAdMine = {
   moderated: boolean;
   created_at: string | null;
   stats: CityAdStats | null;
+  /** картинка экрана на фасаде — закрытый путь (автору и владельцу, с авторизацией) */
+  image_url?: string | null;
 };
 export type CityAdOwner = CityAdMine & {
   advertiser_id: number;
   revenue_nano: number;
   held_nano: number;
   link_changed_at: string | null;
+  image_changed_at?: string | null;
 };
 export type CityAdModeration = { items: CityAdOwner[]; revenue_total: string; revenue_total_nano: number };
 
@@ -1300,7 +1307,10 @@ export function useCityAdQuote(body: CityAdQuoteIn | null, tag = "dates") {
 export function useCityAdBook() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Required<Pick<CityAdQuoteIn, "spot" | "start" | "days" | "title" | "color">> & CityAdContentIn & { district?: string }) =>
+    mutationFn: (
+      body: Required<Pick<CityAdQuoteIn, "spot" | "start" | "days" | "title" | "color">> &
+        CityAdContentIn & { district?: string; image_id?: number },
+    ) =>
       api<CityAdMine>("/api/v1/city-ads", { method: "POST", body: JSON.stringify(body) }),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["city-ad-quote"] });
@@ -1343,6 +1353,51 @@ export function useCityAdLink() {
       qc.invalidateQueries({ queryKey: ["city-ads"] });
     },
   });
+}
+
+export type CityAdImageUp = { id: number; width: number; height: number; size: number; preview_url: string };
+
+/** Картинка экрана на фасаде: сырые байты → сервер проверяет и пережимает в WebP 640×520 → id для брони или замены. */
+export function useCityAdImageUpload() {
+  return useMutation({
+    mutationFn: (file: Blob) => apiUpload<CityAdImageUp>("/api/v1/city-ads/images", file),
+  });
+}
+
+/** Заменить (image_id) или убрать (null) картинку экрана; новая картинка — снова на проверку. */
+export function useCityAdSetImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, image_id }: { id: number; image_id: number | null }) =>
+      api<CityAdMine>(`/api/v1/city-ads/${id}/image`, { method: "PUT", body: JSON.stringify({ image_id }) }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["city-ads-mine"] });
+      qc.invalidateQueries({ queryKey: ["city-ads"] });
+    },
+  });
+}
+
+/** Закрытая картинка (превью автору, модерация владельцу): blob с авторизацией → object URL. */
+export function useAuthImage(path: string | null | undefined) {
+  const q = useQuery({
+    queryKey: ["auth-image", path],
+    queryFn: () => apiBlob(path!),
+    enabled: !!path,
+    staleTime: Infinity,
+    gcTime: 60_000,
+    retry: false,
+  });
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!q.data) {
+      setUrl(null);
+      return;
+    }
+    const u = URL.createObjectURL(q.data);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [q.data]);
+  return { url, isLoading: q.isLoading, error: q.error };
 }
 
 /** Владелец: объявления по статусу + доход платформы с рекламы. */
