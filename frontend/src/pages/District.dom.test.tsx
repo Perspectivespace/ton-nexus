@@ -15,8 +15,9 @@ const m = vi.hoisted(() => ({
   load: vi.fn(),
   life: vi.fn(() => ({ stop: vi.fn(), spawn: vi.fn() })),
   phase: "night" as "dawn" | "day" | "dusk" | "night",
+  ads: { data: undefined } as { data?: { spots: { key: string; price_day: string | null; ad: unknown }[]; prices?: Record<string, string> } },
 }));
-vi.mock("@/api/hooks", () => ({ useMe: () => m.me }));
+vi.mock("@/api/hooks", () => ({ useMe: () => m.me, useDistrictAds: () => m.ads }));
 vi.mock("@/lib/districtAssets", () => ({ loadDistrict: m.load, preloadWhenIdle: () => () => {} }));
 vi.mock("@/lib/districtLife", () => ({ startDistrictLife: m.life }));
 vi.mock("@/lib/cityPhase", () => ({ useCityPhase: () => ({ phase: m.phase, upcoming: null }) }));
@@ -52,6 +53,16 @@ const render = async (url: string) => {
 beforeEach(() => {
   m.me = { data: { is_owner: true }, isLoading: false };
   m.phase = "night";
+  m.ads = {
+    data: {
+      spots: [
+        { key: "rows_facade", price_day: "1.50", ad: null },
+        { key: "rows_line", price_day: "0.5", ad: null },
+        { key: "rows_neon", price_day: "0.7", ad: null },
+        { key: "rows_banner", price_day: "1", ad: null },
+      ],
+    },
+  };
   m.load.mockImplementation(async (_d: string, art: string, lite: boolean) =>
     lite ? { flat: `/flat-${art}.webp` } : { sky: `/sky-${art}`, far: `/far-${art}`, mid: `/mid-${art}`, near: `/near-${art}` },
   );
@@ -72,6 +83,16 @@ afterEach(() => {
 });
 
 describe("district screen", () => {
+  it("final art (Неон-ряды) shows no «Черновик» badge; the sketch (Порт) still does", async () => {
+    await render("/district?d=rows");
+    expect(el.querySelector(".dz-badge")).toBeNull();
+    expect(el.querySelector(".dz-far img")?.getAttribute("src")).toBe("/far-night");
+    act(() => root.unmount());
+    root = createRoot(el);
+    await render("/district?d=port");
+    expect(el.querySelector(".dz-badge")?.textContent).toBe("Черновик");
+  });
+
   it("renders 4 layers at their speeds, entered at the centre, and hides the app chrome", async () => {
     await render("/district?d=port");
     const layers = [...el.querySelectorAll<HTMLElement>(".dz-layer")];
@@ -171,5 +192,47 @@ describe("district screen", () => {
   it("unknown district falls back to Неон-ряды", async () => {
     await render("/district?d=moon");
     expect(m.load).toHaveBeenLastCalledWith("rows", "night", false);
+  });
+});
+
+describe("district: idle promo on free ad spots (Неон-ряды)", () => {
+  it("all four free surfaces advertise themselves inside the street layer, with the price; no tap handling", async () => {
+    await render("/district?d=rows");
+    const idle = [...el.querySelectorAll<HTMLElement>(".dz-mid .dz-idle")];
+    expect(idle.map((n) => n.dataset.spot)).toEqual(["rows_facade", "rows_line", "rows_neon", "rows_banner"]);
+    const facade = idle[0];
+    expect(facade.querySelector(".t")?.textContent).toBe("Место для рекламы");
+    expect(facade.querySelector(".p")?.textContent).toBe("от 1,5 TON/сутки");
+    expect(idle[1].textContent).toBe("Место для рекламы · от 0,5 TON/сутки");
+    expect(idle[2].textContent).toBe("Засветись тут");
+    expect(idle[3].textContent).toBe("Засветись тут");
+    expect(el.querySelector(".dz-idles")?.getAttribute("aria-hidden")).toBe("true");
+    expect(el.querySelectorAll(".dz-idles button, .dz-idles a").length).toBe(0);
+  });
+
+  it("no spot row yet — the type price is used", async () => {
+    m.ads = { data: { spots: [], prices: { facade_screen: "1.5", line: "1" } } };
+    await render("/district?d=rows");
+    expect(el.querySelector(".k-facade_screen .p")?.textContent).toBe("от 1,5 TON/сутки");
+    expect(el.querySelector(".k-line")?.textContent).toBe("Место для рекламы · от 1 TON/сутки");
+  });
+
+  it("a bought spot shows no promo; Порт (sketch) has none", async () => {
+    m.ads.data!.spots[0].ad = { id: 1 };
+    await render("/district?d=rows");
+    expect([...el.querySelectorAll<HTMLElement>(".dz-idle")].map((n) => n.dataset.spot)).not.toContain("rows_facade");
+    act(() => root.unmount());
+    root = createRoot(el);
+    await render("/district?d=port");
+    expect(el.querySelector(".dz-idle")).toBeNull();
+  });
+
+  it("low-end: promo stays on the flattened image, still (first slogan, no rotation)", async () => {
+    document.documentElement.classList.add("low-end");
+    await render("/district?d=rows");
+    const idle = [...el.querySelectorAll<HTMLElement>(".dz-flat .dz-idle")];
+    expect(idle.length).toBe(4);
+    expect(idle.every((n) => n.classList.contains("still"))).toBe(true);
+    expect(idle[1].textContent).toBe("Место для рекламы");
   });
 });

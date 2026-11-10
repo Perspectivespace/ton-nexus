@@ -1,3 +1,4 @@
+import { LANES } from "./districts";
 // @vitest-environment jsdom
 /** Камера района: вход в центре, протяжка двигает слои с разной скоростью, «резинка» и пружина у края, инерция. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -116,6 +117,22 @@ describe("district street life", () => {
     expect(host.querySelectorAll(".dz-mover").length).toBe(1);
     life.stop();
     expect(host.querySelectorAll(".dz-mover").length).toBe(0);
+  });
+
+  it("final rows: sprites (walker bobs in the same one-shot run)", () => {
+    const frames: Keyframe[][] = [];
+    HTMLElement.prototype.animate = function (k: Keyframe[]) {
+      frames.push(k);
+      return { onfinish: null, oncancel: null } as unknown as Animation;
+    } as unknown as typeof HTMLElement.prototype.animate;
+    const walker = LANES.rows.findIndex((l) => l.sprite === "walker");
+    const life = startDistrictLife(host, LANES.rows, { first: 1e9 });
+    life.spawn(walker);
+    const el = host.querySelector<HTMLElement>(".dz-mover")!;
+    expect(el.className).toBe("dz-mover walker sprite");
+    expect(el.style.backgroundImage).toContain("url(");
+    expect(frames[0].length).toBeGreaterThan(4);
+    life.stop();
   });
 });
 
