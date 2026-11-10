@@ -369,6 +369,7 @@ class QuoteAndBook(unittest.TestCase):
             self.assertEqual((out.spot, out.district, out.price_day), ("port_banner_tram", "port", "0.5"))
             mine = await ads_api.city_ads_mine(user=u, db=s)
             self.assertEqual([(a.spot, a.district) for a in mine], [("port_banner_tram", "port")])
+            self.assertEqual(mine[0].spot_title, "Голо-баннер на станции трамвая")
             with self.assertRaises(HTTPException) as e:
                 await ads_api.city_ads_book(
                     ads_api.BookBody(

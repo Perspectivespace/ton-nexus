@@ -141,6 +141,8 @@ class AdOut(BaseModel):
     id: int
     spot: str
     district: str = "centre"
+    # название места по-русски («Экран на фасаде рынка»), не ключ
+    spot_title: str = ""
     format: str
     status: str
     title: str
@@ -183,6 +185,7 @@ def _ad(ad, spot: CityAdSpot | None) -> dict:
     t = ads_svc.nano_to_ton
     return dict(
         id=ad.id, spot=spot.key if spot else "", district=spot.district if spot else ads_svc.DEFAULT_DISTRICT,
+        spot_title=spot.title if spot else "",
         format=ad.format, status=ad.status, title=ad.title, subtitle=ad.subtitle, body=ad.body,
         link_url=ad.link_url, link_kind=ads_svc.link_kind(ad.link_url), color=ad.color,
         start=ad.start_day, end=ad.end_day, days=ad.days,
