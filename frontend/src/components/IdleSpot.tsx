@@ -10,8 +10,10 @@ import { IDLE_COLOR, IDLE_IN, IDLE_OUT, idleDelay, idleSlogans, idleTickerMs, pr
  * Положение задаёт style (проценты кадра); касание обрабатывает обёртка (в Центре — кнопка покупки места).
  * ad — купленное место района (PR 6): тот же облик места, но текст и цвет покупателя (заголовок, подпись у баннера
  * и экрана); LED-строка проезжает заголовок по кругу, остальные стоят без смены (класс dz-ad).
+ * Экран на фасаде с картинкой (ad.image — полный адрес): картинка во весь экран, под ней — заголовок и подпись
+ * на тёмной плашке (контраст ≥ 4,5 : 1 при любой картинке). Картинка не загрузилась — экран как без неё, только текст.
  */
-export type SurfaceAd = { title: string; subtitle?: string | null; color: string };
+export type SurfaceAd = { title: string; subtitle?: string | null; color: string; image?: string | null };
 type IdleProps = {
   spot: string;
   kind: IdleKind;
@@ -27,6 +29,7 @@ const can = (el: Element | null): el is HTMLElement => !!el && typeof (el as HTM
 export function IdleSurface({ spot, kind, i, price, still, style, compact = false, ad = null }: IdleProps) {
   const slogans = ad ? [ad.title] : idleSlogans(kind, price, compact);
   const [n, setN] = useState(0);
+  const [broken, setBroken] = useState<string | null>(null);
   const text = useRef<HTMLSpanElement>(null);
   const win = useRef<HTMLSpanElement>(null);
   const first = useRef(true);
@@ -88,10 +91,11 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
   const slogan = ad ? ad.title : still && kind === "line" ? slogans[0].split(" · ")[0] : slogans[n % count];
   const p = priceLine(price);
   const sub = ad?.subtitle || null;
+  const pic = kind === "facade_screen" && ad?.image && broken !== ad.image ? ad.image : null;
   const look = { ...style, ...adVars(ad?.color ?? IDLE_COLOR[kind]) } as CSSProperties;
   return (
     <div
-      className={`dz-idle k-${kind}${still ? " still" : ""}${compact ? " compact" : ""}${ad ? " dz-ad" : ""}`}
+      className={`dz-idle k-${kind}${still ? " still" : ""}${compact ? " compact" : ""}${ad ? " dz-ad" : ""}${pic ? " has-pic" : ""}`}
       style={look}
       data-spot={spot}
       data-n={n}
@@ -107,7 +111,18 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
           <span className="p">{p ?? "Неон-ряды"}</span>
         </>
       )}
-      {kind === "facade_screen" && ad && (
+      {pic && (
+        <>
+          <img className="pic" src={pic} alt="" decoding="async" draggable={false} onError={() => setBroken(pic)} />
+          <span className="cap">
+            <span className="t" ref={text}>
+              {slogan}
+            </span>
+            {sub && <span className="p">{sub}</span>}
+          </span>
+        </>
+      )}
+      {kind === "facade_screen" && ad && !pic && (
         <>
           <span className="t" ref={text}>
             {slogan}
