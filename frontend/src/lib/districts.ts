@@ -122,7 +122,7 @@ export const layerBoxWidth = (k: number, vw: number, vh: number) => Math.round(v
 export const layerX = (k: number, x: number) => k * x;
 
 /**
- * Запуск по прямой ссылке: start_param «district-rows» / «district-port» (только владелец — проверяет экран района).
+ * Запуск по прямой ссылке: start_param «district-rows» / «district-port» (открыта всем игрокам).
  */
 export function districtFromStart(startParam: string | null | undefined): SceneDistrict | null {
   const m = /^district-(rows|port)$/.exec(String(startParam ?? ""));

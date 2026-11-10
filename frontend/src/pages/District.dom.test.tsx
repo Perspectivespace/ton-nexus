@@ -146,19 +146,18 @@ describe("district screen", () => {
     expect(document.documentElement.classList.contains("district-open")).toBe(false);
   });
 
-  it("production: only the owner gets in, everyone else goes home", async () => {
+  it("production: open to every player (not only the owner), both districts; promo stays non-interactive", async () => {
     vi.stubEnv("DEV", false);
     try {
-      m.me = { data: { is_owner: false }, isLoading: false };
-      await render("/district?d=rows");
-      expect(path).toBe("/");
-      expect(el.querySelector(".dz")).toBeNull();
-      act(() => root.unmount());
-      root = createRoot(el);
-      m.me = { data: { is_owner: true }, isLoading: false };
-      await render("/district?d=rows");
-      expect(path).toBe("/district");
-      expect(el.querySelector(".dz")).not.toBeNull();
+      for (const d of ["rows", "port"]) {
+        m.me = { data: { is_owner: false }, isLoading: false };
+        await render(`/district?d=${d}`);
+        expect(path).toBe("/district");
+        expect(el.querySelector(".dz")?.getAttribute("data-district")).toBe(d);
+        expect(el.querySelectorAll(".dz-idles button, .dz-idles a").length).toBe(0); // покупка в районах — PR 6
+        act(() => root.unmount());
+        root = createRoot(el);
+      }
     } finally {
       vi.unstubAllEnvs();
     }
