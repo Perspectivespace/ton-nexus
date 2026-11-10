@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  useAuthImage,
   useCityAdApprove,
   useCityAdModeration,
   useCityAdReject,
@@ -110,6 +111,9 @@ function OwnerAd({ ad, today, mode }: { ad: CityAdOwner; today: string; mode: Vi
   const refund = refundOnReject(ad, today);
   const left = unshownDays(ad, today);
   const busy = approve.isPending || reject.isPending;
+  const pic = useAuthImage(ad.image_url).url;
+  // снова на проверке после одобрения: что поменяли последним — ссылку или картинку
+  const newPic = !!ad.image_changed_at && (!ad.link_changed_at || ad.image_changed_at > ad.link_changed_at);
 
   const act = async (fn: () => Promise<unknown>) => {
     setErr(null);
@@ -130,7 +134,7 @@ function OwnerAd({ ad, today, mode }: { ad: CityAdOwner; today: string; mode: Vi
           {spotName(ad.spot, ad.spot_title, ad.district)} · {fmtRange(ad.start, ad.end)}
         </span>
         {pending && ad.moderated ? (
-          <Tag tone="amber">Новая ссылка</Tag>
+          <Tag tone="amber">{newPic ? "Новая картинка" : "Новая ссылка"}</Tag>
         ) : mode === "live" ? (
           <Tag tone="ok">В эфире</Tag>
         ) : mode === "next" ? (
@@ -144,9 +148,15 @@ function OwnerAd({ ad, today, mode }: { ad: CityAdOwner; today: string; mode: Vi
         spot={ad.spot}
         zoom={ad.format === "line" ? 2.4 : 2.6}
         aspect={2.2}
-        sign={{ spot: ad.spot, format: ad.format, ad: { title: ad.title, subtitle: ad.subtitle, color: ad.color } }}
+        sign={{ spot: ad.spot, format: ad.format, ad: { title: ad.title, subtitle: ad.subtitle, color: ad.color, image: pic } }}
         label={`Вывеска «${ad.title}»`}
       />
+      {pending && ad.image_url && (
+        <figure className="cab-mod-pic">
+          {pic ? <img src={pic} alt={`Картинка экрана «${ad.title}»`} /> : <span className="cab-pic-img cab-pic-wait" />}
+          <figcaption>Картинка экрана целиком · 640×520 · видна игрокам только после одобрения</figcaption>
+        </figure>
+      )}
       {pending && (
         <AdCardPreview format={ad.format} title={ad.title} subtitle={ad.subtitle} body={ad.body} link={ad.link_url} linkKind={ad.link_kind} color={ad.color} days={ad.days} />
       )}

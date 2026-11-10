@@ -215,3 +215,6 @@
 .cab-pic-wait { background: linear-gradient(180deg, #120A22, #07050F); }
 .cab-pic-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
 .cab-pic-meta { flex: 1; min-width: 0; font: 500 11px/1.2 var(--f-mono); color: #A9B3C7; }
+.cab-mod-pic { margin: 0; border: 1px solid rgba(255, 181, 71, .45); background: #0A0716; }
+.cab-mod-pic img, .cab-mod-pic .cab-pic-img { display: block; width: 100%; aspect-ratio: 640 / 520; object-fit: cover; }
+.cab-mod-pic figcaption { padding: 6px 10px; font: 500 11px/1.3 var(--f-mono); color: #A9B3C7; }
