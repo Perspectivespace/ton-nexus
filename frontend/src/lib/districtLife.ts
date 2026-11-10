@@ -2,20 +2,27 @@ import type { Lane, Sprite } from "@/lib/districts";
 import carUrl from "@/assets/districts/life/rows-car.webp";
 import droneUrl from "@/assets/districts/life/rows-drone.webp";
 import walkerUrl from "@/assets/districts/life/rows-walker.webp";
+import tramUrl from "@/assets/districts/life/port-tram.webp";
+import boatUrl from "@/assets/districts/life/port-boat.webp";
 
 /**
  * Жизнь улицы района: раз в несколько секунд — одно разовое событие (ховер-кар, трамвай к станции, катер, дрон).
  * Только разовые WAAPI-прогоны по JS-таймеру — бесконечных анимаций нет (бюджет экрана ≤ 19 петель).
  * Не больше двух событий сразу; в фоне вкладки — пропуск. Включает экран района только на сильных устройствах
  * без «меньше движения». Элементы живут внутри слоя улицы и едут вместе с ним (параллакс).
- * Финальные районы («Неон-ряды») — нарисованные спрайты (ховер-кар, дрон-курьер, прохожий под зонтом);
- * у прохожего шаг — лёгкое покачивание в том же разовом прогоне.
+ * Финальные районы — нарисованные спрайты: «Неон-ряды» — ховер-кар, дрон-курьер, прохожий под зонтом
+ * (шаг — лёгкое покачивание в том же разовом прогоне); «Порт» — небо-трамвай по эстакаде, катер по каналу, дрон и ховер-кар.
+ * Трасса с участком пути (lane.x) — едет только по нему и проявляется/гаснет на его концах.
  */
-export const SPRITES: Record<Sprite, string> = { car: carUrl, drone: droneUrl, walker: walkerUrl };
+export const SPRITES: Record<Sprite, string> = { car: carUrl, drone: droneUrl, walker: walkerUrl, tram: tramUrl, boat: boatUrl };
 
-/** кадры разового прогона: въезд с краю, проезд, выезд; bob — покачивание (px) каждые ~0,45 с */
-export function moverFrames(a: number, b: number, dur: number, bob = 0): Keyframe[] {
-  const at = (t: number, y = 0) => `translate3d(${Math.round(a + (b - a) * t)}px,${y}px,0)`;
+/**
+ * кадры разового прогона: въезд с краю, проезд, выезд; bob — покачивание (px) каждые ~0,45 с.
+ * flip — едет справа налево: зеркалим спрайт ПОСЛЕ сдвига в том же transform (отдельное свойство scale
+ * применяется до transform и зеркалило бы сам сдвиг — спрайт уезжал бы за левый край слоя).
+ */
+export function moverFrames(a: number, b: number, dur: number, bob = 0, flip = false): Keyframe[] {
+  const at = (t: number, y = 0) => `translate3d(${Math.round(a + (b - a) * t)}px,${y}px,0)${flip ? " scaleX(-1)" : ""}`;
   if (!bob) {
     return [
       { transform: at(0), opacity: 0 },
@@ -51,17 +58,18 @@ export function startDistrictLife(host: HTMLElement, lanes: Lane[], opts: { firs
     el.style.top = `${(lane.y * 100).toFixed(2)}%`;
     el.style.width = `${(lane.w * 100).toFixed(2)}%`;
     el.style.height = `${(lane.h * 100).toFixed(2)}%`;
-    if (!ltr) el.style.scale = "-1 1";
     host.appendChild(el);
     active++;
     // только transform и opacity — движение целиком на компоновщике
     const W = host.clientWidth || 1;
     const H = host.clientHeight || 1;
     const dur = rnd(lane.dur[0], lane.dur[1]);
-    const a = Math.round(ltr ? -0.1 * W : 1.1 * W);
-    const b = Math.round(ltr ? 1.1 * W : -0.1 * W);
+    // вся улица — с запасом за краями; участок пути — от его начала до конца (левый край спрайта)
+    const [x0, x1] = lane.x ? [lane.x[0] * W, (lane.x[1] - lane.w) * W] : [-0.1 * W, 1.1 * W];
+    const a = Math.round(ltr ? x0 : x1);
+    const b = Math.round(ltr ? x1 : x0);
     const bob = lane.bob ? Math.max(1, Math.round(lane.bob * lane.h * H)) : 0;
-    const anim = el.animate(moverFrames(a, b, dur, bob), { duration: dur, easing: "linear", fill: "forwards" });
+    const anim = el.animate(moverFrames(a, b, dur, bob, !ltr), { duration: dur, easing: "linear", fill: "forwards" });
     const done = () => {
       el.remove();
       active--;
