@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ART_ASPECT, districtFromStart, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
+  ART_ASPECT, cameraXFor, surfaceOnScreen, districtFromStart, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
   SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES, surfaceBounds,
 } from "./districts";
 
@@ -190,5 +190,29 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
     const walker = rows.find((l) => l.sprite === "walker")!;
     expect(walker.y + walker.h).toBeLessThan(0.93); // ноги на мостовой, не под ближним планом
     expect(walker.bob).toBeGreaterThan(0);
+  });
+});
+
+describe("camera to a spot (PR 6b)", () => {
+  const sw = 1125; // 390×844: улица 844 · 4/3
+  const range = (sw - 390) / 2;
+  it("centres the spot on screen, within the pan range", () => {
+    const facade = SURFACES.rows!.find((s) => s.spot === "rows_facade")!;
+    const x = cameraXFor(facade, sw, range);
+    expect(x).toBeCloseTo(-(0.423 + 0.08 - 0.5) * sw, 5);
+    expect(surfaceOnScreen(facade, x, sw, 390)).toBe(true);
+    const neon = SURFACES.port!.find((s) => s.spot === "port_neon")!;
+    expect(surfaceOnScreen(neon, 0, sw, 390)).toBe(false); // ворота склада — у правого края улицы
+    const xn = cameraXFor(neon, sw, range);
+    expect(xn).toBe(-range); // дальше края не едет
+    expect(surfaceOnScreen(neon, xn, sw, 390)).toBe(true);
+    // тот же расчёт на 360×780
+    const sw2 = 1040;
+    expect(surfaceOnScreen(neon, cameraXFor(neon, sw2, (sw2 - 360) / 2), sw2, 360)).toBe(true);
+  });
+  it("the tilted crane line uses its rotated bounds", () => {
+    const line = SURFACES.port!.find((s) => s.spot === "port_line")!;
+    const b = surfaceBounds(line);
+    expect(cameraXFor(line, sw, range)).toBeCloseTo(-(b.x + b.w / 2 - 0.5) * sw, 5);
   });
 });
