@@ -597,6 +597,8 @@ async def board(
         "max_days": cfg["max_days"],
         "body_max": cfg["body_max"],
         "limits": cfg["limits"],
+        # можно ли загрузить картинку на экран фасада (на сервере есть Pillow с WebP)
+        "image_upload": images_svc.available(),
     }
 
 
