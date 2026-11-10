@@ -68,14 +68,43 @@ export function tonToNano(s: string | number | null | undefined): number {
   return Number.isFinite(v) ? Math.round(v * 1e9) : 0;
 }
 
-export const FORMAT_RU: Record<string, string> = { line: "Бегущая строка", banner: "Голо-баннер", neon: "Неоновая вывеска" };
+export const FORMAT_RU: Record<string, string> = {
+  line: "Бегущая строка",
+  banner: "Голо-баннер",
+  neon: "Неоновая вывеска",
+  facade_screen: "Экран на фасаде",
+};
+/** короткие русские названия мест (полные — title с сервера) */
 export const SPOT_SHORT: Record<string, string> = {
   tower_line: "Строка на башне",
   banner_sky: "Баннер над площадью",
   banner_street: "Баннер у мостовой",
   neon_left: "Вывеска слева",
   neon_right: "Вывеска справа",
+  rows_facade: "Экран на фасаде рынка",
+  rows_line: "Строка над навесами",
+  rows_neon: "Вывеска у входа на рынок",
+  rows_banner: "Баннер над крышей рынка",
+  port_line: "Строка на стреле крана",
+  port_banner_cargo: "Баннер на контейнерах",
+  port_banner_tram: "Баннер на станции трамвая",
+  port_neon: "Вывеска над воротами склада",
 };
+export type AdDistrict = "centre" | "rows" | "port";
+export const AD_DISTRICTS: AdDistrict[] = ["centre", "rows", "port"];
+export const AD_DISTRICT_RU: Record<AdDistrict, string> = { centre: "Центр", rows: "Неон-ряды", port: "Порт" };
+export const isAdDistrict = (v: unknown): v is AdDistrict => v === "centre" || v === "rows" || v === "port";
+/** район места по ключу (как на сервере: rows_… / port_…, остальные — Центр) */
+export const districtOfSpot = (key: string | null | undefined): AdDistrict =>
+  key?.startsWith("rows_") ? "rows" : key?.startsWith("port_") ? "port" : "centre";
+/** «Неон-ряды · Экран на фасаде рынка» — русское название места с районом (никогда не ключ) */
+export function spotName(spot: string, title?: string | null, district?: string | null): string {
+  const d = isAdDistrict(district) ? district : districtOfSpot(spot);
+  const name = SPOT_SHORT[spot] ?? (title || "Место в городе");
+  return `${AD_DISTRICT_RU[d]} · ${name}`;
+}
+/** у формата есть подпись под надписью: голо-баннер и экран на фасаде */
+export const hasSubtitle = (f: string) => f === "banner" || f === "facade_screen";
 export const COLOR_RU: Record<string, string> = { cyan: "Циан", magenta: "Маджента", amber: "Янтарь", mint: "Мята", violet: "Фиалка" };
 
 export type ContentField = "title" | "subtitle" | "body" | "link" | "color";

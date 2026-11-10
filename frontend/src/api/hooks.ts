@@ -1145,16 +1145,20 @@ export type CityAdOnBoard = {
 };
 export type CityAdSpotOnBoard = {
   key: string;
-  format: "line" | "banner" | "neon";
+  format: CityAdFormat;
+  /** район места: centre | rows | port */
+  district?: string;
   title: string;
   on_sale: boolean;
   price_day: string | null;
   ad: CityAdOnBoard | null;
 };
-export type CityAdFormat = "line" | "banner" | "neon";
+export type CityAdFormat = "line" | "banner" | "neon" | "facade_screen";
 export type CityAdLimits = { title_max: number; subtitle_max?: number };
 export type CityAdsBoard = {
   day: string;
+  /** район витрины (centre — по умолчанию) */
+  district?: string;
   spots: CityAdSpotOnBoard[];
   palette: Record<string, string>;
   /** цены типов мест за сутки (TON строкой): line / banner / neon / facade_screen */
@@ -1168,12 +1172,13 @@ export type CityAdsBoard = {
 };
 
 /** Публичная витрина GET /api/v1/city-ads: одобренные объявления на сегодня (МСК). */
-export function useCityAds() {
+export function useCityAds(enabled = true) {
   return useQuery({
     queryKey: ["city-ads"],
     queryFn: () => api<CityAdsBoard>("/api/v1/city-ads"),
     staleTime: 60_000,
     retry: 0,
+    enabled,
   });
 }
 
@@ -1211,7 +1216,7 @@ export type CityAdContentIn = {
   link_url?: string;
   color?: string;
 };
-export type CityAdQuoteIn = CityAdContentIn & { spot: string; start: string; days: number };
+export type CityAdQuoteIn = CityAdContentIn & { spot: string; start: string; days: number; district?: string };
 export type CityAdQuote = {
   spot: string;
   format: CityAdFormat;
@@ -1242,6 +1247,9 @@ export type CityAdStats = { impression?: number; open?: number; click?: number }
 export type CityAdMine = {
   id: number;
   spot: string;
+  /** район места (centre | rows | port) и его название по-русски */
+  district?: string;
+  spot_title?: string;
   format: CityAdFormat;
   status: CityAdStatus | string;
   title: string;
@@ -1292,7 +1300,7 @@ export function useCityAdQuote(body: CityAdQuoteIn | null, tag = "dates") {
 export function useCityAdBook() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: Required<Pick<CityAdQuoteIn, "spot" | "start" | "days" | "title" | "color">> & CityAdContentIn) =>
+    mutationFn: (body: Required<Pick<CityAdQuoteIn, "spot" | "start" | "days" | "title" | "color">> & CityAdContentIn & { district?: string }) =>
       api<CityAdMine>("/api/v1/city-ads", { method: "POST", body: JSON.stringify(body) }),
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["city-ad-quote"] });

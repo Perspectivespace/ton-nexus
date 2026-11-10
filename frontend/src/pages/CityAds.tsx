@@ -1,19 +1,21 @@
 import { useCallback, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useCityAds, useMe, type CityAdsBoard } from "@/api/hooks";
+import { useCityAds, useDistrictAds, useMe, type CityAdsBoard } from "@/api/hooks";
 import type { MeOut } from "@/api/types";
 import { BackLink } from "@/components/BackLink";
 import { Button, ErrorState, Panel, ScreenHeader, SkeletonCard, Tabs } from "@/components/ui";
-import { AdScene, CROP_ALL, type SceneSlot } from "@/components/cityads/AdScene";
+import { type SceneSlot } from "@/components/cityads/AdScene";
+import { PlaceScene } from "@/components/cityads/DistrictAdScene";
 import { BuyFlow } from "@/components/cityads/BuyFlow";
 import { MyAds } from "@/components/cityads/MyAds";
 import { useScreenBack } from "@/lib/backButton";
-import { tonToNano, ton } from "@/lib/cityAdBuy";
+import { districtOfSpot, isAdDistrict, plural, tonToNano, ton, type AdDistrict } from "@/lib/cityAdBuy";
 import "@/styles/city-ads-buy.css";
 
 /**
- * «Реклама в городе» (/ads?tab=buy|mine&spot=…): покупка места (PR 5) и «Мои объявления».
- * Вход — из «Прогулки» (кнопка «Реклама» и касание свободного места). Ниже минимального уровня — понятный замок.
+ * «Реклама в городе» (/ads?tab=buy|mine&district=…&spot=…): покупка места (PR 5) и «Мои объявления».
+ * Вход — из «Прогулки» и районов (кнопка «Реклама» и касание свободного места). Ниже минимального уровня — понятный замок.
+ * Район (PR 6): ?district=centre|rows|port; без него — район места из ?spot=, иначе Центр.
  */
 type Tab = "buy" | "mine";
 
@@ -21,8 +23,12 @@ export function CityAds() {
   const [sp, setSp] = useSearchParams();
   const tab: Tab = sp.get("tab") === "mine" ? "mine" : "buy";
   const spot = sp.get("spot");
+  const dq = sp.get("district");
+  const district: AdDistrict = isAdDistrict(dq) ? dq : districtOfSpot(spot);
   useScreenBack("/");
-  const { data: board, isLoading: bl, error: be, refetch } = useCityAds();
+  const centre = useCityAds(district === "centre");
+  const zone = useDistrictAds(district, district !== "centre");
+  const { data: board, isLoading: bl, error: be, refetch } = district === "centre" ? centre : zone;
   const { data: me, isLoading: ml } = useMe();
   const [locked, setLocked] = useState(false);
   const [done, setDone] = useState(false);
@@ -33,6 +39,12 @@ export function CityAds() {
     setSp(n, { replace: true });
   };
   const onLocked = useCallback(() => setLocked(true), []);
+  const setDistrict = (d: AdDistrict) => {
+    const n = new URLSearchParams(sp);
+    n.set("district", d);
+    n.delete("spot");
+    setSp(n, { replace: true });
+  };
 
   const minLevel = board?.min_level ?? 3;
   const isLocked = locked || (!!me && me.level < minLevel);
@@ -57,7 +69,7 @@ export function CityAds() {
       {(bl || ml) && <SkeletonCard lines={4} label="Загрузка" />}
       {be && <ErrorState message="Не удалось загрузить места" onRetry={() => refetch()} />}
       {board && me && tab === "mine" && <MyAds today={board.day} onBuy={() => setTab("buy")} />}
-      {board && me && tab === "buy" && isLocked && <Locked board={board} me={me} />}
+      {board && me && tab === "buy" && isLocked && <Locked board={board} me={me} district={district} />}
       {board && me && tab === "buy" && !isLocked && done && (
         <Done
           onMine={() => {
@@ -71,23 +83,33 @@ export function CityAds() {
         />
       )}
       {board && me && tab === "buy" && !isLocked && !done && (
-        <BuyFlow key={flowKey} board={board} me={me} initialSpot={spot} onLocked={onLocked} onDone={() => setDone(true)} />
+        <BuyFlow
+          key={`${district}:${flowKey}`}
+          board={board}
+          me={me}
+          district={district}
+          initialSpot={spot}
+          onDistrict={setDistrict}
+          onLocked={onLocked}
+          onDone={() => setDone(true)}
+        />
       )}
     </div>
   );
 }
 
-function Locked({ board, me }: { board: CityAdsBoard; me: MeOut }) {
+function Locked({ board, me, district }: { board: CityAdsBoard; me: MeOut; district: AdDistrict }) {
   const need = board.min_level ?? 3;
   const cheapest = board.spots
     .filter((s) => s.on_sale && s.price_day)
     .reduce((m, s) => Math.min(m, tonToNano(s.price_day)), Infinity);
+  const onSale = board.spots.filter((s) => s.on_sale).length;
   const slots: SceneSlot[] = board.spots.map((s, i) => ({ key: s.key, n: i + 1, state: s.on_sale ? "free" : "off", label: s.title }));
   return (
     <div className="space-y-3">
-      <AdScene crop={CROP_ALL} slots={slots} className="cab-dim" label="Места для рекламы в городе">
+      <PlaceScene district={district} slots={slots} className="cab-dim" label="Места для рекламы в городе">
         <span className="cab-lockmark" aria-hidden="true" />
-      </AdScene>
+      </PlaceScene>
       <Panel level="hero" className="cab-locked space-y-3 p-4" role="status">
         <p className="ui-label">Закрыто до {need}-го уровня</p>
         <p className="ui-h">Реклама в городе — с {need}-го уровня</p>
@@ -100,7 +122,7 @@ function Locked({ board, me }: { board: CityAdsBoard; me: MeOut }) {
           </span>
         </div>
         <p className="cab-note">
-          {board.spots.filter((s) => s.on_sale).length} мест в городе
+          {onSale} {plural(onSale, "место", "места", "мест")} {district === "centre" ? "в Центре" : "в районе"}
           {Number.isFinite(cheapest) ? ` · от ${ton(cheapest)} за сутки` : ""}. Опыт дают задания и майнер — поднимите уровень, и места откроются.
         </p>
         <div className="grid grid-cols-2 gap-2">
