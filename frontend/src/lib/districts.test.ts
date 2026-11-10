@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ART_ASPECT, cameraXFor, surfaceOnScreen, districtFromStart, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
+  ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
   SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES, surfaceBounds,
 } from "./districts";
 
@@ -215,4 +215,26 @@ describe("camera to a spot (PR 6b)", () => {
     const b = surfaceBounds(line);
     expect(cameraXFor(line, sw, range)).toBeCloseTo(-(b.x + b.w / 2 - 0.5) * sw, 5);
   });
+});
+
+describe("restX: точка покоя камеры не режет места рекламы краем экрана", () => {
+  const screens: [number, number][] = [[360, 780], [390, 844], [412, 892], [411, 870], [430, 932]];
+  for (const d of SCENE_DISTRICTS)
+    for (const [vw, vh] of screens)
+      it(`${d} ${vw}×${vh}`, () => {
+        const x = restX(d, vw, vh);
+        const sw = streetWidth(vw, vh);
+        expect(Math.abs(x)).toBeLessThanOrEqual(panRange(vw, vh));
+        let full = 0;
+        for (const s of SURFACES[d]!) {
+          const b = surfaceBounds(s);
+          const left = vw / 2 + (b.x - 0.5) * sw + x;
+          const right = left + b.w * sw;
+          const inside = left >= 0 && right <= vw;
+          const outside = right <= 0 || left >= vw;
+          expect(inside || outside, s.spot).toBe(true);
+          if (surfaceOnScreen(s, x, sw, vw, 6)) full++;
+        }
+        expect(full).toBeGreaterThanOrEqual(2); // на экране — хотя бы два места целиком
+      });
 });

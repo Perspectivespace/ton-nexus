@@ -172,6 +172,14 @@ describe("district camera: neighbours (PR 3)", () => {
     cam.arrive(-1, 0);
     expect(cam.x).toBe(0);
   });
+
+  it("arrive(): ends at the rest point, clamped to the panorama", () => {
+    cam.arrive(1, 600, 80);
+    flush();
+    expect(cam.x).toBe(80);
+    cam.arrive(-1, 0, -999);
+    expect(cam.x).toBe(-367);
+  });
 });
 
 describe("district camera: taps and panTo (PR 6b)", () => {

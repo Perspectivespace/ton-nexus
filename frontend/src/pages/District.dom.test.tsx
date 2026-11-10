@@ -38,6 +38,7 @@ vi.mock("@/lib/cityPhase", () => ({ useCityPhase: () => ({ phase: m.phase, upcom
 import { District } from "./District";
 import { cityWalk } from "@/lib/cityWalk";
 import { districtNav } from "@/lib/districtNav";
+import { restX } from "@/lib/districts";
 
 let root: Root;
 let el: HTMLDivElement;
@@ -432,9 +433,11 @@ describe("district: link to a spot (?spot=, PR 6b)", () => {
   it("an off-screen spot: one smooth rAF pan to it, then the ad card opens", async () => {
     await render("/district?d=port&spot=port_neon");
     expect(el.querySelector(".cad-card")).toBeNull();
+    const start = midX();
+    expect(start).toBe(restX("port", 390, 844)); // вход — в точке покоя, где места не режутся краем
     flush(3);
     const mid = midX();
-    expect(mid).toBeLessThan(0); // едет вправо по улице (к воротам склада)
+    expect(mid).toBeLessThan(start); // едет вправо по улице (к воротам склада)
     expect(mid).toBeGreaterThan(-367);
     flush();
     expect(midX()).toBe(-367.5); // у правого края панорамы: (844·4/3 − 390) / 2
@@ -470,7 +473,7 @@ describe("district: link to a spot (?spot=, PR 6b)", () => {
     };
     await render("/district?d=rows&spot=rows_facade");
     expect(frames.length).toBe(0);
-    expect(midX()).toBe(0);
+    expect(midX()).toBe(restX("rows", 390, 844)); // улица стоит в точке покоя
     expect(el.querySelector(".cad-card .cc-title")?.textContent).toBe("PIXEL CAFE");
   });
 });
