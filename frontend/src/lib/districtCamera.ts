@@ -8,9 +8,28 @@ import { edgePull, nearEdge, type Dir } from "@/lib/districtNav";
  * Один requestAnimationFrame, который крутится только пока есть движение; слои двигаются transform'ом.
  * PR 3: протяжка за край дальше EDGE_PULL и отпускание — переход к соседнему району (onEdge); onPull — подсказка у края;
  * arrive(dir) — проезд от ближнего края к центру при входе из соседнего района.
+ * PR 6b: касание (onTap) — только если палец сдвинулся меньше порога TAP_SLOP (по обеим осям) и улица в этот момент
+ * не ехала (инерция или проезд): касание, которое останавливает движение, ничего не открывает.
+ * panTo(x, dur) — разовый плавный проезд к точке (тот же requestAnimationFrame, что у инерции); dur = 0 — сразу.
  */
 export type EdgeState = { dir: Dir | 0; p: number; l: boolean; r: boolean };
-type Drag = { id: number; x0: number; cam0: number; samples: Sample[]; moved: boolean };
+type Drag = {
+  id: number;
+  x0: number;
+  y0: number;
+  cam0: number;
+  samples: Sample[];
+  moved: boolean;
+  /** палец ушёл дальше порога касания (по любой оси) — это уже не касание */
+  far: boolean;
+  /** улица ехала, когда палец лёг: касание только останавливает её */
+  stop: boolean;
+  target: Element | null;
+};
+/** быстрее этого (px/мс) — улица ещё едет по инерции */
+const MOVING_V = 0.05;
+/** что не начинает протяжку улицы: кнопки, ссылки, карточка объявления */
+const IGNORE = "button, a, input, textarea, select, .cad-card";
 export type CamLayer = { el: HTMLElement; k: number };
 
 export class DistrictCamera {
@@ -28,7 +47,13 @@ export class DistrictCamera {
   constructor(
     private host: HTMLElement,
     private layers: () => CamLayer[],
-    private opts: { inertia: boolean; onEdge?: (dir: Dir) => boolean; onPull?: (s: EdgeState) => void },
+    private opts: {
+      inertia: boolean;
+      onEdge?: (dir: Dir) => boolean;
+      onPull?: (s: EdgeState) => void;
+      /** касание без сдвига: target — элемент под пальцем */
+      onTap?: (target: Element | null) => void;
+    },
   ) {
     host.addEventListener("pointerdown", this.onDown);
     window.addEventListener("pointermove", this.onMove, { passive: true });
@@ -67,6 +92,21 @@ export class DistrictCamera {
     this.wake();
   }
 
+  /** плавно доехать до x за dur мс (разовый проезд, с замедлением); dur ≤ 0 — встать сразу */
+  panTo(x: number, dur: number) {
+    const to = clamp(x, -this.range, this.range);
+    if (dur <= 0 || Math.abs(to - this.x) < 0.5) return this.jump(to);
+    this.v = 0;
+    this.gliding = false;
+    this.tw = { from: this.x, to, t0: -1, dur };
+    this.wake();
+  }
+
+  /** улица сейчас едет: проезд или инерция */
+  get moving(): boolean {
+    return !!this.tw || (this.gliding && Math.abs(this.v) > MOVING_V);
+  }
+
   /** протяжка по сдвигу (для тестов и клавиатуры): как палец, с инерцией vx (px/мс) */
   nudge(dx: number, vx = 0) {
     this.x = rubber(this.x + dx, -this.range, this.range);
@@ -77,16 +117,29 @@ export class DistrictCamera {
 
   private onDown = (e: PointerEvent) => {
     if (!e.isPrimary || e.button > 0) return;
-    if (e.target instanceof Element && e.target.closest("button, a")) return;
+    const target = e.target instanceof Element ? e.target : null;
+    if (target?.closest(IGNORE)) return;
+    const stop = this.moving;
     this.gliding = false;
     this.tw = null; // палец перехватывает проезд
     this.v = 0;
-    this.drag = { id: e.pointerId, x0: e.clientX, cam0: this.x, samples: [{ t: performance.now(), x: e.clientX, y: 0 }], moved: false };
+    this.drag = {
+      id: e.pointerId,
+      x0: e.clientX,
+      y0: e.clientY,
+      cam0: this.x,
+      samples: [{ t: performance.now(), x: e.clientX, y: 0 }],
+      moved: false,
+      far: false,
+      stop,
+      target,
+    };
   };
   private onMove = (e: PointerEvent) => {
     const g = this.drag;
     if (!g || e.pointerId !== g.id) return;
     const dx = e.clientX - g.x0;
+    if (!g.far && isDrag(dx, e.clientY - g.y0)) g.far = true;
     if (!g.moved && !isDrag(dx, 0)) return;
     g.moved = true;
     this.x = rubber(g.cam0 + dx, -this.range, this.range);
@@ -98,7 +151,11 @@ export class DistrictCamera {
     const g = this.drag;
     if (!g || e.pointerId !== g.id) return;
     this.drag = null;
-    if (!g.moved) return;
+    if (!g.moved) {
+      // касание: палец почти не двигался и улица стояла
+      if (e.type === "pointerup" && !g.far && !g.stop) this.opts.onTap?.(g.target);
+      return;
+    }
     // протянули за край достаточно — к соседнему району (если он есть), иначе — пружина назад
     const pull = edgePull(this.x, -this.range, this.range);
     if (e.type === "pointerup" && pull.dir !== 0 && pull.p >= 1 && this.opts.onEdge?.(pull.dir)) {

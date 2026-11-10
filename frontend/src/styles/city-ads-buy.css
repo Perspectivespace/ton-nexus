@@ -198,3 +198,7 @@
 .cab-fulllink span { display: block; margin-bottom: 2px; font: 600 10px/14px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
 
 @media (prefers-reduced-motion: reduce) { .cab-step, .cab-flow > .space-y-3, .cab-img, .cab-donemark { animation: none; } }
+
+/* кабинет: показы и переходы в эфире по районам (PR 6b) */
+.cab-own-dz { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; font: 500 12px/18px var(--f-mono); color: var(--text-2); }
+.cab-own-dz b { font-family: var(--f-sans); font-weight: 600; color: var(--text); }

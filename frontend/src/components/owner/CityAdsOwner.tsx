@@ -14,6 +14,8 @@ import { linkHost } from "@/lib/cityAdLink";
 import { adVars } from "@/lib/cityAdPalette";
 import { haptic } from "@/lib/haptics";
 import {
+  AD_DISTRICTS,
+  AD_DISTRICT_RU,
   districtOfSpot,
   adTimeline,
   daysWord,
@@ -44,6 +46,11 @@ export function CityAdsOwner() {
   const next = appr.filter((a) => adTimeline(a, today) === "upcoming");
   const queue = pending.data?.items ?? [];
   const sum = (k: "impression" | "open" | "click") => live.reduce((n, a) => n + (a.stats?.[k] ?? 0), 0);
+  // показы и переходы в эфире по районам (PR 6b): где реклама работает
+  const byDistrict = AD_DISTRICTS.map((d) => {
+    const own = live.filter((a) => (a.district ?? districtOfSpot(a.spot)) === d);
+    return { d, n: own.length, imp: own.reduce((n, a) => n + (a.stats?.impression ?? 0), 0), clk: own.reduce((n, a) => n + (a.stats?.click ?? 0), 0) };
+  }).filter((x) => x.n > 0);
   const held = [...appr, ...queue].reduce((n, a) => n + a.held_nano, 0);
   const revenue = pending.data?.revenue_total_nano ?? approved.data?.revenue_total_nano ?? 0;
 
@@ -58,6 +65,15 @@ export function CityAdsOwner() {
         <StatTile label="На проверке" value={String(queue.length)} sub={queue.length ? "ждут решения" : "очередь пуста"} />
         <StatTile label="В эфире · впереди" value={`${live.length} · ${next.length}`} sub={`${sum("impression")} пок. · ${sum("click")} перех.`} />
       </div>
+      {byDistrict.length > 0 && (
+        <p className="cab-own-dz" aria-label="В эфире по районам">
+          {byDistrict.map((x) => (
+            <span key={x.d}>
+              <b>{AD_DISTRICT_RU[x.d]}</b> {x.imp} пок. · {x.clk} перех.
+            </span>
+          ))}
+        </p>
+      )}
       <Tabs
         kind="blocks"
         label="Реклама"

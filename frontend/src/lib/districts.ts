@@ -101,6 +101,23 @@ export function surfaceBounds(s: Surface): { x: number; y: number; w: number; h:
   return { x: cx - bw / 2, y: cy - bh / 2, w: bw, h: bh };
 }
 
+/**
+ * Камера к месту (PR 6b): сдвиг камеры, при котором центр места (доли рисунка улицы) — по центру экрана.
+ * Слой «улица» по ширине = ширина улицы sw и стоит центром в центре экрана при x = 0; результат — в границах панорамы.
+ */
+export function cameraXFor(s: Surface, sw: number, range: number): number {
+  const b = surfaceBounds(s);
+  const x = -(b.x + b.w / 2 - 0.5) * sw;
+  return Math.max(-range, Math.min(range, x));
+}
+/** место целиком на экране шириной vw при сдвиге камеры x (с полями margin, px) */
+export function surfaceOnScreen(s: Surface, x: number, sw: number, vw: number, margin = 12): boolean {
+  const b = surfaceBounds(s);
+  const left = vw / 2 + (b.x - 0.5) * sw + x;
+  const right = left + b.w * sw;
+  return left >= margin && right <= vw - margin;
+}
+
 /** соседние районы со своей сценой (их слои подкачиваются в простое) */
 export function neighbours(d: SceneDistrict): SceneDistrict[] {
   const i = DISTRICT_ORDER.indexOf(d);

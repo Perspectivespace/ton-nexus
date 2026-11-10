@@ -51,3 +51,13 @@ html.district-open, html.district-open body { overscroll-behavior: none; }
 @media (prefers-reduced-motion: reduce) {
   .dz.ready .dz-layer { animation: none; }
 }
+
+/* ── касание рекламы (PR 6b): зоны поверх мест; не меньше 44×44 px — и на 360, и на 390 (поле растёт за край места) ── */
+.dz-hits { position: absolute; inset: 0; pointer-events: none; }
+.dz-hit { position: absolute; box-sizing: border-box; pointer-events: auto; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+.dz-hit::before { content: ""; position: absolute;
+  top: min(0px, calc((100% - 44px) / 2)); bottom: min(0px, calc((100% - 44px) / 2));
+  left: min(0px, calc((100% - 44px) / 2)); right: min(0px, calc((100% - 44px) / 2)); }
+.dz-hit:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+/* открытое объявление: тонкая рамка вокруг места, пока видна карточка */
+.dz-hit[aria-pressed="true"] { box-shadow: 0 0 0 2px rgba(255, 255, 255, .75), 0 0 0 4px rgba(5, 6, 10, .55); }

@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { sendCityAdEvent, useDistrictAds } from "@/api/hooks";
+import { AdCard } from "@/components/AdCard";
 import { pushBack } from "@/lib/backButton";
 import { useCityPhase } from "@/lib/cityPhase";
 import { DistrictCamera, type CamLayer } from "@/lib/districtCamera";
@@ -9,7 +11,8 @@ import { loadDistrict, preloadWhenIdle, type LayerUrls } from "@/lib/districtAss
 import { startDistrictLife } from "@/lib/districtLife";
 import { DistrictIdleAds } from "@/components/DistrictIdleAds";
 import {
-  DISTRICT_RU, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, streetWidth, type SceneDistrict,
+  cameraXFor, DISTRICT_RU, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, streetWidth,
+  SURFACES, surfaceOnScreen, type SceneDistrict,
 } from "@/lib/districts";
 import { haptic } from "@/lib/haptics";
 import { WebApp } from "@/lib/telegram";
@@ -22,13 +25,18 @@ import "@/styles/districts.css";
  * PR 3: полоска «Центр · Неон-ряды · Порт», протяжка за край улицы — к соседу, «Назад» — в Центр («Прогулка»),
  * «Выйти» — на главную. Рисунки обоих районов — финальные (свой дальний план, значка «Черновик» нет).
  *
+ * PR 6b: касание купленного места — карточка объявления (показы, открытия и переходы считаются, как в Центре),
+ * касание свободного — покупка этого места (/ads?district=…&spot=…).
+ * ?spot=<место> (ссылка из «Моих объявлений»): место за экраном — камера разово подъезжает к нему (requestAnimationFrame,
+ * ~0.65 с; при «меньше движения» и на слабых устройствах — сразу), потом открывается карточка, если объявление в эфире.
+ *
  * ?lite=1 — показать вариант слабого устройства; ?phase=dawn|day|dusk|night — фаза суток (как у города).
  */
 export function District() {
   const [sp] = useSearchParams();
   const q = sp.get("d");
   const d: SceneDistrict = isSceneDistrict(q) ? q : "rows";
-  return <DistrictScene key={d} district={d} forceLite={sp.get("lite") === "1"} />;
+  return <DistrictScene key={d} district={d} forceLite={sp.get("lite") === "1"} focus={sp.get("spot")} />;
 }
 
 function useViewport() {
@@ -41,7 +49,18 @@ function useViewport() {
   return vp;
 }
 
-export function DistrictScene({ district, forceLite = false }: { district: SceneDistrict; forceLite?: boolean }) {
+/** проезд камеры к месту по ссылке, мс */
+export const FOCUS_PAN_MS = 650;
+
+export function DistrictScene({
+  district,
+  forceLite = false,
+  focus = null,
+}: {
+  district: SceneDistrict;
+  forceLite?: boolean;
+  focus?: string | null;
+}) {
   const navigate = useNavigate();
   const { phase } = useCityPhase();
   const look = lookFor(phase);
@@ -54,6 +73,27 @@ export function DistrictScene({ district, forceLite = false }: { district: Scene
   const camRef = useRef<DistrictCamera | null>(null);
   const hintsRef = useRef<EdgeHintsHandle>(null);
   const lastX = useRef<number | null>(null);
+  const { data: ads } = useDistrictAds(district);
+  const [picked, setPicked] = useState<string | null>(null);
+  const live = useMemo(
+    () => (ads?.spots ?? []).filter((s) => s.ad && SURFACES[district]?.some((v) => v.spot === s.key)),
+    [ads, district],
+  );
+  const pickedSpot = live.find((s) => s.key === picked) ?? null;
+  // касание места (камера — палец почти не сдвинулся; клавиатура — Enter): реклама → карточка, свободное → покупка
+  const act = useRef<(spot: string | null) => void>(() => {});
+  act.current = (key) => {
+    if (!key) return setPicked(null); // касание улицы мимо мест закрывает карточку
+    const s = ads?.spots.find((x) => x.key === key);
+    if (s?.ad) {
+      haptic.tap();
+      setPicked(key);
+      return;
+    }
+    if (s && !s.on_sale) return;
+    haptic.tap();
+    navigate(`/ads?district=${district}&spot=${encodeURIComponent(key)}`);
+  };
 
   const exit = () => navigate("/");
   const go = (to: Parameters<typeof districtNav.go>[1]) => districtNav.go(district, to, navigate);
@@ -114,6 +154,7 @@ export function DistrictScene({ district, forceLite = false }: { district: Scene
     const still = reducedMotion();
     const cam = new DistrictCamera(host, layers, {
       inertia: !still,
+      onTap: (t) => act.current(t?.closest<HTMLElement>(".dz-hit")?.dataset.spot ?? null),
       onEdge: (dir) => {
         const to = neighbourOf(district, dir);
         return !!to && districtNav.go(district, to, navigate);
@@ -146,6 +187,44 @@ export function DistrictScene({ district, forceLite = false }: { district: Scene
     return life.stop;
   }, [urls, lite, district]);
 
+  // показы — раз в сутки на объявление (сервер дедупит, клиент не повторяет), когда улица уже на экране
+  useEffect(() => {
+    if (!urls || !ads) return;
+    for (const s of live) sendCityAdEvent(s.ad!.id, "impression", ads.day);
+  }, [urls, ads, live]);
+
+  // ссылка на место (?spot=): один раз — подъехать, если место за экраном, и открыть карточку объявления в эфире
+  const focused = useRef(false);
+  const focusTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(focusTimer.current), []);
+  useEffect(() => {
+    const cam = camRef.current;
+    if (!focus || focused.current || !urls || !ads || !cam) return;
+    focused.current = true;
+    const s = SURFACES[district]?.find((v) => v.spot === focus);
+    if (!s) return;
+    const w = window.innerWidth;
+    const street = streetWidth(w, window.innerHeight);
+    const off = !surfaceOnScreen(s, cam.x, street, w);
+    const dur = off && !lite && motionAllowed() ? FOCUS_PAN_MS : 0;
+    if (off) cam.panTo(cameraXFor(s, street, panRange(w, window.innerHeight)), dur);
+    const open = () => live.some((x) => x.key === focus) && setPicked(focus);
+    if (dur) focusTimer.current = window.setTimeout(open, dur);
+    else open();
+  }, [focus, urls, ads, live, district, lite]);
+
+  // открыта карточка: «Назад» закрывает её, полоска районов прячется (как в «Прогулке» Центра)
+  useEffect(() => {
+    if (!pickedSpot) return;
+    const root = document.documentElement;
+    root.classList.add("city-walk-card");
+    const off = pushBack(() => setPicked(null));
+    return () => {
+      off();
+      root.classList.remove("city-walk-card");
+    };
+  }, [pickedSpot]);
+
   const sw = streetWidth(vw, vh);
   const layers = lite ? [{ id: "flat" as const, k: 1 }] : LAYERS;
   return (
@@ -170,7 +249,14 @@ export function DistrictScene({ district, forceLite = false }: { district: Scene
               style={{ width: w, marginLeft: -w / 2 }}
             >
               <img src={urls[id]} alt="" draggable={false} />
-              {(id === "mid" || id === "flat") && <DistrictIdleAds district={district} still={lite || !motionAllowed()} />}
+              {(id === "mid" || id === "flat") && (
+                <DistrictIdleAds
+                  district={district}
+                  still={lite || !motionAllowed()}
+                  picked={pickedSpot?.key ?? null}
+                  onAct={(k) => act.current(k)}
+                />
+              )}
             </div>
           );
         })}
@@ -195,6 +281,7 @@ export function DistrictScene({ district, forceLite = false }: { district: Scene
         ) : null}
         <EdgeHints ref={hintsRef} current={district} />
         <DistrictStrip current={district} onGo={go} />
+        {pickedSpot && ads && <AdCard key={pickedSpot.key} spot={pickedSpot} day={ads.day} onClose={() => setPicked(null)} />}
       </div>
     </div>
   );

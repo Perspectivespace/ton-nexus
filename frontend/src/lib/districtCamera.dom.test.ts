@@ -173,3 +173,94 @@ describe("district camera: neighbours (PR 3)", () => {
     expect(cam.x).toBe(0);
   });
 });
+
+describe("district camera: taps and panTo (PR 6b)", () => {
+  let taps: (Element | null)[] = [];
+  let spot: HTMLElement;
+  beforeEach(() => {
+    cam.destroy();
+    taps = [];
+    spot = document.createElement("span");
+    host.appendChild(spot);
+    cam = new DistrictCamera(host, () => els.map((el, i) => ({ el, k: KS[i] })), { inertia: true, onTap: (t) => taps.push(t) });
+    cam.setRange(367);
+    cam.jump(0);
+  });
+  const at = (type: string, x: number, y: number, target: EventTarget = window) => {
+    const e = new MouseEvent(type, { clientX: x, clientY: y, bubbles: true, cancelable: true });
+    Object.assign(e, { pointerId: 1, isPrimary: true });
+    target.dispatchEvent(e);
+  };
+
+  it("a tap below the threshold reports the element under the finger and does not move the street", () => {
+    at("pointerdown", 200, 300, spot);
+    at("pointermove", 204, 303);
+    at("pointerup", 204, 303);
+    flush();
+    expect(taps).toEqual([spot]);
+    expect(cam.x).toBe(0);
+  });
+
+  it("a swipe is not a tap (horizontal pans, vertical just cancels)", () => {
+    at("pointerdown", 200, 300, spot);
+    at("pointermove", 150, 300);
+    at("pointerup", 150, 300);
+    flush();
+    at("pointerdown", 200, 300, spot);
+    at("pointermove", 202, 340);
+    at("pointerup", 202, 340);
+    flush();
+    expect(taps).toEqual([]);
+  });
+
+  it("a cancelled pointer is not a tap", () => {
+    at("pointerdown", 200, 300, spot);
+    at("pointercancel", 200, 300);
+    expect(taps).toEqual([]);
+  });
+
+  it("a tap that stops the inertia glide only stops it — nothing opens", () => {
+    at("pointerdown", 300, 300, host);
+    for (let i = 1; i <= 6; i++) {
+      at("pointermove", 300 - i * 30, 300);
+      flush(1);
+    }
+    at("pointerup", 120, 300);
+    flush(2); // улица ещё едет
+    expect(cam.moving).toBe(true);
+    at("pointerdown", 200, 300, spot);
+    at("pointerup", 200, 300);
+    expect(taps).toEqual([]);
+    const x = cam.x;
+    flush();
+    expect(cam.x).toBe(x); // остановилась под пальцем
+    at("pointerdown", 200, 300, spot); // теперь стоит — касание засчитывается
+    at("pointerup", 200, 300);
+    expect(taps).toEqual([spot]);
+  });
+
+  it("buttons and the ad card do not start a drag or a tap", () => {
+    const card = document.createElement("div");
+    card.className = "cad-card";
+    host.appendChild(card);
+    at("pointerdown", 200, 300, card);
+    at("pointermove", 100, 300);
+    at("pointerup", 100, 300);
+    flush();
+    expect(cam.x).toBe(0);
+    expect(taps).toEqual([]);
+  });
+
+  it("panTo: one smooth rAF run to the point, clamped; dur 0 — jumps", () => {
+    cam.panTo(-300, 600);
+    flush(3);
+    expect(cam.x).toBeLessThan(0);
+    expect(cam.x).toBeGreaterThan(-300);
+    flush();
+    expect(cam.x).toBe(-300);
+    expect(frames.length).toBe(0); // кадры кончились — бесконечного цикла нет
+    cam.panTo(9999, 0);
+    expect(cam.x).toBe(367);
+    expect(frames.length).toBe(0);
+  });
+});
