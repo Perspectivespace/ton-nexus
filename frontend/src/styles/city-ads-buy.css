@@ -202,3 +202,16 @@
 /* кабинет: показы и переходы в эфире по районам (PR 6b) */
 .cab-own-dz { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; font: 500 12px/18px var(--f-mono); color: var(--text-2); }
 .cab-own-dz b { font-family: var(--f-sans); font-weight: 600; color: var(--text); }
+
+/* картинка экрана на фасаде: выбор, превью уже пережатой картинки (пропорция экрана 640×520) */
+.cab-pic-opt { font: 600 11px/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: #8F9BB3; }
+.cab-pic-drop { display: flex; width: 100%; min-height: 64px; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: 1px dashed rgba(255, 181, 71, .55); background: rgba(255, 181, 71, .05); color: #FFE0AE; cursor: pointer; padding: 12px; }
+.cab-pic-drop .t { font: 600 14px/1.2 var(--f-sans); }
+.cab-pic-drop .s { font: 500 12px/1.2 var(--f-sans); color: #A9B3C7; }
+.cab-pic-drop:disabled { opacity: .7; cursor: progress; }
+.cab-pic-frame { border: 1px solid rgba(255, 181, 71, .45); background: #0A0716; }
+.cab-pic-img { display: block; width: 100%; aspect-ratio: 640 / 520; object-fit: cover; max-height: 220px; }
+.cab-pic-wait { background: linear-gradient(180deg, #120A22, #07050F); }
+.cab-pic-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.cab-pic-meta { flex: 1; min-width: 0; font: 500 11px/1.2 var(--f-mono); color: #A9B3C7; }

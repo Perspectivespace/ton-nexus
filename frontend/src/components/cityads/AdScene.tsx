@@ -29,7 +29,8 @@ export function cropAround(key: string, zoom = 2, aspect = 1.6): Rect {
   return [cx, cy, cw, ch];
 }
 
-export type SignContent = { title: string; subtitle?: string | null; color: string };
+/** image — картинка экрана на фасаде (районы); у мест Центра не используется */
+export type SignContent = { title: string; subtitle?: string | null; color: string; image?: string | null };
 
 /** Вывеска как в городе (голо-баннер / неон / LED-строка). Элементы — div, не кнопки: здесь их не касаются. */
 export function Sign({ spot, format, ad }: { spot: string; format: CityAdFormat; ad: SignContent }) {
