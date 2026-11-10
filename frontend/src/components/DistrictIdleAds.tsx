@@ -5,11 +5,17 @@ import { SURFACES, type SceneDistrict, type Surface } from "@/lib/districts";
 
 /**
  * Самореклама свободных мест района поверх рисунка улицы (внутри слоя «улица» — едет вместе с ним).
- * Пока места района не продаются (PR 6), все четыре места «Неон-рядов» показывают её; цена — из витрины района.
+ * Пока места района не продаются (PR 6), все четыре места района показывают её; цена — из витрины района.
  * Только картинка: касание не обрабатывается (покупка в районах — PR 6).
  */
 const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
-const boxOf = (s: Surface): CSSProperties => ({ left: pct(s.x), top: pct(s.y), width: pct(s.w), height: pct(s.h) });
+const boxOf = (s: Surface): CSSProperties => ({
+  left: pct(s.x),
+  top: pct(s.y),
+  width: pct(s.w),
+  height: pct(s.h),
+  ...(s.rot ? { transform: `rotate(${s.rot}deg)` } : {}),
+});
 
 export function DistrictIdleAds({ district, still }: { district: SceneDistrict; still: boolean }) {
   const surfaces = SURFACES[district];
