@@ -16,6 +16,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -98,6 +99,8 @@ class CityAd(Base):
     moderated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     moderation_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     link_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # картинка экрана на фасаде (city_ad_images.ad_id → это объявление); смена картинки — снова на проверку
+    image_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -131,4 +134,26 @@ class CityAdEvent(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     day: Mapped[date] = mapped_column(Date, nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class CityAdImage(Base):
+    """Картинка экрана на фасаде: уже пережатая сервером в WebP фиксированного размера (без метаданных).
+
+    Хранится прямо в базе (bytea): ни папки на сервере, ни правок nginx. key — случайное имя в адресе картинки
+    (по id перебрать нельзя). ad_id пуст, пока картинку загрузили, но ещё не приложили к объявлению (или её заменили):
+    такие строки удаляет фоновый цикл через час. Игрокам картинка видна, только пока её объявление одобрено.
+    """
+
+    __tablename__ = "city_ad_images"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    ad_id: Mapped[int | None] = mapped_column(ForeignKey("city_ads.id", ondelete="CASCADE"), index=True, nullable=True)
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
