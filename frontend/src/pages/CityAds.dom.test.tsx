@@ -42,14 +42,36 @@ let me: Record<string, unknown> = ME;
 let bookStatus = 201;
 let mine: unknown[] = [];
 
+const ROWS_BOARD = {
+  ...BOARD,
+  district: "rows",
+  limits: { ...BOARD.limits, facade_screen: { title_max: 24, subtitle_max: 32 } },
+  spots: [
+    { key: "rows_facade", format: "facade_screen", district: "rows", title: "Экран на фасаде рынка", on_sale: true, price_day: "1.5", ad: null },
+    { key: "rows_line", format: "line", district: "rows", title: "Бегущая строка над навесами", on_sale: true, price_day: "1", ad: null },
+    { key: "rows_neon", format: "neon", district: "rows", title: "Неоновая вывеска у входа на рынок", on_sale: false, price_day: "0.3", ad: null },
+    { key: "rows_banner", format: "banner", district: "rows", title: "Голо-баннер над крышей рынка", on_sale: true, price_day: "0.5", ad: null },
+  ],
+};
+const PORT_BOARD = {
+  ...BOARD,
+  district: "port",
+  spots: [
+    { key: "port_line", format: "line", district: "port", title: "Бегущая строка на стреле крана", on_sale: true, price_day: "1", ad: null },
+    { key: "port_banner_cargo", format: "banner", district: "port", title: "Голо-баннер на контейнерах", on_sale: true, price_day: "0.5", ad: null },
+    { key: "port_banner_tram", format: "banner", district: "port", title: "Голо-баннер на станции трамвая", on_sale: true, price_day: "0.5", ad: null },
+    { key: "port_neon", format: "neon", district: "port", title: "Неоновая вывеска над воротами склада", on_sale: true, price_day: "0.3", ad: null },
+  ],
+};
+
 function quote(b: { spot: string; start: string; days: number; link_url?: string }) {
   if (b.link_url?.includes("bit.ly")) return [400, { detail: "Ссылка: сокращатели ссылок запрещены — укажите полный адрес" }];
   const busy = ["2026-11-12"];
   const end = new Date(Date.parse(`${b.start}T00:00:00Z`) + (b.days - 1) * 864e5).toISOString().slice(0, 10);
   const occupied = busy.filter((d) => d >= b.start && d <= end);
-  const perDay = b.spot === "tower_line" ? 1e9 : 5e8;
+  const perDay = b.spot === "tower_line" ? 1e9 : b.spot === "rows_facade" ? 1.5e9 : 5e8;
   return [200, {
-    spot: b.spot, format: b.spot === "tower_line" ? "line" : "banner", start: b.start, end, days: b.days,
+    spot: b.spot, format: b.spot === "tower_line" ? "line" : b.spot === "rows_facade" ? "facade_screen" : "banner", start: b.start, end, days: b.days,
     price_day: String(perDay / 1e9), total: String((perDay * b.days) / 1e9), price_day_nano: perDay, total_nano: perDay * b.days,
     available: !occupied.length, occupied, busy, next_free: occupied.length ? "2026-11-13" : b.start,
     earliest: "2026-11-09", latest: "2027-02-06",
@@ -59,6 +81,8 @@ function quote(b: { spot: string; start: string; days: number; link_url?: string
 
 function route(method: string, path: string, body: unknown): [number, unknown] {
   if (path === "/api/v1/city-ads" && method === "GET") return [200, BOARD];
+  if (path === "/api/v1/city-ads?district=rows") return [200, ROWS_BOARD];
+  if (path === "/api/v1/city-ads?district=port") return [200, PORT_BOARD];
   if (path === "/api/v1/me") return [200, me];
   if (path === "/api/v1/city-ads/quote") return quote(body as never) as [number, unknown];
   if (path === "/api/v1/city-ads" && method === "POST") {
@@ -221,7 +245,85 @@ describe("покупка рекламы", () => {
   });
 });
 
+describe("покупка в районах (PR 6)", () => {
+  it("касание места района (?spot=rows_facade): выбран район «Неон-ряды» и экран; экран — только текст 24/32; район уходит в расчёт и бронь", async () => {
+    me = { ...ME, balance: "20" };
+    await render(<CityAds />, "/ads?spot=rows_facade");
+    expect(btn("Неон-ряды").getAttribute("aria-checked")).toBe("true");
+    expect(btn("Центр").getAttribute("aria-checked")).toBe("false");
+    expect(btn(/Экран на фасаде рынка/).getAttribute("aria-checked")).toBe("true");
+    expect(btn(/Экран на фасаде рынка/).textContent).toContain("1.5 TON");
+    expect(btn(/Неоновая вывеска у входа на рынок/).disabled).toBe(true);
+    // на картинке — места района (рамки на рисунке района), а не кадр Центра
+    expect(document.querySelector('.cab-dz[data-district="rows"]')).not.toBeNull();
+    expect(document.querySelectorAll(".cab-dz .cab-slot").length).toBe(4);
+    await click(btn("Выбрать даты"));
+    await wait(30);
+    const q = calls.find((c) => c.path.endsWith("/quote"))!;
+    expect(q.body).toMatchObject({ spot: "rows_facade", district: "rows" });
+    await click(btn("К тексту"));
+    expect(text()).toContain("Заголовок на экране");
+    expect(text()).toContain("Подпись на экране");
+    expect(text()).toContain("только текст");
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+    const [title, sub] = [...document.querySelectorAll<HTMLInputElement>(".cab-step input.ui-input")];
+    expect([title.maxLength, sub.maxLength]).toEqual([24, 32]);
+    await type(title, "PIXEL CAFE");
+    await type(sub, "второй кофе в подарок");
+    // превью — экран района в облике места, с текстом покупателя
+    await until(() => document.querySelector(".cab-dz .dz-ad.k-facade_screen .t")?.textContent === "PIXEL CAFE");
+    expect(document.querySelector(".cab-dz .dz-ad.k-facade_screen .p")?.textContent).toBe("второй кофе в подарок");
+    await wait(450);
+    await until(() => !btn("Проверить").disabled);
+    await click(btn("Проверить"));
+    expect(text()).toContain("Неон-ряды · Экран на фасаде рынка");
+    await click(btn(/^Оплатить/));
+    await click(btn(/^Списать/));
+    await until(() => text().includes("Оплачено — объявление на проверке"));
+    const book = calls.find((c) => c.method === "POST" && c.path === "/api/v1/city-ads")!;
+    expect(book.body).toMatchObject({ spot: "rows_facade", district: "rows", title: "PIXEL CAFE", subtitle: "второй кофе в подарок" });
+  });
+
+  it("выбор района: Центр → Порт — места Порта с ценами по типу; выбор сохраняется в адресе", async () => {
+    await render(<CityAds />, "/ads");
+    expect(btn("Центр").getAttribute("aria-checked")).toBe("true");
+    expect(btn(/Голо-баннер над площадью/)).toBeTruthy();
+    await click(btn("Порт"));
+    await until(() => !!btn(/Голо-баннер на станции трамвая/));
+    expect(calls.some((c) => c.path === "/api/v1/city-ads?district=port")).toBe(true);
+    expect(btn("Порт").getAttribute("aria-checked")).toBe("true");
+    expect(btn(/Бегущая строка на стреле крана/).getAttribute("aria-checked")).toBe("true"); // первое в продаже
+    expect(btn(/Неоновая вывеска над воротами склада/).textContent).toContain("0.3 TON");
+    expect(btn(/Голо-баннер над площадью/)).toBeUndefined();
+    await click(btn("Выбрать даты"));
+    await wait(30);
+    expect(calls.filter((c) => c.path.endsWith("/quote")).at(-1)!.body).toMatchObject({ spot: "port_line", district: "port" });
+  });
+
+  it("ниже 3-го уровня район тоже закрыт", async () => {
+    me = { ...ME, level: 2 };
+    await render(<CityAds />, "/ads?district=port");
+    expect(text()).toContain("Реклама в городе — с 3-го уровня");
+    expect(text()).toContain("4 места в районе");
+    expect(calls.some((c) => c.path.endsWith("/quote"))).toBe(false);
+  });
+});
+
 describe("Мои объявления", () => {
+  it("район и русское название места, не ключ", async () => {
+    mine = [
+      { ...AD, id: 50, spot: "rows_facade", district: "rows", spot_title: "Экран на фасаде рынка", format: "facade_screen" },
+      { ...AD, id: 51, spot: "port_neon", district: "port", spot_title: "Неоновая вывеска над воротами склада", format: "neon" },
+      { ...AD, id: 52, district: "centre", spot_title: "Голо-баннер над площадью" },
+    ];
+    await render(<CityAds />, "/ads?tab=mine");
+    expect(text()).toContain("Неон-ряды · Экран на фасаде рынка");
+    expect(text()).toContain("Порт · Вывеска над воротами склада");
+    expect(text()).toContain("Центр · Баннер над площадью");
+    expect(text()).not.toMatch(/rows_facade|port_neon/);
+    expect(document.querySelector('.cab-thumb.cab-dz[data-district="rows"]')).not.toBeNull();
+  });
+
   it("статус, счётчики, отмена до проверки с возвратом", async () => {
     mine = [AD, { ...AD, id: 43, status: "approved", moderated: true, start: "2026-11-06", stats: { impression: 200, open: 40, click: 10 } }];
     await render(<CityAds />, "/ads?tab=mine");
@@ -246,6 +348,7 @@ describe("Кабинет → Реклама", () => {
   it("очередь с превью, одобрение, отклонение с причиной, снятие с возвратом за непоказанные сутки", async () => {
     await render(<CityAdsOwner />, "/owner?tab=ads");
     expect(text()).toContain("Доход с рекламы");
+    expect(text()).toContain("Центр · Баннер над площадью");
     expect(text()).toContain("3.5 TON");
     expect(document.querySelector(".cad-card.cab-static")!.textContent).toContain("PIXEL");
     await click(btn("Одобрить"));

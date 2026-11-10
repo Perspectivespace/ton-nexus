@@ -5,16 +5,17 @@ import { adVars } from "@/lib/cityAdPalette";
 import { linkHost } from "@/lib/cityAdLink";
 import { haptic } from "@/lib/haptics";
 import {
-  SPOT_SHORT,
+  districtOfSpot,
   canCancel,
   canEditLink,
   daysWord,
   fmtRange,
   linkHint,
+  spotName,
   statusView,
   ton,
 } from "@/lib/cityAdBuy";
-import { AdScene, cropAround } from "./AdScene";
+import { PlaceScene } from "./DistrictAdScene";
 
 /** «Мои объявления»: статус, даты, счётчики «Прогулки», отмена до проверки, смена ссылки. */
 export function MyAds({ today, onBuy }: { today: string; onBuy: () => void }) {
@@ -26,7 +27,7 @@ export function MyAds({ today, onBuy }: { today: string; onBuy: () => void }) {
     return (
       <EmptyState
         title="Пока нет объявлений"
-        body="Вывеска, голо-баннер или строка на башне — их увидят все, кто гуляет по городу."
+        body="Вывеска, голо-баннер, строка на башне или экран на рынке — их увидят все, кто гуляет по городу и районам."
         action={
           <Button className="mt-2" onClick={onBuy}>
             Разместить рекламу
@@ -75,8 +76,11 @@ function MyAdItem({ ad, today, onEdit }: { ad: CityAdMine; today: string; onEdit
   return (
     <Panel className={`cab-ad space-y-3 p-3${closed ? " closed" : ""}`} style={adVars(ad.color)}>
       <div className="cab-ad-head">
-        <AdScene
-          crop={cropAround(ad.spot, ad.format === "line" ? 2.6 : 3, 1.5)}
+        <PlaceScene
+          district={ad.district ?? districtOfSpot(ad.spot)}
+          spot={ad.spot}
+          zoom={ad.format === "line" ? 2.6 : 3}
+          aspect={1.5}
           sign={{ spot: ad.spot, format: ad.format, ad: { title: ad.title, subtitle: ad.subtitle, color: ad.color } }}
           className="cab-thumb"
           label={`Вывеска «${ad.title}»`}
@@ -85,7 +89,7 @@ function MyAdItem({ ad, today, onEdit }: { ad: CityAdMine; today: string; onEdit
           <Tag tone={st.tone}>{st.label}</Tag>
           <p className="cab-ad-t">{ad.title}</p>
           <p className="cab-ad-s">
-            {SPOT_SHORT[ad.spot] ?? ad.spot} · {fmtRange(ad.start, ad.end)} · {daysWord(ad.days)}
+            {spotName(ad.spot, ad.spot_title, ad.district)} · {fmtRange(ad.start, ad.end)} · {daysWord(ad.days)}
           </p>
         </div>
       </div>

@@ -8,18 +8,19 @@ import {
 } from "@/api/hooks";
 import { Button, EmptyState, ErrorState, Field, Panel, SkeletonCard, StatTile, Tabs, Tag } from "@/components/ui";
 import { AdCardPreview } from "@/components/cityads/AdCardPreview";
-import { AdScene, cropAround } from "@/components/cityads/AdScene";
+import { PlaceScene } from "@/components/cityads/DistrictAdScene";
 import { AdStats } from "@/components/cityads/MyAds";
 import { linkHost } from "@/lib/cityAdLink";
 import { adVars } from "@/lib/cityAdPalette";
 import { haptic } from "@/lib/haptics";
 import {
-  SPOT_SHORT,
+  districtOfSpot,
   adTimeline,
   daysWord,
   fmtDayShort,
   fmtRange,
   refundOnReject,
+  spotName,
   ton,
   unshownDays,
 } from "@/lib/cityAdBuy";
@@ -110,7 +111,7 @@ function OwnerAd({ ad, today, mode }: { ad: CityAdOwner; today: string; mode: Vi
       <div className="cab-mod-head">
         <span className="cab-mod-id">#{ad.id}</span>
         <span className="min-w-0 flex-1 truncate">
-          {SPOT_SHORT[ad.spot] ?? ad.spot} · {fmtRange(ad.start, ad.end)}
+          {spotName(ad.spot, ad.spot_title, ad.district)} · {fmtRange(ad.start, ad.end)}
         </span>
         {pending && ad.moderated ? (
           <Tag tone="amber">Новая ссылка</Tag>
@@ -122,8 +123,11 @@ function OwnerAd({ ad, today, mode }: { ad: CityAdOwner; today: string; mode: Vi
           <Tag tone="amber">Проверка</Tag>
         )}
       </div>
-      <AdScene
-        crop={cropAround(ad.spot, ad.format === "line" ? 2.4 : 2.6, 2.2)}
+      <PlaceScene
+        district={ad.district ?? districtOfSpot(ad.spot)}
+        spot={ad.spot}
+        zoom={ad.format === "line" ? 2.4 : 2.6}
+        aspect={2.2}
         sign={{ spot: ad.spot, format: ad.format, ad: { title: ad.title, subtitle: ad.subtitle, color: ad.color } }}
         label={`Вывеска «${ad.title}»`}
       />
