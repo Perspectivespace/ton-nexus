@@ -15,7 +15,12 @@ const m = vi.hoisted(() => ({
   load: vi.fn(),
   life: vi.fn(() => ({ stop: vi.fn(), spawn: vi.fn() })),
   phase: "night" as "dawn" | "day" | "dusk" | "night",
-  ads: { data: undefined } as { data?: { spots: { key: string; price_day: string | null; ad: unknown }[]; prices?: Record<string, string> } },
+  ads: { data: undefined } as {
+    data?: {
+      spots: { key: string; price_day: string | null; ad: { id: number; title: string; subtitle: string | null; color: string } | null }[];
+      prices?: Record<string, string>;
+    };
+  },
 }));
 vi.mock("@/api/hooks", () => ({ useMe: () => m.me, useDistrictAds: () => m.ads }));
 vi.mock("@/lib/districtAssets", () => ({ loadDistrict: m.load, preloadWhenIdle: () => () => {} }));
@@ -217,10 +222,27 @@ describe("district: idle promo on free ad spots (Неон-ряды)", () => {
     expect(el.querySelector(".k-line")?.textContent).toBe("Место для рекламы · от 1 TON/сутки");
   });
 
-  it("a bought spot shows no promo", async () => {
-    m.ads.data!.spots[0].ad = { id: 1 };
+  it("a bought spot shows the buyer's ad in the same look (PR 6): title, caption, colour — no promo", async () => {
+    m.ads.data!.spots[0].ad = { id: 1, title: "PIXEL CAFE", subtitle: "второй кофе в подарок", color: "mint" };
+    m.ads.data!.spots[3].ad = { id: 2, title: "NEXUS", subtitle: "скидка 20 %", color: "magenta" };
+    m.ads.data!.spots[1].ad = { id: 3, title: "БЕГУЩАЯ СТРОКА РЫНКА", subtitle: null, color: "amber" };
     await render("/district?d=rows");
-    expect([...el.querySelectorAll<HTMLElement>(".dz-idle")].map((n) => n.dataset.spot)).not.toContain("rows_facade");
+    const idle = [...el.querySelectorAll<HTMLElement>(".dz-mid .dz-idle")];
+    expect(idle.map((n) => n.dataset.spot)).toEqual(["rows_facade", "rows_line", "rows_neon", "rows_banner"]);
+    const [facade, line, neon, banner] = idle;
+    expect(facade.classList.contains("dz-ad")).toBe(true);
+    expect(facade.querySelector(".tag")).toBeNull();
+    expect(facade.querySelector(".t")?.textContent).toBe("PIXEL CAFE");
+    expect(facade.querySelector(".p")?.textContent).toBe("второй кофе в подарок");
+    expect(facade.style.getPropertyValue("--ac")).toBe("#5DFFB0");
+    expect(line.classList.contains("dz-ad")).toBe(true);
+    expect(line.textContent).toBe("БЕГУЩАЯ СТРОКА РЫНКА");
+    expect(banner.querySelector(".t")?.textContent).toBe("NEXUS");
+    expect(banner.querySelector(".s")?.textContent).toBe("скидка 20 %");
+    expect(banner.style.getPropertyValue("--ac")).toBe("#FF2E7E");
+    // свободное место по-прежнему рекламирует само себя
+    expect(neon.classList.contains("dz-ad")).toBe(false);
+    expect(neon.textContent).toBe("Засветись тут");
   });
 
   it("Порт: the 4 free spots show promo; the crane-boom ticker is tilted along the boom", async () => {

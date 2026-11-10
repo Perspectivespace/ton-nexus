@@ -74,3 +74,20 @@
 .dz-idle.compact.k-neon .t { white-space: nowrap; font-size: min(52cqh, 14cqw); letter-spacing: .04em; }
 .dz-idle.compact.k-banner .t { font-size: min(34cqh, 13.5cqw); }
 .dz-idle.compact:is(.k-banner, .k-neon) > .in { padding: 0 6cqw; }
+
+/* ═══ Купленные места районов (PR 6): тот же облик места, текст и цвет покупателя (класс dz-ad).
+ * Голо-баннер и вывеска — та же плашка и обводка днём (правила выше); экран фасада — рамка цвета объявления,
+ * светлые буквы (--ad-ink) на тёмном экране; подпись — у баннера и экрана. Контраст проверяет adContrast.test.ts. */
+.dz-idle.dz-ad.k-facade_screen {
+  background: radial-gradient(110% 80% at 78% 12%, rgba(var(--ac-rgb), .16), transparent 62%),
+    linear-gradient(180deg, #120A22 0%, #0A0716 72%, #07050F 100%);
+  box-shadow: inset 0 0 0 1.5px var(--ac), inset 0 0 14px rgba(var(--ac-rgb), .32), 0 0 14px rgba(var(--ac-rgb), .32); }
+.dz-ad.k-facade_screen > .in { gap: 6cqh; padding: 9cqh 8cqw; }
+.dz-ad.k-facade_screen .t { font-size: min(16cqh, 10.5cqw); color: var(--ad-ink); overflow-wrap: anywhere;
+  text-shadow: 0 0 5px rgba(var(--ac-rgb), .95), 0 0 16px rgba(var(--ac-rgb), .5); }
+.dz-ad.k-facade_screen .p { padding-top: 5cqh; border-top-color: rgba(var(--ac-rgb), .6); white-space: normal; text-wrap: balance;
+  font: 600 min(9.5cqh, 6.4cqw) / 1.2 var(--f-sans); color: var(--ad-ink); }
+.dz-ad.k-banner .s { position: relative; display: block; max-width: 100%; margin-top: 4cqh; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font: 600 min(13cqh, 8cqw) / 1.1 var(--f-sans); color: var(--ad-ink); text-shadow: 0 0 3px rgba(var(--ac-rgb), .8); }
+:is(.dz[data-art="day"], .cads-live.is-unlit) .dz-ad.k-banner .s { text-shadow: var(--ad-outline); }
+.dz-ad:is(.k-banner, .k-neon) .t { overflow-wrap: anywhere; }
