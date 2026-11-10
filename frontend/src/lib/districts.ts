@@ -118,6 +118,38 @@ export function surfaceOnScreen(s: Surface, x: number, sw: number, vw: number, m
   return left >= margin && right <= vw - margin;
 }
 
+/**
+ * Точка покоя камеры района: прямой вход и проезд от соседа заканчиваются здесь, а не строго в центре улицы.
+ * В центре «Порта» и «Неон-рядов» места рекламы резались краем экрана (строка на кране, баннеры). Ищем ближайший
+ * к центру сдвиг, при котором ни одно место не обрезано (каждое либо целиком на экране, либо целиком за ним),
+ * при равенстве — где целиком видно больше мест. Нет такого сдвига — центр.
+ */
+export function restX(d: SceneDistrict, vw: number, vh: number, margin = 6): number {
+  const list = SURFACES[d] ?? [];
+  const sw = streetWidth(vw, vh);
+  const range = panRange(vw, vh);
+  let best = 0;
+  let score = -1;
+  for (let i = 0; i <= 2 * Math.ceil(range); i++) {
+    const x = (i % 2 ? 1 : -1) * Math.ceil(i / 2); // 0, 1, −1, 2, −2 … — от центра к краям
+    if (Math.abs(x) > range) continue;
+    let full = 0;
+    let cut = false;
+    for (const s of list) {
+      const b = surfaceBounds(s);
+      const left = vw / 2 + (b.x - 0.5) * sw + x;
+      const right = left + b.w * sw;
+      if (left >= margin && right <= vw - margin) full++;
+      else if (right > 0 && left < vw) cut = true;
+    }
+    if (!cut && full > score) {
+      best = x;
+      score = full;
+    }
+  }
+  return best;
+}
+
 /** соседние районы со своей сценой (их слои подкачиваются в простое) */
 export function neighbours(d: SceneDistrict): SceneDistrict[] {
   const i = DISTRICT_ORDER.indexOf(d);

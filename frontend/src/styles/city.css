@@ -209,10 +209,10 @@ html.low-end .cv2-back { display: none; }
 .ph-day.cv2 .rays::before { background:
     radial-gradient(circle at var(--sx) var(--sy), rgba(255,255,255,.85) 0, rgba(230,246,255,.35) 7%, transparent 22%),
     repeating-conic-gradient(from 4deg at var(--sx) var(--sy), rgba(245,252,255,0) 0deg, rgba(245,252,255,.26) 5deg, rgba(245,252,255,0) 12deg, rgba(255,255,255,.14) 18deg, rgba(255,255,255,0) 25deg); }
-/* кромка: силуэт башни чуть сдвинут к солнцу и лежит под копией — выглядывает тонкой светлой линией по боку */
-.cv2 .rim { transform: translateX(-2px);
+/* кромка: тонкая полоса у бока башни со стороны солнца (towerRim) — её форма задаётся инлайн, копия кадра не нужна */
+.cv2 .rim {
   background: linear-gradient(180deg, #FFE0A8 0%, #FFB98A 38%, rgba(255,160,130,.4) 50%, transparent 60%); }
-.ph-day.cv2 .rim { transform: translateX(1.4px); opacity: .5;
+.ph-day.cv2 .rim { opacity: .5;
   background: linear-gradient(180deg, #F4FBFF 0%, #CFEFFF 40%, transparent 60%); }
 /* грань башни, обращённая к солнцу: мягкий свет поверх кадра */
 .cv2 .face { mix-blend-mode: soft-light;
@@ -364,8 +364,8 @@ html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
     radial-gradient(circle at 75.7% 50.8%, #FFF4D6 0, #FFE1A0 1.9%, #FFB560 3.2%, rgba(255,128,64,.9) 3.6%, rgba(255,110,70,.5) 4.4%, rgba(255,96,84,.26) 9%, rgba(240,70,110,.1) 20%, transparent 38%),
     radial-gradient(75% 9% at 72% 55%, rgba(255,150,70,.42), rgba(255,110,80,.16) 55%, transparent 80%),
     linear-gradient(180deg, rgba(110,16,90,.2) 0%, rgba(190,36,90,.12) 26%, rgba(255,104,64,.16) 46%, rgba(255,140,70,.1) 54%, transparent 62%); }
-/* кромка: силуэт башни сдвинут к солнцу (вправо) и лежит под копией — тонкая оранжевая линия по правому боку */
-.cv2 .dk-rim { transform: translateX(2px);
+/* кромка: тонкая оранжевая полоса по правому боку башни (towerRim), не силуэт под копией кадра */
+.cv2 .dk-rim {
   background: linear-gradient(180deg, #FFC27A 0%, #FF8A5C 34%, rgba(255,90,90,.5) 52%, transparent 66%); }
 /* отсвет заката на стекле башни: тёплая правая грань, гаснет к левому краю и книзу */
 .cv2 .dk-face { mix-blend-mode: soft-light;

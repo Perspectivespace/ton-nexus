@@ -11,7 +11,7 @@ import { loadDistrict, preloadWhenIdle, type LayerUrls } from "@/lib/districtAss
 import { startDistrictLife } from "@/lib/districtLife";
 import { DistrictIdleAds } from "@/components/DistrictIdleAds";
 import {
-  cameraXFor, DISTRICT_RU, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, streetWidth,
+  cameraXFor, DISTRICT_RU, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, restX, streetWidth,
   SURFACES, surfaceOnScreen, type SceneDistrict,
 } from "@/lib/districts";
 import { haptic } from "@/lib/haptics";
@@ -145,7 +145,7 @@ export function DistrictScene({
     };
   }, [navigate, district]);
 
-  // камера: прямой вход — в центре улицы; из соседнего района — проезд от ближнего края к центру (~0.6 с)
+  // камера: прямой вход — в точке покоя (около центра улицы); из соседнего района — проезд от ближнего края к ней (~0.6 с)
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host || !urls) return;
@@ -164,8 +164,9 @@ export function DistrictScene({
     camRef.current = cam;
     cam.setRange(panRange(window.innerWidth, window.innerHeight));
     const came = districtNav.takeArrival();
-    if (came) cam.arrive(came.dir, still ? 0 : ARRIVE_MS);
-    else cam.jump(lastX.current ?? 0); // смена фазы суток подменяет рисунок — камера остаётся на месте
+    const rest = restX(district, window.innerWidth, window.innerHeight); // места рекламы не режутся краем экрана
+    if (came) cam.arrive(came.dir, still ? 0 : ARRIVE_MS, rest);
+    else cam.jump(lastX.current ?? rest); // смена фазы суток подменяет рисунок — камера остаётся на месте
     if (import.meta.env.DEV) (window as unknown as { __districtCam?: DistrictCamera }).__districtCam = cam;
     return () => {
       lastX.current = cam.x;

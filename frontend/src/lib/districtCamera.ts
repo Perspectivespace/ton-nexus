@@ -81,14 +81,15 @@ export class DistrictCamera {
   }
 
   /**
-   * вход из соседнего района: камера стоит у ближнего края улицы и за dur мс проезжает к центру.
+   * вход из соседнего района: камера стоит у ближнего края улицы и за dur мс проезжает к точке покоя rest (0 — центр).
    * dir = +1 — шли вправо (пришли слева): видим левый конец улицы, т. е. сдвиг +range.
    */
-  arrive(dir: Dir, dur: number) {
+  arrive(dir: Dir, dur: number, rest = 0) {
     const from = dir === 1 ? this.range : -this.range;
+    const to = clamp(rest, -this.range, this.range);
     this.jump(from);
-    if (dur <= 0 || this.range === 0) return this.jump(0);
-    this.tw = { from, to: 0, t0: -1, dur };
+    if (dur <= 0 || this.range === 0) return this.jump(to);
+    this.tw = { from, to, t0: -1, dur };
     this.wake();
   }
 

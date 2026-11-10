@@ -16,7 +16,6 @@
 @media (max-width: 370px) { .dz-strip > button { letter-spacing: .06em; font-size: 10.5px; } }
 
 /* с полоской подсказка «Ведите пальцем» стоит над ней; открытая карточка объявления полоску прячет */
-.walk-ui.has-strip .walk-hint { bottom: calc(70px + var(--safe-b, 0px)); }
 html.city-walk-card .dz-strip { display: none; }
 
 /* подсказки соседа у краёв улицы: --pull 0…1 — насколько протянули за край */

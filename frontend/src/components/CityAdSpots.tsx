@@ -20,9 +20,9 @@ import { lowEnd, reducedMotion } from "@/lib/walkPrefs";
 export const AD_SPOT_BOX: Record<string, [number, number, number, number]> = {
   tower_line: [334, 573, 154, 26],
   banner_sky: [196, 728, 124, 56],
-  banner_street: [92, 866, 126, 56],
+  banner_street: [148, 852, 126, 56], // ближе к центру: в «Прогулке» у края экрана место обрезалось
   neon_left: [236, 934, 112, 30],
-  neon_right: [542, 868, 106, 34],
+  neon_right: [470, 868, 106, 34], // то же с правого края
 };
 const W = 720;
 const H = 1280;
