@@ -72,7 +72,12 @@
           mask: radial-gradient(circle, #000 62%, transparent 70%) 0 0 / calc(var(--u)*3) calc(var(--u)*3); }
 .cad-tick .own { justify-content: center; color: #E2FEFF; font: 800 calc(var(--u) * 15) / 1 var(--f-mono); letter-spacing: .3em; padding-left: .3em;
   text-shadow: 0 0 calc(var(--u)*3) #2BF5FF, 0 0 calc(var(--u)*8) rgba(43,245,255,.6); }
-.cad-tick .tw-win { justify-content: flex-start; overflow: hidden; }
+.cad-tick .tw-win { justify-content: flex-start; overflow: hidden;
+  /* края окна гаснут: бегущая строка уходит в темноту, а не обрывается на полубукве («т 1 TON/сутки») */
+  -webkit-mask: radial-gradient(circle, #000 62%, transparent 70%) 0 0 / calc(var(--u)*3) calc(var(--u)*3), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-composite: source-in;
+          mask: radial-gradient(circle, #000 62%, transparent 70%) 0 0 / calc(var(--u)*3) calc(var(--u)*3), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+          mask-composite: intersect; }
 .cad-tick .trk { display: inline-block; white-space: nowrap; will-change: transform; transform: translateX(200%);
   font: 800 calc(var(--u) * 18) / 1 var(--f-mono); letter-spacing: .02em; color: #FFF3DC;
   text-shadow: 0 0 calc(var(--u)*1.5) #fff, 0 0 calc(var(--u)*4) var(--ac), 0 0 calc(var(--u)*9) var(--ac); }
