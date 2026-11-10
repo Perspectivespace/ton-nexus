@@ -13,7 +13,7 @@ import { blocked, rnd } from "./CityDaySky";
 type Ad = { x: number; y: number; w: number; h: number; slides: [string, string][] };
 const ADS: Ad[] = [
   { x: 168, y: 656, w: 92, h: 44, slides: [["SKY TRAM", "next 4 min"], ["SOLAR GRID", "98% clean"], ["NEXUS AIR", "fresh 21°"]] },
-  { x: 96, y: 872, w: 92, h: 42, slides: [["ORBIT TEA", "fresh brew"], ["SKYPORT", "gate 7 open"], ["NEXUS PAY", "tap & go"]] },
+  { x: 152, y: 858, w: 92, h: 42, slides: [["ORBIT TEA", "fresh brew"], ["SKYPORT", "gate 7 open"], ["NEXUS PAY", "tap & go"]] },
 ];
 const W = 720;
 const H = 1280;
