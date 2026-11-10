@@ -2,6 +2,9 @@ import { getInitData } from "@/lib/telegram";
 
 const BASE = import.meta.env.VITE_API_BASE || "";
 
+/** Полный адрес ресурса API (картинка в <img>): путь с сервера + VITE_API_BASE, если API на другом адресе. */
+export const apiUrl = (path: string) => `${BASE}${path}`;
+
 export class ApiError extends Error {
   constructor(
     public status: number,
