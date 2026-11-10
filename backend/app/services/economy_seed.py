@@ -95,15 +95,15 @@ DEFAULTS: dict[str, tuple[object, str]] = {
                 "banner_street": {"price_day": "0.5", "enabled": True},
                 "neon_left": {"price_day": "0.3", "enabled": True},
                 "neon_right": {"price_day": "0.3", "enabled": True},
-                # районы: цена — по типу места (prices), пока не продаются (включит владелец к выходу рисунков)
-                "rows_facade": {"enabled": False},
-                "rows_line": {"enabled": False},
-                "rows_neon": {"enabled": False},
-                "rows_banner": {"enabled": False},
-                "port_line": {"enabled": False},
-                "port_banner_cargo": {"enabled": False},
-                "port_banner_tram": {"enabled": False},
-                "port_neon": {"enabled": False},
+                # районы: цена — по типу места (prices); продаются (миграция 021), владелец может снять любое место с продажи
+                "rows_facade": {"enabled": True},
+                "rows_line": {"enabled": True},
+                "rows_neon": {"enabled": True},
+                "rows_banner": {"enabled": True},
+                "port_line": {"enabled": True},
+                "port_banner_cargo": {"enabled": True},
+                "port_banner_tram": {"enabled": True},
+                "port_neon": {"enabled": True},
             },
             # цена за сутки по типу места; у места может быть своя цена (spots.<место>.price_day)
             "prices": {
