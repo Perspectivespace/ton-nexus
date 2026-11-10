@@ -3,6 +3,13 @@
  * движение — разовые WAAPI-прогоны из CityAdSpots.tsx. Размеры — в пикселях кадра: --u = 1 px кадра 720×1280
  * (container query по ширине сцены, запасное значение через vw — в city-walk.css). */
 .cads-live > * { position: absolute; display: block; }
+/* ── читаемость в любое время суток: плашка под текстом и буквы — общие токены рекламы и самопродвижения.
+ * --ad-plate-a — наименьшая плотность плашки под буквами (к краям светлеет, к центру плотнее).
+ * Значения проверяет styles/adContrast.test.ts (контраст ≥ 4.5:1 по фазам, с подкраской рассвета/вечера). */
+.cads-live, .dz-idles { --ad-plate: 4, 8, 20; --ad-plate-a: .88; --ad-ink: #F4FDFF;
+  --ad-plate-bg: radial-gradient(120% 100% at 50% 50%, rgba(var(--ad-plate), calc(var(--ad-plate-a) + .08)), rgba(var(--ad-plate), var(--ad-plate-a)) 78%, rgba(var(--ad-plate), calc(var(--ad-plate-a) - .22)));
+  --ad-outline: 0 0 1px rgba(2, 5, 14, .95), 0 0 2.5px rgba(2, 5, 14, .85); }
+/* днём и на рассвете свечения не видно — буквам помогает тёмная обводка (ниже); плотность плашки одна на все фазы */
 .cad-spot { appearance: none; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
   margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; text-align: center;
   white-space: nowrap; overflow: visible; contain: layout style; pointer-events: none; cursor: default; -webkit-tap-highlight-color: transparent; }
@@ -27,7 +34,7 @@
     radial-gradient(closest-side, rgba(var(--ac-rgb), .22), transparent); }
 /* тёмная плашка под текстом — читаемость мелкого текста на фоне города */
 .cad-holo::before { content: ""; position: absolute; inset: calc(var(--u)*4) calc(var(--u)*4.5); pointer-events: none; border-radius: calc(var(--u)*2);
-  background: radial-gradient(120% 100% at 50% 50%, rgba(3, 7, 18, .62), rgba(3, 7, 18, .38) 70%, rgba(3, 7, 18, .18)); }
+  background: var(--ad-plate-bg); }
 /* луч проектора от эмиттера снизу */
 .cad-holo::after { content: ""; position: absolute; left: 6%; right: 6%; top: 100%; height: calc(var(--u) * 16); pointer-events: none;
   background: linear-gradient(0deg, rgba(var(--ac-rgb), .5), rgba(var(--ac-rgb), 0)); clip-path: polygon(0 0, 100% 0, 58% 100%, 42% 100%); opacity: .7; }
@@ -35,7 +42,7 @@
 .cad-holo .emit { position: absolute; left: 40%; right: 40%; top: calc(100% + var(--u)*15); height: calc(var(--u)*3);
   background: linear-gradient(90deg, #1A2030, var(--ac-core), #1A2030); border-radius: 1px; }
 /* хроматическая кромка — только на заголовке; подпись чистая */
-.cad-holo .t { color: #F2FDFF;
+.cad-holo .t { color: var(--ad-ink);
   text-shadow: calc(var(--u)*-.7) 0 rgba(255, 46, 126, .55), calc(var(--u)*.7) 0 rgba(43, 245, 255, .55), 0 0 calc(var(--u)*2.5) rgba(var(--ac-rgb), .95), 0 0 calc(var(--u)*9) rgba(var(--ac-rgb), .6); }
 .cad-holo.f-banner .t { font: 700 calc(var(--u) * var(--fs, 14.5)) / 1 var(--f-display); letter-spacing: .02em; }
 .cad-holo.f-banner small { font: 700 calc(var(--u) * var(--fs2, 10.5)) / 1 var(--f-sans); letter-spacing: .01em; color: var(--ac-core);
@@ -47,24 +54,22 @@
   background: radial-gradient(closest-side, rgba(var(--ac-rgb), .34), rgba(var(--ac-rgb), .12) 55%, transparent); }
 .cads-live.is-lit .cad-halo { opacity: .45; }
 
-/* день: проекция в солнце бледнеет — светлое стекло и плашка, тёмные цветные буквы, кромка еле заметна */
-.cads-live.is-unlit .cad-holo.f-banner { background-color: rgba(244, 250, 255, .78); }
-.cads-live.is-unlit .cad-holo.f-neon { background: repeating-linear-gradient(0deg, rgba(var(--ac-rgb), .18) 0 calc(var(--u)*1), transparent calc(var(--u)*1) calc(var(--u)*3)), rgba(236, 246, 255, .72); }
-.cads-live.is-unlit .cad-holo::before { background: radial-gradient(120% 100% at 50% 50%, rgba(255,255,255,.7), rgba(255,255,255,.45) 75%, rgba(255,255,255,.25)); }
-.cads-live.is-unlit .cad-holo .t { color: var(--ac-ink); text-shadow: calc(var(--u)*-.5) 0 rgba(255,46,126,.25), calc(var(--u)*.5) 0 rgba(0,160,190,.3); }
-.cads-live.is-unlit .cad-holo.f-banner small { color: #142238; text-shadow: none; }
-.cads-live.is-unlit .cad-holo::after { opacity: .35; }
+/* день и рассвет: голо-проекция остаётся тёмной (плотнее плашка, см. токены) — свечение на солнце не видно,
+ * поэтому вместо ореола у букв тёмная обводка, хроматическая кромка остаётся тонкой */
+.cads-live.is-unlit .cad-holo .t { text-shadow: var(--ad-outline), calc(var(--u)*-.6) 0 rgba(255, 46, 126, .5), calc(var(--u)*.6) 0 rgba(43, 245, 255, .5); }
+.cads-live.is-unlit .cad-holo.f-banner { background-color: rgba(var(--ad-plate), .3); }
+.cads-live.is-unlit .cad-holo::after { opacity: .5; }
 
 /* ── LED-матрица на башне (вместо экрана «МАЙНЕР», чередуется с ним) ── */
 .cad-tick { overflow: hidden; background: #05060A; box-shadow: inset 0 0 0 calc(var(--u)*1) #2A3040, 0 0 0 calc(var(--u)*1) rgba(0,0,0,.6); }
-.cads-live.is-unlit .cad-tick { background: #10141E; }
+/* днём табло то же тёмное: буквы светятся только на чёрном */
 .cad-tick::before { content: ""; position: absolute; inset: calc(var(--u)*2.5); pointer-events: none;
   background: radial-gradient(circle, rgba(var(--ac-rgb), .13) 45%, transparent 52%) 0 0 / calc(var(--u)*3) calc(var(--u)*3); }
 .cad-tick .tk, .cad-tick .own, .cad-tick .tw-win { position: absolute; inset: 0; display: flex; align-items: center; }
 .cad-tick .own, .cad-tick .tw-win { transition: opacity .45s ease;
-  /* сетка светодиодов неподвижна: маска на окне, буквы «перескакивают» по точкам, а не едут вместе с ними */
-  -webkit-mask: radial-gradient(circle, #000 52%, transparent 60%) 0 0 / calc(var(--u)*3) calc(var(--u)*3);
-          mask: radial-gradient(circle, #000 52%, transparent 60%) 0 0 / calc(var(--u)*3) calc(var(--u)*3); }
+  /* сетка светодиодов неподвижна (точки крупные, почти смыкаются — буквы читаются и днём на мелком экране): маска на окне, буквы «перескакивают» по точкам, а не едут вместе с ними */
+  -webkit-mask: radial-gradient(circle, #000 62%, transparent 70%) 0 0 / calc(var(--u)*3) calc(var(--u)*3);
+          mask: radial-gradient(circle, #000 62%, transparent 70%) 0 0 / calc(var(--u)*3) calc(var(--u)*3); }
 .cad-tick .own { justify-content: center; color: #E2FEFF; font: 800 calc(var(--u) * 15) / 1 var(--f-mono); letter-spacing: .3em; padding-left: .3em;
   text-shadow: 0 0 calc(var(--u)*3) #2BF5FF, 0 0 calc(var(--u)*8) rgba(43,245,255,.6); }
 .cad-tick .tw-win { justify-content: flex-start; overflow: hidden; }
@@ -82,5 +87,6 @@ html.city-walk .cad-spot:focus-visible,
 .cad-spot.picked { outline: calc(var(--u) * 1.5) solid rgba(var(--ac-rgb), .9); outline-offset: calc(var(--u) * 5); }
 .cad-tick.picked { overflow: hidden; }
 
-/* дождь идёт перед рекламой (и перед вывесками города) — z-index дешевле, чем перестановка слоёв */
+/* дождь идёт перед вывесками города, но реклама — над дождём: струи не перечёркивают буквы (z-index дешевле перестановки слоёв) */
 .cv2 .cv2-life > .rain { z-index: 1; }
+.cv2 .cv2-life > .cads-live { z-index: 2; }
