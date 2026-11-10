@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ART_ASPECT, districtFromStart, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
-  SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES,
+  SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES, surfaceBounds,
 } from "./districts";
 
 type Fs = { existsSync(path: URL): boolean; statSync(path: URL): { size: number }; readFileSync(path: URL): Uint8Array };
@@ -26,9 +26,9 @@ describe("districts: layers and speeds", () => {
   });
 
   it("files: 4 layers (own far plan for final districts, shared skyline for sketches), one flattened image on low-end; every file exists", () => {
-    expect(OWN_FAR).toEqual(["rows"]);
+    expect(OWN_FAR).toEqual(["rows", "port"]); // оба района — финальный рисунок
     expect(layerFiles("rows", "night", false).map((f) => f.file)).toEqual(["rows-night-sky", "rows-night-far", "rows-night-mid", "rows-night-near"]);
-    expect(layerFiles("port", "day", false)[1].file).toBe("skyline-day");
+    expect(layerFiles("port", "day", false).map((f) => f.file)).toEqual(["port-day-sky", "port-day-far", "port-day-mid", "port-day-near"]);
     expect(layerFiles("port", "day", true)).toEqual([{ id: "flat", file: "port-day-flat" }]);
     let total = 0;
     for (const d of SCENE_DISTRICTS)
@@ -124,16 +124,56 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
       expect(s.x + s.w).toBeLessThan(1);
       expect(s.y + s.h).toBeLessThan(1);
     }
-    expect(SURFACES.port).toBeUndefined(); // Порт — после финального рисунка
   });
 
-  it("street-life lanes never cross an ad surface (movers ride the full street width)", () => {
+  it("Порт: four ad surfaces (crane boom ticker, containers, sky-tram station, warehouse gate), inside the frame", () => {
+    const port = SURFACES.port ?? [];
+    expect(port.map((s) => s.spot)).toEqual(["port_line", "port_banner_cargo", "port_banner_tram", "port_neon"]);
+    expect(port.map((s) => s.kind)).toEqual(["line", "banner", "banner", "neon"]);
+    for (const s of port) {
+      const b = surfaceBounds(s);
+      expect(b.x).toBeGreaterThan(0);
+      expect(b.y).toBeGreaterThan(0);
+      expect(b.x + b.w).toBeLessThan(1);
+      expect(b.y + b.h).toBeLessThan(1);
+    }
+    // строка идёт вдоль наклонной стрелы крана: габарит с наклоном выше и ниже самой строки
+    const line = port[0];
+    expect(line.rot).toBeGreaterThan(0);
+    const b = surfaceBounds(line);
+    expect(b.h).toBeGreaterThan(line.h * 2);
+    expect(b.y + b.h / 2).toBeCloseTo(line.y + line.h / 2, 6);
+  });
+
+  it("street-life lanes never cross an ad surface (rotated surfaces by their bounds; lanes ride their whole stretch)", () => {
     for (const d of SCENE_DISTRICTS)
       for (const l of LANES[d])
         for (const s of SURFACES[d] ?? []) {
-          const apart = l.y + l.h <= s.y || l.y >= s.y + s.h;
+          const b = surfaceBounds(s);
+          const [x0, x1] = l.x ?? [-0.1, 1.1];
+          const apart = l.y + l.h <= b.y || l.y >= b.y + b.h || x1 <= b.x || x0 >= b.x + b.w;
           expect(apart, `${d} ${l.kind}@${l.y} × ${s.spot}`).toBe(true);
         }
+  });
+
+  it("Порт street life: sprites (tram on the viaduct, boat on the canal, drone, hover-car) matching their proportions", () => {
+    const port = LANES.port;
+    expect(port.every((l) => l.sprite)).toBe(true);
+    expect(new Set(port.map((l) => l.sprite))).toEqual(new Set(["tram", "boat", "drone", "car"]));
+    for (const l of port) {
+      const file = new URL(`../assets/districts/life/${l.sprite === "tram" || l.sprite === "boat" ? "port" : "rows"}-${l.sprite}.webp`, import.meta.url);
+      const { w, h } = webpSize(fs.readFileSync(file));
+      expect(w / h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
+      expect((l.w * ART_ASPECT) / l.h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
+      expect(fs.statSync(file).size).toBeLessThan(12 * 1024);
+    }
+    // трамвай — только по эстакаде (не над краном и не перед складом), катер — только по воде
+    const tram = port.find((l) => l.sprite === "tram")!;
+    expect(tram.x).toEqual([0.39, 0.84]);
+    const boat = port.find((l) => l.sprite === "boat")!;
+    expect(boat.x![1]).toBeLessThanOrEqual(0.5);
+    expect(boat.y).toBeGreaterThan(0.67); // ниже стенки дальнего причала — на воде
+    expect(boat.y + boat.h).toBeLessThan(0.7); // выше тумб ближнего причала
   });
 
   it("rows street life is drawn sprites whose lane size matches the sprite proportions", () => {

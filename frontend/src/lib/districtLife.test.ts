@@ -22,7 +22,15 @@ describe("districtLife: one-shot frames", () => {
     expect(f[10].opacity).toBe(1);
   });
 
+  it("right-to-left: the sprite is mirrored after the shift (the move itself is not mirrored)", () => {
+    const f = moverFrames(800, 100, 5000, 0, true);
+    expect(f[0].transform).toBe("translate3d(800px,0px,0) scaleX(-1)");
+    expect(f[f.length - 1].transform).toBe("translate3d(100px,0px,0) scaleX(-1)");
+    const w = moverFrames(800, 100, 9000, 2, true);
+    expect(w.every((k) => String(k.transform).endsWith(" scaleX(-1)"))).toBe(true);
+  });
+
   it("every sprite has an asset", () => {
-    for (const url of Object.values(SPRITES)) expect(String(url)).toMatch(/rows-(car|drone|walker)|^data:image\/webp/);
+    for (const url of Object.values(SPRITES)) expect(String(url)).toMatch(/(rows-(car|drone|walker)|port-(tram|boat))|^data:image\/webp/);
   });
 });

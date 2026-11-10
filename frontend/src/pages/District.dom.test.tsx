@@ -83,14 +83,15 @@ afterEach(() => {
 });
 
 describe("district screen", () => {
-  it("final art (Неон-ряды) shows no «Черновик» badge; the sketch (Порт) still does", async () => {
+  it("final art (Неон-ряды and Порт) shows no «Черновик» badge", async () => {
     await render("/district?d=rows");
     expect(el.querySelector(".dz-badge")).toBeNull();
     expect(el.querySelector(".dz-far img")?.getAttribute("src")).toBe("/far-night");
     act(() => root.unmount());
     root = createRoot(el);
     await render("/district?d=port");
-    expect(el.querySelector(".dz-badge")?.textContent).toBe("Черновик");
+    expect(el.querySelector(".dz-badge")).toBeNull();
+    expect(el.querySelector(".dz-far img")?.getAttribute("src")).toBe("/far-night");
   });
 
   it("renders 4 layers at their speeds, entered at the centre, and hides the app chrome", async () => {
@@ -217,14 +218,21 @@ describe("district: idle promo on free ad spots (Неон-ряды)", () => {
     expect(el.querySelector(".k-line")?.textContent).toBe("Место для рекламы · от 1 TON/сутки");
   });
 
-  it("a bought spot shows no promo; Порт (sketch) has none", async () => {
+  it("a bought spot shows no promo", async () => {
     m.ads.data!.spots[0].ad = { id: 1 };
     await render("/district?d=rows");
     expect([...el.querySelectorAll<HTMLElement>(".dz-idle")].map((n) => n.dataset.spot)).not.toContain("rows_facade");
-    act(() => root.unmount());
-    root = createRoot(el);
+  });
+
+  it("Порт: the 4 free spots show promo; the crane-boom ticker is tilted along the boom", async () => {
+    m.ads = { data: { spots: [], prices: { line: "1", banner: "0.5", neon: "0.3" } } };
     await render("/district?d=port");
-    expect(el.querySelector(".dz-idle")).toBeNull();
+    const idle = [...el.querySelectorAll<HTMLElement>(".dz-mid .dz-idle")];
+    expect(idle.map((n) => n.dataset.spot)).toEqual(["port_line", "port_banner_cargo", "port_banner_tram", "port_neon"]);
+    expect(idle.map((n) => n.className.split(" ")[1])).toEqual(["k-line", "k-banner", "k-banner", "k-neon"]);
+    expect(idle[0].style.transform).toBe("rotate(16deg)");
+    expect(idle[1].style.transform).toBe("");
+    expect(idle[0].textContent).toBe("Место для рекламы · от 1 TON/сутки");
   });
 
   it("low-end: promo stays on the flattened image, still (first slogan, no rotation)", async () => {
