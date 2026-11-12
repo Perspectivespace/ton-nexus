@@ -550,6 +550,54 @@ export function usePromoRedeem() {
   });
 }
 
+/** Секретный промокод «Прогулки»: что видно в локации сейчас (только код, без расписания). Опрос — пока открыта «Прогулка». */
+export function useCitySignal(district: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["city-signal", district],
+    queryFn: () => api<{ code: string | null }>(`/api/v1/city/signal?district=${encodeURIComponent(district)}`),
+    enabled,
+    refetchInterval: 30_000,
+    staleTime: 0,
+    retry: 0,
+  });
+}
+
+export type SecretPromo = {
+  id: number;
+  code: string;
+  reward_ton: string;
+  max_uses: number;
+  used_count: number;
+  days: number;
+  per_day: number;
+  appearances_total: number;
+  appearances_done: number;
+  status: "active" | "exhausted" | "finished" | "disabled";
+  created_at: string;
+  ends_at: string;
+};
+
+export function useSecretPromos() {
+  return useQuery({ queryKey: ["owner", "secret-promos"], queryFn: () => api<SecretPromo[]>("/api/v1/owner/secret-promos") });
+}
+
+export function useSecretPromoCreate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { code: string; reward_ton: string; max_uses: number; days: number; per_day: number }) =>
+      api<SecretPromo>("/api/v1/owner/secret-promos", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["owner", "secret-promos"] }),
+  });
+}
+
+export function useSecretPromoDisable() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api<SecretPromo>(`/api/v1/owner/secret-promos/${id}/disable`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["owner", "secret-promos"] }),
+  });
+}
+
 export type PromoCreateOut = {
   id: number;
   code: string;
