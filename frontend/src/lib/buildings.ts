@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 /**
  * Разделы-здания (DESIGN.md п. 3.8.3): на маршруте раздела вместо улицы — его нарисованный интерьер.
  * В продукте — только реакторная башня → «Майнер». Входа тапом по башне нет: в раздел ведёт док.
@@ -17,8 +18,12 @@ export const BUILDINGS: Record<BuildingId, Building> = {
   reactor: {
     id: "reactor",
     route: "/miner",
-    name: "Реакторная башня",
-    section: "Майнер",
+    get name() {
+      return t("city.reactorTower");
+    },
+    get section() {
+      return t("city.minerSection");
+    },
   },
 };
 

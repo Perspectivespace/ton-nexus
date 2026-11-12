@@ -7,7 +7,9 @@ import type { CityPhase } from "@/lib/cityPhase";
 import { blocked, rnd } from "./CityDaySky";
 import { IdleSurface } from "./IdleSpot";
 import { priceLine } from "@/lib/districtIdle";
+import { spotTitle } from "@/lib/cityAdBuy";
 import { lowEnd, reducedMotion } from "@/lib/walkPrefs";
+import { t } from "@/i18n";
 
 /**
  * Реклама в городе — утверждённый облик (дизайн «F»): голо-баннеры и вывески — проекция (HUD-уголки, развёртка, луч
@@ -53,7 +55,7 @@ export function idleTower(spots: CityAdSpotOnBoard[] | undefined): CityAdSpotOnB
 }
 /** объявление-самореклама для строки на башне (рисуется тем же AdTicker, что и купленная строка) */
 export function towerPromo(price: string | null): CityAdOnBoard {
-  return { id: 0, title: "Место для рекламы", subtitle: priceLine(price), body: null, link_url: null, link_kind: null, color: "cyan", until: "" };
+  return { id: 0, title: t("idle.adSpace"), subtitle: priceLine(price), body: null, link_url: null, link_kind: null, color: "cyan", until: "" };
 }
 
 const lit = (p: CityPhase) => p === "night" || p === "dusk";
@@ -86,9 +88,9 @@ function useHoloLife(host: React.RefObject<HTMLDivElement | null>, phase: CityPh
           fill: "backwards",
         }),
       );
-    let t = 0;
+    let timer = 0;
     const plan = (ms: number) => {
-      t = window.setTimeout(() => {
+      timer = window.setTimeout(() => {
         const all = el.querySelectorAll<HTMLElement>(".cad-holo");
         const n = all[Math.floor(Math.random() * all.length)];
         if (n && !n.getAnimations?.({ subtree: true }).length) once(n.querySelector(".t"), GLITCH, { duration: 260, easing: "steps(1, end)" });
@@ -96,7 +98,7 @@ function useHoloLife(host: React.RefObject<HTMLDivElement | null>, phase: CityPh
       }, ms);
     };
     plan(rnd(9000, 16000));
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [host, phase, count]);
 }
 
@@ -121,7 +123,7 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
       "data-spot": s.key,
       tabIndex: walk.active ? 0 : -1,
       "aria-hidden": walk.active ? undefined : true,
-      "aria-label": `Реклама: ${ad.title}${ad.subtitle ? `, ${ad.subtitle}` : ""}`,
+      "aria-label": t("city.adAria", { title: ad.title, subtitle: ad.subtitle ? `, ${ad.subtitle}` : "" }),
       onClick: () => cityWalk.pick(s.key),
     };
   };
@@ -155,7 +157,7 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
           data-free={s.key}
           className={`cad-free f-${s.format}`}
           style={box(AD_SPOT_BOX[s.key])}
-          aria-label={`Свободное место: ${s.title}. Разместить рекламу`}
+          aria-label={t("city.freeSpotAria", { title: spotTitle(s.key, s.title) })}
           onClick={() => navigate(`/ads?spot=${s.key}`)}
         >
           <IdleSurface spot={s.key} kind={s.format === "banner" ? "banner" : "neon"} i={i} price={s.price_day} still={still} compact />
@@ -170,7 +172,7 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
           style={{ ...box(AD_SPOT_BOX.tower_line), ...adVars("cyan") }}
           tabIndex={walk.active ? 0 : -1}
           aria-hidden={walk.active ? undefined : true}
-          aria-label={`Свободное место: ${tower.title}. Разместить рекламу`}
+          aria-label={t("city.freeSpotAria", { title: spotTitle(tower.key, tower.title) })}
           onClick={() => walk.active && navigate(`/ads?spot=${tower.key}`)}
         >
           <AdTicker ad={towerPromo(tower.price_day)} />
@@ -224,18 +226,18 @@ function AdTicker({ ad }: { ad: CityAdOnBoard }) {
       }
       return () => a?.cancel();
     }
-    let t = 0;
+    let timer = 0;
     let alive = true;
     let anim: Animation | null = null;
     const back = (ms: number) => {
-      t = window.setTimeout(() => {
+      timer = window.setTimeout(() => {
         if (!alive) return;
         setMode("m-own");
         cycle();
       }, ms);
     };
     const cycle = () => {
-      t = window.setTimeout(() => {
+      timer = window.setTimeout(() => {
         if (!alive) return;
         if (document.hidden) return cycle();
         if (blocked()) {
@@ -254,13 +256,13 @@ function AdTicker({ ad }: { ad: CityAdOnBoard }) {
     cycle();
     return () => {
       alive = false;
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
       anim?.cancel();
     };
   }, [frozen, text]);
   return (
     <span className={`tk ${mode}`}>
-      <span className="own">МАЙНЕР</span>
+      <span className="own">{t("city.signMiner")}</span>
       <span className="tw-win" ref={win}>
         <span className="trk" ref={track}>
           {mode === "m-still" ? ad.title : text}

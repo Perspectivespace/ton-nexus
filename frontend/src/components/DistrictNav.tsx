@@ -3,6 +3,7 @@ import { DISTRICT_ORDER, DISTRICT_RU, type DistrictId } from "@/lib/districts";
 import { neighbourOf } from "@/lib/districtNav";
 import type { EdgeState } from "@/lib/districtCamera";
 import { haptic } from "@/lib/haptics";
+import { t } from "@/i18n";
 
 /**
  * Навигация между районами в «Прогулке» (PR 3 районов): полоска «Центр · Неон-ряды · Порт» внизу экрана
@@ -16,7 +17,7 @@ export function useDistrictsOpen(): boolean {
 
 export function DistrictStrip({ current, onGo }: { current: DistrictId; onGo: (to: DistrictId) => void }) {
   return (
-    <nav className="dz-strip" aria-label="Районы города">
+    <nav className="dz-strip" aria-label={t("city.districtsAria")}>
       {DISTRICT_ORDER.map((d) => (
         <button
           key={d}
@@ -68,7 +69,7 @@ export const EdgeHints = forwardRef<EdgeHintsHandle, { current: DistrictId }>(fu
           <i>‹</i>
           <span>
             <b>{DISTRICT_RU[left]}</b>
-            <em>Отпустите</em>
+            <em>{t("city.release")}</em>
           </span>
         </div>
       )}
@@ -76,7 +77,7 @@ export const EdgeHints = forwardRef<EdgeHintsHandle, { current: DistrictId }>(fu
         <div ref={r} className="dz-edge r" aria-hidden="true">
           <span>
             <b>{DISTRICT_RU[right]}</b>
-            <em>Отпустите</em>
+            <em>{t("city.release")}</em>
           </span>
           <i>›</i>
         </div>

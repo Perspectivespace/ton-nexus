@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { adVars } from "@/lib/cityAdPalette";
 import { IDLE_COLOR, IDLE_IN, IDLE_OUT, idleDelay, idleSlogans, idleTickerMs, priceLine, type IdleKind } from "@/lib/districtIdle";
+import { t } from "@/i18n";
 
 /**
  * Самореклама свободного места (PR 4 районов, Центр — отдельный PR): слоганы по очереди в стиле типа места —
@@ -39,7 +40,7 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
   useLayoutEffect(() => {
     if (still || (count < 2 && kind !== "line")) return; // один текст (купленное место) — без смены
     let alive = true;
-    let t = 0;
+    let timer = 0;
     let raf = 0;
     let anim: Animation | null = null;
     const next = () => alive && setN((v) => (v + 1) % count);
@@ -52,7 +53,7 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
         const tr = text.current;
         if (!alive || !w || !can(tr)) return;
         if (document.hidden) {
-          t = window.setTimeout(run, 2000);
+          timer = window.setTimeout(run, 2000);
           return;
         }
         const from = w.clientWidth;
@@ -63,26 +64,26 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
           fill: "both",
         });
         // один текст (купленная строка) — снова тот же заголовок после паузы; иначе — следующий слоган
-        anim.finished.then(() => (t = window.setTimeout(count < 2 ? run : next, count < 2 ? 1600 : 700))).catch(() => {});
+        anim.finished.then(() => (timer = window.setTimeout(count < 2 ? run : next, count < 2 ? 1600 : 700))).catch(() => {});
       };
-      t = window.setTimeout(() => (raf = requestAnimationFrame(run)), wasFirst ? 600 + i * 1300 : 0);
+      timer = window.setTimeout(() => (raf = requestAnimationFrame(run)), wasFirst ? 600 + i * 1300 : 0);
     } else {
       // голо/экран: новый слоган проявляется развёрткой; через 7–10 с — гаснет и сменяется
       if (!wasFirst && can(text.current)) text.current.animate(IDLE_IN, { duration: 260, easing: "cubic-bezier(.2,.9,.2,1)" });
       const swap = () => {
         if (!alive) return;
         if (document.hidden || !can(text.current)) {
-          t = window.setTimeout(swap, 3000);
+          timer = window.setTimeout(swap, 3000);
           return;
         }
         anim = text.current.animate(IDLE_OUT, { duration: 200, easing: "steps(3, end)", fill: "forwards" });
         anim.finished.then(next).catch(() => {});
       };
-      t = window.setTimeout(swap, idleDelay(wasFirst ? i : 0));
+      timer = window.setTimeout(swap, idleDelay(wasFirst ? i : 0));
     }
     return () => {
       alive = false;
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
       cancelAnimationFrame(raf);
       anim?.cancel();
     };
@@ -104,11 +105,11 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
       <span className="in">
       {kind === "facade_screen" && !ad && (
         <>
-          <span className="tag">Свободный экран</span>
+          <span className="tag">{t("idle.freeScreen")}</span>
           <span className="t" ref={text}>
             {slogan}
           </span>
-          <span className="p">{p ?? "Неон-ряды"}</span>
+          <span className="p">{p ?? t("district.rows")}</span>
         </>
       )}
       {pic && (

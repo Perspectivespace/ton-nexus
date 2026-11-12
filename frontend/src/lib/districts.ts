@@ -1,4 +1,5 @@
 import type { CityPhase } from "@/lib/cityPhase";
+import { tmap } from "@/i18n";
 
 /**
  * Районы города (PR 2 районов): данные и чистая математика сцены (без DOM, покрыта тестами).
@@ -19,7 +20,8 @@ export type Tint = "dawn" | "dusk" | null;
 /** порядок районов на полоске навигации (PR 3): Центр — главная, районы — справа от него */
 export const DISTRICT_ORDER: DistrictId[] = ["centre", "rows", "port"];
 export const SCENE_DISTRICTS: SceneDistrict[] = ["rows", "port"];
-export const DISTRICT_RU: Record<DistrictId, string> = { centre: "Центр", rows: "Неон-ряды", port: "Порт" };
+/** названия районов на языке игрока */
+export const DISTRICT_RU = tmap("district.", DISTRICT_ORDER);
 
 /** слои снизу вверх и их скорость относительно улицы */
 export const LAYERS: { id: LayerId; k: number }[] = [

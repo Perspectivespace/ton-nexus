@@ -16,6 +16,7 @@ import { useCityAds } from "@/api/hooks";
 import { CityAdSpots, idleTower } from "./CityAdSpots";
 import { CentreSignal } from "./SecretSignal";
 import type { ReactNode } from "react";
+import { quote, t, type Key } from "@/i18n";
 
 /**
  * Город растёт вместе с реактором (DESIGN.md п. 3.10–3.11). Облик города = облик реактора (п. 8.1.1):
@@ -206,7 +207,7 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── T2+: вывески зажглись (одна иногда «моргает»); единственный борт ПЕРЕД башней ── */}
         {tier >= 2 && (
           <>
-            <b className={`sign v ${tier >= 4 ? "holo" : "quiet cut"}`} style={box(72, 578, 40, 170)} data-d={district(72)}>ОБМЕН</b>
+            <b className={`sign v ${tier >= 4 ? "holo" : "quiet cut"}`} style={box(72, 578, 40, 170)} data-d={district(72)}>{t("city.signSwap")}</b>
             <b className={`sign ${tier >= 4 ? "holo" : "quiet"}`} style={box(444, 808, 44, 52)} data-d={district(444)}>TON</b>
             <i className="craft c0 front" />
           </>
@@ -220,8 +221,7 @@ export function CityV2({ tier }: { tier: number }) {
         {/* ── T4: голо-«РЕАКТОР» с развёрткой, прожектор (третий борт — в заднем слое) ── */}
         {tier >= 4 && (
           <>
-            <b className="sign holo wide scan" style={box(543, 705, 112, 86)} data-d={district(543)}>
-              РЕАКТОР<small>MK IV · ОНЛАЙН</small>
+            <b className="sign holo wide scan" style={box(543, 705, 112, 86)} data-d={district(543)}>{t("city.signReactor")}<small>{t("city.signReactorSub")}</small>
             </b>
             <i className="beam" style={{ left: pc(600, W), top: pc(1000, H) }} />
           </>
@@ -259,16 +259,16 @@ function TowerScreen() {
   return (
     <b className={`tw-scr ${TW_SCREEN}`} style={box(x, y, w, h)}>
       <i className="tw-led" />
-      <span>МАЙНЕР</span>
+      <span>{t("city.signMiner")}</span>
     </b>
   );
 }
 
-const TIER_MOOD = ["", "город спит", "город просыпается", "башня под током", "город в огнях"];
+const TIER_MOOD = ["", "city.mood.1", "city.mood.2", "city.mood.3", "city.mood.4"] as const;
 
 /** «Окно в город» на главной: пустая полоса ~240 px, город сдвигается так, чтобы в окне была башня и вывески. */
 export function CityWindow({ action }: { action?: ReactNode }) {
-  const t = useCityTier();
+  const tier = useCityTier();
   useEffect(() => {
     document.documentElement.classList.add("cv2-home");
     return () => document.documentElement.classList.remove("cv2-home");
@@ -276,7 +276,7 @@ export function CityWindow({ action }: { action?: ReactNode }) {
   return (
     <div className="cv2-window">
       <span className="cv2-chip" aria-hidden="true">
-        <span className="ui-label">Район</span> {TIER_MOOD[t]} · «{REACTOR_TIERS[t - 1]?.name}»
+        <span className="ui-label">{t("city.district")}</span> {TIER_MOOD[tier] ? t(TIER_MOOD[tier] as Key) : ""} · {quote(REACTOR_TIERS[tier - 1]?.name)}
       </span>
       {action}
     </div>

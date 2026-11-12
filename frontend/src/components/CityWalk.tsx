@@ -15,6 +15,7 @@ import { lookFor, type DistrictId } from "@/lib/districts";
 import { useCityPhase } from "@/lib/cityPhase";
 import { AdCard } from "./AdCard";
 import { DistrictStrip, EdgeHints, useDistrictsOpen, type EdgeHintsHandle } from "./DistrictNav";
+import { t } from "@/i18n";
 
 /**
  * «Прогулка» — чистый город (реклама в городе, PR 3; живая камера — PR 5).
@@ -147,7 +148,7 @@ export function CityWalk() {
             cityWalk.leave();
           }}
         >
-          <i aria-hidden="true">×</i> Выйти<span className="walk-long"> из прогулки</span>
+          <i aria-hidden="true">×</i>{" "}{t("walk.exit")}<span className="walk-long">{" "}{t("walk.exitLong")}</span>
         </button>
         <div className="walk-tools">
           {/* покупка рекламы (PR 5): уход с главной сам выключает «Прогулку» (Layout) */}
@@ -159,9 +160,7 @@ export function CityWalk() {
               navigate("/ads");
             }}
           >
-            <i aria-hidden="true">+</i>
-            Реклама
-          </button>
+            <i aria-hidden="true">+</i>{t("walk.ads")}</button>
           {offered && (
             <button
               type="button"
@@ -173,19 +172,17 @@ export function CityWalk() {
                 setTilt(!tilt);
               }}
             >
-              <i aria-hidden="true" />
-              Наклон
-            </button>
+              <i aria-hidden="true" />{t("walk.tilt")}</button>
           )}
         </div>
       </div>
       {!spot && (
         <p className="walk-hint" role="status">
           {live.length
-            ? "Ведите пальцем · коснитесь вывески"
+            ? t("walk.hintTap")
             : data?.spots.some((s) => s.on_sale && !s.ad)
-              ? "Ведите пальцем · свободное место можно занять"
-              : "Ведите пальцем — осмотритесь"}
+              ? t("walk.hintFree")
+              : t("walk.hintLook")}
         </p>
       )}
       {districts && <EdgeHints ref={hintsRef} current="centre" />}

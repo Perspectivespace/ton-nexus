@@ -19,6 +19,7 @@ import { haptic } from "@/lib/haptics";
 import { WebApp } from "@/lib/telegram";
 import { lowEnd, motionAllowed, reducedMotion } from "@/lib/walkPrefs";
 import "@/styles/districts.css";
+import { t } from "@/i18n";
 
 /**
  * Экран района (PR 2 районов — движок сцены). Открыт всем игрокам: /district?d=rows|port
@@ -234,7 +235,7 @@ export function DistrictScene({
       ref={hostRef}
       className={`dz${lite ? " dz-lite" : ""}${urls ? " ready" : ""}`}
       data-district={district}
-      aria-label={`Район «${DISTRICT_RU[district]}»`}
+      aria-label={t("city.districtAria", { district: DISTRICT_RU[district] })}
       data-art={look.art}
       data-tint={look.tint ?? undefined}
       style={{ ["--dz-street" as string]: `${sw}px` } as CSSProperties}
@@ -274,12 +275,11 @@ export function DistrictScene({
               exit();
             }}
           >
-            <i aria-hidden="true">×</i> Выйти
-          </button>
+            <i aria-hidden="true">×</i>{" "}{t("walk.exit")}</button>
         </div>
         {failed || !urls || !isFinalArt(district) ? (
           <p className="dz-badge" role="status">
-            {failed ? "Не удалось загрузить" : urls ? "Черновик" : "Загрузка…"}
+            {failed ? t("city.loadFail") : urls ? t("city.draft") : t("ui.loadingDots")}
           </p>
         ) : null}
         <EdgeHints ref={hintsRef} current={district} />
