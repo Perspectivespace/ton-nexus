@@ -7,12 +7,13 @@ import { DailyCheckIn } from "@/components/DailyCheckIn";
 import { PromoPanel } from "@/components/PromoPanel";
 import { IconUser } from "@/components/icons";
 import { TasksTopLink } from "@/components/RatingLinks";
+import { t, tp } from "@/i18n";
 
 export type EarnTab = "tasks" | "friends" | "promo";
 const TABS: ReadonlyArray<{ value: EarnTab; label: string }> = [
-  { value: "tasks", label: "Задания" },
-  { value: "friends", label: "Друзья" },
-  { value: "promo", label: "Промокод" },
+  { value: "tasks", get label() { return t("tasks.tabTasks"); } },
+  { value: "friends", get label() { return t("tasks.tabFriends"); } },
+  { value: "promo", get label() { return t("tasks.tabPromo"); } },
 ];
 
 /** ?tab= → вкладка; неизвестное значение — «Задания» */
@@ -33,12 +34,11 @@ export function Tasks() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        title="Заработок"
+        title={t("nav.earn")}
         action={
           canCreate ? (
             <Link to="/tasks/new" className="ui-btn ghost sm" onClick={() => haptic.tap()}>
-              + Создать
-            </Link>
+              {t("tasks.create")}</Link>
           ) : undefined
         }
       />
@@ -47,7 +47,7 @@ export function Tasks() {
 
       <section className="space-y-3">
         <Tabs
-          label="Способы заработка"
+          label={t("tasks.waysLabel")}
           items={TABS}
           value={tab}
           onChange={(v) =>
@@ -62,7 +62,7 @@ export function Tasks() {
             )
           }
         />
-        <div role="tabpanel" aria-label={TABS.find((t) => t.value === tab)?.label}>
+        <div role="tabpanel" aria-label={TABS.find((x) => x.value === tab)?.label}>
           {tab === "tasks" && <TaskFeed />}
           {tab === "friends" && <FriendsSoon />}
           {tab === "promo" && <PromoPanel />}
@@ -78,48 +78,48 @@ function TaskFeed() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="ui-sec ui-shade !text-[12px] !leading-[16px]">Выполните — получите TON и опыт после проверки</p>
-        <StatusPill tone={isFetching ? "live" : "neutral"}>{isFetching ? "синхр." : `${data?.length ?? 0} активных`}</StatusPill>
+        <p className="ui-sec ui-shade !text-[12px] !leading-[16px]">{t("tasks.feedSub")}</p>
+        <StatusPill tone={isFetching ? "live" : "neutral"}>{isFetching ? t("home.syncing") : t("tasks.activeN", { data: data?.length ?? 0 })}</StatusPill>
       </div>
 
       <TasksTopLink />
 
-      {isLoading && <LoadingPanel label="Загрузка ленты заданий…" />}
-      {error && <ErrorPanel message="Канал заданий недоступен" />}
+      {isLoading && <LoadingPanel label={t("tasks.loading")} />}
+      {error && <ErrorPanel message={t("tasks.feedDown")} />}
 
       {!isLoading && !error && data?.length === 0 && (
         <EmptyPanel
-          title="Заданий пока нет"
-          body="Активных заданий пока нет. Амбассадоры и админы публикуют их в разделе «Управление» в «Профиле»."
+          title={t("tasks.none")}
+          body={t("tasks.noneSub")}
         />
       )}
 
       <ul className="space-y-3">
-        {(data || []).map((t, i) => {
-          const slotsLeft = t.total_slots - t.filled_slots;
-          const fillPct = t.total_slots > 0 ? Math.round((t.filled_slots / t.total_slots) * 100) : 0;
+        {(data || []).map((task, i) => {
+          const slotsLeft = task.total_slots - task.filled_slots;
+          const fillPct = task.total_slots > 0 ? Math.round((task.filled_slots / task.total_slots) * 100) : 0;
           return (
-            <motion.li key={t.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-              <Link to={`/tasks/${t.id}`} className="block no-underline text-inherit" onClick={() => haptic.tap()}>
+            <motion.li key={task.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+              <Link to={`/tasks/${task.id}`} className="block no-underline text-inherit" onClick={() => haptic.tap()}>
                 <Panel className="p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <h2 className="ui-h !text-[15px] !leading-[20px] !font-medium">{t.title}</h2>
+                    <h2 className="ui-h !text-[15px] !leading-[20px] !font-medium">{task.title}</h2>
                     <span className="ui-num s-m !font-bold !text-[var(--neon)] shrink-0">
-                      {Number(t.reward).toFixed(4)}
+                      {Number(task.reward).toFixed(4)}
                       <span className="unit">TON</span>
                     </span>
                   </div>
-                  <p className="ui-sec mt-2 line-clamp-2">{t.description}</p>
-                  <Bar value={fillPct / 100} className="mt-3" label="Занято мест" />
+                  <p className="ui-sec mt-2 line-clamp-2">{task.description}</p>
+                  <Bar value={fillPct / 100} className="mt-3" label={t("tasks.slotsTaken")} />
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Tag tone="neutral" dot={false}>
-                      {slotsLeft} {plural(slotsLeft, "место", "места", "мест")}
+                      {slotsLeft} {tp("tasks.slots", slotsLeft)}
                     </Tag>
                     <Tag tone="neutral" dot={false}>
-                      ур. {t.min_level}+
+                      {t("common.lvlLower")}{" "}{task.min_level}+
                     </Tag>
                     <Tag tone="amber" dot={false}>
-                      +{t.xp_reward} XP
+                      +{task.xp_reward} XP
                     </Tag>
                   </div>
                 </Panel>
@@ -142,14 +142,12 @@ export function FriendsSoon() {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="ui-h">Приглашения друзей</h2>
+            <h2 className="ui-h">{t("tasks.invites")}</h2>
             <Tag tone="neutral" dot={false}>
-              скоро
-            </Tag>
+              {t("tasks.soon")}</Tag>
           </div>
           <p className="ui-sec mt-1">
-            Награды за приглашённых друзей пока не начисляются. Когда программа заработает, здесь появятся ваша ссылка и список друзей.
-          </p>
+            {t("tasks.invitesSoon")}</p>
         </div>
       </div>
     </Panel>
@@ -157,11 +155,3 @@ export function FriendsSoon() {
 }
 
 /** 1 место, 2 места, 5 мест */
-function plural(n: number, one: string, few: string, many: string) {
-  const a = Math.abs(n) % 100;
-  const b = a % 10;
-  if (a > 10 && a < 20) return many;
-  if (b === 1) return one;
-  if (b >= 2 && b <= 4) return few;
-  return many;
-}

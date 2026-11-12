@@ -19,6 +19,7 @@ import {
   PROOF_TASK_TYPES,
   type TaskType,
 } from "@/components/tasks/TaskTypeSelect";
+import { t } from "@/i18n";
 
 /** «12.5» (%) → 1250 bp; пусто → null (тариф); мусор → NaN */
 function pctToBp(v: string): number | null {
@@ -79,7 +80,7 @@ export function TaskCreate() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const t = await create.mutateAsync({
+      const task = await create.mutateAsync({
         title: title.trim(),
         description: description.trim(),
         ...(isManual
@@ -98,28 +99,28 @@ export function TaskCreate() {
         publish: canDirectPublish ? publish : false,
       });
       const statusHint =
-        t.status === "active"
-          ? "опубликовано"
-          : t.status === "pending_approval"
-            ? "на проверке у админа или владельца"
-            : t.status === "draft"
-              ? "черновик"
-              : t.status;
-      toast({ kind: "ok", title: "Задание создано", sub: `#${t.id} · ${statusHint}` });
-      setTimeout(() => nav(t.status === "active" ? `/tasks/${t.id}` : "/inbox"), 1200);
+        task.status === "active"
+          ? t("taskNew.published")
+          : task.status === "pending_approval"
+            ? t("taskNew.inReview")
+            : task.status === "draft"
+              ? t("taskStatus.draft")
+              : task.status;
+      toast({ kind: "ok", title: t("taskNew.created"), sub: `#${task.id} · ${statusHint}` });
+      setTimeout(() => nav(task.status === "active" ? `/tasks/${task.id}` : "/inbox"), 1200);
     } catch (e) {
-      toast({ kind: "danger", title: "Задание не создано", sub: e instanceof Error ? e.message : "Ошибка" });
+      toast({ kind: "danger", title: t("taskNew.notCreated"), sub: e instanceof Error ? e.message : t("ui.error") });
     }
   }
 
-  if (isLoading) return <LoadingPanel label="Проверка роли…" />;
+  if (isLoading) return <LoadingPanel label={t("taskNew.checkingRole")} />;
 
   if (!me) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Заработок" title="Новое задание" />
-        <ErrorPanel message="Войдите через Telegram, чтобы создать задание." />
-        <BackLink to="/tasks" label="Лента" />
+        <ScreenHeader eyebrow={t("nav.earn")} title={t("taskNew.title")} />
+        <ErrorPanel message={t("taskNew.signIn")} />
+        <BackLink to="/tasks" label={t("task.feed")} />
       </div>
     );
   }
@@ -127,9 +128,9 @@ export function TaskCreate() {
   if (!allowedTaskTypes(me).includes(taskType)) {
     return (
       <div className="space-y-4">
-        <ScreenHeader eyebrow="Заработок" title="Новое задание" />
-        <ErrorPanel message="Этот тип доступен только владельцу. Выберите «Переход на сторонний ресурс»." />
-        <BackLink to="/tasks" label="Лента" />
+        <ScreenHeader eyebrow={t("nav.earn")} title={t("taskNew.title")} />
+        <ErrorPanel message={t("taskNew.ownerOnly")} />
+        <BackLink to="/tasks" label={t("task.feed")} />
       </div>
     );
   }
@@ -137,11 +138,11 @@ export function TaskCreate() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Заработок"
-        title="Новое задание"
+        eyebrow={t("nav.earn")}
+        title={t("taskNew.title")}
         action={
           <StatusPill tone={!canDirectPublish ? "warn" : "live"}>
-            {canDirectPublish ? "сразу в ленту" : "на одобрение"}
+            {canDirectPublish ? t("taskNew.direct") : t("taskNew.toApprove")}
           </StatusPill>
         }
       />
@@ -149,10 +150,10 @@ export function TaskCreate() {
       <div className="ui-cut hero p-4">
         <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
           {isVisit
-            ? "Переход: цена и комиссия из тарифа владельца. Ссылка обязательна; награду исполнителю задаёт тариф."
+            ? t("taskNew.hintVisit")
             : isCampaign
-              ? "Кампания: награду и условия вписываете вручную. Комиссия и XP по умолчанию из тарифа, можно поменять."
-              : "Партнёрская услуга: покупатель платит цену со своего баланса, партнёр получает её за вычетом комиссии платформы."}
+              ? t("taskNew.hintCampaign")
+              : t("taskNew.hintPartner")}
         </p>
       </div>
 
@@ -163,29 +164,29 @@ export function TaskCreate() {
       )}
 
       <form onSubmit={onSubmit} className="ui-cut space-y-4 p-5">
-        <Field label="Заголовок">
+        <Field label={t("taskNew.fTitle")}>
           <input
             className="ui-input sans"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={isVisit ? "Перейди по ссылке / подпишись" : "Подпишись на канал / репост"}
+            placeholder={isVisit ? t("taskNew.phTitleVisit") : t("taskNew.phTitleCampaign")}
             minLength={3}
             required
             disabled={create.isPending}
           />
         </Field>
 
-        <Field label="Описание / бриф">
+        <Field label={t("taskNew.fDesc")}>
           <textarea
             className="ui-input"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={
               isVisit
-                ? "Что открыть и как подтвердить (скрин)…"
+                ? t("taskNew.phDescVisit")
                 : isCampaign
-                  ? "Условия кампании по договорённости…"
-                  : "Что сделать и как подтвердить…"
+                  ? t("taskNew.phDescCampaign")
+                  : t("taskNew.phDesc")
             }
             minLength={3}
             required
@@ -194,10 +195,10 @@ export function TaskCreate() {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Тип">
+          <Field label={t("taskNew.fType")}>
             <TaskTypeSelect me={me} value={taskType} onChange={setTaskType} disabled={create.isPending} />
           </Field>
-          <Field label="Мин. уровень">
+          <Field label={t("taskNew.fMinLevel")}>
             <input
               className="ui-input"
               value={minLevel}
@@ -208,12 +209,12 @@ export function TaskCreate() {
         </div>
 
         {isPriced && (
-          <Field label={isVisit ? "Ссылка на ресурс" : "Ссылка (необязательно)"}>
+          <Field label={isVisit ? t("taskNew.fLink") : t("taskNew.fLinkOpt")}>
             <input
               className="ui-input"
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
-              placeholder="https://… или t.me/…"
+              placeholder={t("taskNew.phLink")}
               required={isVisit}
               disabled={create.isPending}
             />
@@ -221,13 +222,13 @@ export function TaskCreate() {
         )}
 
         {isPartner && (
-          <Field label="Партнёр: Telegram ID">
+          <Field label={t("taskNew.fPartner")}>
             <input
               className="ui-input"
               inputMode="numeric"
               value={partnerTg}
               onChange={(e) => setPartnerTg(e.target.value)}
-              placeholder="кто получает деньги"
+              placeholder={t("taskNew.partnerHint")}
               required
               disabled={create.isPending}
             />
@@ -237,7 +238,7 @@ export function TaskCreate() {
         {isManual ? (
           <div className="space-y-3" data-testid="campaign-fields">
             <div className="grid grid-cols-2 gap-3">
-              <Field label={isPartner ? "Цена, TON" : "Награда, TON"}>
+              <Field label={isPartner ? t("taskNew.fPrice") : t("taskNew.fReward")}>
                 <input
                   className="ui-input"
                   inputMode="decimal"
@@ -247,7 +248,7 @@ export function TaskCreate() {
                   disabled={create.isPending}
                 />
               </Field>
-              <Field label={isPartner ? "Число продаж" : "Число выполнений"}>
+              <Field label={isPartner ? t("taskNew.fSales") : t("taskNew.fSlots")}>
                 <input
                   className="ui-input"
                   inputMode="numeric"
@@ -259,13 +260,13 @@ export function TaskCreate() {
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Комиссия, %">
+              <Field label={t("taskNew.fFee")}>
                 <input
                   className="ui-input"
                   inputMode="decimal"
                   value={campaignBp}
                   onChange={(e) => setCampaignBp(e.target.value)}
-                  placeholder={quote ? `тариф ${quote.commission_bp / 100}` : "из тарифа"}
+                  placeholder={quote ? t("taskNew.tariff", { commissionBp: quote.commission_bp / 100 }) : t("taskNew.fromTariff")}
                   disabled={create.isPending}
                 />
               </Field>
@@ -275,20 +276,20 @@ export function TaskCreate() {
                   inputMode="numeric"
                   value={campaignXp}
                   onChange={(e) => setCampaignXp(e.target.value)}
-                  placeholder={quote ? `тариф ${quote.xp}` : "из тарифа"}
+                  placeholder={quote ? t("taskNew.tariffXp", { xp: quote.xp }) : t("taskNew.fromTariff")}
                   disabled={create.isPending}
                 />
               </Field>
             </div>
-            {bpInvalid && <p className="text-[12px] text-[var(--danger-text)]">Комиссия: от 0 до 100%</p>}
+            {bpInvalid && <p className="text-[12px] text-[var(--danger-text)]">{t("taskNew.feeRange")}</p>}
             {quoteQ.isError && (
               <p className="text-[12px] text-[var(--danger-text)]">
-                {quoteQ.error instanceof Error ? quoteQ.error.message : "Проверьте награду и число выполнений"}
+                {quoteQ.error instanceof Error ? quoteQ.error.message : t("taskNew.checkReward")}
               </p>
             )}
           </div>
         ) : (
-          <Field label="Число выполнений">
+          <Field label={t("taskNew.fSlots")}>
             <input
               className="ui-input"
               value={slots}
@@ -309,10 +310,9 @@ export function TaskCreate() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]"
             />
             <span>
-              <span className="text-[var(--text)]">Подтверждение скриншотом</span>
+              <span className="text-[var(--text)]">{t("taskNew.proofShot")}</span>
               <br />
-              Исполнитель приложит картинку; видите только вы, удаляется через 24 ч после проверки.
-            </span>
+              {t("taskNew.proofShotHint")}</span>
           </label>
         )}
 
@@ -325,7 +325,7 @@ export function TaskCreate() {
               disabled={create.isPending}
               className="h-4 w-4 accent-[var(--accent)]"
             />
-            {isPartner ? "Сразу опубликовать (ничего не списывается)" : "Сразу опубликовать (списать бюджет)"}
+            {isPartner ? t("taskNew.publishFree") : t("taskNew.publishCharge")}
           </label>
         )}
 
@@ -343,16 +343,16 @@ export function TaskCreate() {
           }
         >
           {create.isPending
-            ? "Создание…"
+            ? t("taskNew.creating")
             : canDirectPublish && publish
-              ? "Создать и опубликовать"
+              ? t("taskNew.createPublish")
               : canDirectPublish
-                ? "Создать черновик"
-                : "Отправить на одобрение"}
+                ? t("taskNew.createDraft")
+                : t("taskNew.sendApproval")}
         </button>
       </form>
 
-      <BackLink to="/tasks" label="Лента" />
+      <BackLink to="/tasks" label={t("task.feed")} />
     </div>
   );
 }
