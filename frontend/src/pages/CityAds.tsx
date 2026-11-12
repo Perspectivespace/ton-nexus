@@ -14,7 +14,8 @@ import "@/styles/city-ads-buy.css";
 
 /**
  * «Реклама в городе» (/ads?tab=buy|mine&district=…&spot=…): покупка места (PR 5) и «Мои объявления».
- * Вход — из «Прогулки» и районов (кнопка «Реклама» и касание свободного места). Ниже минимального уровня — понятный замок.
+ * Вход — из «Прогулки» и районов (кнопка «Реклама» и касание свободного места). Покупать может игрок любого уровня;
+ * если владелец поднял порог (city_ads.min_level), ниже него — понятный замок.
  * Район (PR 6): ?district=centre|rows|port; без него — район места из ?spot=, иначе Центр.
  */
 type Tab = "buy" | "mine";
@@ -46,7 +47,7 @@ export function CityAds() {
     setSp(n, { replace: true });
   };
 
-  const minLevel = board?.min_level ?? 3;
+  const minLevel = board?.min_level ?? 1; // по умолчанию — любой уровень; порог может поднять владелец
   const isLocked = locked || (!!me && me.level < minLevel);
 
   return (
@@ -99,7 +100,7 @@ export function CityAds() {
 }
 
 function Locked({ board, me, district }: { board: CityAdsBoard; me: MeOut; district: AdDistrict }) {
-  const need = board.min_level ?? 3;
+  const need = board.min_level ?? 1;
   const cheapest = board.spots
     .filter((s) => s.on_sale && s.price_day)
     .reduce((m, s) => Math.min(m, tonToNano(s.price_day)), Infinity);

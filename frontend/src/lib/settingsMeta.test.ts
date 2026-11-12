@@ -196,6 +196,7 @@ describe("реклама в городе в редакторе владельц�
 
   it("сводка и пример недели без ошибок округления", () => {
     expect(summarize("city_ads", CFG)).toBe("строка 1 · баннер 0.5 · неон 0.3 TON · снято с продажи: 1 · с 3 ур.");
+    expect(summarize("city_ads", { ...CFG, min_level: 1 })).toBe("строка 1 · баннер 0.5 · неон 0.3 TON · снято с продажи: 1 · любой ур.");
     expect(cityAdsExample("0.3", 7)).toBe("2.1");
     expect(cityAdsExample("0.1", 3)).toBe("0.3");
     expect(cityAdsExample("1", 30)).toBe("30");
