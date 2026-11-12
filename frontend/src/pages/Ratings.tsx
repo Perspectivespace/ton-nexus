@@ -6,12 +6,13 @@ import { IconChevron } from "@/components/icons";
 import { KINDS, kindOf, type Kind } from "@/components/RatingLinks";
 import { useScreenBack } from "@/lib/backButton";
 import { haptic } from "@/lib/haptics";
-import { friendJoinHint, friendRuleText, friendSoonText, plural, readFriendRule } from "@/lib/friendRule";
-import { monthPrepositional, monthTitle } from "@/lib/tower/month";
+import { friendJoinHint, friendRuleText, friendSoonText, readFriendRule } from "@/lib/friendRule";
+import { monthInline, monthPrepositional } from "@/lib/tower/month";
 import { useRating, useTowerLeaderboard } from "@/api/hooks";
 import type { RatingBoard, RatingKind, RatingPeriod } from "@/api/types";
 import { Board, PrizeMark, placesWord, prizeOf, ton } from "@/pages/TowerTop";
 import "@/styles/tower-top.css";
+import { fmtNum, t, tp, type Key } from "@/i18n";
 
 /*
  * «Рейтинги» (/ratings?t=level|tasks|friends|tower&p=month|all&from=profile|tasks):
@@ -20,28 +21,28 @@ import "@/styles/tower-top.css";
  */
 
 /** Куда ведёт «назад» — откуда открыли рейтинги */
-const BACK: Record<string, [string, string]> = {
-  tasks: ["/tasks", "Заработок"],
-  tower: ["/tower", "Башня"],
-  profile: ["/wallet", "Профиль"],
+const BACK: Record<string, [string, Key]> = {
+  tasks: ["/tasks", "nav.earn"],
+  tower: ["/tower", "games.tower"],
+  profile: ["/wallet", "nav.profile"],
 };
 
-const fmt = (n: number) => n.toLocaleString("ru-RU");
-const players = (n: number) => `${fmt(n)} ${plural(n, "игрок", "игрока", "игроков")}`;
-const tasksWord = (n: number) => plural(n, "задание", "задания", "заданий");
+const fmt = (n: number) => fmtNum(n);
+const players = (n: number) => `${fmt(n)} ${tp("ratings.players", n)}`;
+const tasksWord = (n: number) => tp("ratings.tasksWord", n);
 
 /** Единица значения строки: «ур.» (уровень), «XP» (опыт за месяц), «задания» */
 export function unitOf(d: RatingBoard, n: number): string {
-  if (d.kind === "level") return d.period === "all" ? "ур." : "XP";
+  if (d.kind === "level") return d.period === "all" ? t("common.lvlLower") : "XP";
   if (d.kind === "tasks") return tasksWord(n);
-  return plural(n, "друг", "друга", "друзей");
+  return tp("ratings.friendsWord", n);
 }
 
 /** Заголовок шапки топа */
 export function boardTitle(d: RatingBoard): string {
-  if (d.kind === "level") return d.period === "all" ? "Уровень аккаунта" : `Опыт · ${monthTitle(d.month).toLowerCase()}`;
-  if (d.kind === "tasks") return d.period === "month" ? `Задания · ${monthTitle(d.month).toLowerCase()}` : "Задания · всё время";
-  return "Друзья";
+  if (d.kind === "level") return d.period === "all" ? t("ratings.titleLevel") : t("ratings.titleXp", { month: monthInline(d.month) });
+  if (d.kind === "tasks") return d.period === "month" ? t("ratings.titleTasksMonth", { month: monthInline(d.month) }) : t("ratings.titleTasksAll");
+  return t("ratings.kindFriends");
 }
 
 /** Как считается топ — одна строка под шапкой (у друзей — из настройки владельца) */
@@ -49,11 +50,11 @@ export function ruleText(d: RatingBoard): string {
   if (d.kind === "friends") return friendRuleText(readFriendRule(d.rule));
   if (d.kind === "level")
     return d.period === "all"
-      ? "Уровень аккаунта · при равном уровне выше тот, у кого больше опыта"
-      : `Опыт, набранный в ${monthPrepositional(d.month)} · при равенстве выше тот, кто набрал раньше`;
+      ? t("ratings.ruleLevel")
+      : t("ratings.ruleXp", { month: monthPrepositional(d.month) });
   return d.period === "month"
-    ? `Принятые задания за ${monthTitle(d.month).toLowerCase()} · при равенстве выше тот, кто успел раньше`
-    : "Все принятые задания · при равенстве выше тот, кто успел раньше";
+    ? t("ratings.ruleTasksMonth", { month: monthInline(d.month) })
+    : t("ratings.ruleTasksAll");
 }
 
 /**
@@ -64,20 +65,20 @@ export function gapText(d: RatingBoard): string | null {
   const me = d.me;
   if (!me) return null;
   if (d.kind === "level" && d.period === "all") {
-    return me.xp_to_next ? `Ещё ${fmt(me.xp_to_next)} XP до ${me.value + 1}-го уровня` : null;
+    return me.xp_to_next ? t("ratings.xpToLevel", { xpToNext: fmt(me.xp_to_next), value: me.value + 1 }) : null;
   }
   const p = d.prize;
   if (p && p.places > 0) {
     const mine = prizeOf(p.prizes, me.rank);
-    if (mine) return `Приз сейчас ${ton(mine.ton)}`;
+    if (mine) return t("ratings.prizeNow", { ton: ton(mine.ton) });
     if (p.cutoff_value != null) {
       const need = Math.max(1, p.cutoff_value + 1 - me.value);
       const last = p.prizes[p.prizes.length - 1];
-      return `+${fmt(need)} ${unitOf(d, need)} до ${last.to_place}-го места · приз ${ton(last.ton)}`;
+      return t("ratings.toPrizePlace", { need: fmt(need), need2: unitOf(d, need), toPlace: last.to_place, ton: ton(last.ton) });
     }
   }
-  if (me.rank === 1) return "Вы на первом месте";
-  if (me.need && me.next_rank) return `Ещё ${fmt(me.need)} ${unitOf(d, me.need)} — и вы ${me.next_rank}-й`;
+  if (me.rank === 1) return t("ratings.first");
+  if (me.need && me.next_rank) return t("ratings.toNext", { need: fmt(me.need), need2: unitOf(d, me.need), nextRank: me.next_rank });
   return null;
 }
 
@@ -85,33 +86,33 @@ export function gapText(d: RatingBoard): string | null {
 export function prizeText(d: RatingBoard): { main: string; sub?: string } | null {
   const p = d.prize;
   if (!p) return null;
-  const fund = `Призовой фонд ${ton(p.budget_ton)}`;
+  const fund = t("ratings.fund", { budgetTon: ton(p.budget_ton) });
   const need = p.next_place_at != null ? Math.max(1, p.next_place_at - p.participants) : 0;
-  const who = (n: number) => `${fmt(n)} ${plural(n, "участник", "участника", "участников")}`;
+  const who = (n: number) => `${fmt(n)} ${tp("ratings.participants", n)}`;
   if (!p.places) {
     if (p.participants >= p.min_participants)
       return {
         main: fund,
-        sub: `Фонда пока не хватает на призы от ${ton(p.min_prize_ton)}`,
+        sub: t("ratings.fundShort", { minPrizeTon: ton(p.min_prize_ton) }),
       };
     return {
       main: fund,
-      sub: `Призы — от ${who(p.min_participants)} · ещё ${who(need)}`,
+      sub: t("ratings.prizesFrom", { minParticipants: who(p.min_participants), need: who(need) }),
     };
   }
   const sub =
     p.next_place_at != null
-      ? `Ещё ${who(need)} — и мест станет ${p.places + 1}`
+      ? t("ratings.morePlaces", { need: who(need), places: p.places + 1 })
       : p.limited_by === "budget"
-        ? `Больше мест фонд не даёт: приз от ${ton(p.min_prize_ton)}`
+        ? t("ratings.noMorePlaces", { minPrizeTon: ton(p.min_prize_ton) })
         : undefined;
   return { main: `${fund} · ${placesWord(p.places)}`, sub };
 }
 
 export default function Ratings() {
   const [sp, setSp] = useSearchParams();
-  const t = sp.get("t");
-  const kind = (KINDS.some((x) => x.k === t) ? t : "level") as Kind;
+  const tab = sp.get("t");
+  const kind = (KINDS.some((x) => x.k === tab) ? tab : "level") as Kind;
   const p = sp.get("p");
   const period: RatingPeriod | undefined = p === "all" || p === "month" ? p : undefined;
   const [backTo, backLabel] = BACK[sp.get("from") ?? "profile"] ?? BACK.profile;
@@ -126,9 +127,9 @@ export default function Ratings() {
 
   return (
     <div className="tt rt space-y-4" style={{ "--acc": kindOf(kind).acc } as CSSProperties}>
-      <BackLink to={backTo} label={backLabel} />
-      <ScreenHeader eyebrow="Контур" title="Рейтинги" />
-      <div role="tablist" aria-label="Рейтинг" className="rt-switch">
+      <BackLink to={backTo} label={t(backLabel)} />
+      <ScreenHeader eyebrow={t("nav.home")} title={t("ratings.title")} />
+      <div role="tablist" aria-label={t("ratings.titleOne")} className="rt-switch">
         {KINDS.map(({ k, label, Icon, acc }) => (
           <button
             key={k}
@@ -164,24 +165,23 @@ function TowerTab() {
   return (
     <div className="space-y-4">
       {lb.isPending ? (
-        <SkeletonCard lines={4} label="Загружаем топ" />
+        <SkeletonCard lines={4} label={t("ratings.loadingTop")} />
       ) : lb.isError ? (
-        <ErrorState message="Не удалось загрузить топ" onRetry={() => void lb.refetch()} />
+        <ErrorState message={t("ratings.topFailed")} onRetry={() => void lb.refetch()} />
       ) : (
         <Board data={lb.data} current />
       )}
       <Link to="/tower/top" className="rt-more no-underline" onClick={() => haptic.tap()}>
-        Прошлые месяцы и призы
-        <IconChevron size={16} />
+        {t("ratings.pastMonths")}<IconChevron size={16} />
       </Link>
     </div>
   );
 }
 
 function PeriodSeg({ value, periods, onChange }: { value: RatingPeriod; periods: RatingPeriod[]; onChange: (p: RatingPeriod) => void }) {
-  if (periods.length < 2) return <p className="rt-per-one">за всё время</p>;
+  if (periods.length < 2) return <p className="rt-per-one">{t("ratings.allTime")}</p>;
   return (
-    <div role="radiogroup" aria-label="Период" className="rt-per">
+    <div role="radiogroup" aria-label={t("ratings.period")} className="rt-per">
       {periods.map((p) => (
         <button
           key={p}
@@ -195,7 +195,7 @@ function PeriodSeg({ value, periods, onChange }: { value: RatingPeriod; periods:
             }
           }}
         >
-          <span>{p === "month" ? "Месяц" : "Всё время"}</span>
+          <span>{p === "month" ? t("ratings.month") : t("ratings.allTimeTab")}</span>
         </button>
       ))}
     </div>
@@ -205,7 +205,7 @@ function PeriodSeg({ value, periods, onChange }: { value: RatingPeriod; periods:
 function Value({ d, n }: { d: RatingBoard; n: number }) {
   return d.kind === "level" && d.period === "all" ? (
     <>
-      <span className="rt-u">ур.</span>
+      <span className="rt-u">{t("common.lvlLower")}</span>
       {fmt(n)}
     </>
   ) : (
@@ -215,8 +215,8 @@ function Value({ d, n }: { d: RatingBoard; n: number }) {
 
 function RatingTab({ kind, period, onPeriod }: { kind: RatingKind; period?: RatingPeriod; onPeriod: (p: RatingPeriod) => void }) {
   const q = useRating(kind, period);
-  if (q.isPending) return <SkeletonCard lines={4} label="Загружаем рейтинг" />;
-  if (q.isError) return <ErrorState message="Не удалось загрузить рейтинг" onRetry={() => void q.refetch()} />;
+  if (q.isPending) return <SkeletonCard lines={4} label={t("ratings.loading")} />;
+  if (q.isError) return <ErrorState message={t("ratings.failed")} onRetry={() => void q.refetch()} />;
   return <RatingView d={q.data} onPeriod={onPeriod} />;
 }
 
@@ -250,12 +250,11 @@ export function RatingView({ d, onPeriod }: { d: RatingBoard; onPeriod: (p: Rati
               </span>
               {boardTitle(d)}
             </p>
-            <p className="tt-count">{d.soon ? "Откроется с приглашениями" : empty ? "Пока без игроков" : players(d.total_players)}</p>
+            <p className="tt-count">{d.soon ? t("ratings.opensWithInvites") : empty ? t("ratings.noPlayers") : players(d.total_players)}</p>
           </div>
           {d.soon ? (
             <Tag tone="neutral" dot={false}>
-              скоро
-            </Tag>
+              {t("tasks.soon")}</Tag>
           ) : (
             <PeriodSeg value={d.period} periods={d.periods} onChange={onPeriod} />
           )}
@@ -263,11 +262,11 @@ export function RatingView({ d, onPeriod }: { d: RatingBoard; onPeriod: (p: Rati
 
         {empty ? (
           <div className="tt-empty">
-            <p className="ui-h">{d.kind === "tasks" && d.period === "month" ? `В ${monthPrepositional(d.month)} заданий ещё не принимали` : "Пока никого"}</p>
-            <p className="ui-sec">{d.kind === "tasks" ? "Первое принятое задание сразу займёт 1-е место" : "Первый, кто наберёт опыт, займёт 1-е место"}</p>
+            <p className="ui-h">{d.kind === "tasks" && d.period === "month" ? t("ratings.noTasksIn", { month: monthPrepositional(d.month) }) : t("ratings.nobody")}</p>
+            <p className="ui-sec">{d.kind === "tasks" ? t("ratings.firstTask") : t("ratings.firstXp")}</p>
           </div>
         ) : (
-          <ol className="tt-podium" aria-label="Первая тройка">
+          <ol className="tt-podium" aria-label={t("ratings.podium")}>
             {[1, 0, 2].map((i) => {
               const e = top[i];
               const place = i + 1;
@@ -276,12 +275,12 @@ export function RatingView({ d, onPeriod }: { d: RatingBoard; onPeriod: (p: Rati
                 <li
                   key={i}
                   className={`tt-step p${place}${e?.is_me ? " me" : ""}${e ? "" : " free"}`}
-                  aria-label={e ? `${place}-е место: ${e.is_me ? "вы" : e.name}, ${fmt(e.value)} ${unitOf(d, e.value)}` : `${place}-е место свободно`}
+                  aria-label={e ? t("ratings.placeAriaFull", { place, name: e.is_me ? t("ratings.youLower") : e.name, value: fmt(e.value), value2: unitOf(d, e.value) }) : t("ratings.placeFree", { place })}
                 >
                   <span className="tt-medal" aria-hidden="true">
                     {place}
                   </span>
-                  <span className="tt-pname">{e ? (e.is_me ? "Вы" : e.name) : "свободно"}</span>
+                  <span className="tt-pname">{e ? (e.is_me ? t("ratings.you") : e.name) : t("ratings.free")}</span>
                   <span className="tt-pscore">{e ? <Value d={d} n={e.value} /> : "—"}</span>
                   {pz ? <PrizeMark m={pz} /> : <span className="rt-psub">{e ? sub(e) : " "}</span>}
                   <span className="tt-base" aria-hidden="true" />
@@ -300,21 +299,20 @@ export function RatingView({ d, onPeriod }: { d: RatingBoard; onPeriod: (p: Rati
       {prize && !d.soon ? <p className="tt-rules ui-onbg">{ruleText(d)}</p> : null}
 
       {rest.length > 0 && (
-        <Panel className="tt-list" aria-label="Места с 4-го">
+        <Panel className="tt-list" aria-label={t("ratings.from4")}>
           <ol>
             {rest.map((e) => {
               const pz = prizeAt(e.rank);
               return (
                 <Fragment key={e.rank}>
                   {lastPrize > 0 && e.rank === lastPrize + 1 ? (
-                    <li className="tt-band cut" aria-label="Ниже — без приза">
-                      Ниже — без приза
-                    </li>
+                    <li className="tt-band cut" aria-label={t("ratings.noPrizeBelow")}>
+                      {t("ratings.noPrizeBelow")}</li>
                   ) : null}
                   <li className={e.is_me ? "tt-row me" : "tt-row"}>
                     <span className="tt-rank">{e.rank}</span>
                     <span className="tt-name">
-                      {e.is_me ? "Вы" : e.name}
+                      {e.is_me ? t("ratings.you") : e.name}
                       {d.kind === "level" && d.period === "all" && e.xp != null ? <span className="tt-gap rt-xp">{`${fmt(e.xp)} XP`}</span> : null}
                     </span>
                     {pz ? <PrizeMark m={pz} /> : null}
@@ -331,10 +329,9 @@ export function RatingView({ d, onPeriod }: { d: RatingBoard; onPeriod: (p: Rati
 
       {d.soon && (
         <Panel className="rt-soon">
-          <p className="ui-h">Топ друзей ждёт приглашений</p>
+          <p className="ui-h">{t("ratings.friendsWait")}</p>
           <p className="ui-sec mt-1">
-            Приглашения пока не записываются. Как только реферальная программа заработает, здесь появятся настоящие места — без выдуманных цифр.
-          </p>
+            {t("ratings.friendsNote")}</p>
           <p className="ui-sec mt-2">{friendJoinHint(rule)}.</p>
         </Panel>
       )}
@@ -346,8 +343,7 @@ export function RatingView({ d, onPeriod }: { d: RatingBoard; onPeriod: (p: Rati
             <div className="tt-row me">
               <span className="tt-rank">{fmt(me.rank)}</span>
               <span className="tt-name">
-                Вы
-                {gap ? <span className="tt-gap">{gap}</span> : null}
+                {t("ratings.you")}{gap ? <span className="tt-gap">{gap}</span> : null}
               </span>
               <span className="tt-score">
                 <Value d={d} n={me.value} />
@@ -365,18 +361,17 @@ export function RatingView({ d, onPeriod }: { d: RatingBoard; onPeriod: (p: Rati
 function JoinPin({ d }: { d: RatingBoard }) {
   const [hint, to, cta] =
     d.kind === "friends"
-      ? [friendJoinHint(readFriendRule(d.rule)), "/tasks?tab=friends", "Позвать"]
+      ? [friendJoinHint(readFriendRule(d.rule)), "/tasks?tab=friends", t("ratings.invite")]
       : d.kind === "tasks"
-        ? ["Одно принятое задание — и вы в таблице", "/tasks", "Задания"]
-        : ["Наберите опыт — и вы в таблице", "/tasks", "Задания"];
+        ? [t("ratings.joinTasks"), "/tasks", t("ratings.kindTasks")]
+        : [t("ratings.joinXp"), "/tasks", t("ratings.kindTasks")];
   return (
     <>
       <div className="tt-pin-gap" aria-hidden="true" />
       <div className="tt-pin" role="status">
         <div className="tt-row join">
           <span className="tt-name">
-            Вас нет в топе
-            <span className="tt-gap">{hint}</span>
+            {t("ratings.notInTop")}<span className="tt-gap">{hint}</span>
           </span>
           <Link to={to} className="ui-btn primary no-underline" onClick={() => haptic.tap()}>
             {cta}

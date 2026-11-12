@@ -1,5 +1,6 @@
 import { ApiError } from "@/api/client";
 import { serverNow } from "@/lib/cityPhase";
+import { t } from "@/i18n";
 
 /** Ошибка API «Башни»: сервер отдаёт detail = {code, message[, next_reset_at]} */
 export interface TowerErr {
@@ -21,7 +22,7 @@ export function parseTowerError(e: unknown): TowerErr {
     }
     return { status: e.status, code: "http_" + e.status, message: e.message };
   }
-  return { status: 0, code: "network", message: "Нет связи с сервером" };
+  return { status: 0, code: "network", message: t("tower.noServer") };
 }
 
 /** ошибка, после которой повтор отправки того же журнала не поможет */
@@ -31,12 +32,12 @@ export function isFinal(e: TowerErr): boolean {
 
 /** «через 5 ч 12 мин» до сброса попыток; меньше минуты — «меньше минуты» */
 export function untilReset(iso: string | undefined, now = serverNow()): string {
-  const t = iso ? Date.parse(iso) : NaN;
-  if (!Number.isFinite(t)) return "в 00:00 по Москве";
-  const min = Math.max(0, Math.ceil((t - now) / 60000));
-  if (min < 1) return "меньше чем через минуту";
+  const at = iso ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(at)) return t("tower.atMidnight");
+  const min = Math.max(0, Math.ceil((at - now) / 60000));
+  if (min < 1) return t("tower.lessMinute");
   const h = Math.floor(min / 60);
   const m = min % 60;
-  if (h === 0) return `через ${m} мин`;
-  return m === 0 ? `через ${h} ч` : `через ${h} ч ${m} мин`;
+  if (h === 0) return t("tower.inMin", { m });
+  return m === 0 ? t("tower.inH", { h }) : t("tower.inHMin", { h, m });
 }

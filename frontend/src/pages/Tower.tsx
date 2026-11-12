@@ -13,6 +13,7 @@ import { isFinal, parseTowerError, untilReset, type TowerErr } from "@/lib/tower
 import { useTowerFinish, useTowerMe, useTowerStart } from "@/api/hooks";
 import type { TowerFinish } from "@/api/types";
 import "@/styles/tower.css";
+import { t } from "@/i18n";
 
 type Phase = "idle" | "play" | "over";
 
@@ -168,12 +169,12 @@ export default function Tower() {
     <div className="space-y-4">
       <BackLink />
       <ScreenHeader
-        eyebrow="Игра"
-        title="Башня"
+        eyebrow={t("tower.game")}
+        title={t("games.tower")}
         action={
           <Link to="/tower/top" className="tw-top" onClick={() => haptic.tap()} onPointerEnter={() => void prefetchRoute("/tower/top")}>
             <IconPodium size={16} />
-            {best > 0 ? <>Топ · {best}</> : "Топ месяца"}
+            {best > 0 ? <>{t("tower.topDot")}{" "}{best}</> : t("tower.monthTop")}
             <IconChevron size={14} />
           </Link>
         }
@@ -190,51 +191,48 @@ export default function Tower() {
             }
           }}
         >
-          <canvas ref={canvas} aria-label="Поле игры «Башня»" role="img" />
+          <canvas ref={canvas} aria-label={t("tower.fieldAria")} role="img" />
 
           {phase !== "idle" && (
             <div className="tw-plate" data-lv={combo >= 2 ? Math.min(combo, 6) : undefined} aria-live="off">
               <Num value={score} size="l" decode={false} className="!text-[28px] !leading-[32px]" />
               {combo >= 2 && (
                 <span key={combo} className="tw-combo" data-lv={Math.min(combo, 6)}>
-                  ×{combo} идеально
-                </span>
+                  ×{combo}{" "}{t("tower.perfect")}</span>
               )}
             </div>
           )}
 
-          {phase === "play" && dropped === 0 && <div className="tw-hint">тап — бросить блок</div>}
+          {phase === "play" && dropped === 0 && <div className="tw-hint">{t("tower.tapDrop")}</div>}
 
           {phase === "idle" && (
             <div className="tw-sheet space-y-3">
               <div>
-                <p className="ui-label">Башня</p>
-                <p className="ui-sec mt-1">Блок скользит над башней — тапните, когда он ровно над ней. Свес отрежется, идеальный бросок даёт бонус и серию.</p>
+                <p className="ui-label">{t("games.tower")}</p>
+                <p className="ui-sec mt-1">{t("tower.rules")}</p>
               </div>
               {st ? (
                 <div className="flex items-center justify-between gap-3">
-                  <span className="ui-sys">рекорд месяца: {best}</span>
+                  <span className="ui-sys">{t("tower.monthBest")}{" "}{best}</span>
                   <span className="ui-sys">
-                    попытки: {st.left_today}/{st.free_per_day}
+                    {t("tower.tries")}{" "}{st.left_today}/{st.free_per_day}
                   </span>
                 </div>
               ) : null}
               {outOfAttempts && <OutOfAttempts resetAt={st?.next_reset_at} />}
-              {startErr && <p className="ui-sec text-[var(--danger-text)]" role="alert">{startErr.message || "Не удалось начать игру"}</p>}
+              {startErr && <p className="ui-sec text-[var(--danger-text)]" role="alert">{startErr.message || t("tower.startFailed")}</p>}
               {me.isError && !st && (
                 <p className="ui-sec text-[var(--danger-text)]" role="alert">
-                  Не удалось загрузить попытки.
-                </p>
+                  {t("tower.triesFailed")}</p>
               )}
               {!outOfAttempts && (
                 <div className="ui-spill">
                   {me.isError && !st ? (
                     <Button kind="primary" size="lg" block onClick={() => me.refetch()}>
-                      Повторить
-                    </Button>
+                      {t("ui.retry")}</Button>
                   ) : (
                     <Button kind="primary" size="lg" block onClick={play} disabled={!st || startM.isPending}>
-                      {startM.isPending ? "Запускаем…" : "Играть"}
+                      {startM.isPending ? t("tower.starting") : t("games.play")}
                     </Button>
                   )}
                 </div>
@@ -246,36 +244,35 @@ export default function Tower() {
             <div className="tw-sheet space-y-3">
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <p className="ui-label">{record ? "Новый рекорд месяца" : "Игра окончена"}</p>
+                  <p className="ui-label">{record ? t("tower.newBest") : t("tower.gameOver")}</p>
                   <Num value={shownScore} size="xl" decode={false} tone={record ? "amber" : undefined} className="mt-1 block !text-[40px] !leading-[44px]" />
                 </div>
                 <div className="space-y-0.5 text-right">
-                  <p className="ui-sys">рекорд месяца: {done ? done.best_month : best}</p>
-                  {done?.rank != null && <p className="ui-sys">место в топе: {done.rank}</p>}
-                  <p className="ui-sys">блоков: {sum.height}</p>
-                  <p className="ui-sys">идеально: {sum.perfects} · серия {sum.bestCombo}</p>
+                  <p className="ui-sys">{t("tower.monthBest")}{" "}{done ? done.best_month : best}</p>
+                  {done?.rank != null && <p className="ui-sys">{t("tower.topPlace")}{" "}{done.rank}</p>}
+                  <p className="ui-sys">{t("tower.blocks")}{" "}{sum.height}</p>
+                  <p className="ui-sys">{t("tower.perfects")}{" "}{sum.perfects}{" "}{t("tower.streak")}{" "}{sum.bestCombo}</p>
                 </div>
               </div>
-              {saved?.state === "saving" && <p className="ui-sys">Проверяем результат…</p>}
+              {saved?.state === "saving" && <p className="ui-sys">{t("tower.checking")}</p>}
               {saved?.state === "failed" && (
                 <p className="ui-sec text-[var(--danger-text)]" role="alert">
-                  {saved.err.code === "network" || !isFinal(saved.err) ? "Результат пока не записан." : saved.err.message || "Результат не засчитан."}
+                  {saved.err.code === "network" || !isFinal(saved.err) ? t("tower.notSaved") : saved.err.message || t("tower.notCounted")}
                 </p>
               )}
               {saved?.state === "failed" && pending.current && (
                 <Button kind="secondary" size="lg" block onClick={() => finish(pending.current!)}>
-                  Отправить ещё раз
-                </Button>
+                  {t("tower.resend")}</Button>
               )}
               {outOfAttempts && saved?.state !== "saving" && <OutOfAttempts resetAt={st?.next_reset_at} />}
               {!outOfAttempts && saved?.state !== "saving" && !pending.current && (
                 <div className="ui-spill">
                   <Button kind="primary" size="lg" block onClick={play} disabled={startM.isPending}>
-                    {startM.isPending ? "Запускаем…" : `Ещё раз · осталось ${left ?? 0}`}
+                    {startM.isPending ? t("tower.starting") : t("tower.again", { left: left ?? 0 })}
                   </Button>
                 </div>
               )}
-              {startErr && <p className="ui-sec text-[var(--danger-text)]" role="alert">{startErr.message || "Не удалось начать игру"}</p>}
+              {startErr && <p className="ui-sec text-[var(--danger-text)]" role="alert">{startErr.message || t("tower.startFailed")}</p>}
             </div>
           )}
         </div>
@@ -288,8 +285,8 @@ export default function Tower() {
 function OutOfAttempts({ resetAt }: { resetAt?: string }) {
   return (
     <div className="tw-out" role="status">
-      <p className="ui-label">Попытки на сегодня закончились</p>
-      <p className="ui-sec mt-1">Три бесплатные попытки в день. Новые появятся в 00:00 по Москве — {untilReset(resetAt)}.</p>
+      <p className="ui-label">{t("tower.outOfTries")}</p>
+      <p className="ui-sec mt-1">{t("tower.triesInfo")}{" "}{untilReset(resetAt)}.</p>
     </div>
   );
 }

@@ -4,11 +4,14 @@
  * «Сейчас» — по часам сервера (`serverNow`): у телефона с неверными часами отсчёт и месяц не съезжают.
  */
 import { serverNow } from "@/lib/cityPhase";
+import { getLang, t, tp, type Key } from "@/i18n";
 
 const MSK_MS = 3 * 3600_000;
 
-const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-const MONTHS_GEN = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+/** Названия месяцев — из словаря (month.1…12, падежи для русского: .gen — «октября», .prep — «октябре») */
+const MONTH = (m: number) => t(`month.${m}` as Key);
+const MONTH_GEN = (m: number) => t(`month.gen.${m}` as Key);
+const MONTH_PREP = (m: number) => t(`month.prep.${m}` as Key);
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -47,24 +50,31 @@ export function monthTitle(key: string, now = serverNow()): string {
   const p = parse(key);
   if (!p) return key;
   const [y, m] = p;
-  return y === Number(mskMonth(now).slice(0, 4)) ? MONTHS[m - 1] : `${MONTHS[m - 1]} ${y}`;
+  return y === Number(mskMonth(now).slice(0, 4)) ? MONTH(m) : `${MONTH(m)} ${y}`;
+}
+
+/** Месяц внутри фразы: по-русски строчной («Опыт · октябрь»), по-английски с заглавной («XP · October») */
+export function monthInline(key: string, now = serverNow()): string {
+  const s = monthTitle(key, now);
+  return getLang() === "ru" ? s.toLowerCase() : s;
 }
 
 /** «октября» — для «Итоги октября», «1 ноября» */
 export function monthGenitive(key: string): string {
   const p = parse(key);
-  return p ? MONTHS_GEN[p[1] - 1] : key;
+  return p ? MONTH_GEN(p[1]) : key;
 }
 
 /** «октябре» — для «В октябре никто не играл» */
 export function monthPrepositional(key: string): string {
-  return monthGenitive(key).replace(/[яа]$/, "е");
+  const p = parse(key);
+  return p ? MONTH_PREP(p[1]) : key;
 }
 
 /** «1 ноября» — день, когда закрывается топ месяца `key` */
 export function closesOn(key: string): string {
   const p = parse(key);
-  return p ? `1 ${MONTHS_GEN[p[1] % 12]}` : "";
+  return p ? t("month.closesOn", { month: MONTH_GEN((p[1] % 12) + 1) }) : "";
 }
 
 export type Countdown = { days: number; h: number; m: number; s: number; over: boolean };
@@ -85,19 +95,14 @@ export function countdown(endsAt: string | number | undefined, now = serverNow()
 /** «12 д 04:05:09», в последние сутки — «04:05:09» */
 export function formatCountdown(c: Countdown): string {
   const hms = `${pad(c.h)}:${pad(c.m)}:${pad(c.s)}`;
-  return c.days > 0 ? `${c.days} д ${hms}` : hms;
+  return c.days > 0 ? t("time.daysClock", { n: c.days, hms }) : hms;
 }
 
 /** «12 дней 4 часа» — для чтения с экрана (раз в минуту, не каждую секунду) */
 export function spokenCountdown(c: Countdown): string {
-  const plural = (n: number, one: string, few: string, many: string) => {
-    const a = n % 10;
-    const b = n % 100;
-    return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many;
-  };
   const parts: string[] = [];
-  if (c.days) parts.push(`${c.days} ${plural(c.days, "день", "дня", "дней")}`);
-  if (c.h) parts.push(`${c.h} ${plural(c.h, "час", "часа", "часов")}`);
-  if (!c.days) parts.push(`${c.m} ${plural(c.m, "минута", "минуты", "минут")}`);
+  if (c.days) parts.push(tp("time.days", c.days));
+  if (c.h) parts.push(tp("time.hours", c.h));
+  if (!c.days) parts.push(tp("time.minutes", c.m));
   return parts.join(" ");
 }
