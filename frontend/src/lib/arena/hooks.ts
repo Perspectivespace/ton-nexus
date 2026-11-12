@@ -1,11 +1,24 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { arenaApi, pollMs, type ApiPlan, type ArenaRoom } from "./api";
 
 export const arenaKeys = {
   lobby: ["arena", "rooms"] as const,
   room: (id: number) => ["arena", "room", id] as const,
+  history: ["arena", "history"] as const,
 };
+
+/** История моих боёв: страницы по 20, «Показать ещё» — before = id последней комнаты */
+export function useArenaHistory() {
+  return useInfiniteQuery({
+    queryKey: arenaKeys.history,
+    queryFn: ({ pageParam }) => arenaApi.history(pageParam),
+    initialPageParam: null as number | null,
+    getNextPageParam: (last) => last.next_before,
+    refetchOnMount: "always",
+    retry: false,
+  });
+}
 
 /** Лобби: типы комнат, сколько ждут, моя активная комната. Опрос ~1 с, пока экран открыт. */
 export function useArenaLobby(opts: { poll?: boolean; enabled?: boolean } = {}) {

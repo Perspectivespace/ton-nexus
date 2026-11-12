@@ -156,6 +156,26 @@ export interface ArenaRoom {
   server_time: string;
   skew?: number;
 }
+/** GET /history: мои бои, новые сверху (PR 7) */
+export interface ArenaHistoryItem {
+  room_id: number;
+  type: string;
+  status: "finished" | "cancelled";
+  seats: number;
+  stake_nano: string;
+  place: number | null;
+  prize_nano: string;
+  /** приз − ставка; прерванный бой — 0 */
+  net_nano: string;
+  kills: number;
+  turns: number | null;
+  finished_at: string | null;
+}
+export interface ArenaHistory {
+  items: ArenaHistoryItem[];
+  next_before: number | null;
+  summary: { played: number; wins: number; prizes_nano: string; net_nano: string };
+}
 export interface ArenaLeave {
   ok: boolean;
   room_id: number;
@@ -176,6 +196,8 @@ export const arenaApi = {
   room: (id: number) => api<ArenaRoom>(`${ARENA}/rooms/${id}`).then(withSkew),
   /** комната + бой; since — последний полученный ход (журнал ходов нужен экрану боя, здесь не берём лишнего) */
   state: (id: number, since = 0) => api<ArenaRoom>(`${ARENA}/rooms/${id}/state?since=${since}`).then(withSkew),
+  /** мои бои; before — id комнаты (следующая страница) */
+  history: (before?: number | null) => api<ArenaHistory>(`${ARENA}/history${before ? `?before=${before}` : ""}`),
   /** план хода; ready=false — черновик (виден только мне), ready=true — «Готово» */
   plan: (id: number, turn: number, plan: ApiPlan | null, ready: boolean) =>
     api<ArenaPlanResp>(`${ARENA}/rooms/${id}/plan`, { method: "POST", body: JSON.stringify({ turn, plan, ready }) }),

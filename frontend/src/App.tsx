@@ -28,6 +28,7 @@ export default function App() {
           <Route path="/tower" element={route("tower")} />
           <Route path="/tower/top" element={route("towerTop")} />
           <Route path="/arena" element={route("arena")} />
+          <Route path="/arena/history" element={route("arenaHistory")} />
           <Route path="/arena/:id" element={route("arenaRoom")} />
           <Route path="/ratings" element={route("ratings")} />
           <Route path="/ads" element={route("cityAds")} />

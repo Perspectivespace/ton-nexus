@@ -10,6 +10,20 @@ export function fmtNet(nano: number): string {
   return `${nano > 0 ? "+" : "−"}${fmtTon(Math.abs(nano))}`;
 }
 
+/** Три плитки «число + подпись»: мои фраги / урон / ходы на итогах, сводка в истории */
+export function ArenaStats({ items }: { items: { v: string; k: string; cls?: string }[] }) {
+  return (
+    <div className="ar-rs-stats">
+      {items.map((x) => (
+        <div key={x.k}>
+          <b className={x.cls}>{x.v}</b>
+          <span>{x.k}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Итоги боя: моё место и итог (приз − ставка), мои убийства / урон / ходы, таблица, проверка seed */
 export function ArenaResults({ room, name }: { room: ArenaRoom; name: string }) {
   const res = [...(room.results ?? [])].sort((a, b) => a.place - b.place || a.seat - b.seat);
@@ -77,14 +91,13 @@ function Hero({
         </div>
       </div>
       {mine.kills != null && (
-        <div className="ar-rs-stats">
-          <div><b>{mine.kills}</b><span>{t("arena.r.kills")}</span></div>
-          <div><b>{mine.dealt ?? 0}</b><span>{t("arena.r.dealt")}</span></div>
-          <div>
-            <b>{alive ?? "—"}</b>
-            <span>{mine.death_turn == null ? t("arena.r.toEnd") : t("arena.r.turnsAlive")}</span>
-          </div>
-        </div>
+        <ArenaStats
+          items={[
+            { v: String(mine.kills), k: t("arena.r.kills") },
+            { v: String(mine.dealt ?? 0), k: t("arena.r.dealt") },
+            { v: alive != null ? String(alive) : "—", k: mine.death_turn == null ? t("arena.r.toEnd") : t("arena.r.turnsAlive") },
+          ]}
+        />
       )}
     </div>
   );
