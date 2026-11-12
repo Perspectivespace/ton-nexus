@@ -9,8 +9,9 @@ import { PlaceScene } from "@/components/cityads/DistrictAdScene";
 import { BuyFlow } from "@/components/cityads/BuyFlow";
 import { MyAds } from "@/components/cityads/MyAds";
 import { useScreenBack } from "@/lib/backButton";
-import { districtOfSpot, isAdDistrict, plural, tonToNano, ton, type AdDistrict } from "@/lib/cityAdBuy";
+import { districtOfSpot, isAdDistrict, spotTitle, tonToNano, ton, type AdDistrict } from "@/lib/cityAdBuy";
 import "@/styles/city-ads-buy.css";
+import { t, tp } from "@/i18n";
 
 /**
  * «Реклама в городе» (/ads?tab=buy|mine&district=…&spot=…): покупка места (PR 5) и «Мои объявления».
@@ -52,14 +53,14 @@ export function CityAds() {
 
   return (
     <div className="cab space-y-4">
-      <BackLink to="/" label="Контур" />
-      <ScreenHeader eyebrow="Реклама в городе" title={tab === "mine" ? "Мои объявления" : "Разместить рекламу"} />
+      <BackLink to="/" label={t("common.back.home")} />
+      <ScreenHeader eyebrow={t("ad.title")} title={tab === "mine" ? t("ad.mine") : t("ad.place")} />
       <Tabs
         kind="blocks"
-        label="Реклама в городе"
+        label={t("ad.title")}
         items={[
-          { value: "buy", label: "Разместить" },
-          { value: "mine", label: "Мои объявления" },
+          { value: "buy", label: t("ad.placeShort") },
+          { value: "mine", label: t("ad.mine") },
         ]}
         value={tab}
         onChange={(t) => {
@@ -67,8 +68,8 @@ export function CityAds() {
           setTab(t);
         }}
       />
-      {(bl || ml) && <SkeletonCard lines={4} label="Загрузка" />}
-      {be && <ErrorState message="Не удалось загрузить места" onRetry={() => refetch()} />}
+      {(bl || ml) && <SkeletonCard lines={4} label={t("ad.loading")} />}
+      {be && <ErrorState message={t("ad.spotsLoadFail")} onRetry={() => refetch()} />}
       {board && me && tab === "mine" && <MyAds today={board.day} onBuy={() => setTab("buy")} />}
       {board && me && tab === "buy" && isLocked && <Locked board={board} me={me} district={district} />}
       {board && me && tab === "buy" && !isLocked && done && (
@@ -105,34 +106,28 @@ function Locked({ board, me, district }: { board: CityAdsBoard; me: MeOut; distr
     .filter((s) => s.on_sale && s.price_day)
     .reduce((m, s) => Math.min(m, tonToNano(s.price_day)), Infinity);
   const onSale = board.spots.filter((s) => s.on_sale).length;
-  const slots: SceneSlot[] = board.spots.map((s, i) => ({ key: s.key, n: i + 1, state: s.on_sale ? "free" : "off", label: s.title }));
+  const slots: SceneSlot[] = board.spots.map((s, i) => ({ key: s.key, n: i + 1, state: s.on_sale ? "free" : "off", label: spotTitle(s.key, s.title) }));
   return (
     <div className="space-y-3">
-      <PlaceScene district={district} slots={slots} className="cab-dim" label="Места для рекламы в городе">
+      <PlaceScene district={district} slots={slots} className="cab-dim" label={t("ad.sceneAria")}>
         <span className="cab-lockmark" aria-hidden="true" />
       </PlaceScene>
       <Panel level="hero" className="cab-locked space-y-3 p-4" role="status">
-        <p className="ui-label">Закрыто до {need}-го уровня</p>
-        <p className="ui-h">Реклама в городе — с {need}-го уровня</p>
-        <div className="cab-lvl" aria-label={`Ваш уровень ${me.level} из ${need}`}>
+        <p className="ui-label">{t("ad.lockedUntil", { n: need })}</p>
+        <p className="ui-h">{t("ad.fromLevel", { n: need })}</p>
+        <div className="cab-lvl" aria-label={t("ad.levelAria", { level: me.level, need })}>
           {Array.from({ length: need }, (_, i) => (
             <i key={i} className={i < me.level ? "on" : undefined} />
           ))}
-          <span>
-            ур. <b>{me.level}</b> / {need}
+          <span>{t("ad.lvl")}{" "}<b>{me.level}</b> / {need}
           </span>
         </div>
         <p className="cab-note">
-          {onSale} {plural(onSale, "место", "места", "мест")} {district === "centre" ? "в Центре" : "в районе"}
-          {Number.isFinite(cheapest) ? ` · от ${ton(cheapest)} за сутки` : ""}. Опыт дают задания и майнер — поднимите уровень, и места откроются.
-        </p>
+          {tp(district === "centre" ? "ad.onSaleCentre" : "ad.onSaleDistrict", onSale)}
+          {Number.isFinite(cheapest) ? t("ad.fromPerDay", { cheapest: ton(cheapest) }) : ""}{t("ad.lockedNote")}</p>
         <div className="grid grid-cols-2 gap-2">
-          <Link to="/tasks" className="ui-btn primary no-underline">
-            К заданиям
-          </Link>
-          <Link to="/miner" className="ui-btn secondary no-underline">
-            Майнер
-          </Link>
+          <Link to="/tasks" className="ui-btn primary no-underline">{t("ad.toTasks")}</Link>
+          <Link to="/miner" className="ui-btn secondary no-underline">{t("city.minerSection")}</Link>
         </div>
       </Panel>
     </div>
@@ -143,17 +138,11 @@ function Done({ onMine, onMore }: { onMine: () => void; onMore: () => void }) {
   return (
     <Panel level="hero" className="cab-done space-y-3 p-5" role="status">
       <span className="cab-donemark" aria-hidden="true" />
-      <p className="ui-h">Оплачено — объявление на проверке</p>
-      <p className="cab-note">
-        Владелец проверит текст и ссылку. После одобрения вывеска появится в городе в первый день показа. Если не одобрят — TON вернутся на баланс.
-      </p>
+      <p className="ui-h">{t("ad.paidReview")}</p>
+      <p className="cab-note">{t("ad.paidReviewNote")}</p>
       <div className="grid gap-2">
-        <Button block onClick={onMine}>
-          Мои объявления
-        </Button>
-        <Button block kind="secondary" onClick={onMore}>
-          Разместить ещё одно
-        </Button>
+        <Button block onClick={onMine}>{t("ad.mine")}</Button>
+        <Button block kind="secondary" onClick={onMore}>{t("ad.placeAnother")}</Button>
       </div>
     </Panel>
   );

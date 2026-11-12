@@ -3,18 +3,14 @@ import { sendCityAdEvent, type CityAdSpotOnBoard } from "@/api/hooks";
 import { adVars } from "@/lib/cityAdPalette";
 import { isSafeAdLink, linkHost, openAdLink } from "@/lib/cityAdLink";
 import { haptic } from "@/lib/haptics";
+import { t, tmap } from "@/i18n";
 
 /**
  * Карточка объявления в «Прогулке» — Центр и районы (PR 6b): заголовок, подпись, текст, ссылка (https / t.me),
  * переход на внешний сайт — с подтверждением. Открытие и переход считаются (раз в сутки на человека, сервер дедупит).
  * Камеру подводит владелец карточки (onLayout): в Центре — фокус «Прогулки», в районе — проезд улицы.
  */
-const FORMAT_RU: Record<string, string> = {
-  line: "БЕГУЩАЯ СТРОКА",
-  banner: "ГОЛО-БАННЕР",
-  neon: "ВЫВЕСКА",
-  facade_screen: "ЭКРАН НА ФАСАДЕ",
-};
+const FORMAT_RU = tmap("ad.kick.", ["line", "banner", "neon", "facade_screen"] as const);
 
 export function daysLeft(until: string, today: string): number {
   const a = Date.parse(`${today}T00:00:00Z`);
@@ -64,8 +60,8 @@ export function AdCard({
   return (
     <div ref={ref} className="cad-card" style={adVars(ad.color)} role="dialog" aria-modal="false" aria-labelledby="cad-title">
       <div className="cc-top">
-        <span className="cc-kicker">РЕКЛАМА · {FORMAT_RU[spot.format] ?? "ОБЪЯВЛЕНИЕ"}</span>
-        <span className="cc-days">ещё {daysLeft(ad.until, day)} дн.</span>
+        <span className="cc-kicker">{t("ad.kicker")}{" "}{FORMAT_RU[spot.format] ?? t("ad.kickerAny")}</span>
+        <span className="cc-days">{t("ad.daysLeft", { n: daysLeft(ad.until, day) })}</span>
       </div>
       <h3 id="cad-title" className="cc-title">{ad.title}</h3>
       {ad.subtitle && <p className="cc-sub">{ad.subtitle}</p>}
@@ -74,21 +70,15 @@ export function AdCard({
         <div className="cc-link">
           <i className="cc-ico" aria-hidden="true" />
           <span>{linkHost(link)}</span>
-          <em>{ad.link_kind === "telegram" ? "Telegram" : "Сайт"}</em>
+          <em>{ad.link_kind === "telegram" ? "Telegram" : t("ad.site")}</em>
         </div>
       )}
       {confirm && link ? (
-        <div className="cc-confirm" role="alertdialog" aria-label="Переход на сайт">
-          <p>
-            Откроется внешний сайт <b>{linkHost(link)}</b>. Мы его не проверяем — будьте внимательны с платежами и данными.
-          </p>
+        <div className="cc-confirm" role="alertdialog" aria-label={t("ad.leaveAria")}>
+          <p>{t("ad.leave1")}{" "}<b>{linkHost(link)}</b>{t("ad.leave2")}</p>
           <div className="cc-act">
-            <button type="button" className="cc-go" onClick={go}>
-              Открыть сайт
-            </button>
-            <button type="button" className="cc-close" onClick={() => setConfirm(false)}>
-              Отмена
-            </button>
+            <button type="button" className="cc-go" onClick={go}>{t("ad.openSite")}</button>
+            <button type="button" className="cc-close" onClick={() => setConfirm(false)}>{t("ui.cancel")}</button>
           </div>
         </div>
       ) : (
@@ -98,16 +88,12 @@ export function AdCard({
               type="button"
               className="cc-go"
               onClick={() => (ad.link_kind === "telegram" ? go() : setConfirm(true))}
-            >
-              Перейти
-            </button>
+            >{t("ad.go")}</button>
           )}
-          <button type="button" className="cc-close" onClick={onClose}>
-            Закрыть
-          </button>
+          <button type="button" className="cc-close" onClick={onClose}>{t("ui.close")}</button>
         </div>
       )}
-      <p className="cc-note">Объявление прошло модерацию. Реклама в городе — от жителей Nexus.</p>
+      <p className="cc-note">{t("ad.note")}</p>
     </div>
   );
 }

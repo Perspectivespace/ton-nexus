@@ -19,23 +19,22 @@ import {
 } from "@/lib/cityAdBuy";
 import { PlaceScene } from "./DistrictAdScene";
 import { FacadeImagePicker, type FacadePick } from "./FacadeImage";
+import { quote, t } from "@/i18n";
 
 /** «Мои объявления»: статус, даты, счётчики «Прогулки», отмена до проверки, смена ссылки и картинки экрана. */
 export function MyAds({ today, onBuy }: { today: string; onBuy: () => void }) {
   const { data, isLoading, error, refetch } = useMyCityAds();
   const [edit, setEdit] = useState<CityAdMine | null>(null);
   const [pic, setPic] = useState<CityAdMine | null>(null);
-  if (isLoading) return <SkeletonCard lines={3} label="Загрузка" />;
-  if (error) return <ErrorState message="Не удалось загрузить объявления" onRetry={() => refetch()} />;
+  if (isLoading) return <SkeletonCard lines={3} label={t("ad.loading")} />;
+  if (error) return <ErrorState message={t("ad.mineLoadFail")} onRetry={() => refetch()} />;
   if (!data?.length)
     return (
       <EmptyState
-        title="Пока нет объявлений"
-        body="Вывеска, голо-баннер, строка на башне или экран на рынке — их увидят все, кто гуляет по городу и районам."
+        title={t("ad.mineEmpty")}
+        body={t("ad.mineEmptyHint")}
         action={
-          <Button className="mt-2" onClick={onBuy}>
-            Разместить рекламу
-          </Button>
+          <Button className="mt-2" onClick={onBuy}>{t("ad.place")}</Button>
         }
       />
     );
@@ -57,14 +56,11 @@ export function AdStats({ ad }: { ad: Pick<CityAdMine, "stats"> }) {
   return (
     <div className="cab-stats">
       <span>
-        <b>{views}</b>показы
-      </span>
+        <b>{views}</b>{t("ad.stat.views")}</span>
       <span>
-        <b>{s.open ?? 0}</b>открытия
-      </span>
+        <b>{s.open ?? 0}</b>{t("ad.stat.opens")}</span>
       <span>
-        <b>{clicks}</b>переходы
-      </span>
+        <b>{clicks}</b>{t("ad.stat.clicks")}</span>
       <span>
         <b>{views ? `${((clicks / views) * 100).toFixed(1)}%` : "—"}</b>CTR
       </span>
@@ -91,7 +87,7 @@ function MyAdItem({ ad, today, onEdit, onImage }: { ad: CityAdMine; today: strin
           aspect={1.5}
           sign={{ spot: ad.spot, format: ad.format, ad: { title: ad.title, subtitle: ad.subtitle, color: ad.color, image: pic } }}
           className="cab-thumb"
-          label={`Вывеска «${ad.title}»`}
+          label={t("ad.signAria", { title: ad.title })}
         />
         <div className="min-w-0 flex-1">
           <Tag tone={st.tone}>{st.label}</Tag>
@@ -103,28 +99,24 @@ function MyAdItem({ ad, today, onEdit, onImage }: { ad: CityAdMine; today: strin
       </div>
       {ad.moderation_note && (ad.status === "rejected" || ad.status === "pending") && (
         <p className="cab-reason">
-          <span>{ad.status === "rejected" ? "Причина" : "Комментарий"}</span>
+          <span>{ad.status === "rejected" ? t("ad.reason") : t("ad.comment")}</span>
           {ad.moderation_note}
         </p>
       )}
       {(ad.status === "approved" || ad.status === "expired" || (ad.stats && (ad.stats.impression ?? 0) > 0)) && <AdStats ad={ad} />}
       <div className="cab-ad-money">
-        <span>
-          Оплачено <b>{ad.paid} TON</b>
+        <span>{t("ad.paid")}{" "}<b>{ad.paid} TON</b>
         </span>
         {ad.refunded_nano > 0 && (
-          <span>
-            Возвращено <b>{ad.refunded} TON</b>
+          <span>{t("ad.refunded")}{" "}<b>{ad.refunded} TON</b>
           </span>
         )}
         {ad.link_url && <span className="cab-ad-link">{linkHost(ad.link_url)}</span>}
       </div>
       {err && <p className="ui-fhint err">{err}</p>}
       {ask ? (
-        <div className="cab-ask" role="alertdialog" aria-label="Отмена объявления">
-          <p>
-            Отменить объявление? <b>{ton(ad.paid_nano - ad.refunded_nano)}</b> вернутся на баланс, сутки освободятся.
-          </p>
+        <div className="cab-ask" role="alertdialog" aria-label={t("ad.cancelAria")}>
+          <p>{t("ad.cancelAsk")}{" "}<b>{ton(ad.paid_nano - ad.refunded_nano)}</b>{" "}{t("ad.cancelAsk2")}</p>
           <div className="grid grid-cols-2 gap-2">
             <Button
               kind="danger"
@@ -136,40 +128,30 @@ function MyAdItem({ ad, today, onEdit, onImage }: { ad: CityAdMine; today: strin
                   await cancel.mutateAsync(ad.id);
                   haptic.collect();
                 } catch (e) {
-                  setErr(e instanceof Error ? e.message : "Не удалось отменить");
+                  setErr(e instanceof Error ? e.message : t("ad.cancelFail"));
                 }
                 setAsk(false);
               }}
-            >
-              Отменить и вернуть
-            </Button>
-            <Button kind="secondary" size="sm" onClick={() => setAsk(false)}>
-              Оставить
-            </Button>
+            >{t("ad.cancelRefund")}</Button>
+            <Button kind="secondary" size="sm" onClick={() => setAsk(false)}>{t("ad.keep")}</Button>
           </div>
         </div>
       ) : (
         (canCancel(ad) || canEditLink(ad, today) || street || canPic) && (
           <div className="cab-ad-act">
             {street && (
-              <Link to={street} className="ui-btn secondary sm no-underline">
-                На улице
-              </Link>
+              <Link to={street} className="ui-btn secondary sm no-underline">{t("ad.onStreet")}</Link>
             )}
             {canEditLink(ad, today) && (
-              <Button kind="secondary" size="sm" onClick={onEdit}>
-                Изменить ссылку
-              </Button>
+              <Button kind="secondary" size="sm" onClick={onEdit}>{t("ad.editLink")}</Button>
             )}
             {canPic && (
               <Button kind="secondary" size="sm" onClick={onImage}>
-                {ad.image_url ? "Заменить картинку" : "Добавить картинку"}
+                {ad.image_url ? t("ad.replaceImage") : t("ad.addImage")}
               </Button>
             )}
             {canCancel(ad) && (
-              <Button kind="ghost" size="sm" onClick={() => setAsk(true)}>
-                Отменить
-              </Button>
+              <Button kind="ghost" size="sm" onClick={() => setAsk(true)}>{t("ad.cancelBtn")}</Button>
             )}
           </div>
         )
@@ -180,7 +162,7 @@ function MyAdItem({ ad, today, onEdit, onImage }: { ad: CityAdMine; today: strin
 
 function LinkSheet({ ad, today, onClose }: { ad: CityAdMine | null; today: string; onClose: () => void }) {
   return (
-    <Sheet open={!!ad} onClose={onClose} title="Ссылка объявления" sub={ad ? `«${ad.title}»` : undefined}>
+    <Sheet open={!!ad} onClose={onClose} title={t("ad.adLink")} sub={ad ? quote(ad.title) : undefined}>
       {ad && <LinkForm key={ad.id} ad={ad} today={today} onDone={onClose} />}
     </Sheet>
   );
@@ -196,12 +178,10 @@ function LinkForm({ ad, onDone }: { ad: CityAdMine; today: string; onDone: () =>
     <div className="space-y-3 pb-2">
       {ad.status === "approved" && (
         <div className="cab-warn amber" role="note">
-          <span>
-            После смены ссылки объявление <b>снова уйдёт на проверку</b> и не будет показываться в городе, пока его не одобрят.
-          </span>
+          <span>{t("ad.reReview1")}{" "}<b>{t("ad.reReview2")}</b>{" "}{t("ad.reReview3")}</span>
         </div>
       )}
-      <Field label="Новая ссылка" error={hint ?? err} hint="Только https:// или t.me/… · без сокращателей · пусто — без ссылки">
+      <Field label={t("ad.newLink")} error={hint ?? err} hint={t("ad.newLinkHint")}>
         <input
           className="ui-input"
           value={v}
@@ -209,7 +189,7 @@ function LinkForm({ ad, onDone }: { ad: CityAdMine; today: string; onDone: () =>
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder="https://… или t.me/канал"
+          placeholder={t("ad.linkPlaceholder")}
           onChange={(e) => {
             setV(e.target.value);
             setErr(null);
@@ -226,11 +206,11 @@ function LinkForm({ ad, onDone }: { ad: CityAdMine; today: string; onDone: () =>
             haptic.collect();
             onDone();
           } catch (e) {
-            setErr(e instanceof Error ? e.message : "Не удалось сохранить");
+            setErr(e instanceof Error ? e.message : t("ad.saveFail"));
           }
         }}
       >
-        {ad.status === "approved" ? "Сохранить и отправить на проверку" : "Сохранить"}
+        {ad.status === "approved" ? t("ad.saveReview") : t("ad.save")}
       </Button>
     </div>
   );
@@ -238,7 +218,7 @@ function LinkForm({ ad, onDone }: { ad: CityAdMine; today: string; onDone: () =>
 
 function ImageSheet({ ad, onClose }: { ad: CityAdMine | null; onClose: () => void }) {
   return (
-    <Sheet open={!!ad} onClose={onClose} title="Картинка на экране" sub={ad ? `«${ad.title}»` : undefined}>
+    <Sheet open={!!ad} onClose={onClose} title={t("ad.pic.label")} sub={ad ? quote(ad.title) : undefined}>
       {ad && <ImageForm key={ad.id} ad={ad} onDone={onClose} />}
     </Sheet>
   );
@@ -256,32 +236,28 @@ function ImageForm({ ad, onDone }: { ad: CityAdMine; onDone: () => void }) {
       haptic.collect();
       onDone();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Не удалось сохранить");
+      setErr(e instanceof Error ? e.message : t("ad.saveFail"));
     }
   };
   return (
     <div className="space-y-3 pb-2">
       {ad.status === "approved" && (
         <div className="cab-warn amber" role="note">
-          <span>
-            С новой картинкой объявление <b>снова уйдёт на проверку</b> и не будет показываться в городе, пока его не одобрят.
-          </span>
+          <span>{t("ad.reReviewPic1")}{" "}<b>{t("ad.reReview2")}</b>{" "}{t("ad.reReview3")}</span>
         </div>
       )}
       <FacadeImagePicker
         value={next}
         onChange={setNext}
-        label={ad.image_url ? "Новая картинка" : "Картинка на экране"}
-        note="Новую картинку проверит владелец."
+        label={ad.image_url ? t("ad.newImage") : t("ad.pic.label")}
+        note={t("ad.newImageNote")}
       />
       {err && <p className="ui-fhint err">{err}</p>}
       <Button block size="lg" disabled={!next || save.isPending} onClick={() => next && run(next.id)}>
-        {ad.status === "approved" ? "Сохранить и отправить на проверку" : "Сохранить"}
+        {ad.status === "approved" ? t("ad.saveReview") : t("ad.save")}
       </Button>
       {ad.image_url && (
-        <Button block kind="ghost" size="sm" disabled={save.isPending} onClick={() => run(null)}>
-          Убрать картинку — экран только с текстом
-        </Button>
+        <Button block kind="ghost" size="sm" disabled={save.isPending} onClick={() => run(null)}>{t("ad.removeImage")}</Button>
       )}
     </div>
   );

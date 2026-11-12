@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { haptic } from "@/lib/haptics";
+import { t, type Key } from "@/i18n";
 import { addDays, addMonths, fmtDay, monthGrid, monthOf, monthTitle } from "@/lib/cityAdBuy";
 
-const WD = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
+const WD = [1, 2, 3, 4, 5, 6, 7].map((i) => `ad.wd.${i}` as Key);
 
 /**
  * Календарь начала показа: с завтрашнего дня (МСК) до +90 дней. Занятые сутки (из расчёта сервера) — заштрихованы;
@@ -37,7 +38,7 @@ export function AdCalendar({
         <button
           type="button"
           className="cab-cal-nav"
-          aria-label="Предыдущий месяц"
+          aria-label={t("ad.prevMonth")}
           disabled={ym <= first}
           onClick={() => {
             haptic.select();
@@ -50,7 +51,7 @@ export function AdCalendar({
         <button
           type="button"
           className="cab-cal-nav"
-          aria-label="Следующий месяц"
+          aria-label={t("ad.nextMonth")}
           disabled={ym >= last}
           onClick={() => {
             haptic.select();
@@ -60,10 +61,10 @@ export function AdCalendar({
           ›
         </button>
       </div>
-      <div className="cab-cal-grid" role="grid" aria-label={`Начало показа, ${monthTitle(ym)}`}>
+      <div className="cab-cal-grid" role="grid" aria-label={t("ad.calAria", { ym: monthTitle(ym) })}>
         {WD.map((w) => (
           <span key={w} className="cab-wd" role="columnheader">
-            {w}
+            {t(w)}
           </span>
         ))}
         {weeks.flat().map((d, i) => {
@@ -90,7 +91,7 @@ export function AdCalendar({
               className={cls}
               disabled={out || isBusy}
               aria-selected={d === start}
-              aria-label={`${fmtDay(d)}${isBusy ? ", занято" : ""}`}
+              aria-label={`${fmtDay(d)}${isBusy ? t("ad.busyAria") : ""}`}
               onClick={() => {
                 haptic.select();
                 onPick(d);
@@ -103,11 +104,9 @@ export function AdCalendar({
       </div>
       <div className="cab-cal-legend" aria-hidden="true">
         <span>
-          <i className="lg in" /> ваш показ
-        </span>
+          <i className="lg in" />{" "}{t("ad.yourRun")}</span>
         <span>
-          <i className="lg busy" /> занято
-        </span>
+          <i className="lg busy" />{" "}{t("ad.busy")}</span>
       </div>
     </div>
   );
