@@ -16,7 +16,7 @@ export const arena: Record<keyof typeof ru, string> = {
   "arena.noTon": "Not enough TON on your balance",
   "arena.stakeNote": "The stake is taken from your balance and held until the start. Top up to join.",
   "arena.kicker": "PvP · battle royale",
-  "arena.heroText": "Everyone moves at once, 10&nbsp;seconds per turn. The zone shrinks — last one standing wins.",
+  "arena.heroText": "Everyone moves at once, 10 seconds per turn. The zone shrinks — last one standing wins.",
   "arena.chip10s": "10 s / turn",
   "arena.chipNoRng": "no RNG",
   "arena.chipSeed": "fair seed",
