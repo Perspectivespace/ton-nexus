@@ -18,6 +18,8 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     language_code: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Язык приложения, выбранный игроком в Профиле (ru / en). Пусто — берём из Telegram (app/core/i18n.py).
+    lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"), nullable=False)
 
