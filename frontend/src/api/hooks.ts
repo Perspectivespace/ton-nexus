@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { keepPreviousData, useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, apiBlob, apiUpload } from "./client";
 import { setServerClock } from "@/lib/cityPhase";
+import { isLang, setLang, useLangStore, type Lang } from "@/i18n/core";
 import type {
   DeployJob,
   DeployOverview,
@@ -26,6 +27,36 @@ export function useMe() {
   return useQuery({
     queryKey: ["me"],
     queryFn: () => api<MeOut>("/api/v1/me"),
+  });
+}
+
+/** Язык с сервера (выбор в Профиле с любого устройства) главнее сохранённого на этом устройстве */
+export function useLangSync() {
+  const { data: me } = useMe();
+  const lang = useLangStore((s) => s.lang);
+  useEffect(() => {
+    if (me && isLang(me.lang) && me.lang !== lang) setLang(me.lang);
+    // смотрим только на ответ сервера: локальное переключение уже записано в кэш me (useSetLang)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me?.lang]);
+}
+
+/** Переключатель «Язык / Language»: сразу меняет интерфейс, на сервере — для всех устройств */
+export function useSetLang() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (lang: Lang) => api<{ lang: string; lang_chosen: boolean }>("/api/v1/me/lang", { method: "PUT", body: JSON.stringify({ lang }) }),
+    onMutate: (lang: Lang) => {
+      const prev = useLangStore.getState().lang;
+      qc.setQueryData<MeOut>(["me"], (m) => (m ? { ...m, lang, lang_chosen: true } : m));
+      setLang(lang);
+      return { prev };
+    },
+    onError: (_e, _lang, ctx) => {
+      if (!ctx) return;
+      qc.setQueryData<MeOut>(["me"], (m) => (m ? { ...m, lang: ctx.prev } : m));
+      setLang(ctx.prev);
+    },
   });
 }
 

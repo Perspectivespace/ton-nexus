@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { cityWalk } from "@/lib/cityWalk";
+import { useLangSync } from "@/api/hooks";
 import { districtFromStart } from "@/lib/districts";
 import { WebApp } from "@/lib/telegram";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -20,6 +21,7 @@ export function Layout() {
   const [onboarding, setOnboarding] = useState(shouldShowOnboarding);
   const endSplash = useCallback(() => setSplash(false), []);
   const endOnboarding = useCallback(() => setOnboarding(false), []);
+  useLangSync();
   // DESIGN п. 14.2: док только на четырёх разделах; на вложенных экранах — «Назад» (Telegram или ссылка)
   const loc = useLocation();
   const dock = isDockRoute(loc.pathname);

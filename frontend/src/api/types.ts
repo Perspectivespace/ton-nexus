@@ -37,6 +37,9 @@ export type MeOut = {
   is_owner: boolean;
   is_deployer: boolean;
   can_deploy: boolean;
+  /** язык приложения: выбор в Профиле или язык Telegram (ru / en); lang_chosen — выбран вручную */
+  lang?: string;
+  lang_chosen?: boolean;
   miner: MinerOut | null;
 };
 
