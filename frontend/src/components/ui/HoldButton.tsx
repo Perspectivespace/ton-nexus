@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { haptic } from "@/lib/haptics";
 import { cx } from "./press";
+import { t } from "@/i18n";
 
 type HoldButtonProps = {
   /** вызывается, когда шкала заполнилась до конца */
@@ -32,7 +33,7 @@ export function HoldButton({
   size = "md",
   className,
   children,
-  holdingLabel = "Держите…",
+  holdingLabel = t("ui.holding"),
 }: HoldButtonProps) {
   const [holding, setHolding] = useState(false);
   const [done, setDone] = useState(false);
@@ -87,7 +88,7 @@ export function HoldButton({
         if (e.key === "Enter" || e.key === " ") stop();
       }}
       onContextMenu={(e) => e.preventDefault()}
-      aria-label={typeof children === "string" ? `${children} — удерживайте` : undefined}
+      aria-label={typeof children === "string" ? t("ui.holdToConfirm", { children }) : undefined}
     >
       <i className="charge" aria-hidden />
       <span className="lbl">{holding ? holdingLabel : children}</span>

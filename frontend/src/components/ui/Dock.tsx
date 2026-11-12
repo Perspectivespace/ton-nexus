@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { haptic } from "@/lib/haptics";
 import type { IconProps } from "../icons";
+import { t } from "@/i18n";
 
 export type DockItem = { to: string; label: string; Icon: ComponentType<IconProps> };
 
@@ -28,7 +29,7 @@ function Item({ to, label, Icon }: DockItem) {
 export function Dock({ items, center, className }: { items: ReadonlyArray<DockItem>; center?: ReactNode; className?: string }) {
   const half = Math.ceil(items.length / 2);
   return (
-    <nav className={className ? `ui-dock ${className}` : "ui-dock"} aria-label="Разделы">
+    <nav className={className ? `ui-dock ${className}` : "ui-dock"} aria-label={t("ui.sections")}>
       <div className="ui-lift l2">
         <div className="ui-cut e2">
           {center ? (

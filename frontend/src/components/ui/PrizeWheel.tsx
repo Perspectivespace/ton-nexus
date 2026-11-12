@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } f
 import { BrandMark } from "@/components/Brand";
 import { haptic } from "@/lib/haptics";
 import { cx, prefersReducedMotion } from "./press";
+import { t } from "@/i18n";
 
 /** Роль сектора — цвет по п. 2.1: натрий — награды (hot — редкая), циан — TON, маджента — запрет, сталь — опыт, пусто — тёмный */
 export type WheelRole = "hot" | "amber" | "neon" | "magenta" | "steel" | "void";
@@ -93,7 +94,7 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
   // табло меняем напрямую (без перерисовки React): сектор под иглой и курс диска
   const readout = (a: number) => {
     const i = underPtr(a);
-    if (secNo.current) secNo.current.textContent = `Сектор ${pad2(i + 1)}`;
+    if (secNo.current) secNo.current.textContent = t("ui.wheelSector", { i: pad2(i + 1) });
     if (secOut.current) secOut.current.textContent = sectors[i]?.title ?? "";
     if (hdgOut.current) hdgOut.current.textContent = `${String(Math.round(norm(-a)) % 360).padStart(3, "0")}°`;
   };
@@ -300,19 +301,19 @@ export const PrizeWheel = forwardRef<PrizeWheelHandle, Props>(function PrizeWhee
 
       {/* 5. табло по углам прибора */}
       <span className="pw-hud tl" aria-hidden>
-        <i>Вращения</i>
+        <i>{t("ui.wheelSpins")}</i>
         <b>{spins ? `${spins.left}/${spins.max}` : "—"}</b>
       </span>
       <span className="pw-hud tr" aria-hidden>
-        <i ref={secNo}>Сектор 01</i>
+        <i ref={secNo}>{t("ui.wheelSector01")}</i>
         <b ref={secOut}>{sectors[0]?.title}</b>
       </span>
       <span className="pw-hud bl" aria-hidden>
-        <i>Курс</i>
+        <i>{t("ui.wheelCourse")}</i>
         <b ref={hdgOut}>000°</b>
       </span>
       <span className="pw-hud br" aria-hidden>
-        <i>Режим</i>
+        <i>{t("ui.wheelMode")}</i>
         <b>{mode ?? "—"}</b>
       </span>
     </div>

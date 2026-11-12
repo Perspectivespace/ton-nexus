@@ -4,6 +4,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { ErrorState } from "@/components/ui/States";
 import { warmFonts } from "@/lib/fontWarm";
+import { t } from "@/i18n";
 
 /**
  * Разделы грузятся отдельными чанками (главная — в стартовом). Чтобы раздел открывался без задержки:
@@ -142,8 +143,8 @@ class ChunkBoundary extends Component<{ children: ReactNode }, { failed: boolean
     if (!this.state.failed) return this.props.children;
     return (
       <ErrorState
-        title="Раздел не загрузился"
-        message="Проверьте связь и попробуйте ещё раз."
+        title={t("ui.sectionFailed")}
+        message={t("ui.checkConnection")}
         onRetry={() => location.reload()}
       />
     );

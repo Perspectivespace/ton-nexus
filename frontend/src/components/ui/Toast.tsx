@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { haptic } from "@/lib/haptics";
 import { IconAlert, IconBolt, IconCheck, IconClose, IconBell } from "../icons";
 import { cx } from "./press";
+import { t } from "@/i18n";
 
 export type ToastKind = "ok" | "amber" | "danger" | "info";
 export type ToastInput = { kind?: ToastKind; title: ReactNode; sub?: ReactNode };
@@ -63,7 +64,7 @@ export function ToastView({ toast, onClose }: { toast: ToastState | (ToastInput 
           {toast.sub ? <p className="t-sub">{toast.sub}</p> : null}
         </div>
         {onClose ? (
-          <button type="button" className="t-x" onClick={onClose} aria-label="Закрыть">
+          <button type="button" className="t-x" onClick={onClose} aria-label={t("ui.close")}>
             <IconClose size={18} />
           </button>
         ) : null}

@@ -1,4 +1,5 @@
 import { Skeleton, SkeletonCard } from "@/components/ui/States";
+import { t } from "@/i18n";
 
 /**
  * Заглушка раздела, пока грузится его чанк (обычно не видна: разделы подтягиваются заранее).
@@ -7,13 +8,13 @@ import { Skeleton, SkeletonCard } from "@/components/ui/States";
  */
 export function RouteSkeleton() {
   return (
-    <div className="route-sk space-y-5" aria-busy="true" aria-label="Загрузка раздела">
+    <div className="route-sk space-y-5" aria-busy="true" aria-label={t("ui.loadingSection")}>
       <div className="grid min-h-[40px] gap-2 pt-1">
         <Skeleton w="28%" h={8} />
         <Skeleton w="52%" h={22} />
       </div>
-      <SkeletonCard lines={3} label="Загрузка" />
-      <SkeletonCard lines={2} label="Синхронизация" />
+      <SkeletonCard lines={3} label={t("ui.loading")} />
+      <SkeletonCard lines={2} label={t("ui.syncing")} />
     </div>
   );
 }
