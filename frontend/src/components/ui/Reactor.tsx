@@ -1,5 +1,6 @@
 import { useId, type CSSProperties } from "react";
 import { cx } from "./press";
+import { t } from "@/i18n";
 
 export type ReactorState = "running" | "ready" | "idle";
 
@@ -87,7 +88,7 @@ export function Reactor({ fill, state, size = 204, plate = true, draining, ignit
       className={cx("rx", `is-${state}`, `t${tier}`, draining && "is-draining", ignite && "is-ignite", reveal && "is-reveal", className)}
       style={{ width: size, height: size }}
       role="img"
-      aria-label={`Реактор: ${state === "running" ? "работает" : state === "ready" ? "хранилище полное" : "остановлен"}, хранилище ${pctLabel}%`}
+      aria-label={t("ui.reactorAria", { ready: state === "running" ? t("ui.reactorRunning") : state === "ready" ? t("ui.reactorFull") : t("ui.reactorStopped"), pctLabel })}
     >
       <svg className="rx-house" viewBox="0 0 210 210" aria-hidden>
         <defs>
@@ -243,7 +244,7 @@ export function Reactor({ fill, state, size = 204, plate = true, draining, ignit
       {plate && (
         <div className="rx-plate">
           <b>{pctLabel}%</b>
-          <span>хранилище</span>
+          <span>{t("ui.storage")}</span>
         </div>
       )}
     </div>

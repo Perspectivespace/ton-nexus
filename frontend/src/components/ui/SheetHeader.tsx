@@ -1,4 +1,5 @@
 import { forwardRef, type ReactNode } from "react";
+import { t } from "@/i18n";
 
 /**
  * Общая кнопка закрытия шторок (DESIGN.md п. 7, «Шторка»): касание 44 × 44, видимый круг 36 —
@@ -6,7 +7,7 @@ import { forwardRef, type ReactNode } from "react";
  * margin-right −4 px: правый край круга совпадает с полем контента (16 px).
  */
 export const CloseButton = forwardRef<HTMLButtonElement, { onClick: () => void; label?: string }>(function CloseButton(
-  { onClick, label = "Закрыть" },
+  { onClick, label = t("ui.close") },
   ref,
 ) {
   return (

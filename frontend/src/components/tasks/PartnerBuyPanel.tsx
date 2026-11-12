@@ -1,4 +1,5 @@
 import { StatusPill } from "@/components/ui";
+import { t } from "@/i18n";
 
 export type PartnerBuyState = {
   status: string;
@@ -20,12 +21,12 @@ function fmt(v: string | number) {
 /** Почему купить нельзя (null — можно) */
 export function buyBlockReason(s: PartnerBuyState): string | null {
   if (s.purchased) return null;
-  if (s.isPartner) return "Это ваша услуга, купить её нельзя.";
-  if (s.status !== "active") return "Продажи сейчас закрыты.";
-  if (s.slotsLeft <= 0) return "Продажи закончились.";
-  if (s.myLevel < s.minLevel) return `Нужен уровень ${s.minLevel}.`;
+  if (s.isPartner) return t("partner.yours");
+  if (s.status !== "active") return t("partner.closed");
+  if (s.slotsLeft <= 0) return t("partner.soldOut");
+  if (s.myLevel < s.minLevel) return t("partner.needLevel", { minLevel: s.minLevel });
   if (s.myBalance != null && Number(s.myBalance) < Number(s.price))
-    return `Не хватает TON: нужно ${fmt(s.price)}, на балансе ${fmt(s.myBalance)}.`;
+    return t("partner.noTon", { price: fmt(s.price), myBalance: fmt(s.myBalance) });
   return null;
 }
 
@@ -36,20 +37,19 @@ export function PartnerBuyPanel({ state, onBuy }: { state: PartnerBuyState; onBu
   return (
     <div className="ui-cut space-y-4 p-5" data-testid="partner-buy">
       <div className="flex items-center justify-between">
-        <p className="eyebrow">Покупка</p>
+        <p className="eyebrow">{t("partner.purchase")}</p>
         <StatusPill tone={state.purchased ? "ok" : canBuy ? "live" : "neutral"}>
-          {state.purchased ? "куплено" : canBuy ? "доступно" : "недоступно"}
+          {state.purchased ? t("partner.bought") : canBuy ? t("partner.available") : t("partner.unavailable")}
         </StatusPill>
       </div>
 
       {state.purchased ? (
         <p className="text-[13px] leading-relaxed">
-          Покупка оплачена с баланса. Партнёр получил оплату, детали в истории кошелька.
-        </p>
+          {t("partner.paid")}</p>
       ) : (
         <>
           <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
-            {reason ?? "Сумма спишется с вашего баланса в приложении и сразу уйдёт партнёру."}
+            {reason ?? t("partner.note")}
           </p>
           <button
             type="button"
@@ -57,7 +57,7 @@ export function PartnerBuyPanel({ state, onBuy }: { state: PartnerBuyState; onBu
             disabled={!canBuy || state.pending}
             onClick={onBuy}
           >
-            {state.pending ? "Оплата…" : `Купить за ${fmt(state.price)} TON`}
+            {state.pending ? t("partner.paying") : t("partner.buyFor", { price: fmt(state.price) })}
           </button>
         </>
       )}

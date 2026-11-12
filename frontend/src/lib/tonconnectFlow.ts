@@ -1,4 +1,5 @@
 import type { TonConnectUI } from "@tonconnect/ui-react";
+import { t } from "@/i18n";
 
 /** Подключить кошелёк и дождаться подключения: openModal() возвращается сразу, ждём onStatusChange */
 export type ConnectUI = Pick<TonConnectUI, "connected" | "connectionRestored" | "onStatusChange" | "onModalStateChange" | "openModal">;
@@ -29,7 +30,7 @@ export async function ensureConnected(ui: ConnectUI): Promise<void> {
     offModal = ui.onModalStateChange((s) => {
       if (s.status === "closed" && s.closeReason === "action-cancelled" && !ui.connected) {
         done();
-        reject(new Error("Кошелёк не подключён"));
+        reject(new Error(t("ui.walletNotConnected")));
       }
     });
     ui.openModal().catch((e) => {

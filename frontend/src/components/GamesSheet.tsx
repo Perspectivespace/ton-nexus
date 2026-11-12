@@ -11,6 +11,7 @@ import { IconChevron, IconPodium } from "@/components/icons";
 import { ArenaArt } from "@/components/arena/ArenaArt";
 import { useArenaLobby } from "@/lib/arena/hooks";
 import { arenaCard, fmtTon } from "@/lib/arena/api";
+import { t } from "@/i18n";
 
 /** Колесо: диск с секторами, спицами и восемью лампами (сетка 48) */
 function WheelArt() {
@@ -83,7 +84,7 @@ export default function GamesSheet({
   const wheel = useWheelStatus();
   const tower = useTowerMe();
   const w = wheelLine(wheel.data);
-  const t = towerLine(tower.data?.best_month);
+  const towerSt = towerLine(tower.data?.best_month);
 
   // «Арена»: игрок видит карточку, только когда она открыта (GET /arena/rooms отвечает);
   // владелец — всегда, а при выключенной настройке — с бейджем «тест»
@@ -160,7 +161,7 @@ export default function GamesSheet({
             <i className="gs-grab" />
           </div>
           <div className="gs-head" onPointerDown={startDrag}>
-            <SheetHeader title="Игры" sub="Выберите игру" id={titleId} onClose={() => closeRef.current()} closeRef={closeBtn} />
+            <SheetHeader title={t("games.title")} sub={t("games.pick")} id={titleId} onClose={() => closeRef.current()} closeRef={closeBtn} />
           </div>
 
           {card.show && (
@@ -168,19 +169,18 @@ export default function GamesSheet({
               <span className="gs-feat-art" aria-hidden="true">
                 <ArenaArt id="gsa" h={116} className="gs-feat-svg" />
                 <span className="gs-new">NEW</span>
-                {card.test && <span className="gs-test">тест</span>}
+                {card.test && <span className="gs-test">{t("games.test")}</span>}
               </span>
               <span className="gs-feat-body">
                 <span className="gs-txt">
-                  <span className="gs-name">Арена</span>
+                  <span className="gs-name">{t("games.arena")}</span>
                   <span className="gs-st">
                     PvP · {stake ? fmtTon(stake) : "0.1"} TON
-                    {lobby.data ? ` · ${waiting} ${waiting === 1 ? "ждёт" : "ждут"}` : ""}
+                    {lobby.data ? ` · ${waiting} ${waiting === 1 ? t("games.waitingOne") : t("games.waitingMany")}` : ""}
                   </span>
                 </span>
                 <span className="gs-go" aria-hidden="true">
-                  В бой
-                  <IconChevron size={14} />
+                  {t("games.fight")}<IconChevron size={14} />
                 </span>
               </span>
             </Link>
@@ -194,15 +194,14 @@ export default function GamesSheet({
             </span>
             <span className="gs-body">
               <span className="gs-txt">
-                <span className="gs-name">Колесо удачи</span>
+                <span className="gs-name">{t("games.wheel")}</span>
                 <span className={w.hot ? "gs-st hot" : "gs-st"}>
                   {w.hot && <i aria-hidden="true" />}
                   {w.text}
                 </span>
               </span>
               <span className="gs-go" aria-hidden="true">
-                Крутить
-                <IconChevron size={14} />
+                {t("games.spin")}<IconChevron size={14} />
               </span>
             </span>
           </Link>
@@ -210,7 +209,7 @@ export default function GamesSheet({
           {/* карточка — не ссылка целиком: внутри вторая ссылка «Топ», а <a> в <a> недопустим.
               Основная ссылка растянута на всю карточку (.gs-hit), «Топ» лежит поверх неё */}
           <div className="gs-card amber">
-            <Link to="/tower" className="gs-hit" aria-label={`Башня — играть. ${t}`} onClick={() => haptic.tap()} />
+            <Link to="/tower" className="gs-hit" aria-label={t("games.towerPlay", { line: towerSt })} onClick={() => haptic.tap()} />
             <span className="gs-art" aria-hidden="true">
               <span className="gs-med">
                 <TowerArt />
@@ -218,18 +217,16 @@ export default function GamesSheet({
             </span>
             <span className="gs-body">
               <span className="gs-txt" aria-hidden="true">
-                <span className="gs-name">Башня</span>
-                <span className="gs-st">{t}</span>
+                <span className="gs-name">{t("games.tower")}</span>
+                <span className="gs-st">{towerSt}</span>
               </span>
               <span className="gs-acts">
                 <span className="gs-go" aria-hidden="true">
-                  Играть
-                  <IconChevron size={14} />
+                  {t("games.play")}<IconChevron size={14} />
                 </span>
                 <Link to="/tower/top" className="gs-sub" onClick={() => haptic.tap()}>
                   <IconPodium size={14} />
-                  Топ
-                </Link>
+                  {t("games.top")}</Link>
               </span>
             </span>
           </div>

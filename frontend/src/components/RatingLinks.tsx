@@ -4,11 +4,11 @@ import { Panel } from "@/components/ui";
 import { IconChevron, IconTasks, IconTower, IconUp } from "@/components/icons";
 import { haptic } from "@/lib/haptics";
 import { prefetchRoute } from "@/lib/routes";
-import { plural } from "@/lib/friendRule";
-import { monthTitle, mskMonth } from "@/lib/tower/month";
+import { monthInline, mskMonth } from "@/lib/tower/month";
 import { useRatingSummary } from "@/api/hooks";
 import type { RatingKind, RatingSummary } from "@/api/types";
 import "@/styles/ratings.css";
+import { fmtNum, ordSuffix, t, tp } from "@/i18n";
 
 /*
  * Рейтинги: вкладки (значок и акцент) и точки входа — «Мои места» в Профиле и «Топ исполнителей» в Заработке.
@@ -17,8 +17,8 @@ import "@/styles/ratings.css";
 
 /** чанк экрана рейтингов — заранее, при наведении/касании */
 const warm = () => void prefetchRoute("/ratings");
-const fmt = (n: number) => n.toLocaleString("ru-RU");
-const players = (n: number) => `${fmt(n)} ${plural(n, "игрок", "игрока", "игроков")}`;
+const fmt = (n: number) => fmtNum(n);
+const players = (n: number) => `${fmt(n)} ${tp("ratings.players", n)}`;
 
 export type Kind = RatingKind | "tower";
 
@@ -40,17 +40,17 @@ export const KINDS: {
   Icon: (p: { size?: number }) => ReactNode;
   acc: string;
 }[] = [
-  { k: "level", label: "Уровень", Icon: IconUp, acc: "var(--neon)" },
-  { k: "tasks", label: "Задания", Icon: IconTasks, acc: "var(--ok)" },
-  { k: "friends", label: "Друзья", Icon: IconFriends, acc: "var(--magenta)" },
-  { k: "tower", label: "Башня", Icon: IconTower, acc: "var(--amber)" },
+  { k: "level", get label() { return t("ratings.kindLevel"); }, Icon: IconUp, acc: "var(--neon)" },
+  { k: "tasks", get label() { return t("ratings.kindTasks"); }, Icon: IconTasks, acc: "var(--ok)" },
+  { k: "friends", get label() { return t("ratings.kindFriends"); }, Icon: IconFriends, acc: "var(--magenta)" },
+  { k: "tower", get label() { return t("ratings.kindTower"); }, Icon: IconTower, acc: "var(--amber)" },
 ];
 export const kindOf = (k: Kind) => KINDS.find((x) => x.k === k)!;
 
 const CELLS: { k: "level" | "tasks" | "tower"; label: string }[] = [
-  { k: "level", label: "Уровень" },
-  { k: "tasks", label: "Задания" },
-  { k: "tower", label: "Башня" },
+  { k: "level", get label() { return t("ratings.kindLevel"); } },
+  { k: "tasks", get label() { return t("ratings.kindTasks"); } },
+  { k: "tower", get label() { return t("ratings.kindTower"); } },
 ];
 
 /** Профиль: «Мои места» — три ячейки-ссылки на свои вкладки + «Все рейтинги» */
@@ -59,10 +59,9 @@ export function ProfileRanks() {
   return (
     <Panel className="rt-strip">
       <Link to="/ratings?from=profile" className="rt-strip-hd no-underline" onClick={() => haptic.tap()} onPointerEnter={warm}>
-        <span className="ui-label">Мои места</span>
+        <span className="ui-label">{t("ratings.myPlaces")}</span>
         <span className="rt-all">
-          Все рейтинги
-          <IconChevron size={16} />
+          {t("ratings.all")}<IconChevron size={16} />
         </span>
       </Link>
       <div className="rt-cells">
@@ -75,7 +74,7 @@ export function ProfileRanks() {
               to={`/ratings?t=${k}&from=profile`}
               className="rt-cell no-underline"
               style={{ "--acc": K.acc } as CSSProperties}
-              aria-label={rank != null ? `${label}: ${rank}-е место` : `${label}: пока без места`}
+              aria-label={rank != null ? t("ratings.placeAria", { label, rank }) : t("ratings.noPlaceAria", { label })}
               onClick={() => haptic.tap()}
               onPointerEnter={warm}
             >
@@ -85,7 +84,7 @@ export function ProfileRanks() {
               {rank != null ? (
                 <span className="rt-cn">
                   {fmt(rank)}
-                  <span className="rt-cpl">-е</span>
+                  <span className="rt-cpl">{ordSuffix(rank, "ratings.ordPlace")}</span>
                 </span>
               ) : (
                 <span className="rt-cn rt-cnone">—</span>
@@ -101,15 +100,15 @@ export function ProfileRanks() {
 
 /** Подпись «Топ исполнителей»: место за месяц или как туда попасть */
 export function tasksTopSub(s?: RatingSummary): string {
-  if (!s) return "Кто выполнил больше заданий";
-  if (s.tasks.rank == null) return s.tasks.total ? `${players(s.tasks.total)} в топе · одно задание — и вы там` : "Одно принятое задание — и вы в топе";
-  return `Вы ${fmt(s.tasks.rank)}-й из ${fmt(s.tasks.total)}`;
+  if (!s) return t("ratings.tasksTopWho");
+  if (s.tasks.rank == null) return s.tasks.total ? t("ratings.tasksTopIn", { total: players(s.tasks.total) }) : t("ratings.tasksTopOne");
+  return t("ratings.youOf", { rank: fmt(s.tasks.rank), total: fmt(s.tasks.total) });
 }
 
 /** Заработок: ссылка «Топ исполнителей · октябрь» над лентой заданий */
 export function TasksTopLink() {
   const s = useRatingSummary().data;
-  const month = monthTitle(s?.month ?? mskMonth()).toLowerCase();
+  const month = monthInline(s?.month ?? mskMonth());
   return (
     <Link
       to="/ratings?t=tasks&from=tasks"
@@ -122,7 +121,7 @@ export function TasksTopLink() {
         <IconTasks size={16} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="rt-ctx-t">{`Топ исполнителей · ${month}`}</span>
+        <span className="rt-ctx-t">{t("ratings.tasksTopMonth", { month })}</span>
         <span className="rt-ctx-s">{tasksTopSub(s)}</span>
       </span>
       <IconChevron size={18} className="rt-chev" />

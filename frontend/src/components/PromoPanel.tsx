@@ -2,12 +2,13 @@ import { useState } from "react";
 import { usePromoRedeem, type PromoRedeemOut } from "@/api/hooks";
 import { ApiError } from "@/api/client";
 import { Button, Field, Panel, useToast } from "@/components/ui";
+import { t } from "@/i18n";
 
 function rewardLine(r: PromoRedeemOut) {
   return [
     Number(r.reward_ton) > 0 && `+${Number(r.reward_ton).toFixed(4)} TON`,
     r.reward_xp > 0 && `+${r.reward_xp} XP`,
-    r.reward_focus > 0 && `Фокус +${r.reward_focus}`,
+    r.reward_focus > 0 && t("promo.focusReward", { rewardFocus: r.reward_focus }),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -17,11 +18,11 @@ function rewardLine(r: PromoRedeemOut) {
 export function promoErrorText(e: unknown): string {
   const status = e instanceof ApiError ? e.status : 0;
   const msg = e instanceof Error ? e.message : "";
-  if (status === 429 || /too many/i.test(msg)) return "Слишком много попыток. Попробуйте позже";
-  if (/already redeemed/i.test(msg)) return "Этот код уже активирован на вашем аккаунте";
-  if (/fully used/i.test(msg)) return "Активации этого кода закончились";
-  if (/expired/i.test(msg)) return "Срок действия кода истёк";
-  return "Код не принят";
+  if (status === 429 || /too many/i.test(msg)) return t("promo.tooMany");
+  if (/already redeemed/i.test(msg)) return t("promo.already");
+  if (/fully used/i.test(msg)) return t("promo.usedUp");
+  if (/expired/i.test(msg)) return t("promo.expired");
+  return t("promo.rejected");
 }
 
 /** Ввод промокода — вкладка «Промокод» в «Заработке» (/tasks?tab=promo): код начисляет TON, опыт или фокус. */
@@ -35,7 +36,7 @@ export function PromoPanel() {
     promo.mutate(code, {
       onSuccess: (r) => {
         setCode("");
-        toast({ kind: "ok", title: "Промокод активирован", sub: rewardLine(r) || r.code });
+        toast({ kind: "ok", title: t("promo.done"), sub: rewardLine(r) || r.code });
       },
     });
   }
@@ -43,10 +44,10 @@ export function PromoPanel() {
   return (
     <Panel className="space-y-4 p-5">
       <div className="min-w-0">
-        <h2 className="ui-h">Промокод</h2>
-        <p className="ui-sec mt-1">Начисляет TON, опыт или фокус. Один код — один раз на аккаунт.</p>
+        <h2 className="ui-h">{t("promo.title")}</h2>
+        <p className="ui-sec mt-1">{t("promo.sub")}</p>
       </div>
-      <Field label="Код" error={promo.isError ? promoErrorText(promo.error) : undefined}>
+      <Field label={t("promo.code")} error={promo.isError ? promoErrorText(promo.error) : undefined}>
         <input
           className="ui-input uppercase tracking-wider"
           value={code}
@@ -62,7 +63,7 @@ export function PromoPanel() {
         />
       </Field>
       <Button kind="secondary" block disabled={promo.isPending || short} onClick={onPromo}>
-        {promo.isPending ? "Проверка…" : short ? "Введите код" : "Активировать"}
+        {promo.isPending ? t("promo.checking") : short ? t("promo.enter") : t("promo.activate")}
       </Button>
     </Panel>
   );

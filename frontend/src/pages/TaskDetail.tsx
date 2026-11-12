@@ -16,16 +16,17 @@ import { BackLink } from "@/components/BackLink";
 import { PartnerBuyPanel } from "@/components/tasks/PartnerBuyPanel";
 import { OwnerTaskPanel } from "@/components/tasks/OwnerTaskPanel";
 import { ProofUpload, proofFileError } from "@/components/tasks/ProofUpload";
+import { t } from "@/i18n";
 
 const TASK_STATUS_RU: Record<string, string> = {
-  active: "активно",
-  draft: "черновик",
-  pending_approval: "на одобрении",
-  paused: "пауза",
-  rejected: "отклонено",
-  completed: "завершено",
-  closed: "закрыто",
-  cancelled: "отменено",
+  get active() { return t("taskStatus.active"); },
+  get draft() { return t("taskStatus.draft"); },
+  get pending_approval() { return t("taskStatus.pending"); },
+  get paused() { return t("taskStatus.paused"); },
+  get rejected() { return t("taskStatus.rejected"); },
+  get completed() { return t("taskStatus.finished"); },
+  get closed() { return t("taskStatus.closed"); },
+  get cancelled() { return t("taskStatus.cancelled"); },
 };
 
 export function TaskDetail() {
@@ -33,7 +34,7 @@ export function TaskDetail() {
   const { id } = useParams();
   const taskId = Number(id) || 0;
   const { data: me } = useMe();
-  const { data: t, isLoading, error } = useTask(taskId);
+  const { data: task, isLoading, error } = useTask(taskId);
   const submit = useTaskSubmit(taskId);
   const buy = useTaskBuy(taskId);
   const [proofText, setProofText] = useState("");
@@ -63,9 +64,9 @@ export function TaskDetail() {
         proof_upload_id: proofUploadId,
       });
       setDone(true);
-      toast({ kind: "ok", title: "Сдано на проверку", sub: "награда придёт после одобрения" });
+      toast({ kind: "ok", title: t("task.submitted"), sub: t("task.submittedSub") });
     } catch (e) {
-      toast({ kind: "danger", title: "Не удалось сдать", sub: e instanceof Error ? e.message : "Ошибка" });
+      toast({ kind: "danger", title: t("task.submitFailed"), sub: e instanceof Error ? e.message : t("ui.error") });
     }
   }
 
@@ -75,25 +76,25 @@ export function TaskDetail() {
       const r = await buy.mutateAsync();
       toast({
         kind: "ok",
-        title: r.already ? "Уже куплено" : "Покупка оплачена",
-        sub: r.already ? "повторно не списали" : `−${Number(r.amount)} TON${r.xp ? ` · +${r.xp} XP` : ""}`,
+        title: r.already ? t("task.alreadyBought") : t("task.bought"),
+        sub: r.already ? t("task.notCharged") : `−${Number(r.amount)} TON${r.xp ? ` · +${r.xp} XP` : ""}`,
       });
     } catch (e) {
-      toast({ kind: "danger", title: "Покупка не прошла", sub: e instanceof Error ? e.message : "Ошибка" });
+      toast({ kind: "danger", title: t("task.buyFailed"), sub: e instanceof Error ? e.message : t("ui.error") });
     }
   }
 
-  if (isLoading) return <LoadingPanel label="Загрузка задания…" />;
-  if (error || !t) return <ErrorPanel message="Задание не найдено или недоступно" />;
+  if (isLoading) return <LoadingPanel label={t("task.loading")} />;
+  if (error || !task) return <ErrorPanel message={t("task.notFound")} />;
 
-  const slotsLeft = t.total_slots - t.filled_slots;
-  const levelOk = (me?.level ?? 1) >= t.min_level;
-  const isOwn = me?.id === t.creator_id;
-  const isPartnerTask = t.task_type === "partner";
+  const slotsLeft = task.total_slots - task.filled_slots;
+  const levelOk = (me?.level ?? 1) >= task.min_level;
+  const isOwn = me?.id === task.creator_id;
+  const isPartnerTask = task.task_type === "partner";
   const canSubmit =
-    t.status === "active" && slotsLeft > 0 && levelOk && !isOwn && !done && !submit.isSuccess;
-  const proofRequired = !!t.proof_required;
-  const proofAllowed = proofRequired || t.task_type === "visit" || t.task_type === "campaign";
+    task.status === "active" && slotsLeft > 0 && levelOk && !isOwn && !done && !submit.isSuccess;
+  const proofRequired = !!task.proof_required;
+  const proofAllowed = proofRequired || task.task_type === "visit" || task.task_type === "campaign";
   const proofErr = proofFileError(proofFile);
   const sending = submit.isPending || upload.isPending;
   const submitBlocked =
@@ -104,95 +105,94 @@ export function TaskDetail() {
   return (
     <div className="space-y-5">
       <ScreenHeader
-        eyebrow="Задание"
-        title={t.title}
-        action={<BackLink to="/tasks" label="Лента" />}
+        eyebrow={t("task.title")}
+        title={task.title}
+        action={<BackLink to="/tasks" label={t("task.feed")} />}
       />
 
       <div className="ui-cut hero space-y-4 p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <StatusPill tone={t.status === "active" ? "live" : "neutral"}>{TASK_STATUS_RU[t.status] ?? t.status}</StatusPill>
+          <StatusPill tone={task.status === "active" ? "live" : "neutral"}>{TASK_STATUS_RU[task.status] ?? task.status}</StatusPill>
           <StatusPill tone={slotsLeft > 0 ? "ok" : "warn"}>
-            {isPartnerTask ? "продано" : "занято"} {t.filled_slots} из {t.total_slots}
+            {isPartnerTask ? t("task.sold") : t("task.taken")} {task.filled_slots}{" "}{t("task.of")}{" "}{task.total_slots}
           </StatusPill>
-          {!levelOk && <StatusPill tone="danger">нужен ур. {t.min_level}</StatusPill>}
-          {proofRequired && <StatusPill tone="neutral">нужен скриншот</StatusPill>}
-          {isOwn && <StatusPill tone="neutral">ваше задание</StatusPill>}
+          {!levelOk && <StatusPill tone="danger">{t("task.needLvl")}{" "}{task.min_level}</StatusPill>}
+          {proofRequired && <StatusPill tone="neutral">{t("task.needScreenshot")}</StatusPill>}
+          {isOwn && <StatusPill tone="neutral">{t("task.yours")}</StatusPill>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <Readout
-            label={isPartnerTask ? "Цена" : "Награда"}
-            value={isPartnerTask ? String(Number(t.reward)) : Number(t.reward).toFixed(4)}
+            label={isPartnerTask ? t("task.price") : t("task.reward")}
+            value={isPartnerTask ? String(Number(task.reward)) : Number(task.reward).toFixed(4)}
             unit="TON"
-            hint={isPartnerTask && t.partner_name ? `партнёр ${t.partner_name}` : undefined}
+            hint={isPartnerTask && task.partner_name ? t("task.partner", { partnerName: task.partner_name }) : undefined}
           />
-          <Readout label="Опыт" value={`+${t.xp_reward}`} unit="XP" />
+          <Readout label={t("task.xp")} value={`+${task.xp_reward}`} unit="XP" />
         </div>
 
         <div>
-          <p className="eyebrow mb-2">Бриф</p>
-          <p className="text-[14px] leading-relaxed whitespace-pre-wrap">{t.description}</p>
+          <p className="eyebrow mb-2">{t("task.brief")}</p>
+          <p className="text-[14px] leading-relaxed whitespace-pre-wrap">{task.description}</p>
         </div>
 
-        {t.target_url && (
+        {task.target_url && (
           <a
-            href={t.target_url}
+            href={task.target_url}
             target="_blank"
             rel="noopener noreferrer"
             className="ui-btn secondary sm"
           >
-            Открыть ссылку задания ↗
-          </a>
+            {t("task.openLink")}</a>
         )}
       </div>
 
       {isPartnerTask && (
         <PartnerBuyPanel
           state={{
-            status: t.status,
-            price: t.reward,
+            status: task.status,
+            price: task.reward,
             slotsLeft,
-            minLevel: t.min_level,
+            minLevel: task.min_level,
             myLevel: me?.level ?? 1,
             myBalance: me?.balance ?? null,
-            isPartner: me?.id != null && me.id === t.partner_user_id,
-            purchased: !!t.purchased || !!buy.data,
+            isPartner: me?.id != null && me.id === task.partner_user_id,
+            purchased: !!task.purchased || !!buy.data,
             pending: buy.isPending,
-            error: buy.isError ? (buy.error instanceof Error ? buy.error.message : "Ошибка покупки") : null,
+            error: buy.isError ? (buy.error instanceof Error ? buy.error.message : t("task.buyError")) : null,
           }}
           onBuy={onBuy}
         />
       )}
 
-      {me?.is_owner && <OwnerTaskPanel taskId={t.id} />}
+      {me?.is_owner && <OwnerTaskPanel taskId={task.id} />}
 
       {!isPartnerTask && (
         <div className="ui-cut space-y-4 p-5">
           <div className="flex items-center justify-between">
-            <p className="eyebrow">Сдача</p>
+            <p className="eyebrow">{t("task.submission")}</p>
             <StatusPill
               tone={done || submit.isSuccess ? "ok" : canSubmit ? "live" : "neutral"}
             >
               {done || submit.isSuccess
-                ? "на проверке"
+                ? t("wallet.inReview")
                 : canSubmit
-                  ? "готово к сдаче"
-                  : "закрыто"}
+                  ? t("task.ready")
+                  : t("taskStatus.closed")}
             </StatusPill>
           </div>
 
           {!canSubmit && !done && !submit.isSuccess && (
             <p className="text-[13px] leading-relaxed text-[var(--text-dim)]">
               {isOwn
-                ? "Нельзя сдавать своё задание."
+                ? t("task.ownTask")
                 : !levelOk
-                  ? `Требуется уровень ${t.min_level}.`
+                  ? t("task.levelRequired", { minLevel: task.min_level })
                   : slotsLeft <= 0
-                    ? "Места закончились."
-                    : t.status !== "active"
-                      ? "Задание неактивно."
-                      : "Сдача недоступна."}
+                    ? t("task.noSlots")
+                    : task.status !== "active"
+                      ? t("task.inactive")
+                      : t("task.cantSubmit")}
             </p>
           )}
 
@@ -206,17 +206,17 @@ export function TaskDetail() {
                   disabled={sending}
                 />
               )}
-              <Field label={proofRequired ? "Комментарий (необязательно)" : "Подтверждение (текст)"}>
+              <Field label={proofRequired ? t("task.commentOptional") : t("task.proofText")}>
                 <textarea
                   className="ui-input"
                   value={proofText}
                   disabled={done || submit.isSuccess || sending}
                   onChange={(e) => setProofText(e.target.value)}
-                  placeholder={proofRequired ? "Что сделано, ник/аккаунт…" : "Описание выполнения…"}
+                  placeholder={proofRequired ? t("task.commentPh") : t("task.proofPh")}
                 />
               </Field>
               {!proofRequired && (
-                <Field label="Ссылка на подтверждение">
+                <Field label={t("task.proofLink")}>
                   <input
                     className="ui-input"
                     value={proofUrl}
@@ -234,7 +234,7 @@ export function TaskDetail() {
                   disabled={submitBlocked}
                   onClick={onSubmit}
                 >
-                  {upload.isPending ? "Загрузка скриншота…" : submit.isPending ? "Отправка…" : "Сдать на проверку"}
+                  {upload.isPending ? t("proof.loading") : submit.isPending ? t("task.sending") : t("task.submit")}
                 </button>
               )}
             </>
@@ -246,10 +246,10 @@ export function TaskDetail() {
                 upload.isError
                   ? upload.error instanceof Error
                     ? upload.error.message
-                    : "Скриншот не загрузился"
+                    : t("task.screenshotFailed")
                   : submit.error instanceof Error
                     ? submit.error.message
-                    : "Ошибка сдачи"
+                    : t("task.submitError")
               }
             />
           )}
@@ -261,11 +261,11 @@ export function TaskDetail() {
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl border border-[var(--success)]/25 bg-[var(--success)]/5 p-4 text-[13px] leading-relaxed"
               >
-                Заявка ушла модератору. После одобрения —{" "}
+                {t("task.sentToMod")}{" "}
                 <span className="mono font-semibold text-[var(--success)]">
-                  {Number(t.reward).toFixed(4)} TON
+                  {Number(task.reward).toFixed(4)} TON
                 </span>
-                {t.xp_reward > 0 && ` и +${t.xp_reward} XP`}.
+                {task.xp_reward > 0 && t("task.plusXp", { xpReward: task.xp_reward })}.
               </motion.div>
             )}
           </AnimatePresence>

@@ -1,0 +1,17 @@
+export const home = {
+  "home.minerIdle": "остановлен — запустите цикл",
+  "home.minerRunning": "цикл активен",
+  "home.minerReady": "хранилище полное — соберите",
+  "home.levelProgress": "Прогресс уровня",
+  "home.wheelBonusHint": "Бонус с колеса: прибавится к шансу следующей попытки усиления и потратится на ней",
+  "home.wheelBonusTail": "% к успеху · след. усиление",
+  "home.reactor": "Реактор",
+  "home.syncing": "синхр.",
+  "home.online": "в сети",
+  "home.syncingHub": "Синхронизация контура…",
+  "home.noServer": "Нет связи с сервером. Откройте приложение из Telegram.",
+  "home.collapseBalance": "Свернуть панель баланса",
+  "home.expandBalance": "Развернуть панель баланса",
+  "home.balance": "Баланс",
+  "home.lvl": "Ур.",
+};

@@ -27,6 +27,7 @@ import { DailyWeek } from "@/components/DailyWeek";
 import { useDaily } from "@/lib/useDaily";
 import { formatLeft, nextMskMidnight, useCountdown } from "@/lib/countdown";
 import { useQueryClient } from "@tanstack/react-query";
+import { fmtNum, t } from "@/i18n";
 
 /**
  * Сектора колеса. Порядок — визуальный (цвета чередуются), выпавший сектор ищется по id ответа сервера.
@@ -40,12 +41,12 @@ const PRIZES: readonly {
   role: WheelRole;
   use: string;
 }[] = [
-  { id: "success_plus_5", title: "+5%", sub: "успех", label: "+5% к успеху", role: "hot", use: "Добавляет +5% к шансу успеха следующей попытки усиления майнера. Не гарантирует успех." },
-  { id: "xp_small", title: "XP", sub: "опыт", label: "XP", role: "steel", use: "Опыт уровня аккаунта." },
-  { id: "focus_1", title: "Фокус", sub: "×1", label: "Фокус ×1", role: "amber", use: "Повышает вес нужного типа на колесе апгрейда (чаще выпадает выбранный стат)." },
-  { id: "nothing", title: "Пусто", label: "Пусто", role: "void", use: "Пустой сектор — без награды." },
-  { id: "ton_dust", title: "TON", sub: "пыль", label: "Пыль TON", role: "neon", use: "Небольшая сумма TON на баланс." },
-  { id: "block_1", title: "Запрет", sub: "×1", label: "Запрет ×1", role: "magenta", use: "Блокирует выпадение одного нежелательного типа апгрейда." },
+  { id: "success_plus_5", title: "+5%", get sub() { return t("wheel.successSub"); }, get label() { return t("wheel.successLabel"); }, role: "hot", get use() { return t("wheel.successUse"); } },
+  { id: "xp_small", title: "XP", get sub() { return t("wheel.xpSub"); }, label: "XP", role: "steel", get use() { return t("wheel.xpUse"); } },
+  { id: "focus_1", get title() { return t("token.focus"); }, sub: "×1", get label() { return t("wheel.focusLabel"); }, role: "amber", get use() { return t("wheel.focusUse"); } },
+  { id: "nothing", get title() { return t("wheel.empty"); }, get label() { return t("wheel.empty"); }, role: "void", get use() { return t("wheel.emptyUse"); } },
+  { id: "ton_dust", title: "TON", get sub() { return t("wheel.dustSub"); }, get label() { return t("wheel.dustLabel"); }, role: "neon", get use() { return t("wheel.dustUse"); } },
+  { id: "block_1", get title() { return t("token.block"); }, sub: "×1", get label() { return t("wheel.blockLabel"); }, role: "magenta", get use() { return t("wheel.blockUse"); } },
 ];
 const MISS = PRIZES.findIndex((p) => p.id === "nothing");
 
@@ -58,9 +59,9 @@ function rewardParts(r: SpinOut): string[] {
   return [
     Number(r.reward_ton) > 0 && `+${Number(r.reward_ton).toFixed(4)} TON`,
     r.reward_xp > 0 && `+${r.reward_xp} XP`,
-    r.reward_focus > 0 && `Фокус +${r.reward_focus}`,
-    r.reward_block > 0 && `Запрет +${r.reward_block}`,
-    r.success_boost_bp > 0 && `+${r.success_boost_bp / 100}% к успеху`,
+    r.reward_focus > 0 && t("promo.focusReward", { rewardFocus: r.reward_focus }),
+    r.reward_block > 0 && t("wheel.blockReward", { rewardBlock: r.reward_block }),
+    r.success_boost_bp > 0 && t("wheel.boostReward", { successBoostBp: r.success_boost_bp / 100 }),
   ].filter(Boolean) as string[];
 }
 
@@ -73,7 +74,6 @@ const DOT: Record<WheelRole, string> = {
   void: "var(--line-strong)",
 };
 
-const pct = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
 
 type Phase = "idle" | "wait" | "spin" | "done";
 
@@ -108,7 +108,7 @@ export function Wheel() {
       out = await spinMut.mutateAsync();
     } catch (e) {
       setPhase("idle");
-      toast({ kind: "danger", title: "Колесо не ответило", sub: e instanceof Error ? e.message : undefined });
+      toast({ kind: "danger", title: t("wheel.noAnswer"), sub: e instanceof Error ? e.message : undefined });
       return;
     }
     const idx = prizeIndex(out.item_id);
@@ -119,16 +119,16 @@ export function Wheel() {
     setPhase("done");
     const p = PRIZES[idx];
     if (p.id === "nothing" && rewardParts(out).length === 0) {
-      toast({ kind: "info", title: "Пустой сектор", sub: "в этот раз без награды" });
+      toast({ kind: "info", title: t("wheel.emptySector"), sub: t("wheel.noRewardThisTime") });
     } else {
       haptic.heavy();
-      toast({ kind: "amber", title: `Выигрыш: ${out.label || p.label}`, sub: rewardParts(out).join(" · ") || undefined });
+      toast({ kind: "amber", title: t("wheel.win", { label: out.label || p.label }), sub: rewardParts(out).join(" · ") || undefined });
     }
     requestAnimationFrame(() => resultRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
 
   if (daily.loading || wheelSt.isLoading) {
-    return <LoadingPanel label="Загрузка колеса…" />;
+    return <LoadingPanel label={t("wheel.loading")} />;
   }
 
   const d = daily.status;
@@ -148,18 +148,17 @@ export function Wheel() {
       }}
     >
       <ScreenHeader
-        title="Колесо удачи"
+        title={t("games.wheel")}
         action={
-          <Button kind="secondary" size="sm" onClick={() => setHelpOpen(true)} aria-label="Призы и шансы">
-            Шансы
-          </Button>
+          <Button kind="secondary" size="sm" onClick={() => setHelpOpen(true)} aria-label={t("wheel.prizesOdds")}>
+            {t("wheel.odds")}</Button>
         }
       />
 
       {/* Герой: колесо (п. 8.3) */}
       <Panel level="hero" cut="l" lift="l2" className="px-5 pb-0 pt-5">
         <p className="sr-only">
-          Бесплатных вращений сегодня: {left} из {maxSpins}
+          {t("wheel.freeToday")}{" "}{left}{" "}{t("task.of")}{" "}{maxSpins}
         </p>
         <PrizeWheel
           ref={wheel}
@@ -168,27 +167,27 @@ export function Wheel() {
           spinning={phase === "spin"}
           miss={miss}
           spins={{ left, max: maxSpins }}
-          mode={phase === "wait" ? "Связь" : phase === "spin" ? "Вращение" : phase === "done" ? (miss ? "Пусто" : "Выигрыш") : left > 0 ? "Готов" : "Ждёт"}
+          mode={phase === "wait" ? t("wheel.stLink") : phase === "spin" ? t("wheel.stSpin") : phase === "done" ? (miss ? t("wheel.empty") : t("wheel.stWin")) : left > 0 ? t("wheel.stReady") : t("wheel.stWait")}
           className="mb-5"
         />
         <Scrim className="relative -mx-5 space-y-3 px-5 pb-5 pt-3">
           <p className="ui-sec text-center !text-[12px]">
             {phase === "wait"
-              ? "Связь с колесом…"
+              ? t("wheel.linking")
               : phase === "spin"
-                ? "Тап по экрану — сразу к результату"
+                ? t("upgrade.tapSkip")
                 : left > 0
-                  ? "Сектор под указателем — ваша награда"
-                  : "Бесплатные вращения обновляются в 00:00 мск"}
+                  ? t("wheel.pointerHint")
+                  : t("wheel.resetHint")}
           </p>
           <span className="ui-spill block">
             <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || spinsOut} onClick={onSpin}>
-              {phase === "wait" ? "Связь…" : phase === "spin" ? "Вращение…" : spinsOut ? (
+              {phase === "wait" ? t("wheel.linkingShort") : phase === "spin" ? t("wheel.spinning") : spinsOut ? (
                 <>
-                  Следующее через <span className="ui-num">{spinIn ?? "—"}</span>
+                  {t("wheel.nextIn")}{" "}<span className="ui-num">{spinIn ?? "—"}</span>
                 </>
               ) : (
-                "Крутить колесо"
+                t("wheel.spin")
               )}
             </Button>
           </span>
@@ -200,17 +199,17 @@ export function Wheel() {
         <div ref={resultRef} className="scroll-mb-28">
           <Panel className={cx("space-y-3 p-5", !miss && "win-edge")}>
             <div className="flex items-center justify-between gap-3">
-              <p className="ui-label">{miss ? "Результат" : "Выигрыш"}</p>
-              {miss ? <Tag tone="neutral">пусто</Tag> : <span className="ui-verdict ok ui-ignite">{last.label || won.label}</span>}
+              <p className="ui-label">{miss ? t("wheel.result") : t("wheel.stWin")}</p>
+              {miss ? <Tag tone="neutral">{t("wheel.emptyLower")}</Tag> : <span className="ui-verdict ok ui-ignite">{last.label || won.label}</span>}
             </div>
             {miss ? (
-              <p className="ui-sec">Сектор без награды. Повезёт в следующий раз.</p>
+              <p className="ui-sec">{t("wheel.betterLuck")}</p>
             ) : (
               <>
                 <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                  {rewardParts(last).map((t) => (
-                    <span key={t} className="ui-num text-[20px] font-bold leading-7 text-[var(--amber)]">
-                      {t}
+                  {rewardParts(last).map((part) => (
+                    <span key={part} className="ui-num text-[20px] font-bold leading-7 text-[var(--amber)]">
+                      {part}
                     </span>
                   ))}
                 </div>
@@ -225,35 +224,34 @@ export function Wheel() {
       <Panel className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="ui-h">Ежедневная отметка</p>
+            <p className="ui-h">{t("daily.title")}</p>
             <p className="ui-sec !text-[12px] !leading-[16px]">
-              7 дней по кругу: награда растёт с каждым днём серии, на 7-й — ещё Фокус. Пропуск дня — снова с дня 1. Новый день в 00:00 мск
-            </p>
+              {t("wheel.dailyRules")}</p>
           </div>
-          <Tag tone={daily.waiting ? "ok" : "amber"}>{daily.waiting ? "получено" : "доступно"}</Tag>
+          <Tag tone={daily.waiting ? "ok" : "amber"}>{daily.waiting ? t("wheel.claimed") : t("partner.available")}</Tag>
         </div>
         {d?.rewards && d.rewards.length > 0 && (
           <DailyWeek days={d.rewards} today={d.cycle_day ?? 1} claimed={!!d.claimed_today} streak={d.streak} />
         )}
         <div className="grid grid-cols-2 gap-4">
-          <Readout label="Серия" value={String(d?.streak ?? 0)} unit="дн" />
-          <Readout label={daily.waiting ? "Следующая через" : "Сегодня"} value={daily.countdown ?? "доступно"} live />
+          <Readout label={t("daily.streak")} value={String(d?.streak ?? 0)} unit={t("wheel.daysShort")} />
+          <Readout label={daily.waiting ? t("wheel.nextInCap") : t("daily.today")} value={daily.countdown ?? t("partner.available")} live />
         </div>
         <Button kind="secondary" block icon={<IconBolt size={18} />} disabled={!daily.ready} onClick={daily.claimNow}>
-          {daily.pending ? "Начисление…" : daily.waiting ? "Отметка получена" : "Забрать отметку"}
+          {daily.pending ? t("daily.claiming") : daily.waiting ? t("daily.gotToast") : t("wheel.claimCheckin")}
         </Button>
       </Panel>
 
       <BackLink to="/" />
 
-      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title="Призы и шансы">
-        <p className="ui-sec !text-[13px]">Указатель сверху. После остановки сектор под ним — ваша награда.</p>
+      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title={t("wheel.prizesOdds")}>
+        <p className="ui-sec !text-[13px]">{t("wheel.pointerTop")}</p>
         <p className="ui-sec mt-1 !text-[12px] !leading-[16px]">
           {!odds
-            ? "Шансы покажем после обновления сервера."
+            ? t("wheel.oddsAfterUpdate")
             : w?.weights_source === "default"
-              ? "Сейчас действуют шансы по умолчанию."
-              : "Шансы заданы в настройках игры и пересчитываются сразу после их изменения."}
+              ? t("wheel.oddsDefault")
+              : t("wheel.oddsSettings")}
         </p>
         <div className="mt-4 divide-y divide-[var(--line)]">
           {PRIZES.map((p) => {
@@ -266,9 +264,9 @@ export function Wheel() {
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-[15px] font-medium leading-5 text-[var(--text)]">{o?.label || p.label}</span>
                     {off ? (
-                      <Tag tone="neutral">не выпадает</Tag>
+                      <Tag tone="neutral">{t("wheel.neverDrops")}</Tag>
                     ) : (
-                      <span className="ui-num text-[15px]">{o ? `${pct.format(o.chance_pct)}%` : "—"}</span>
+                      <span className="ui-num text-[15px]">{o ? `${fmtNum(o.chance_pct, { maximumFractionDigits: 1 })}%` : "—"}</span>
                     )}
                   </div>
                   <p className="ui-sec mt-0.5 !text-[12px] !leading-[16px]">{p.use}</p>
@@ -278,8 +276,7 @@ export function Wheel() {
           })}
         </div>
         <Button kind="primary" block className="mt-4" onClick={() => setHelpOpen(false)}>
-          Понятно
-        </Button>
+          {t("wheel.gotIt")}</Button>
       </Sheet>
     </div>
   );

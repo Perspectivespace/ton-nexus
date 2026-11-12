@@ -28,6 +28,7 @@ import {
 } from "@shared/arena/engine.js";
 import type { Board, BoardPlayer, ReachCell } from "@/components/arena/board/types";
 import type { ApiPlan, ArenaErr, ArenaEventView, ArenaLastTurn, ArenaRoom, ArenaTurnInfo } from "./api";
+import { t, type Key } from "@/i18n";
 
 export type Draft = Plan;
 export const emptyDraft = (): Draft => ({ path: [], attack: null, medkit: false });
@@ -35,6 +36,10 @@ export const emptyDraft = (): Draft => ({ path: [], attack: null, medkit: false 
 // ───── вид боя из API → состояние в форме движка ─────
 const WEAPON_IDS = new Set(Object.keys(WEAPONS));
 const ARMOR_IDS = new Set(Object.keys(ARMORS));
+
+/** Названия оружия и брони — из словаря (в shared/arena/engine.js — русские, для движка и векторов) */
+export const weaponName = (id: WeaponId) => t(`arena.w.${id}` as Key);
+export const armorName = (id: ArmorId) => t(`arena.a.${id}` as Key);
 
 export function lastTurnOf(lt: ArenaLastTurn | null | undefined): LastTurn | null {
   if (!lt) return null;
@@ -62,7 +67,7 @@ export function toBoard(room: ArenaRoom): Board | null {
     if (p.is_me) meId = p.seat;
     return {
       id: p.seat,
-      name: p.name ?? "Игрок",
+      name: p.name ?? t("arena.player"),
       bot: !p.is_me, // движок подписывает «Вы» / «@имя» по этому флагу
       slot: p.slot,
       isMe: !!p.is_me,
@@ -157,15 +162,15 @@ export function tapCell(b: Board, me: BoardPlayer, d: Draft, c: Cell): TapResult
     if (plan.medkit) plan = emptyDraft();
     const w = WEAPONS[me.weapon];
     if (plan.attack === foe.id) return { draft: { ...plan, attack: null }, err: "" };
-    if (plan.path.length === 2) return { draft: plan, err: "После рывка на 2 клетки атаки нет" };
-    if (!canHit(b, plannedPos(me, plan), me.weapon, foe)) return { draft: plan, err: `${w.name}: бьёт на ${w.range} кл.${w.range > 1 ? ", стены закрывают" : ""}` };
+    if (plan.path.length === 2) return { draft: plan, err: t("arena.bDashNoAttack") };
+    if (!canHit(b, plannedPos(me, plan), me.weapon, foe)) return { draft: plan, err: t("arena.bRange", { name: weaponName(me.weapon), range: w.range, range2: w.range > 1 ? t("arena.bWalls") : "" }) };
     return { draft: { ...plan, attack: foe.id }, err: "" };
   }
   if (c.x === me.x && c.y === me.y) return { draft: { ...plan, path: [], medkit: false }, err: "" };
   const path = pathTo(b, me, c);
-  if (!path) return { draft: plan, err: "Туда не дойти за ход" };
+  if (!path) return { draft: plan, err: t("arena.bTooFar") };
   plan = { ...plan, medkit: false, path };
-  if (path.length === 2 && plan.attack != null) return { draft: { ...plan, attack: null }, err: "Рывок на 2 клетки — атака снята" };
+  if (path.length === 2 && plan.attack != null) return { draft: { ...plan, attack: null }, err: t("arena.bDashDrop") };
   return { draft: plan, err: "" };
 }
 
@@ -216,7 +221,7 @@ export const isEmptyDraft = (d: Draft) => !d.path.length && d.attack == null && 
 export const nameOf = (b: Board, id: number | undefined) => {
   const p = b.players.find((o) => o.id === id);
   // имя с сервера уже готово к показу: «@username» или имя из Telegram — без своего «@»
-  return !p ? "?" : p.id === b.meId ? "Вы" : p.name;
+  return !p ? "?" : p.id === b.meId ? t("ratings.you") : p.name;
 };
 
 /** строка плана: tag + сегменты (b — выделить) */
@@ -227,25 +232,25 @@ export interface PlanLine {
 }
 export function planLine(o: { b: Board; me: BoardPlayer | undefined; d: Draft; err: string; anim: boolean; locked: boolean; countdown: boolean }): PlanLine {
   const { b, me, d } = o;
-  if (!me) return { tag: "Наблюдение", parts: [{ text: "Вы смотрите бой" }] };
-  if (b.finished) return { tag: "Финал", parts: [{ text: "Бой окончен" }] };
-  if (o.anim && me.alive) return { tag: "Розыгрыш", parts: [{ text: `Ход ${b.turn - 1}: все действия одновременно` }] };
-  if (!me.alive) return { tag: "Наблюдение", parts: [{ text: "Вы выбыли — матч идёт без вас" }] };
-  if (o.err) return { tag: "Нельзя", parts: [{ text: o.err }], err: true };
-  if (o.locked) return { tag: "Принято", parts: [{ text: "Ждём остальных игроков" }] };
-  if (d.medkit) return { tag: "План", parts: [{ text: "Аптечка " }, { text: `+${Math.min(MEDKIT_HEAL, MAX_HP - me.hp)} HP`, b: true }, { text: ", без движения и атаки" }] };
+  if (!me) return { tag: t("arena.bWatching"), parts: [{ text: t("arena.bWatchingSub") }] };
+  if (b.finished) return { tag: t("arena.bFinal"), parts: [{ text: t("arena.over") }] };
+  if (o.anim && me.alive) return { tag: t("arena.bResolve"), parts: [{ text: t("arena.bResolveSub", { turn: b.turn - 1 }) }] };
+  if (!me.alive) return { tag: t("arena.bWatching"), parts: [{ text: t("arena.bOutSub") }] };
+  if (o.err) return { tag: t("arena.bNo"), parts: [{ text: o.err }], err: true };
+  if (o.locked) return { tag: t("arena.bAccepted"), parts: [{ text: t("arena.bWaitOthers") }] };
+  if (d.medkit) return { tag: t("arena.bPlan"), parts: [{ text: t("arena.bMedkit") }, { text: `+${Math.min(MEDKIT_HEAL, MAX_HP - me.hp)} HP`, b: true }, { text: t("arena.bMedkitTail") }] };
   const parts: PlanLine["parts"] = [];
-  if (d.path.length === 2) parts.push({ text: "рывок на 2", b: true }, { text: ", без атаки" });
-  else if (d.path.length === 1) parts.push({ text: "шаг", b: true });
+  if (d.path.length === 2) parts.push({ text: t("arena.bDash"), b: true }, { text: t("arena.bNoAttack") });
+  else if (d.path.length === 1) parts.push({ text: t("arena.bStep"), b: true });
   if (d.attack != null) {
-    const t = b.players.find((x) => x.id === d.attack);
-    if (t) {
+    const foe = b.players.find((x) => x.id === d.attack);
+    if (foe) {
       if (parts.length) parts.push({ text: " + " });
-      parts.push({ text: "атака " }, { text: nameOf(b, t.id), b: true }, { text: ` −${rawDamage(b, plannedPos(me, d), me.weapon, t)}` });
+      parts.push({ text: t("arena.bAttack") }, { text: nameOf(b, foe.id), b: true }, { text: ` −${rawDamage(b, plannedPos(me, d), me.weapon, foe)}` });
     }
   }
-  if (parts.length) return { tag: "План", parts };
-  return { tag: o.countdown ? "Старт" : "Ход", parts: [{ text: "Клетка — идти, соперник — атаковать" }] };
+  if (parts.length) return { tag: t("arena.bPlan"), parts };
+  return { tag: o.countdown ? t("arena.bStart") : t("arena.turn"), parts: [{ text: t("arena.bHint") }] };
 }
 
 export interface ZoneInfo {
@@ -258,10 +263,10 @@ export interface ZoneInfo {
 export function zoneInfo(b: Board, me: BoardPlayer | undefined): ZoneInfo {
   const box = zoneBox(b.N, b.stage), ms = maxStage(b.N), tts = turnsToShrink(b.turn);
   const dmg = zoneDmg(b.stage, b.N, b.turn);
-  const next = b.stage > ms ? `урон всем −${dmg}` : b.stage === ms ? `закроется через ${tts + 1}` : `сужение через ${tts + 1}`;
+  const next = b.stage > ms ? t("arena.bAllDmg", { dmg }) : b.stage === ms ? t("arena.bClosesIn", { tts: tts + 1 }) : t("arena.bShrinksIn", { tts: tts + 1 });
   const inside = !box.closed && !!me && inBox(box, me);
   let mine: ZoneInfo["me"] = null;
-  if (me?.alive && b.stage > 0) mine = inside ? { out: false, text: "в зоне" } : { out: true, text: `вне зоны −${dmg}` };
+  if (me?.alive && b.stage > 0) mine = inside ? { out: false, text: t("arena.bInZone") } : { out: true, text: t("arena.bOutZone", { dmg }) };
   return { closed: !!box.closed, size: box.closed ? 0 : box.x1 - box.x0 + 1, next, me: mine };
 }
 
@@ -287,25 +292,25 @@ export function eventText(b: Board, e: ArenaEventView): string {
   const nm = (id: number | undefined) => nameOf(b, id);
   switch (e.t) {
     case "heal":
-      return `${nm(e.who)}: аптечка +${e.hp ?? MEDKIT_HEAL}`;
+      return t("arena.eMedkit", { who: nm(e.who), MEDKITHEAL: e.hp ?? MEDKIT_HEAL });
     case "bump":
-      return `${nm(e.who)}: путь перекрыт`;
+      return t("arena.ePathBlocked", { who: nm(e.who) });
     case "pick":
-      if (e.kind === "medkit") return `${nm(e.who)}: подобрал аптечку`;
-      if (e.kind === "weapon" && e.type && e.type in WEAPONS) return `${nm(e.who)}: ${WEAPONS[e.type as WeaponId].name.toLowerCase()}`;
-      if (e.kind === "armor" && e.type && e.type in ARMORS) return `${nm(e.who)}: ${ARMORS[e.type as ArmorId].name.toLowerCase()}`;
-      return `${nm(e.who)}: подобрал предмет`;
+      if (e.kind === "medkit") return t("arena.ePickMedkit", { who: nm(e.who) });
+      if (e.kind === "weapon" && e.type && e.type in WEAPONS) return `${nm(e.who)}: ${weaponName(e.type as WeaponId).toLowerCase()}`;
+      if (e.kind === "armor" && e.type && e.type in ARMORS) return `${nm(e.who)}: ${armorName(e.type as ArmorId).toLowerCase()}`;
+      return t("arena.ePickItem", { who: nm(e.who) });
     case "miss":
-      return `${nm(e.who)} → ${nm(e.target)}: мимо (вне досягаемости)`;
+      return t("arena.eMiss", { who: nm(e.who), target: nm(e.target) });
     case "hit":
       return `${nm(e.who)} → ${nm(e.target)}: −${e.dmg ?? 0}`;
     case "zone":
-      return `${nm(e.who)}: зона −${e.dmg ?? 0}`;
+      return t("arena.eZone", { who: nm(e.who), dmg: e.dmg ?? 0 });
     case "death":
-      return `${e.who === b.meId ? "Вы выбыли" : `${nm(e.who)} выбыл`}${e.zone ? " (зона)" : ""}`;
+      return `${e.who === b.meId ? t("arena.bYouOut") : t("arena.eOut", { who: nm(e.who) })}${e.zone ? t("arena.eOutZone") : ""}`;
     case "zone-shrink": {
       const k = b.N - 2 * (e.stage ?? b.stage);
-      return e.closed ? "Зона закрылась: урон всем" : `Зона сузилась: ${k}×${k}`;
+      return e.closed ? t("arena.zoneClosed") : t("arena.zoneShrank", { k, k2: k });
     }
     default:
       return e.t;
@@ -324,19 +329,19 @@ export function feedOf(b: Board, turn: number, events: ArenaEventView[] | undefi
 
 // ───── ошибки POST /plan ─────
 const BAD_PLAN: Record<string, string> = {
-  medkit_exclusive: "Аптечка — вместо движения и атаки",
-  no_medkit: "Аптечек нет",
-  path_too_long: "За ход — не дальше 2 клеток",
-  step_out_of_bounds: "Клетка за краем поля",
-  step_not_adjacent: "Шаги — только в соседние клетки",
-  step_into_wall: "В стену не пройти",
-  step_sealed_corner: "Угол между стенами не пройти",
-  dash_no_attack: "После рывка на 2 клетки атаки нет",
-  attack_self: "Себя атаковать нельзя",
-  attack_unknown: "Такого соперника нет",
-  attack_dead: "Соперник уже выбыл",
+  get medkit_exclusive() { return t("arena.bp.medkit_exclusive"); },
+  get no_medkit() { return t("arena.bp.no_medkit"); },
+  get path_too_long() { return t("arena.bp.path_too_long"); },
+  get step_out_of_bounds() { return t("arena.bp.step_out_of_bounds"); },
+  get step_not_adjacent() { return t("arena.bp.step_not_adjacent"); },
+  get step_into_wall() { return t("arena.bp.step_into_wall"); },
+  get step_sealed_corner() { return t("arena.bp.step_sealed_corner"); },
+  get dash_no_attack() { return t("arena.bDashNoAttack"); },
+  get attack_self() { return t("arena.bp.attack_self"); },
+  get attack_unknown() { return t("arena.bp.attack_unknown"); },
+  get attack_dead() { return t("arena.bp.attack_dead"); },
 };
-export const badPlanText = (reason: string | undefined) => (reason && BAD_PLAN[reason]) || "Сервер не принял план — соберите заново";
+export const badPlanText = (reason: string | undefined) => (reason && BAD_PLAN[reason]) || t("arena.bp.rejected");
 
 /**
  * Что делать после ошибки отправки плана:
@@ -347,19 +352,19 @@ export type PlanErrAction = { kind: "reset" | "refetch" | "retry" | "spectate" |
 export function planErrorAction(e: ArenaErr): PlanErrAction {
   switch (e.code) {
     case "bad_plan":
-      if (e.reason === "match_finished") return { kind: "refetch", text: "Бой уже окончен" };
-      if (e.reason === "player_dead" || e.reason === "unknown_player") return { kind: "spectate", text: "Вы выбыли — матч идёт без вас" };
+      if (e.reason === "match_finished") return { kind: "refetch", text: t("arena.over2") };
+      if (e.reason === "player_dead" || e.reason === "unknown_player") return { kind: "spectate", text: t("arena.bOutSub") };
       return { kind: "reset", text: badPlanText(e.reason) };
     case "turn_mismatch":
-      return { kind: "refetch", text: "Ход уже сменился" };
+      return { kind: "refetch", text: t("arena.turnChanged") };
     case "room_state":
-      return { kind: "refetch", text: "Бой уже окончен" };
+      return { kind: "refetch", text: t("arena.over2") };
     case "turn_not_open":
-      return { kind: "retry", text: "Ход ещё не начался" };
+      return { kind: "retry", text: t("arena.turnNotStarted") };
     case "not_playing":
-      return { kind: "spectate", text: "Вы не играете в этой комнате" };
+      return { kind: "spectate", text: t("arena.notPlaying") };
     default:
-      return { kind: "keep", text: e.code === "network" ? "Нет связи — план отправим ещё раз" : "Сбой сервера — план отправим ещё раз" };
+      return { kind: "keep", text: e.code === "network" ? t("arena.netRetry") : t("arena.serverRetry") };
   }
 }
 

@@ -1,0 +1,27 @@
+import type { tasks as ru } from "../ru/tasks";
+
+export const tasks: Record<keyof typeof ru, string> = {
+  "tasks.typeVisit": "Visit an external site",
+  "tasks.typeCampaign": "Campaign",
+  "tasks.typePartner": "Partner service",
+  "tasks.performerGets": "Performer gets",
+  "tasks.fee": "Fee",
+  "tasks.toPay": "To pay",
+  "tasks.fromBalanceOnPublish": "from balance on publish",
+  "tasks.tabTasks": "Tasks",
+  "tasks.tabFriends": "Friends",
+  "tasks.tabPromo": "Promo code",
+  "tasks.create": "+ Create",
+  "tasks.waysLabel": "Ways to earn",
+  "tasks.feedSub": "Complete a task — get TON and XP after review",
+  "tasks.activeN": "{data} active",
+  "tasks.loading": "Loading tasks…",
+  "tasks.feedDown": "Task channel unavailable",
+  "tasks.none": "No tasks yet",
+  "tasks.noneSub": "No active tasks yet. Ambassadors and admins publish them under “Manage” in your Profile.",
+  "tasks.slotsTaken": "Spots taken",
+  "tasks.slots": "spot|spots",
+  "tasks.invites": "Friend invites",
+  "tasks.soon": "soon",
+  "tasks.invitesSoon": "Rewards for invited friends aren't paid yet. Once the program goes live, your link and friends list will show up here.",
+};

@@ -5,6 +5,7 @@ import markLight from "@/assets/brand/mark-light.svg";
 import wordDark from "@/assets/brand/wordmark.svg";
 import wordLight from "@/assets/brand/wordmark-light.svg";
 import { haptic } from "@/lib/haptics";
+import { t } from "@/i18n";
 
 const KEY = "tn-splash";
 const IGNITION_MS = 900;
@@ -53,7 +54,7 @@ export function Splash({ onDone }: { onDone: () => void }) {
       <div className="splash-wm">
         <img className="b-dark" src={wordDark} alt="" draggable={false} />
         <img className="b-light" src={wordLight} alt="" draggable={false} />
-        <span className="splash-tag">Сеть TON · майнинг и задания</span>
+        <span className="splash-tag">{t("ui.splashTagline")}</span>
       </div>
     </div>
   );

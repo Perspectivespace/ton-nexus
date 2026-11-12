@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 /**
  * Статичный SVG-арт «Арены» (лобби и карточка в «Играх») — порт heroArt из прототипа: неоновый закат, город,
  * перспективная сетка, кольцо зоны, фишки «Я» и соперника. Детерминирован (без случайности), без анимаций.
@@ -63,7 +64,7 @@ ${blk(vx - 104, h - 52, 30, 16, 10, "#2BF5FF")}${blk(vx + 70, h - 66, 24, 12, 8,
 <g><polygon points="${HEX(vx - 88, hz + 36, 8)}" fill="#3A0A1E" stroke="#FF2E7E" stroke-width="1.3" stroke-opacity=".8"/></g>
 <ellipse cx="${vx - 30}" cy="${h - 34}" rx="20" ry="6" fill="#2BF5FF" fill-opacity=".35" filter="url(#${id}gl)"/>
 <g><polygon points="${HEX(vx - 30, h - 46, 14)}" fill="#06323A" stroke="#2BF5FF" stroke-width="2"/><polygon points="${HEX(vx - 30, h - 46, 10.5)}" fill="none" stroke="#2BF5FF" stroke-opacity=".35"/>
-<text x="${vx - 30}" y="${h - 41}" fill="#D2FDFF" font-family="Tektur, sans-serif" font-weight="700" font-size="13" text-anchor="middle">Я</text></g>
+<text x="${vx - 30}" y="${h - 41}" fill="#D2FDFF" font-family="Tektur, sans-serif" font-weight="700" font-size="13" text-anchor="middle">${t("arena.meMark")}</text></g>
 <rect width="${W}" height="${h}" fill="url(#${id}fade)"/>
 </svg>`;
 }

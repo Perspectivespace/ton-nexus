@@ -102,3 +102,11 @@ export function fmtDate(d: Date | string | number, opts?: Intl.DateTimeFormatOpt
   const x = d instanceof Date ? d : new Date(d);
   return Number.isNaN(x.getTime()) ? "" : x.toLocaleString(locale(), opts);
 }
+
+/** Окончание порядкового после числа: ru — из словаря («-е», «-й»), en — st / nd / rd / th */
+export function ordSuffix(n: number, ruKey: Key): string {
+  if (getLang() !== "en") return t(ruKey);
+  const a = Math.abs(n) % 100;
+  if (a >= 11 && a <= 13) return "th";
+  return ["th", "st", "nd", "rd"][a % 10] ?? "th";
+}

@@ -4,6 +4,7 @@
  */
 import type { ReactNode } from "react";
 import { EmptyState, ErrorState, Num, SkeletonCard, Tag, type Tone } from "./ui/index";
+import { t } from "@/i18n";
 
 export * from "./ui/index";
 
@@ -21,7 +22,7 @@ export function StatusPill({ tone = "neutral", children }: { tone?: keyof typeof
 }
 
 /** Загрузка — скелетон с линией «СИНХРОНИЗАЦИЯ ▮▮▮▯▯» */
-export function LoadingPanel({ label = "Синхронизация" }: { label?: string }) {
+export function LoadingPanel({ label = t("ui.syncing") }: { label?: string }) {
   return <SkeletonCard label={label.replace(/…$/, "")} lines={2} />;
 }
 

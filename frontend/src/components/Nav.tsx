@@ -4,16 +4,17 @@ import { useWheelStatus } from "@/api/hooks";
 import { hasFreeSpin } from "@/lib/games";
 import { IconCoins, IconGamepad, IconHome, IconReactor, IconUser } from "./icons";
 import { Dock } from "./ui/index";
+import { t } from "@/i18n";
 
 /**
  * Пять мест дока: Контур · Майнер · [Игры] · Заработок · Профиль.
  * Заработок — `/tasks` (псевдоним `/earn`), Профиль — `/wallet` (псевдоним `/profile`), lib/routes.tsx ALIASES.
  */
 export const dockItems = [
-  { to: "/", label: "Контур", Icon: IconHome },
-  { to: "/miner", label: "Майнер", Icon: IconReactor },
-  { to: "/tasks", label: "Заработок", Icon: IconCoins },
-  { to: "/wallet", label: "Профиль", Icon: IconUser },
+  { to: "/", get label() { return t("nav.home"); }, Icon: IconHome },
+  { to: "/miner", get label() { return t("nav.miner"); }, Icon: IconReactor },
+  { to: "/tasks", get label() { return t("nav.earn"); }, Icon: IconCoins },
+  { to: "/wallet", get label() { return t("nav.profile"); }, Icon: IconUser },
 ] as const;
 
 /** Док виден только на корневых экранах разделов (DESIGN п. 14.2) */
@@ -49,7 +50,7 @@ export function Nav() {
         center={
           <span className={open ? "dock-mid on" : "dock-mid"} aria-hidden="true">
             <i />
-            <span>Игры</span>
+            <span>{t("nav.games")}</span>
           </span>
         }
       />
@@ -57,7 +58,7 @@ export function Nav() {
         ref={btn}
         type="button"
         className={open ? "dock-games on" : "dock-games"}
-        aria-label={dot ? "Игры — есть бесплатное вращение" : "Игры"}
+        aria-label={dot ? t("nav.gamesFreeSpin") : t("nav.games")}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? "games-sheet" : undefined}

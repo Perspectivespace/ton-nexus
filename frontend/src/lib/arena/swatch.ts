@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 /**
  * Образцы клеток для легенды «Карта» в правилах — порт ArenaRenderer.swatch из прототипа (proto-arena/render.js, v3):
  * те же спрайты стены, укрытия и лута, та же штриховка зоны. Рисуется один раз при открытии правил, без анимаций.
@@ -20,12 +21,12 @@ export type LootKey = keyof typeof RARITY;
 export type SwatchKind = "wall" | "cover" | "zone" | LootKey;
 /** Легенда: ключ образца, заголовок, пояснение (как в прототипе) */
 export const LEGEND: { k: SwatchKind; title: string; text: string }[] = [
-  { k: "wall", title: "Стена", text: "не пройти, пули не проходят" },
-  { k: "cover", title: "Укрытие", text: "встаньте: урон издалека ×½" },
-  { k: "pistol", title: "Оружие", text: "цвет — редкость" },
-  { k: "light", title: "Броня", text: "1 пластина — лёгкая, 2 — тяжёлая" },
-  { k: "medkit", title: "Аптечка", text: "+35 HP, в запас" },
-  { k: "zone", title: "Вне зоны", text: "урон каждый ход" },
+  { k: "wall", get title() { return t("arena.s.wall"); }, get text() { return t("arena.s.wallSub"); } },
+  { k: "cover", get title() { return t("arena.s.cover"); }, get text() { return t("arena.s.coverSub"); } },
+  { k: "pistol", get title() { return t("arena.s.weapon"); }, get text() { return t("arena.s.weaponSub"); } },
+  { k: "light", get title() { return t("arena.s.armor"); }, get text() { return t("arena.s.armorSub"); } },
+  { k: "medkit", get title() { return t("arena.s.medkit"); }, get text() { return t("arena.s.medkitSub"); } },
+  { k: "zone", get title() { return t("arena.s.outside"); }, get text() { return t("arena.s.outsideSub"); } },
 ];
 
 export type G = CanvasRenderingContext2D;

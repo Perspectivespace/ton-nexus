@@ -3,9 +3,10 @@ import { IconAlert, IconEmpty, IconRefresh } from "../icons";
 import { Button } from "./Button";
 import { Panel } from "./Panel";
 import { cx } from "./press";
+import { t } from "@/i18n";
 
 /** Строка «СИНХРОНИЗАЦИЯ ▮▮▮▯▯» — статично, без анимации свечения */
-export function SyncLine({ label = "Синхронизация", step = 3, of = 5, className }: { label?: string; step?: number; of?: number; className?: string }) {
+export function SyncLine({ label = t("ui.syncing"), step = 3, of = 5, className }: { label?: string; step?: number; of?: number; className?: string }) {
   return (
     <span className={cx("ui-sync ui-sys uppercase", className)} aria-label={label}>
       <span>{label}</span>
@@ -53,7 +54,7 @@ export function EmptyState({ title, body, action, icon }: { title: ReactNode; bo
 
 /** Ошибка: магентовая кромка, «Реактор не отвечает», код, «Повторить» */
 export function ErrorState({
-  title = "Реактор не отвечает",
+  title = t("ui.errorTitle"),
   message,
   code,
   onRetry,
@@ -70,11 +71,10 @@ export function ErrorState({
       </span>
       <p className="ui-h">{title}</p>
       {message ? <p className="ui-sec max-w-[34ch] break-words">{message}</p> : null}
-      {code ? <p className="ui-sys">КОД {code}</p> : null}
+      {code ? <p className="ui-sys">{t("ui.code")}{" "}{code}</p> : null}
       {onRetry ? (
         <Button kind="secondary" size="sm" icon={<IconRefresh size={18} />} onClick={onRetry} className="mt-2">
-          Повторить
-        </Button>
+          {t("ui.retry")}</Button>
       ) : null}
     </Panel>
   );

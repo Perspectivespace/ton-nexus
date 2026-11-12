@@ -1,6 +1,7 @@
 import type { DailyDay } from "@/api/hooks";
 import { cx } from "@/components/ui";
 import { IconCheck } from "@/components/icons";
+import { t } from "@/i18n";
 
 type State = "done" | "today" | "got" | "next";
 
@@ -34,7 +35,7 @@ export function DailyWeek({
   const round = streak > 7 || (!claimed && streak >= 7) ? Math.floor((claimed ? streak - 1 : streak) / 7) + 1 : 1;
   return (
     <div className={caption ? "space-y-3" : undefined}>
-      <div className="dw" role="list" aria-label="Награды 7 дней">
+      <div className="dw" role="list" aria-label={t("daily.week")}>
         <span className="dw-track" aria-hidden>
           <span className="dw-fill" style={{ transform: `scaleX(${fill})` }} />
         </span>
@@ -45,11 +46,11 @@ export function DailyWeek({
               key={d.day}
               role="listitem"
               className={cx("dw-day", st, d.focus > 0 && "bonus")}
-              aria-label={`День ${d.day}: ${ton(d.ton)} TON, ${d.xp} XP${d.focus ? `, Фокус +${d.focus}` : ""}${st === "done" || st === "got" ? " — получено" : st === "today" ? " — сегодня" : ""}`}
+              aria-label={t("daily.dayAria", { day: d.day, ton: ton(d.ton), xp: d.xp, focus: d.focus ? t("daily.focusAria", { focus: d.focus }) : "", today: st === "done" || st === "got" ? t("daily.claimedAria") : st === "today" ? t("daily.todayAria") : "" })}
             >
-              <span className="dw-k">{st === "today" || st === "got" ? "сег" : `д${d.day}`}</span>
+              <span className="dw-k">{st === "today" || st === "got" ? t("daily.todayShort") : t("daily.dayShort", { day: d.day })}</span>
               <span className="dw-ic" aria-hidden>
-                {st === "done" || st === "got" ? <IconCheck size={14} /> : d.focus > 0 ? <b>Ф</b> : <i>{d.day}</i>}
+                {st === "done" || st === "got" ? <IconCheck size={14} /> : d.focus > 0 ? <b>{t("daily.focusShort")}</b> : <i>{d.day}</i>}
               </span>
               <span className="dw-v">{ton(d.ton)}</span>
               <span className="dw-p">+{d.xp} xp</span>
@@ -60,11 +61,10 @@ export function DailyWeek({
       {caption && cur && (
         <p className="ui-sec !text-[12px] !leading-[16px]">
           <span className="text-[var(--text)]">
-            {claimed ? "Получено сегодня" : "Сегодня"} · день {today} из 7
-            {round > 1 ? ` · круг ${round}` : ""}:
+            {claimed ? t("daily.gotToday") : t("daily.today")}{" "}{t("daily.dayWord")}{" "}{today}{" "}{t("daily.of7")}{round > 1 ? t("daily.round", { v: round }) : ""}:
           </span>{" "}
           <span className="ui-num">
-            +{ton(cur.ton)} TON · +{cur.xp} XP{cur.focus > 0 ? ` · Фокус +${cur.focus}` : ""}
+            +{ton(cur.ton)} TON · +{cur.xp} XP{cur.focus > 0 ? t("daily.focusPlus", { focus: cur.focus }) : ""}
           </span>
         </p>
       )}

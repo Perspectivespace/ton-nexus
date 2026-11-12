@@ -3,6 +3,7 @@ import { useTonConnectUI } from "@tonconnect/ui-react";
 import { Button, HoldButton, useToast } from "@/components/ui";
 import { api } from "@/api/client";
 import { haptic } from "@/lib/haptics";
+import { t } from "@/i18n";
 
 type Props = {
   linked: { address: string; wallet_app: string | null } | null;
@@ -57,7 +58,7 @@ export default function WalletConnectSheetInner({ linked, onLinked, onUnlink }: 
             });
             onLinked();
           } catch (e) {
-            setError(e instanceof Error ? e.message : "Ошибка привязки");
+            setError(e instanceof Error ? e.message : t("wallet.linkError"));
           } finally {
             cleanup();
           }
@@ -66,7 +67,7 @@ export default function WalletConnectSheetInner({ linked, onLinked, onUnlink }: 
 
       await tonConnectUI.openModal();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка");
+      setError(e instanceof Error ? e.message : t("ui.error"));
       cleanup();
     }
   }, [tonConnectUI, onLinked, cleanup]);
@@ -75,7 +76,7 @@ export default function WalletConnectSheetInner({ linked, onLinked, onUnlink }: 
     if (linked) {
       navigator.clipboard?.writeText(linked.address);
       haptic.select();
-      toast({ title: "Скопировано" });
+      toast({ title: t("ui.copied") });
     }
   };
 
@@ -83,13 +84,13 @@ export default function WalletConnectSheetInner({ linked, onLinked, onUnlink }: 
     return (
       <div className="space-y-4">
         <p className="font-mono text-[13px] break-all">{linked.address}</p>
-        <Button className="w-full" onClick={copy}>Скопировать</Button>
-        <Button className="w-full" onClick={startLink} disabled={loading}>Сменить кошелёк</Button>
-        <HoldButton block onConfirm={onUnlink}>Отвязать</HoldButton>
+        <Button className="w-full" onClick={copy}>{t("ui.copy")}</Button>
+        <Button className="w-full" onClick={startLink} disabled={loading}>{t("wallet.change")}</Button>
+        <HoldButton block onConfirm={onUnlink}>{t("wallet.unlink")}</HoldButton>
         {error && (
           <p className="text-[12px] text-[var(--danger)]">
             {error}{" "}
-            <button className="min-h-[44px] px-3" onClick={startLink}>Повторить</button>
+            <button className="min-h-[44px] px-3" onClick={startLink}>{t("ui.retry")}</button>
           </p>
         )}
       </div>
@@ -98,14 +99,14 @@ export default function WalletConnectSheetInner({ linked, onLinked, onUnlink }: 
 
   return (
     <div className="space-y-4">
-      <p className="text-[13px] text-[var(--text-dim)]">Подтвердите, что кошелёк ваш: приложение кошелька попросит подпись. Деньги не списываются.</p>
+      <p className="text-[13px] text-[var(--text-dim)]">{t("wallet.proofHint")}</p>
       <Button className="w-full !h-[52px]" onClick={startLink} disabled={loading}>
-        {loading ? "Ожидание…" : "Привязать кошелёк"}
+        {loading ? t("wallet.waiting") : t("wallet.link")}
       </Button>
       {error && (
         <p className="text-[12px] text-[var(--danger)]">
           {error}{" "}
-          <button className="min-h-[44px] px-3" onClick={startLink}>Повторить</button>
+          <button className="min-h-[44px] px-3" onClick={startLink}>{t("ui.retry")}</button>
         </p>
       )}
     </div>

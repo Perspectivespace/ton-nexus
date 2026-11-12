@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useProofImage } from "@/api/hooks";
 import { StatusPill } from "@/components/ui";
+import { t } from "@/i18n";
 
 export const PROOF_MAX_BYTES = 5 * 1024 * 1024;
 export const PROOF_ACCEPT = "image/png,image/jpeg,image/webp";
@@ -9,14 +10,14 @@ const OK_TYPES = ["image/png", "image/jpeg", "image/webp"];
 /** Проверка файла до загрузки (сервер проверяет ещё раз по содержимому). null — файл подходит. */
 export function proofFileError(f: { type: string; size: number } | null): string | null {
   if (!f) return null;
-  if (!OK_TYPES.includes(f.type)) return "Нужна картинка PNG, JPG или WebP.";
-  if (f.size <= 0) return "Пустой файл.";
-  if (f.size > PROOF_MAX_BYTES) return "Файл больше 5 МБ — сожмите скриншот.";
+  if (!OK_TYPES.includes(f.type)) return t("proof.needImage");
+  if (f.size <= 0) return t("proof.empty");
+  if (f.size > PROOF_MAX_BYTES) return t("proof.tooBig");
   return null;
 }
 
 export function fmtSize(n: number): string {
-  return n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} МБ` : `${Math.max(1, Math.round(n / 1024))} КБ`;
+  return n >= 1024 * 1024 ? t("proof.mb", { v: (n / 1024 / 1024).toFixed(1) }) : t("proof.kb", { n: Math.max(1, Math.round(n / 1024)) });
 }
 
 /** Шаг «скриншот» при сдаче задания: выбор файла, превью, проверка размера/типа. */
@@ -50,10 +51,9 @@ export function ProofUpload({
     <div className="space-y-2" data-testid="proof-upload">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={inputId} className="ui-label">
-          Скриншот выполнения
-        </label>
+          {t("proof.title")}</label>
         <StatusPill tone={required ? (file && !err ? "ok" : "warn") : "neutral"}>
-          {required ? (file && !err ? "приложен" : "обязательно") : "по желанию"}
+          {required ? (file && !err ? t("proof.attached") : t("proof.required")) : t("proof.optional")}
         </StatusPill>
       </div>
       <input
@@ -70,14 +70,13 @@ export function ProofUpload({
       />
       {preview && file ? (
         <div className="proof-frame">
-          <img src={preview} alt="Скриншот выполнения" className="proof-img" />
+          <img src={preview} alt={t("proof.title")} className="proof-img" />
           <div className="flex items-center justify-between gap-2 px-3 py-2">
             <span className="min-w-0 truncate font-mono text-[11px] text-[var(--text-dim)]">
               {fmtSize(file.size)} · {file.type.replace("image/", "").toUpperCase()}
             </span>
             <button type="button" className="ui-btn secondary sm" disabled={disabled} onClick={() => onChange(null)}>
-              Убрать
-            </button>
+              {t("proof.remove")}</button>
           </div>
         </div>
       ) : (
@@ -87,15 +86,13 @@ export function ProofUpload({
           disabled={disabled}
           onClick={() => ref.current?.click()}
         >
-          <span className="text-[14px] font-semibold">Выбрать скриншот</span>
-          <span className="text-[12px] text-[var(--text-dim)]">PNG, JPG или WebP · до 5 МБ</span>
+          <span className="text-[14px] font-semibold">{t("proof.pick")}</span>
+          <span className="text-[12px] text-[var(--text-dim)]">{t("proof.formats")}</span>
         </button>
       )}
       {err && <p className="text-[12px] text-[var(--danger-text)]">{err}</p>}
       <p className="text-[11px] leading-relaxed text-[var(--text-dim)]">
-        Видит только проверяющий. Данные о месте и устройстве (EXIF) удаляются, файл стирается не позже 24 ч после
-        проверки.
-      </p>
+        {t("proof.privacy")}</p>
     </div>
   );
 }
@@ -107,19 +104,19 @@ export function ProofImage({ proofId, state }: { proofId: number | null | undefi
   if (proofId == null) return null;
   return (
     <div className="space-y-1.5" data-testid="proof-image">
-      <p className="ui-label">Скриншот</p>
+      <p className="ui-label">{t("proof.screenshot")}</p>
       {deleted ? (
-        <p className="text-[12px] text-[var(--text-dim)]">Скриншот уже удалён по сроку хранения.</p>
+        <p className="text-[12px] text-[var(--text-dim)]">{t("proof.expired")}</p>
       ) : url ? (
         <a href={url} target="_blank" rel="noopener noreferrer" className="proof-frame block">
-          <img src={url} alt="Скриншот исполнителя" className="proof-img" />
+          <img src={url} alt={t("proof.alt")} className="proof-img" />
         </a>
       ) : (
         <div className="proof-frame grid h-32 place-items-center text-[12px] text-[var(--text-dim)]">
-          {isLoading ? "Загрузка скриншота…" : error instanceof Error ? error.message : "Скриншот недоступен"}
+          {isLoading ? t("proof.loading") : error instanceof Error ? error.message : t("proof.unavailable")}
         </div>
       )}
-      <p className="text-[11px] text-[var(--text-dim)]">Удалится через 24 ч после проверки.</p>
+      <p className="text-[11px] text-[var(--text-dim)]">{t("proof.deleteNote")}</p>
     </div>
   );
 }

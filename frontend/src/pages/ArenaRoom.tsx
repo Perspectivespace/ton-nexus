@@ -26,6 +26,7 @@ import {
   type RoomScreen,
 } from "@/lib/arena/api";
 import "@/styles/arena.css";
+import { t } from "@/i18n";
 
 const R0 = 74;
 /** сколько ждать проверки версии перед полем (сеть медленная — показываем поле, не держим игрока) */
@@ -102,7 +103,7 @@ function Slots({ room, open }: { room: Room; open: boolean }) {
             {s ? initial(s.name) : ""}
           </span>
           <span className="ar-slot-n">
-            {s ? (s.is_me ? "Вы" : s.name) : i === next ? "ждём…" : "свободно"}
+            {s ? (s.is_me ? t("ratings.you") : s.name) : i === next ? t("arena.waitingDots") : t("ratings.free")}
           </span>
         </div>
       ))}
@@ -110,19 +111,19 @@ function Slots({ room, open }: { room: Room; open: boolean }) {
   );
 }
 
-function Hold({ room, t }: { room: Room; t: ArenaType | undefined }) {
+function Hold({ room, at }: { room: Room; at: ArenaType | undefined }) {
   return (
     <div className="ar-panel ar-hold">
       <div className="ar-row">
-        <span>Ставка удержана</span>
+        <span>{t("arena.stakeHeldTag")}</span>
         <b>{fmtTon(room.stake_nano)} TON</b>
       </div>
-      {t && (
+      {at && (
         <div className="ar-row">
-          <span>Приз</span>
+          <span>{t("arena.prize")}</span>
           <b className="ok">
-            {t.prizes_nano
-              .map((p, i) => `${i + 1}м ${fmtPrize(p)}`)
+            {at.prizes_nano
+              .map((p, i) => t("arena.prizeN", { i: i + 1, p: fmtPrize(p) }))
               .join(" · ")}{" "}
             TON
           </b>
@@ -130,7 +131,7 @@ function Hold({ room, t }: { room: Room; t: ArenaType | undefined }) {
       )}
       {room.seed_hash && (
         <div className="ar-row">
-          <span>Хэш карты</span>
+          <span>{t("arena.mapHash")}</span>
           <b className="ar-mono">
             {room.seed_hash.slice(0, 6)}…{room.seed_hash.slice(-4)}
           </b>
@@ -171,7 +172,7 @@ export function ArenaRoomView({
   onWatch,
   checking = false,
 }: ArenaRoomViewProps) {
-  const name = `Арена ${room.seats_total}`;
+  const name = t("arena.roomName", { seatsTotal: room.seats_total });
   if (screen.kind === "waiting" || screen.kind === "countdown") {
     const cd = screen.kind === "countdown";
     const full = cd || room.taken >= room.seats_total;
@@ -187,7 +188,7 @@ export function ArenaRoomView({
                   <b key={screen.sec} className="ar-cd" aria-live="assertive">
                     {screen.sec}
                   </b>
-                  <span>старт</span>
+                  <span>{t("arena.start")}</span>
                 </>
               ) : (
                 <>
@@ -204,26 +205,24 @@ export function ArenaRoomView({
           </div>
           <p className="ar-wait-t" aria-live="polite">
             {cd
-              ? "Комната собрана"
+              ? t("arena.roomFull")
               : screen.left > 0
-                ? `Ждём игроков · ${room.taken} из ${room.seats_total}`
-                : "Время вышло — возвращаем ставку…"}
+                ? t("arena.waitingPlayers", { taken: room.taken, seatsTotal: room.seats_total })
+                : t("arena.timeUp")}
           </p>
           <Slots room={room} open={!full} />
           {cd && (
             <div className="ar-start-in">
-              Старт через <b>{screen.sec}</b> · поле{" "}
+              {t("arena.startIn")}{" "}<b>{screen.sec}</b>{" "}{t("arena.fieldDot")}{" "}
               {type ? `${type.board}×${type.board}` : ""}
             </div>
           )}
         </section>
         {!cd && (
           <p className="ar-note">
-            Не собрались за 3:00 — ставка вернётся на баланс автоматически.
-            Выйти можно до старта.
-          </p>
+            {t("arena.fillNote")}</p>
         )}
-        <Hold room={room} t={type} />
+        <Hold room={room} at={type} />
         {!cd && (
           <div className="ar-foot">
             <Button
@@ -234,8 +233,8 @@ export function ArenaRoomView({
               onClick={onLeave}
             >
               {leaving
-                ? "Выходим…"
-                : `Выйти · вернуть ${fmtTon(room.stake_nano)} TON`}
+                ? t("arena.leaving")
+                : t("arena.leaveRefund", { stakeNano: fmtTon(room.stake_nano) })}
             </Button>
           </div>
         )}
@@ -249,17 +248,15 @@ export function ArenaRoomView({
       return (
         <div className="ar-body">
           <div className="ar-panel ar-next">
-            <span className="ui-label ar-neon">Бой идёт · ход {screen.turn}</span>
-            <b>{me && !me.alive ? `Вы выбыли · ${alive + 1} место` : "Вы не в бою"}</b>
-            <p>Итоги и приз придут сюда сами, когда бой закончится.</p>
+            <span className="ui-label ar-neon">{t("arena.battleTurn")}{" "}{screen.turn}</span>
+            <b>{me && !me.alive ? t("arena.outPlace", { alive: alive + 1 }) : t("arena.notInBattle")}</b>
+            <p>{t("arena.resultsCome")}</p>
           </div>
           <div className="ar-foot">
             <Button kind="secondary" size="lg" block onClick={onWatch}>
-              Досмотреть
-            </Button>
+              {t("arena.watch")}</Button>
             <Link to="/arena" className="ui-btn ghost lg block no-underline">
-              В лобби
-            </Link>
+              {t("arena.toLobby")}</Link>
           </div>
         </div>
       );
@@ -267,7 +264,7 @@ export function ArenaRoomView({
     if (checking && screen.kind === "battle")
       return (
         <div className="ar-bt">
-          <p className="ar-note">Проверяем версию…</p>
+          <p className="ar-note">{t("arena.checkingVersion")}</p>
         </div>
       );
     return <ArenaBattle room={room} onDone={onBattleDone ?? noop} />;
@@ -278,13 +275,13 @@ export function ArenaRoomView({
     return (
       <div className="ar-body">
         <div className="ar-panel ar-end">
-          <span className="ui-label ar-neon">{name} · бой окончен</span>
+          <span className="ui-label ar-neon">{name}{" "}{t("arena.battleOver")}</span>
           <b>
             {mine
               ? Number(mine.prize_nano) > 0
-                ? `${mine.place} место · +${fmtPrize(mine.prize_nano)} TON`
-                : `${mine.place} место`
-              : "Итоги боя"}
+                ? t("arena.placePrize", { place: mine.place, prizeNano: fmtPrize(mine.prize_nano) })
+                : t("arena.placeOnly", { place: mine.place })
+              : t("arena.results")}
           </b>
           <ol className="ar-res">
             {res.map((r) => (
@@ -294,7 +291,7 @@ export function ArenaRoomView({
               >
                 <span>{r.place}</span>
                 <span className="min-w-0 flex-1 truncate">
-                  {r.seat === room.my_seat ? "Вы" : r.name}
+                  {r.seat === room.my_seat ? t("ratings.you") : r.name}
                 </span>
                 <b>
                   {Number(r.prize_nano) > 0
@@ -312,17 +309,17 @@ export function ArenaRoomView({
   const txt =
     screen.kind === "refunded"
       ? {
-          t: "Комната не собралась",
-          s: `За 3:00 не набралось ${room.seats_total} игроков — ставка ${fmtTon(room.stake_nano)} TON вернулась на баланс.`,
+          t: t("arena.notFilled"),
+          s: t("arena.notFilledSub", { seatsTotal: room.seats_total, stakeNano: fmtTon(room.stake_nano) }),
         }
       : screen.kind === "cancelled"
         ? {
-            t: "Бой отменён",
-            s: `Ставка ${fmtTon(room.stake_nano)} TON вернулась на баланс.`,
+            t: t("arena.cancelled"),
+            s: t("arena.stakeBack", { stakeNano: fmtTon(room.stake_nano) }),
           }
         : {
-            t: "Вы вышли из комнаты",
-            s: `Ставка ${fmtTon(room.stake_nano)} TON вернулась на баланс.`,
+            t: t("arena.youLeft"),
+            s: t("arena.stakeBack", { stakeNano: fmtTon(room.stake_nano) }),
           };
   return (
     <div className="ar-body">
@@ -349,24 +346,24 @@ function Again({ again, onAgain }: { again?: boolean; onAgain?: () => void }) {
           onClick={onAgain}
           icon={<IconRefresh size={18} />}
         >
-          {again ? "Входим…" : "Ещё раз"}
+          {again ? t("arena.joining") : t("arena.again")}
         </Button>
       </span>
       <Link to="/arena" className="ui-btn ghost lg block no-underline">
-        В лобби <IconChevron size={16} />
+        {t("arena.toLobby")}{" "}<IconChevron size={16} />
       </Link>
     </div>
   );
 }
 
 const TITLE: Record<RoomScreen["kind"], string> = {
-  waiting: "ожидание",
-  countdown: "старт",
-  battle: "бой",
-  finished: "итоги",
-  refunded: "возврат",
-  cancelled: "отмена",
-  left: "выход",
+  get waiting() { return t("arena.stWaiting"); },
+  get countdown() { return t("arena.start"); },
+  get battle() { return t("arena.stBattle"); },
+  get finished() { return t("arena.stResults"); },
+  get refunded() { return t("arena.stRefund"); },
+  get cancelled() { return t("arena.stCancel"); },
+  get left() { return t("arena.stLeft"); },
 };
 
 /**
@@ -391,7 +388,7 @@ export default function ArenaRoomPage() {
         (room.status === "running" && (room.match?.turn ?? 0) <= 1)),
   );
   const screen = room ? roomScreen(room, now) : null;
-  const t = lobby.data?.types.find((x) => x.type === room?.type);
+  const ltype = lobby.data?.types.find((x) => x.type === room?.type);
   // экран боя: финальный ход доигрывается на поле, к итогам — после «Бой окончен» (или по кнопке)
   const [battle, setBattle] = useState<"live" | "out" | "done">("done");
   const sawBattle = useRef(false);
@@ -405,13 +402,13 @@ export default function ArenaRoomPage() {
     setBattleActive(true);
     let off = false;
     const done = () => !off && setFresh(true);
-    const t = window.setTimeout(done, FRESH_WAIT_MS);
+    const timer = window.setTimeout(done, FRESH_WAIT_MS);
     void ensureFreshForBattle().then((reloading) => {
       if (!reloading) done();
     });
     return () => {
       off = true;
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
       setBattleActive(false);
     };
   }, [running]);
@@ -431,8 +428,8 @@ export default function ArenaRoomPage() {
         haptic.collect();
         toast({
           kind: "ok",
-          title: "Ставка возвращена",
-          sub: `+${fmtTon(r.refunded_nano)} TON на баланс`,
+          title: t("arena.refunded"),
+          sub: t("arena.refundedSub", { refundedNano: fmtTon(r.refunded_nano) }),
         });
         navigate("/arena", { replace: true });
       },
@@ -442,7 +439,7 @@ export default function ArenaRoomPage() {
           return void navigate("/arena", { replace: true });
         toast({
           kind: pe.code === "room_state" ? "amber" : "danger",
-          title: "Не удалось выйти",
+          title: t("arena.leaveFailed"),
           sub: arenaErrorText(pe),
         });
         void q.refetch();
@@ -460,14 +457,14 @@ export default function ArenaRoomPage() {
         if (pe.code === "insufficient_balance") {
           toast({
             kind: "danger",
-            title: "Не хватает TON",
-            sub: "Пополните баланс в «Кошельке»",
+            title: t("upgrade.notEnoughTon"),
+            sub: t("arena.topUpWallet"),
           });
           return void navigate("/wallet?topup=1");
         }
         toast({
           kind: "danger",
-          title: "Не удалось войти",
+          title: t("arena.joinFailed"),
           sub: arenaErrorText(pe),
         });
       },
@@ -477,14 +474,14 @@ export default function ArenaRoomPage() {
   const err = q.error && !room ? parseArenaError(q.error) : null;
   return (
     <div className="ar space-y-4">
-      <BackLink to="/arena" label="Лобби" />
+      <BackLink to="/arena" label={t("arena.lobby")} />
       {inBattle ? null : (
         <ScreenHeader
-          eyebrow="Арена"
+          eyebrow={t("games.arena")}
           title={
             room
-              ? `Арена ${room.seats_total} · ${TITLE[screen!.kind]}`
-              : "Комната"
+              ? t("arena.roomTitle", { seatsTotal: room.seats_total, kind: TITLE[screen!.kind] })
+              : t("arena.room")
           }
         />
       )}
@@ -492,7 +489,7 @@ export default function ArenaRoomPage() {
         <ArenaRoomView
           room={room}
           screen={screen}
-          type={t}
+          type={ltype}
           leaving={leave.isPending}
           again={join.isPending}
           onLeave={onLeave}
@@ -505,16 +502,15 @@ export default function ArenaRoomPage() {
       ) : err && (err.status === 404 || err.status === 403) ? (
         <>
           <ErrorState
-            title="Комната недоступна"
-            message="Её нет или вы в ней не участвуете."
+            title={t("arena.roomGone")}
+            message={t("arena.roomGoneSub")}
           />
           <Link to="/arena" className="ui-btn secondary lg block no-underline">
-            В лобби
-          </Link>
+            {t("arena.toLobby")}</Link>
         </>
       ) : err ? (
         <ErrorState
-          title="Не удалось загрузить комнату"
+          title={t("arena.roomFailed")}
           message={arenaErrorText(err)}
           onRetry={() => void q.refetch()}
         />

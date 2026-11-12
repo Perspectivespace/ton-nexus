@@ -1,0 +1,15 @@
+export const promo = {
+  "promo.focusReward": "Фокус +{rewardFocus}",
+  "promo.tooMany": "Слишком много попыток. Попробуйте позже",
+  "promo.already": "Этот код уже активирован на вашем аккаунте",
+  "promo.usedUp": "Активации этого кода закончились",
+  "promo.expired": "Срок действия кода истёк",
+  "promo.rejected": "Код не принят",
+  "promo.done": "Промокод активирован",
+  "promo.title": "Промокод",
+  "promo.sub": "Начисляет TON, опыт или фокус. Один код — один раз на аккаунт.",
+  "promo.code": "Код",
+  "promo.checking": "Проверка…",
+  "promo.enter": "Введите код",
+  "promo.activate": "Активировать",
+};

@@ -30,6 +30,7 @@ import {
   targetsOf,
   toggleMedkit,
   turnClock,
+  weaponName,
   zoneInfo,
   type BattleState,
   type Draft,
@@ -39,6 +40,7 @@ import { GLYPH, RARITY } from "@/lib/arena/swatch";
 import { ArenaRenderer, reducedMotion } from "./board/renderer";
 import { assignSigils } from "./board/tokens";
 import { T, type DrawView } from "./board/types";
+import { t } from "@/i18n";
 
 const MAX_W = 456;
 /** строк ленты: минимум, который оставляем под поле, и максимум */
@@ -69,11 +71,10 @@ function FeedIcon({ t }: { t: string }) {
 export function BoardFallback({ h, children }: { h: number; children?: ReactNode }) {
   return (
     <div className="ar-map-fail" role="alert" style={{ minHeight: Math.max(160, h) }}>
-      <b>Поле не отрисовалось</b>
-      <p>Таймер и «Готово» работают: без поля ход — стоять на месте. Обновите экран — бой сохранится.</p>
+      <b>{t("arena.fieldFailed")}</b>
+      <p>{t("arena.fieldFailedSub")}</p>
       <Button kind="secondary" size="md" onClick={() => location.reload()}>
-        Обновить
-      </Button>
+        {t("arena.refresh")}</Button>
       {children}
     </div>
   );
@@ -351,7 +352,7 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
       return;
     }
     if (countdown) {
-      setNote("Ход ещё не начался");
+      setNote(t("arena.turnNotStarted"));
       return;
     }
     setErr("");
@@ -380,7 +381,7 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
   if (!b) {
     return (
       <div className="ar-bt">
-        <p className="ar-note">Загружаем поле…</p>
+        <p className="ar-note">{t("arena.loadingField")}</p>
       </div>
     );
   }
@@ -403,26 +404,23 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
     <>
       {showOut ? (
         <div className="ar-out">
-          <h2>Вы выбыли</h2>
+          <h2>{t("arena.youOut")}</h2>
           <p>
-            {outPlace(b)} место · ход {me?.deathTurn ?? b.turn - 1}
+            {outPlace(b)}{" "}{t("arena.placeTurn")}{" "}{me?.deathTurn ?? b.turn - 1}
           </p>
           <div className="ar-out-acts">
             <Button kind="secondary" size="md" onClick={() => setWatch(true)}>
-              Досмотреть
-            </Button>
+              {t("arena.watch")}</Button>
             <Button kind="primary" size="md" onClick={onDone}>
-              Итоги
-            </Button>
+              {t("arena.resultsShort")}</Button>
           </div>
         </div>
       ) : null}
       {finished && !anim ? (
         <div className="ar-out fin">
-          <h2>Бой окончен</h2>
+          <h2>{t("arena.over")}</h2>
           <Button kind="primary" size="md" onClick={onDone}>
-            Итоги
-          </Button>
+            {t("arena.resultsShort")}</Button>
         </div>
       ) : null}
     </>
@@ -432,7 +430,7 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
     <div className="ar-bt" ref={root} data-turn={b.turn} data-phase={finished ? "finished" : countdown ? "countdown" : "planning"}>
       <div className="ar-mtop">
         <div className="ar-mchip">
-          <span className="ui-label">Ход</span>
+          <span className="ui-label">{t("arena.turn")}</span>
           <b>{b.turn}</b>
         </div>
         <div className="ar-mchip">
@@ -440,28 +438,28 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
             <path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z" fill="none" stroke="currentColor" strokeWidth="2" />
             <circle cx="12" cy="12" r="3" fill="currentColor" />
           </svg>
-          <span className="ui-label">Живых</span>
+          <span className="ui-label">{t("arena.alive")}</span>
           <b>
             {aliveN}/{b.players.length}
           </b>
         </div>
-        <ul className="ar-pips" aria-label={`Готовы ${b.players.filter((p) => p.alive && ready.has(p.id)).length} из ${aliveN}`}>
+        <ul className="ar-pips" aria-label={t("arena.readyN", { id: b.players.filter((p) => p.alive && ready.has(p.id)).length, aliveN })}>
           {b.players.map((p) => (
             <li
               key={p.id}
               className={`${ready.has(p.id) ? "on" : ""}${p.alive ? "" : " dead"}${p.id === b.meId ? " me" : ""}`}
               style={{ "--pc": sig.get(p.id)?.col ?? "#9AA4BA" } as React.CSSProperties}
-              title={`${nameOf(b, p.id)}${p.alive ? (ready.has(p.id) ? ": готов" : ": думает") : ": выбыл"}`}
+              title={`${nameOf(b, p.id)}${p.alive ? (ready.has(p.id) ? t("arena.pReady") : t("arena.pThinking")) : t("arena.pOut")}`}
             />
           ))}
         </ul>
-        <div className={`ar-tm${tLow ? " low" : ""}`} aria-label={`Осталось ${clock.left} с`}>
+        <div className={`ar-tm${tLow ? " low" : ""}`} aria-label={t("arena.secLeft", { left: clock.left })}>
           <svg viewBox="0 0 48 48" aria-hidden="true">
             <circle className="trk" cx="24" cy="24" r="20" />
             <circle className="arc" cx="24" cy="24" r="20" pathLength="100" strokeDasharray="100" strokeDashoffset={finished ? 100 : 100 - clock.frac * 100} />
           </svg>
           <b>{finished ? "—" : countdown ? Math.ceil(clock.opensIn / 1000) : clock.left}</b>
-          {locked && !finished ? <span className="lock">принято</span> : null}
+          {locked && !finished ? <span className="lock">{t("arena.accepted")}</span> : null}
         </div>
         <div className="ar-mzone">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -469,11 +467,11 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
           </svg>
           {zi.closed ? (
             <span>
-              Зона <b>закрыта</b> · {zi.next}
+              {t("arena.zone")}{" "}<b>{t("arena.closedLower")}</b> · {zi.next}
             </span>
           ) : (
             <span>
-              Зона <b>{`${zi.size}×${zi.size}`}</b> · {zi.next}
+              {t("arena.zone")}{" "}<b>{`${zi.size}×${zi.size}`}</b> · {zi.next}
             </span>
           )}
           {zi.me ? <span className={zi.me.out ? "danger" : "safe"}>{zi.me.text}</span> : null}
@@ -486,7 +484,7 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
         ) : (
           <BoardBoundary onError={failBoard}>
             <div className="ar-map-in" style={{ width: R.current ? undefined : "100%" }}>
-              <canvas ref={canvas} className="ar-cv" onPointerUp={onTap} aria-label="Поле боя" />
+              <canvas ref={canvas} className="ar-cv" onPointerUp={onTap} aria-label={t("arena.field")} />
               <canvas ref={over} className="ar-cv-over" aria-hidden="true" />
               {overlays}
             </div>
@@ -523,13 +521,13 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
                   <path d={GLYPH[me.weapon]} fill="currentColor" fillRule="evenodd" />
                 </svg>
               </span>
-              <span className="w-n">{w.name}</span>
+              <span className="w-n">{weaponName(me.weapon)}</span>
               <span className="w-s">
                 <span>
-                  дальн. <b>{w.range}</b>
+                  {t("arena.rangeShort")}{" "}<b>{w.range}</b>
                 </span>
                 <span>
-                  урон <b>{w.dmg}</b>
+                  {t("arena.dmg")}{" "}<b>{w.dmg}</b>
                 </span>
               </span>
             </div>
@@ -556,7 +554,7 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
               setDraft((d) => toggleMedkit(me, d));
               setErr("");
             }}
-            aria-label={`Аптечка, ${me.medkits} из ${MEDKIT_MAX}`}
+            aria-label={t("arena.medkitN", { medkits: me.medkits, MEDKITMAX: MEDKIT_MAX })}
             aria-pressed={draft.medkit}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -575,10 +573,9 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
               setErr("");
             }}
           >
-            Сброс
-          </Button>
+            {t("arena.reset")}</Button>
           <Button kind={locked ? "secondary" : "primary"} size="lg" disabled={anim} onClick={onReady}>
-            {locked ? "Изменить" : "Готово"}
+            {locked ? t("arena.change") : t("arena.done")}
           </Button>
         </div>
       ) : null}
@@ -596,7 +593,7 @@ export function ArenaBattle({ room, onDone }: ArenaBattleProps) {
           <li className="pick">
             <FeedIcon t="pick" />
             <span className="t">00</span>
-            <span>Матч начался. Лут виден всем — первый ход спокойный</span>
+            <span>{t("arena.matchStarted")}</span>
           </li>
         )}
       </ul>

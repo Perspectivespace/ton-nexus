@@ -20,11 +20,12 @@ import {
   Bar,
   Chip,
 } from "@/components/ui";
+import { t } from "@/i18n";
 
 const MINER_RU: Record<string, string> = {
-  idle: "остановлен — запустите цикл",
-  running: "цикл активен",
-  ready: "хранилище полное — соберите",
+  get idle() { return t("home.minerIdle"); },
+  get running() { return t("home.minerRunning"); },
+  get ready() { return t("home.minerReady"); },
 };
 
 /** раскрытие панели баланса — отдельный чанк с framer-motion (см. HomePanelMore) */
@@ -96,8 +97,7 @@ function WalkButton() {
       }}
     >
       <i aria-hidden="true" />
-      Прогулка
-    </button>
+      {t("walk.name")}</button>
   );
 }
 
@@ -120,26 +120,25 @@ function HomeMain() {
     <div className="px-5 pb-5">
         <div className="pt-1">
           <div className="mb-2 flex items-center justify-between">
-            <span className="ui-label ui-shade">Прогресс уровня</span>
+            <span className="ui-label ui-shade">{t("home.levelProgress")}</span>
             <span className="ui-sys ui-shade">{me.xp % 100} / 100 XP</span>
           </div>
-          <Bar value={(me.xp % 100) / 100} label="Прогресс уровня" />
+          <Bar value={(me.xp % 100) / 100} label={t("home.levelProgress")} />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Chip label="Фокус" value={me.focus_tokens} />
-          <Chip label="Запрет" value={me.block_tokens} />
+          <Chip label={t("token.focus")} value={me.focus_tokens} />
+          <Chip label={t("token.block")} value={me.block_tokens} />
           {me.success_boost_bp > 0 && (
-            <span title="Бонус с колеса: прибавится к шансу следующей попытки усиления и потратится на ней">
+            <span title={t("home.wheelBonusHint")}>
               <StatusPill tone="ok">
-                +{Number((me.success_boost_bp / 100).toFixed(1))}% к успеху · след. усиление
-              </StatusPill>
+                +{Number((me.success_boost_bp / 100).toFixed(1))}{t("home.wheelBonusTail")}</StatusPill>
             </span>
           )}
-          {me.is_owner && <StatusPill tone="live">владелец</StatusPill>}
-          {me.is_admin && !me.is_owner && <StatusPill tone="neutral">админ</StatusPill>}
-          {me.is_ambassador && !me.is_admin && !me.is_owner && <StatusPill tone="neutral">амбассадор</StatusPill>}
-          {me.can_deploy && <StatusPill tone="neutral">деплойер</StatusPill>}
+          {me.is_owner && <StatusPill tone="live">{t("role.owner")}</StatusPill>}
+          {me.is_admin && !me.is_owner && <StatusPill tone="neutral">{t("role.admin")}</StatusPill>}
+          {me.is_ambassador && !me.is_admin && !me.is_owner && <StatusPill tone="neutral">{t("role.ambassador")}</StatusPill>}
+          {me.can_deploy && <StatusPill tone="neutral">{t("role.deployer")}</StatusPill>}
         </div>
 
         {miner && (() => {
@@ -152,7 +151,7 @@ function HomeMain() {
               <Link to="/miner" className="home-rx no-underline" onClick={() => haptic.tap()}>
                 <IconReactor size={20} />
                 <span className="min-w-0 flex-1">
-                  <span className="ui-label block">Реактор</span>
+                  <span className="ui-label block">{t("home.reactor")}</span>
                   <span className="ui-sec block truncate !text-[13px]">{MINER_RU[miner.status] || miner.status}</span>
                 </span>
                 <span className={ready ? "ui-num tone-amber text-[15px] font-bold" : "ui-num text-[15px] font-bold"}>{pct}%</span>
@@ -169,11 +168,11 @@ function HomeMain() {
       <div {...r("head")}>
         <ScreenHeader
           eyebrow="TON Nexus"
-          title={me?.first_name || me?.username || "Контур"}
+          title={me?.first_name || me?.username || t("nav.home")}
           action={
             me ? (
               <StatusPill tone={isFetching ? "live" : "ok"}>
-                {isFetching ? "синхр." : "в сети"}
+                {isFetching ? t("home.syncing") : t("home.online")}
               </StatusPill>
             ) : undefined
           }
@@ -183,9 +182,9 @@ function HomeMain() {
       {/* «окно в город»: полоса, где город не закрыт панелями (DESIGN.md п. 3.8) */}
       <CityWindow action={<WalkButton />} />
 
-      {isLoading && <LoadingPanel label="Синхронизация контура…" />}
+      {isLoading && <LoadingPanel label={t("home.syncingHub")} />}
       {error && (
-        <ErrorPanel message="Нет связи с сервером. Откройте приложение из Telegram." />
+        <ErrorPanel message={t("home.noServer")} />
       )}
 
       {me && (
@@ -197,7 +196,7 @@ function HomeMain() {
               className="home-bar"
               aria-expanded={panel.open}
               aria-controls="home-more"
-              aria-label={panel.open ? "Свернуть панель баланса" : "Развернуть панель баланса"}
+              aria-label={panel.open ? t("home.collapseBalance") : t("home.expandBalance")}
               onPointerDown={() => void loadMore()}
               onClick={() => {
                 haptic.tap();
@@ -206,13 +205,13 @@ function HomeMain() {
             >
               <i className="home-grab" aria-hidden="true" />
               <span className="min-w-0 flex-1 text-left">
-                <span className="ui-label ui-shade block">Баланс</span>
+                <span className="ui-label ui-shade block">{t("home.balance")}</span>
                 <Num value={Number(me.balance).toFixed(4)} unit="TON" size="l" glow className="ui-shade block !text-[26px] !leading-[30px]" />
               </span>
               <span className="home-lv">
                 <span className="flex items-center justify-end gap-1 text-[var(--text-3)]">
                   <IconUp size={11} />
-                  <span className="ui-label">Ур.</span>
+                  <span className="ui-label">{t("home.lvl")}</span>
                   <Num value={me.level} size="m" className="!font-bold" />
                 </span>
                 <span className="ui-sys block text-right">{me.xp} XP</span>
