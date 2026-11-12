@@ -26,7 +26,7 @@ from app.models.user import User
 from app.services import arena_engine
 from app.services import arena_escrow as escrow
 from app.services import arena_match
-from app.services.arena_config import ARENA_ROOMS, room_type
+from app.services.arena_config import ARENA_ROOMS, DEFAULT_COMMISSION_BPS, clamp_commission_bps, prizes_for, room_type
 from app.services.economy import get_setting
 
 SETTING_KEY = "arena"
@@ -42,6 +42,13 @@ class ArenaUnknownType(escrow.ArenaError):
 async def is_enabled(session: AsyncSession) -> bool:
     cfg = await get_setting(session, SETTING_KEY) or {}
     return bool(isinstance(cfg, dict) and cfg.get("enabled"))
+
+
+async def commission_bps(session: AsyncSession) -> int:
+    """Текущая комиссия «Арены» из настройки (commission_bp); нет ключа — по умолчанию (10 %)."""
+    cfg = await get_setting(session, SETTING_KEY) or {}
+    raw = cfg.get("commission_bp", DEFAULT_COMMISSION_BPS) if isinstance(cfg, dict) else DEFAULT_COMMISSION_BPS
+    return clamp_commission_bps(raw)
 
 
 def _rt(code: str):
@@ -125,7 +132,7 @@ async def join_type(session: AsyncSession, *, code: str, user_id: int, now: date
         raise escrow.ArenaAlreadyInRoom(other)
     room = await _open_room(session, code, now)
     if room is None:
-        room = await escrow.create_room(session, code, now=now)
+        room = await escrow.create_room(session, code, now=now, commission_bps=await commission_bps(session))
     entry = await escrow.join(session, room_id=room.id, user_id=user_id, now=now)
     match = None
     if await _held_count(session, room.id) >= room.seats:
@@ -208,15 +215,16 @@ async def list_types(session: AsyncSession, *, user_id: int) -> dict:
         )
     ).all()
     waiting = {code: int(n) for code, n in rows}
+    bps = await commission_bps(session)
     types = [
         {
             "type": rt.code,
             "seats": rt.seats,
             "board": rt.board,
             "stake_nano": str(rt.stake_nano),
-            "prizes_nano": [str(p) for p in rt.prizes_nano],
+            "prizes_nano": [str(p) for p in prizes_for(rt, bps)],
             "pot_nano": str(rt.pot_nano),
-            "commission_bps": rt.commission_bps,
+            "commission_bps": bps,
             "waiting": waiting.get(rt.code, 0),
         }
         for rt in ARENA_ROOMS.values()
@@ -289,6 +297,9 @@ async def room_view(session: AsyncSession, room_id: int, *, user_id: int, with_m
         "taken": sum(1 for s in seats if s is not None),
         "my_seat": me,
         "stake_nano": str(room.stake_nano),
+        # условия этой комнаты (комиссия зафиксирована при создании) — не текущая настройка
+        "commission_bps": room.commission_bps,
+        "prizes_nano": [str(p) for p in prizes_for(room_type(room.room_type), room.commission_bps)],
         "fill_deadline": _iso(room.fill_deadline),
         "started_at": _iso(room.started_at),
         "finished_at": _iso(room.finished_at),

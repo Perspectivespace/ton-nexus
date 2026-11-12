@@ -60,7 +60,10 @@ DEFAULTS: dict[str, tuple[object, str]] = {
     "miner_base_rate": ({"ton_per_hour": "0.00035"}, "Базовая ставка TON/час"),
     "ton_wallet": ({"enabled": True, "network": "mainnet", "unique_address": True, "proof_ttl_minutes": 15}, "Настройки кошелька TON"),
     "ton_deposits": ({"enabled": False, "project_address": "", "min_ton": "0.1", "poll_seconds": 15}, "Пополнение TON"),
-    "arena": ({"enabled": False}, "«Арена»: вход в комнаты со ставкой (выключено — API комнат закрыт для игроков)"),
+    "arena": (
+        {"enabled": False, "commission_bp": 1000},
+        "«Арена»: вход в комнаты со ставкой (выключено — API комнат закрыт для игроков) и комиссия платформы, bp",
+    ),
     "ton_payouts": ({"enabled": False, "payout_wallet": ""}, "Выплаты TON: кошелёк, с которого владелец платит заявки на вывод"),
     "miner_power_mult": ({"per_level": "0.08"}, "Множитель за Мощность"),
     "miner_capacity_mult": ({"per_level": "0.06"}, "Ёмкость: +доля добычи за цикл за уровень выше 1"),

@@ -28,7 +28,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.arena import ArenaEntry, ArenaRoom
 from app.services import balance
-from app.services.arena_config import FILL_TIMEOUT_S, LEDGER_QUANTUM_NANO, NANO_PER_TON, room_type
+from app.services.arena_config import (
+    FILL_TIMEOUT_S,
+    LEDGER_QUANTUM_NANO,
+    NANO_PER_TON,
+    clamp_commission_bps,
+    prizes_for,
+    room_type,
+)
 
 REF = "arena_entry"
 
@@ -135,10 +142,17 @@ def _expired(room: ArenaRoom, now: datetime) -> bool:
 
 
 async def create_room(
-    session: AsyncSession, code: str, *, now: datetime | None = None, seed: int | None = None
+    session: AsyncSession,
+    code: str,
+    *,
+    now: datetime | None = None,
+    seed: int | None = None,
+    commission_bps: int | None = None,
 ) -> ArenaRoom:
-    """Новая комната в наборе. Условия (места, ставка, комиссия) копируются из таблицы комнат."""
+    """Новая комната в наборе. Места и ставка — из таблицы комнат; комиссия — текущая из настройки
+    (commission_bps; None — по умолчанию). Всё копируется в комнату: призы при расчёте — от этой комиссии."""
     rt = room_type(code)
+    bps = rt.commission_bps if commission_bps is None else clamp_commission_bps(commission_bps)
     now = now or utcnow()
     seed = secrets.randbits(32) if seed is None else seed
     salt = secrets.token_hex(16)
@@ -147,7 +161,7 @@ async def create_room(
         status="waiting",
         seats=rt.seats,
         stake_nano=rt.stake_nano,
-        commission_bps=rt.commission_bps,
+        commission_bps=bps,
         seed=seed,
         seed_salt=salt,
         seed_hash=seed_commit(seed, salt),
@@ -396,7 +410,7 @@ async def settle(
     if set(placements) != {e.user_id for e in held}:
         raise ArenaPlacementError("placements must list exactly the room's players")
     rt = room_type(room.room_type)
-    shares = split_prizes(rt.prizes_nano, placements)
+    shares = split_prizes(prizes_for(rt, room.commission_bps), placements)
     pot = sum(e.held_nano for e in held)
     paid_total = sum(shares.values())
     if paid_total > pot:  # не может случиться при валидной таблице — защита от неверной настройки

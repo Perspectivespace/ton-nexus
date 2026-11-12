@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
+from app.services.arena_config import DEFAULT_COMMISSION_BPS, MAX_COMMISSION_BPS, MIN_COMMISSION_BPS
 from app.services import city_ads, ratings, task_tariff, tower_prizes
 from app.services.economy_seed import DEFAULTS, seed_economy
 
@@ -33,6 +34,8 @@ def _fill_missing(key: str, value: Any) -> Any:
         merged = {d: value.get(d, week[d]) for d in week}
         merged.update({k: v for k, v in value.items() if k not in merged})
         return merged
+    if key == "arena" and isinstance(value, dict) and "commission_bp" not in value:
+        return {**value, "commission_bp": DEFAULT_COMMISSION_BPS}
     return value
 
 
@@ -207,13 +210,24 @@ def _normalize_ton_deposits(v: dict) -> dict:
 
 
 def _normalize_arena(v: dict) -> dict:
-    """«Арена»: только флаг enabled (bool). Лишние ключи отбрасываются."""
+    """«Арена»: флаг enabled (bool) и комиссия commission_bp (целые bp, 0…3000 = 0…30 %).
+
+    Нет комиссии — 10 %. Лишние ключи отбрасываются. Новая комиссия — только для новых комнат.
+    """
     if not isinstance(v, dict):
         raise EconomyAdminError("Настройки «Арены» должны быть объектом")
     enabled = v.get("enabled", False)
     if not isinstance(enabled, bool):
         raise EconomyAdminError("«Арена»: enabled — да/нет")
-    return {"enabled": enabled}
+    bp = v.get("commission_bp", DEFAULT_COMMISSION_BPS)
+    if isinstance(bp, bool) or not isinstance(bp, (int, float)) or bp != int(bp):
+        raise EconomyAdminError("«Арена»: комиссия — целое число bp")
+    bp = int(bp)
+    if not MIN_COMMISSION_BPS <= bp <= MAX_COMMISSION_BPS:
+        raise EconomyAdminError(
+            f"«Арена»: комиссия — от {MIN_COMMISSION_BPS // 100} до {MAX_COMMISSION_BPS // 100} %"
+        )
+    return {"enabled": enabled, "commission_bp": bp}
 
 
 def _normalize_ton_wallet(v: dict) -> dict:
@@ -234,7 +248,7 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "ton_deposits", "group": "ton", "label": "Пополнение TON"},
     {"key": "ton_payouts", "group": "ton", "label": "Выплаты TON"},
     {"key": "ton_wallet", "group": "ton", "label": "Кошелёк TON"},
-    {"key": "arena", "group": "arena", "label": "«Арена»: включена"},
+    {"key": "arena", "group": "arena", "label": "«Арена»: включена, комиссия"},
     {"key": "upgrade_base_cost", "group": "miner_upgrade", "label": "Базовая цена усиления"},
     {"key": "upgrade_cost_scale", "group": "miner_upgrade", "label": "Надбавка цены за уровни"},
     {"key": "upgrade_type_weights", "group": "miner_upgrade", "label": "Веса колеса типа"},

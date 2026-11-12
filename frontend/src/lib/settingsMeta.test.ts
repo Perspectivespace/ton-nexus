@@ -98,8 +98,12 @@ describe("TON: сеть списком и пополнения", () => {
   });
   it("арена — один флаг", () => {
     expect(fieldMeta("arena", "enabled", false).kind).toBe("bool");
-    expect(summarize("arena", { enabled: false })).toBe("Выключено");
-    expect(summarize("arena", { enabled: true })).toBe("Включено");
+    expect(summarize("arena", { enabled: false })).toBe("Выключено · комиссия 10%");
+    expect(summarize("arena", { enabled: true, commission_bp: 1250 })).toBe("Включено · комиссия 12.5%");
+    const c = fieldMeta("arena", "commission_bp", 1000);
+    expect([c.kind, c.min, c.max]).toEqual(["pct_bp", 0, 30]);
+    expect(toInput(c, 1250)).toBe("12.5");
+    expect(fromInput(c, "7.5", 1000)).toBe(750);
   });
   it("выплаты TON — кошелёк выплат текстом, сводка без адреса — выключено", () => {
     const w = fieldMeta("ton_payouts", "payout_wallet", "");
