@@ -18,6 +18,7 @@ Telegram Mini App: **рынок заданий (TON)** + **майнер-конт
 - [docs/PROMPTS.md](docs/PROMPTS.md) — дизайн для ИИ
 - [docs/LOCAL_RUN.md](docs/LOCAL_RUN.md) — **локальный запуск без Docker**
 - [docs/TODO.md](docs/TODO.md) — задачи
+- [docs/i18n.md](docs/i18n.md) — **языки: каждая новая функция — сразу RU и EN**
 
 ## Стек
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useMe, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink, useDepositInfo, useRecentHistory } from "@/api/hooks";
+import { useMe, useSetLang, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink, useDepositInfo, useRecentHistory } from "@/api/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
@@ -13,7 +13,8 @@ import { TopUpSheet } from "@/components/TopUpSheet";
 import { BalanceHistorySheet, HistoryRow } from "@/components/BalanceHistory";
 import { LazyTonConnectProvider } from "@/lib/tonconnect";
 import { prefersReducedMotion } from "@/components/ui/press";
-import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Sheet, Tag, useToast } from "@/components/ui";
+import { Button, Field, HoldButton, List, ListRow, Num, Panel, ScreenHeader, SectionLabel, Sheet, Tabs, Tag, useToast } from "@/components/ui";
+import { LANG_NAMES, LANGS, t, useLangStore, type Lang } from "@/i18n";
 
 /** Тот же формат, что проверяет сервер */
 const TON_ADDR = /^(UQ|EQ)[A-Za-z0-9_-]{46}$/;
@@ -182,7 +183,7 @@ export function Wallet() {
           sub="Пополнения, выводы, начисления и траты"
           onClick={() => setSheet("history")}
         />
-        <ListRow icon={<IconGear size={20} />} iconTone="muted" title="Настройки" sub="Тема, анимации, язык" onClick={() => setSheet("settings")} />
+        <ListRow icon={<IconGear size={20} />} iconTone="muted" title={t("settings.title")} sub={t("settings.rowSub")} onClick={() => setSheet("settings")} />
       </List>
 
       {recent.data && recent.data.pending.length + recent.data.items.length > 0 ? (
@@ -297,7 +298,7 @@ export function Wallet() {
         <BalanceHistorySheet />
       </Sheet>
 
-      <Sheet open={sheet === "settings"} onClose={closeSheet} title="Настройки" sub="Берутся из Telegram и системы">
+      <Sheet open={sheet === "settings"} onClose={closeSheet} title={t("settings.title")} sub={t("settings.sub")}>
         <SettingsInfo />
       </Sheet>
     </div>
@@ -305,24 +306,33 @@ export function Wallet() {
 }
 
 /**
- * Настройки — честно только то, что есть: тема и язык идут из Telegram, анимации — из системы и мощности устройства.
- * Переключателей в приложении пока нет, поэтому строки без шеврона.
+ * Настройки: тема идёт из Telegram, анимации — из системы и мощности устройства; язык выбирается здесь
+ * («Язык / Language» — подпись на обоих языках, чтобы найти её на любом) и хранится на сервере.
  */
 function SettingsInfo() {
   const root = typeof document !== "undefined" ? document.documentElement : null;
-  const theme = root?.dataset.theme === "light" ? "Дневной HUD" : "Ночь";
+  const theme = root?.dataset.theme === "light" ? t("settings.themeDay") : t("settings.themeNight");
   const lowEnd = !!root?.classList.contains("low-end");
-  const motionMode = prefersReducedMotion() ? "Уменьшены (система)" : lowEnd ? "Облегчённые" : "Полные";
+  const motionMode = prefersReducedMotion() ? t("settings.motionReduced") : lowEnd ? t("settings.motionLite") : t("settings.motionFull");
+  const lang = useLangStore((st) => st.lang);
+  const setLang = useSetLang();
   return (
     <div className="space-y-3">
+      <div className="space-y-2">
+        <SectionLabel>{t("lang.title")}</SectionLabel>
+        <Tabs<Lang>
+          label={t("lang.title")}
+          items={LANGS.map((l) => ({ value: l, label: LANG_NAMES[l] }))}
+          value={lang}
+          onChange={(l) => setLang.mutate(l)}
+        />
+        <p className="ui-sec !text-[12px] !leading-[16px]">{t("lang.sub")}</p>
+      </div>
       <List>
-        <ListRow title="Тема" sub="Как в Telegram" value={theme} />
-        <ListRow title="Анимации" sub="По системе и мощности устройства" value={motionMode} />
-        <ListRow title="Язык" sub="Интерфейс" value="Русский" />
+        <ListRow title={t("settings.theme")} sub={t("settings.themeSub")} value={theme} />
+        <ListRow title={t("settings.motion")} sub={t("settings.motionSub")} value={motionMode} />
       </List>
-      <p className="ui-sec !text-[12px] !leading-[16px]">
-        Тема меняется вместе с темой Telegram, анимации — системной настройкой «Уменьшить движение».
-      </p>
+      <p className="ui-sec !text-[12px] !leading-[16px]">{t("settings.note")}</p>
     </div>
   );
 }

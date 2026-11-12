@@ -8,6 +8,7 @@ import { initTheme } from "./lib/theme";
 import { initRoutePrefetch } from "./lib/routes";
 import { initFps } from "./lib/fps";
 import { initVersionCheck } from "./lib/version";
+import { LangRoot, getLang } from "./i18n";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,10 +22,13 @@ function boot() {
   initRoutePrefetch();
   initFps();
   initVersionCheck();
+  document.documentElement.lang = getLang();
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <LangRoot>
+          <App />
+        </LangRoot>
       </QueryClientProvider>
     </StrictMode>
   );

@@ -1,4 +1,5 @@
 import { getInitData } from "@/lib/telegram";
+import { getLang } from "@/i18n/core";
 
 const BASE = import.meta.env.VITE_API_BASE || "";
 
@@ -19,6 +20,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   headers.set("Content-Type", "application/json");
   const initData = getInitData();
   if (initData) headers.set("X-Telegram-Init-Data", initData);
+  headers.set("X-Lang", getLang()); // язык ответов сервера (ошибки) — текущий язык интерфейса
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
@@ -55,6 +57,7 @@ export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
   headers.set("Content-Type", file.type || "application/octet-stream");
   const initData = getInitData();
   if (initData) headers.set("X-Telegram-Init-Data", initData);
+  headers.set("X-Lang", getLang()); // язык ответов сервера (ошибки) — текущий язык интерфейса
   const res = await fetch(`${BASE}${path}`, { method: "POST", body: file, headers });
   if (!res.ok) throw await rawError(res);
   return res.json() as Promise<T>;
@@ -65,6 +68,7 @@ export async function apiBlob(path: string): Promise<Blob> {
   const headers = new Headers();
   const initData = getInitData();
   if (initData) headers.set("X-Telegram-Init-Data", initData);
+  headers.set("X-Lang", getLang()); // язык ответов сервера (ошибки) — текущий язык интерфейса
   const res = await fetch(`${BASE}${path}`, { headers, cache: "no-store" });
   if (!res.ok) throw await rawError(res);
   return res.blob();
