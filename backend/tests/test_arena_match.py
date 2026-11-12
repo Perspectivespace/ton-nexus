@@ -317,6 +317,24 @@ class FinishTest(MatchBase):
         self.assertEqual({r["seat"]: r["place"] for r in v["results"]}, places)
         self.assertEqual({r["seat"]: int(r["prize_nano"]) for r in v["results"]}, {e.seat: e.prize_nano for e in entries})
         self.assertEqual({p["seat"]: p["place"] for p in v["match"]["places"]}, places)
+        # итоги: убийства, урон и ход гибели — из финального состояния
+        fin = {p.id: (p.kills, p.dealt, p.death_turn) for p in final.players}
+        self.assertEqual({r["seat"]: (r["kills"], r["dealt"], r["death_turn"]) for r in v["results"]}, fin)
+        # история боёв игрока: этот бой, место, приз, итог, убийства, ходы
+        h = (await self.client.get("/api/v1/arena/history", headers=self.h(tgs[0]))).json()
+        (it,) = h["items"]
+        me = entries[0]
+        self.assertEqual(
+            (it["room_id"], it["type"], it["status"], it["place"], int(it["prize_nano"]), int(it["net_nano"]), it["kills"]),
+            (rid, code, "finished", me.place, me.prize_nano, me.prize_nano - rt.stake_nano, fin[0][0]),
+        )
+        self.assertEqual(it["turns"], len(v["turns"]))
+        self.assertEqual(
+            h["summary"],
+            {"played": 1, "wins": int(me.place == 1), "prizes_nano": str(me.prize_nano),
+             "net_nano": str(me.prize_nano - rt.stake_nano)},
+        )
+        self.assertIsNone(h["next_before"])
         # commit–reveal: только публичные данные — seed, соль, хэш до старта и журнал ходов
         self.assertEqual(hashlib.sha256(f"{v['seed_salt']}:{v['seed']}".encode()).hexdigest(), v["seed_hash"])
         log = v["turns"]
