@@ -4,6 +4,7 @@ import { AD_SPOT_BOX, fitFont } from "@/components/CityAdSpots";
 import { loadCityFrame, useCityTier } from "@/components/CityV2";
 import { adVars } from "@/lib/cityAdPalette";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
+import { t } from "@/i18n";
 
 /**
  * Кусок города с местами рекламы — для экрана покупки, «Моих объявлений» и модерации.
@@ -40,7 +41,7 @@ export function Sign({ spot, format, ad }: { spot: string; format: CityAdFormat;
     return (
       <div className="cad-spot cad-tick" style={{ ...box(r), ...adVars(ad.color) }}>
         <span className="tk m-still">
-          <span className="own">МАЙНЕР</span>
+          <span className="own">{t("city.signMiner")}</span>
           <span className="tw-win">
             <span className="trk">{ad.title}</span>
           </span>

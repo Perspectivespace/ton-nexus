@@ -16,7 +16,7 @@ import { adVars } from "@/lib/cityAdPalette";
 import { haptic } from "@/lib/haptics";
 import {
   AD_DISTRICTS,
-  AD_DISTRICT_RU,
+  AD_DISTRICT_OWNER,
   districtOfSpot,
   adTimeline,
   daysWord,
@@ -70,7 +70,7 @@ export function CityAdsOwner() {
         <p className="cab-own-dz" aria-label="В эфире по районам">
           {byDistrict.map((x) => (
             <span key={x.d}>
-              <b>{AD_DISTRICT_RU[x.d]}</b> {x.imp} пок. · {x.clk} перех.
+              <b>{AD_DISTRICT_OWNER[x.d]}</b> {x.imp} пок. · {x.clk} перех.
             </span>
           ))}
         </p>

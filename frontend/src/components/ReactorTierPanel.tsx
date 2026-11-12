@@ -1,6 +1,6 @@
 import { Bar, Panel, Reactor } from "@/components/ui";
 import { nextTier, type ReactorTier } from "@/lib/reactorTiers";
-import { t } from "@/i18n";
+import { quote, t } from "@/i18n";
 
 /** Облик реактора под героем: тизер следующего облика и путь к нему (docs/DESIGN.md, п. 8.1.1). */
 export function ReactorTierPanel({ tier, level }: { tier: ReactorTier; level: number }) {
@@ -15,7 +15,7 @@ export function ReactorTierPanel({ tier, level }: { tier: ReactorTier; level: nu
         <div className="min-w-0 flex-1">
           <p className="ui-label">{next ? t("reactor.nextAt", { from: next.from, level: next.from - level }) : t("reactor.topLook")}</p>
           <p className="mt-0.5 truncate text-[15px] font-semibold leading-6 text-[var(--text)]">
-            «{show.name}» · {show.mk}
+            {quote(show.name)} · {show.mk}
           </p>
           <p className="ui-sec !text-[12px] !leading-[16px]">{show.look}</p>
         </div>
@@ -29,7 +29,7 @@ export function ReactorTierPanel({ tier, level }: { tier: ReactorTier; level: nu
       )}
       <p className="ui-sec mt-2 flex justify-between !text-[12px] !leading-[16px]">
         <span>
-          {t("reactor.now")}{" "}{tier.mk} «{tier.name}»
+          {t("reactor.now")}{" "}{tier.mk} {quote(tier.name)}
         </span>
         <span className="font-mono">{t("reactor.lvl")}{" "}{level}</span>
       </p>

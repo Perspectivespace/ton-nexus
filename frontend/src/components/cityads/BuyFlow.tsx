@@ -19,6 +19,7 @@ import {
   AD_DISTRICTS,
   AD_DISTRICT_RU,
   FORMAT_RU,
+  spotTitle,
   addDays,
   contentField,
   daysWord,
@@ -37,6 +38,7 @@ import { AdCardPreview } from "./AdCardPreview";
 import { FacadeImagePicker, type FacadePick } from "./FacadeImage";
 import { type SceneSlot } from "./AdScene";
 import { PlaceScene, type PlaceSign } from "./DistrictAdScene";
+import { t, tp } from "@/i18n";
 
 /**
  * Покупка рекламы в городе: район и место → даты → текст → проверка и оплата с баланса.
@@ -46,13 +48,16 @@ import { PlaceScene, type PlaceSign } from "./DistrictAdScene";
  * Цена, занятые сутки и проверка текста — живой расчёт сервера (POST /city-ads/quote); бронь — POST /city-ads.
  */
 export type Step = 0 | 1 | 2 | 3;
-const STEPS = ["Место", "Даты", "Текст", "Оплата"] as const;
-const SAMPLE: Record<CityAdFormat, { title: string; subtitle?: string }> = {
-  line: { title: "ВАША РЕКЛАМА НА БАШНЕ" },
-  banner: { title: "ВАШ БРЕНД", subtitle: "здесь подпись" },
-  neon: { title: "ВЫВЕСКА" },
-  facade_screen: { title: "ВАШ ЭКРАН НА РЫНКЕ", subtitle: "подпись под заголовком" },
-};
+const STEPS = ["ad.step.spot", "ad.step.dates", "ad.step.text", "ad.step.pay"] as const;
+/** образец текста на превью — на языке игрока, читается в момент показа */
+const sampleOf = (f: CityAdFormat): { title: string; subtitle?: string } =>
+  f === "line"
+    ? { title: t("ad.sample.line") }
+    : f === "banner"
+      ? { title: t("ad.sample.banner"), subtitle: t("ad.sample.bannerSub") }
+      : f === "neon"
+        ? { title: t("ad.sample.neon") }
+        : { title: t("ad.sample.facade"), subtitle: t("ad.sample.facadeSub") };
 const DURATIONS = [1, 3, 7, 14, 30];
 
 function useDebounced<T>(v: T, ms: number): T {
@@ -64,7 +69,7 @@ function useDebounced<T>(v: T, ms: number): T {
   return d;
 }
 
-const errText = (e: unknown) => (e instanceof Error ? e.message : "Не удалось связаться с сервером");
+const errText = (e: unknown) => (e instanceof Error ? e.message : t("ad.netFail"));
 const errStatus = (e: unknown) => (e instanceof ApiError ? e.status : 0);
 
 type BookFail = { kind: "busy" | "funds" | "other"; text: string };
@@ -197,14 +202,14 @@ export function BuyFlow({
   const titleOk = title.trim().length > 0 && !fieldErr("title");
   const contentOk = titleOk && !hint && !(serverErr && settled) && !cq.isError;
   // образец строки: в Центре — «на башне», в районах — просто «здесь»
-  const sample = fmt === "line" && district !== "centre" ? "ВАША РЕКЛАМА ЗДЕСЬ" : SAMPLE[fmt].title;
+  const sample = fmt === "line" && district !== "centre" ? t("ad.sampleHere") : sampleOf(fmt).title;
   const sign = spot
     ? {
         spot: spot.key,
         format: fmt,
         ad: {
           title: title.trim() || sample,
-          subtitle: sub ? subtitle.trim() || (title.trim() ? "" : SAMPLE[fmt].subtitle) : null,
+          subtitle: sub ? subtitle.trim() || (title.trim() ? "" : sampleOf(fmt).subtitle) : null,
           color,
           image: canPic ? pic : null,
         },
@@ -213,12 +218,12 @@ export function BuyFlow({
 
   return (
     <div ref={top} className="cab-flow space-y-3">
-      <ol className="cab-steps" aria-label="Шаги покупки">
+      <ol className="cab-steps" aria-label={t("ad.stepsAria")}>
         {STEPS.map((s, i) => (
           <li key={s} className={i === step ? "on" : i < step ? "done" : undefined}>
             <button type="button" disabled={i > step} aria-current={i === step ? "step" : undefined} onClick={() => i < step && go(i as Step)}>
               <b>{i + 1}</b>
-              {s}
+              {t(s)}
             </button>
           </li>
         ))}
@@ -228,48 +233,46 @@ export function BuyFlow({
         <SpotStep board={board} district={district} onDistrict={onDistrict} spotKey={spotKey} onPick={setSpotKey} sign={sign} />
       )}
 
-      {step === 1 && !quote && <Panel className="cab-step p-4"><p className="cab-note">Считаем свободные даты…</p></Panel>}
+      {step === 1 && !quote && <Panel className="cab-step p-4"><p className="cab-note">{t("ad.countingDates")}</p></Panel>}
       {step === 1 && quote && (
         <Panel className="cab-step space-y-4 p-4" key="dates">
           <div>
-            <p className="ui-label">Начало показа</p>
-            <p className="cab-note">С завтрашнего дня (МСК), не позже чем через 90 дней. Сутки идут по Москве.</p>
+            <p className="ui-label">{t("ad.start")}</p>
+            <p className="cab-note">{t("ad.startHint")}</p>
           </div>
           <AdCalendar start={start} days={days} earliest={quote.earliest} latest={quote.latest} busy={quote.busy} onPick={setStart} />
           <div className="space-y-2">
-            <p className="ui-label">Срок</p>
+            <p className="ui-label">{t("ad.duration")}</p>
             <div className="cab-dur">
-              <button type="button" className="cab-stepper" aria-label="Меньше суток" disabled={days <= minDays} onClick={() => setDays(days - 1)}>
+              <button type="button" className="cab-stepper" aria-label={t("ad.lessDays")} disabled={days <= minDays} onClick={() => setDays(days - 1)}>
                 −
               </button>
               <output className="cab-dur-v" aria-live="polite">
                 {daysWord(days)}
               </output>
-              <button type="button" className="cab-stepper" aria-label="Больше суток" disabled={days >= maxDays} onClick={() => setDays(days + 1)}>
+              <button type="button" className="cab-stepper" aria-label={t("ad.moreDays")} disabled={days >= maxDays} onClick={() => setDays(days + 1)}>
                 +
               </button>
             </div>
-            <div className="cab-chips" role="group" aria-label="Быстрый выбор срока">
+            <div className="cab-chips" role="group" aria-label={t("ad.quickDuration")}>
               {DURATIONS.filter((d) => d >= minDays && d <= maxDays).map((d) => (
                 <button key={d} type="button" className={d === days ? "on" : undefined} aria-pressed={d === days} onClick={() => setDays(d)}>
-                  {d} сут.
+                  {t("ad.daysShort", { n: d })}
                 </button>
               ))}
             </div>
           </div>
           <div className={`cab-range${quote.available ? "" : " bad"}`} role="status">
-            <span>
-              Показ <b>{fmtRange(quote.start, quote.end)}</b> · {daysWord(quote.days)}
+            <span>{t("ad.run")}{" "}<b>{fmtRange(quote.start, quote.end)}</b> · {daysWord(quote.days)}
             </span>
             {!quote.available && (
               <span className="cab-range-warn">
-                {quote.occupied.length} {quote.occupied.length === 1 ? "сутки уже заняты" : "суток уже заняты"}.{" "}
+                {tp("ad.occupied", quote.occupied.length)}.{" "}
                 {quote.next_free ? (
-                  <button type="button" onClick={() => setStart(quote.next_free!)}>
-                    Ближайшее свободное — с {fmtDay(quote.next_free)}
+                  <button type="button" onClick={() => setStart(quote.next_free!)}>{t("ad.nextFree")}{" "}{fmtDay(quote.next_free)}
                   </button>
                 ) : (
-                  "Свободного окна такой длины нет — сократите срок."
+                  t("ad.noWindow")
                 )}
               </span>
             )}
@@ -288,47 +291,47 @@ export function BuyFlow({
               sign={sign}
               phase={canPic ? (night ? "night" : "day") : undefined}
               className="cab-mini"
-              label="Так вывеска будет выглядеть в городе"
+              label={t("ad.signPreviewHint")}
             >
               {canPic && <DayNight night={night} onNight={setNight} />}
             </PlaceScene>
           )}
           <Panel className="cab-step space-y-4 p-4">
             <Field
-              label={fmt === "line" ? "Текст бегущей строки" : fmt === "facade_screen" ? "Заголовок на экране" : "Надпись на вывеске"}
+              label={fmt === "line" ? t("ad.lineText") : fmt === "facade_screen" ? t("ad.screenTitle") : t("ad.signText")}
               unit={<Count n={title.length} max={lim.title_max} />}
               error={fieldErr("title")}
               hint={
                 fmt === "line"
                   ? district === "centre"
-                    ? "Проезжает по башне между показами «МАЙНЕР»"
-                    : "Проезжает по строке раз за разом"
+                    ? t("ad.lineHintTower")
+                    : t("ad.lineHint")
                   : fmt === "facade_screen"
                     ? canPic
-                      ? "С картинкой — подпись на тёмной плашке внизу экрана"
-                      : "Экран — заголовок и подпись"
-                    : "Коротко и крупно — её читают на ходу"
+                      ? t("ad.screenHintPic")
+                      : t("ad.screenHint")
+                    : t("ad.signHint")
               }
             >
               <input className="ui-input" value={title} maxLength={lim.title_max} placeholder={sample} onChange={(e) => setTitle(e.target.value)} />
             </Field>
             {sub && (
               <Field
-                label={fmt === "facade_screen" ? "Подпись на экране" : "Подпись под надписью"}
+                label={fmt === "facade_screen" ? t("ad.screenSub") : t("ad.signSub")}
                 unit={<Count n={subtitle.length} max={lim.subtitle_max ?? 18} />}
                 error={fieldErr("subtitle")}
-                hint="Необязательно"
+                hint={t("ad.optional")}
               >
-                <input className="ui-input" value={subtitle} maxLength={lim.subtitle_max ?? 18} placeholder="например, «скидка 20 %»" onChange={(e) => setSubtitle(e.target.value)} />
+                <input className="ui-input" value={subtitle} maxLength={lim.subtitle_max ?? 18} placeholder={t("ad.subPlaceholder")} onChange={(e) => setSubtitle(e.target.value)} />
               </Field>
             )}
             {canPic && <FacadeImagePicker value={image} onChange={setImage} />}
-            <Field label="Текст карточки" unit={<Count n={body.length} max={bodyMax} />} error={fieldErr("body")} hint="Открывается по касанию вывески в «Прогулке». Необязательно">
-              <textarea className="ui-input cab-ta" value={body} maxLength={bodyMax} rows={3} placeholder="Что вы предлагаете и почему стоит перейти" onChange={(e) => setBody(e.target.value)} />
+            <Field label={t("ad.cardText")} unit={<Count n={body.length} max={bodyMax} />} error={fieldErr("body")} hint={t("ad.cardTextHint")}>
+              <textarea className="ui-input cab-ta" value={body} maxLength={bodyMax} rows={3} placeholder={t("ad.cardTextPlaceholder")} onChange={(e) => setBody(e.target.value)} />
             </Field>
             <div className="space-y-2">
-              <p className="ui-flabel">Цвет</p>
-              <div className="cab-palette" role="radiogroup" aria-label="Цвет вывески">
+              <p className="ui-flabel">{t("ad.color")}</p>
+              <div className="cab-palette" role="radiogroup" aria-label={t("ad.signColor")}>
                 {Object.keys(AD_PALETTE).map((c) => (
                   <button
                     key={c}
@@ -351,15 +354,15 @@ export function BuyFlow({
               {fieldErr("color") && <p className="ui-fhint err">{fieldErr("color")}</p>}
             </div>
             <Field
-              label="Ссылка"
+              label={t("ad.link")}
               error={fieldErr("link")}
               hint={
                 normLink && settled && !serverErr ? (
                   <span className="cab-ok">
-                    ✓ {linkKind === "telegram" ? "Откроется в Telegram" : "Откроется во внешнем браузере"}: {normLink}
+                    ✓ {linkKind === "telegram" ? t("ad.opensTg") : t("ad.opensBrowser")}: {normLink}
                   </span>
                 ) : (
-                  "Только https:// или t.me/… · без сокращателей (bit.ly и т. п.) · необязательно"
+                  t("ad.linkHint")
                 )
               }
             >
@@ -370,12 +373,12 @@ export function BuyFlow({
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                placeholder="https://… или t.me/канал"
+                placeholder={t("ad.linkPlaceholder")}
                 onChange={(e) => setLink(e.target.value)}
               />
             </Field>
             {serverErr && settled && !errField && <p className="ui-fhint err">{serverErr}</p>}
-            {cq.isError && !serverErr && <p className="ui-fhint err">Не удалось проверить текст — проверьте связь</p>}
+            {cq.isError && !serverErr && <p className="ui-fhint err">{t("ad.checkFail")}</p>}
           </Panel>
         </div>
       )}
@@ -406,27 +409,20 @@ export function BuyFlow({
       {/* низ шага: цена и «Далее» */}
       <Panel level="e2" className="cab-bar p-3" lift="l2">
         <div className="cab-sum">
-          <span className="k">{quote ? `${daysWord(quote.days)} × ${ton(quote.price_day_nano)}` : spot?.price_day ? `${spot.price_day} TON / сутки` : "Цена"}</span>
+          <span className="k">{quote ? `${daysWord(quote.days)} × ${ton(quote.price_day_nano)}` : spot?.price_day ? t("ad.pricePerDay", { priceDay: spot.price_day }) : t("ad.price")}</span>
           <b className={dq.isFetching ? "busy" : undefined}>{quote ? ton(quote.total_nano) : "—"}</b>
         </div>
         {step === 0 && (
-          <Button size="lg" disabled={!spotKey} onClick={() => go(1)}>
-            Выбрать даты
-          </Button>
+          <Button size="lg" disabled={!spotKey} onClick={() => go(1)}>{t("ad.pickDates")}</Button>
         )}
         {step === 1 && (
-          <Button size="lg" disabled={!quote?.available || dq.isFetching} onClick={() => go(2)}>
-            К тексту
-          </Button>
+          <Button size="lg" disabled={!quote?.available || dq.isFetching} onClick={() => go(2)}>{t("ad.toText")}</Button>
         )}
         {step === 2 && (
-          <Button size="lg" disabled={!contentOk || !settled} onClick={() => go(3)}>
-            Проверить
-          </Button>
+          <Button size="lg" disabled={!contentOk || !settled} onClick={() => go(3)}>{t("ad.check")}</Button>
         )}
         {step === 3 && (
-          <Button size="lg" disabled={!quote?.available || short > 0 || book.isPending} onClick={() => setConfirm(true)}>
-            Оплатить {quote ? ton(quote.total_nano) : ""}
+          <Button size="lg" disabled={!quote?.available || short > 0 || book.isPending} onClick={() => setConfirm(true)}>{t("ad.pay")}{" "}{quote ? ton(quote.total_nano) : ""}
           </Button>
         )}
       </Panel>
@@ -439,27 +435,23 @@ export function BuyFlow({
       <Sheet
         open={confirm}
         onClose={() => setConfirm(false)}
-        title="Оплата с баланса"
+        title={t("ad.payFromBalance")}
         sub={spot ? `${spotName(spot.key, spot.title, district)} · ${quote ? fmtRange(quote.start, quote.end) : ""}` : undefined}
         footer={
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <Button size="lg" onClick={pay} disabled={book.isPending} haptics="heavy">
-              {book.isPending ? "Оплата…" : `Списать ${quote ? ton(quote.total_nano) : ""}`}
+              {book.isPending ? t("ad.paying") : t("ad.charge", { totalNano: quote ? ton(quote.total_nano) : "" })}
             </Button>
-            <Button kind="secondary" size="lg" onClick={() => setConfirm(false)}>
-              Отмена
-            </Button>
+            <Button kind="secondary" size="lg" onClick={() => setConfirm(false)}>{t("ui.cancel")}</Button>
           </div>
         }
       >
         <div className="cab-confirm space-y-3">
           <div className="cab-rows">
-            <Row k="Спишется" v={quote ? ton(quote.total_nano) : "—"} strong />
-            <Row k="Баланс после" v={ton(Math.max(0, balance - total))} />
+            <Row k={t("ad.willCharge")} v={quote ? ton(quote.total_nano) : "—"} strong />
+            <Row k={t("ad.balanceAfter")} v={ton(Math.max(0, balance - total))} />
           </div>
-          <p className="cab-note">
-            Объявление уйдёт на проверку. Если его не одобрят — TON вернутся на баланс полностью. Передумали — отмена до проверки, тоже с полным возвратом.
-          </p>
+          <p className="cab-note">{t("ad.payNote")}</p>
         </div>
       </Sheet>
     </div>
@@ -500,12 +492,12 @@ function SpotStep({
     key: s.key,
     n: i + 1,
     state: !s.on_sale ? "off" : s.key === spotKey ? "picked" : "free",
-    label: `${i + 1}. ${s.title}`,
+    label: `${i + 1}. ${spotTitle(s.key, s.title)}`,
   }));
   return (
     <div className="space-y-3" key="spot">
       {onDistrict && (
-        <div className="cab-district" role="radiogroup" aria-label="Район">
+        <div className="cab-district" role="radiogroup" aria-label={t("city.district")}>
           {AD_DISTRICTS.map((d) => (
             <button
               key={d}
@@ -530,10 +522,10 @@ function SpotStep({
         slots={slots}
         onPick={(k) => (haptic.select(), onPick(k))}
         sign={sign}
-        label={`Места для рекламы: ${AD_DISTRICT_RU[district]}`}
+        label={t("ad.spotsAria", { district: AD_DISTRICT_RU[district] })}
       />
-      {none && <p className="cab-note">Сейчас в этом районе нет мест в продаже — выберите другой район.</p>}
-      <div className="cab-spots" role="radiogroup" aria-label="Место">
+      {none && <p className="cab-note">{t("ad.noSpots")}</p>}
+      <div className="cab-spots" role="radiogroup" aria-label={t("ad.spot")}>
         {spots.map((s, i) => (
           <SpotRow key={s.key} s={s} n={i + 1} on={s.key === spotKey} onPick={onPick} />
         ))}
@@ -557,13 +549,13 @@ function SpotRow({ s, n, on, onPick }: { s: CityAdSpotOnBoard; n: number; on: bo
     >
       <b className="n">{n}</b>
       <span className="m">
-        <span className="t">{s.title}</span>
+        <span className="t">{spotTitle(s.key, s.title)}</span>
         <span className="s">
           {FORMAT_RU[s.format] ?? s.format}
-          {s.ad ? ` · сейчас занято до ${fmtDay(s.ad.until)}` : ""}
+          {s.ad ? t("ad.takenUntil", { until: fmtDay(s.ad.until) }) : ""}
         </span>
       </span>
-      <span className="p">{s.on_sale ? <>{s.price_day} TON<small>/сутки</small></> : <small>не продаётся</small>}</span>
+      <span className="p">{s.on_sale ? <>{s.price_day} TON<small>{t("ad.perDay")}</small></> : <small>{t("ad.notForSale")}</small>}</span>
     </button>
   );
 }
@@ -618,7 +610,7 @@ function ReviewStep({
             aspect={1.7}
             phase={night ? "night" : "day"}
             sign={sign}
-            label="Превью вывески в городе"
+            label={t("ad.signPreviewAria")}
           >
             <DayNight night={night} onNight={onNight} />
           </PlaceScene>
@@ -628,29 +620,22 @@ function ReviewStep({
       {fail && <FailPanel fail={fail} onDates={onDates} />}
       <Panel className="space-y-1 p-4">
         <div className="cab-rows">
-          <Row k="Место" v={spotName(spot.key, spot.title, district)} />
-          {fmt === "facade_screen" && <Row k="Картинка" v={hasImage ? "есть · проверит владелец" : "нет · только текст"} />}
-          <Row k="Показ" v={`${fmtRange(quote.start, quote.end)} · ${daysWord(quote.days)}`} />
-          <Row k="Цена за сутки" v={ton(quote.price_day_nano)} />
-          <Row k="Итого" v={ton(quote.total_nano)} strong />
-          <Row k="Ваш баланс" v={ton(balance)} />
+          <Row k={t("ad.spot")} v={spotName(spot.key, spot.title, district)} />
+          {fmt === "facade_screen" && <Row k={t("ad.image")} v={hasImage ? t("ad.imageYes") : t("ad.imageNo")} />}
+          <Row k={t("ad.run")} v={`${fmtRange(quote.start, quote.end)} · ${daysWord(quote.days)}`} />
+          <Row k={t("ad.pricePerDayLabel")} v={ton(quote.price_day_nano)} />
+          <Row k={t("ad.total")} v={ton(quote.total_nano)} strong />
+          <Row k={t("ad.yourBalance")} v={ton(balance)} />
         </div>
         {short > 0 && (
           <div className="cab-warn" role="alert">
-            <span>
-              Не хватает <b>{ton(short)}</b>
+            <span>{t("ad.short")}{" "}<b>{ton(short)}</b>
             </span>
-            <Link to="/wallet" className="ui-btn secondary sm no-underline">
-              Пополнить
-            </Link>
+            <Link to="/wallet" className="ui-btn secondary sm no-underline">{t("ad.topUp")}</Link>
           </div>
         )}
         <p className="cab-note pt-2">
-          <Tag tone="amber" dot={false}>
-            Проверка
-          </Tag>{" "}
-          Владелец проверяет каждое объявление. До одобрения его не видно в городе.
-        </p>
+          <Tag tone="amber" dot={false}>{t("ad.review")}</Tag>{" "}{t("ad.reviewNote")}</p>
       </Panel>
     </div>
   );
@@ -658,13 +643,9 @@ function ReviewStep({
 
 function DayNight({ night, onNight }: { night: boolean; onNight: (v: boolean) => void }) {
   return (
-    <div className="cab-daynight" role="group" aria-label="Время суток превью">
-      <button type="button" aria-pressed={night} className={night ? "on" : undefined} onClick={() => onNight(true)}>
-        Ночью
-      </button>
-      <button type="button" aria-pressed={!night} className={!night ? "on" : undefined} onClick={() => onNight(false)}>
-        Днём
-      </button>
+    <div className="cab-daynight" role="group" aria-label={t("ad.previewTime")}>
+      <button type="button" aria-pressed={night} className={night ? "on" : undefined} onClick={() => onNight(true)}>{t("ad.night")}</button>
+      <button type="button" aria-pressed={!night} className={!night ? "on" : undefined} onClick={() => onNight(false)}>{t("ad.day")}</button>
     </div>
   );
 }
@@ -673,26 +654,22 @@ function FailPanel({ fail, onDates }: { fail: BookFail; onDates: () => void }) {
   if (fail.kind === "busy")
     return (
       <Panel danger className="cab-fail space-y-2 p-4" role="alert">
-        <p className="ui-h">Эти сутки только что заняли</p>
-        <p className="cab-note">Кто-то оплатил это место раньше. Деньги не списаны — выберите другие даты.</p>
-        <Button kind="secondary" size="sm" onClick={onDates}>
-          Выбрать даты
-        </Button>
+        <p className="ui-h">{t("ad.justTaken")}</p>
+        <p className="cab-note">{t("ad.justTakenNote")}</p>
+        <Button kind="secondary" size="sm" onClick={onDates}>{t("ad.pickDates")}</Button>
       </Panel>
     );
   if (fail.kind === "funds")
     return (
       <Panel danger className="cab-fail space-y-2 p-4" role="alert">
-        <p className="ui-h">Не хватает TON</p>
-        <p className="cab-note">{fail.text}. Ничего не списано.</p>
-        <Link to="/wallet" className="ui-btn secondary sm self-start no-underline">
-          Пополнить баланс
-        </Link>
+        <p className="ui-h">{t("ad.notEnoughTon")}</p>
+        <p className="cab-note">{fail.text}{t("ad.nothingCharged")}</p>
+        <Link to="/wallet" className="ui-btn secondary sm self-start no-underline">{t("ad.topUpBalance")}</Link>
       </Panel>
     );
   return (
     <Panel danger className="cab-fail space-y-2 p-4" role="alert">
-      <p className="ui-h">Не получилось оплатить</p>
+      <p className="ui-h">{t("ad.payFail")}</p>
       <p className="cab-note">{fail.text}</p>
     </Panel>
   );

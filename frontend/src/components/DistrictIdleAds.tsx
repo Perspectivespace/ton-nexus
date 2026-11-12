@@ -4,6 +4,7 @@ import { apiUrl } from "@/api/client";
 import { IdleSurface } from "@/components/IdleSpot";
 import { SPOT_SHORT } from "@/lib/cityAdBuy";
 import { SURFACES, type SceneDistrict, type Surface } from "@/lib/districts";
+import { t } from "@/i18n";
 
 /**
  * Места рекламы района поверх рисунка улицы (внутри слоя «улица» — едет вместе с ним): купленное и одобренное
@@ -61,7 +62,7 @@ export function DistrictIdleAds({
           const ad = spot?.ad;
           // свободное место без витрины (ещё грузится) — тоже ведёт в покупку: место проверит сервер
           if (!ad && spot && !spot.on_sale) return null;
-          const name = SPOT_SHORT[s.spot] ?? spot?.title ?? "Место для рекламы";
+          const name = SPOT_SHORT[s.spot] ?? spot?.title ?? t("idle.adSpace");
           return (
             <span
               key={s.spot}
@@ -71,7 +72,7 @@ export function DistrictIdleAds({
               role="button"
               tabIndex={0}
               aria-pressed={ad ? picked === s.spot : undefined}
-              aria-label={ad ? `Реклама: ${ad.title}${ad.subtitle ? `, ${ad.subtitle}` : ""}` : `Свободное место: ${name} — разместить рекламу`}
+              aria-label={ad ? t("city.adAria", { title: ad.title, subtitle: ad.subtitle ? `, ${ad.subtitle}` : "" }) : t("city.freeSpotAria2", { name })}
               style={boxOf(s)}
               onKeyDown={(e) => {
                 if (e.key !== "Enter" && e.key !== " ") return;

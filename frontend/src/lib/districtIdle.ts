@@ -1,4 +1,5 @@
 import type { Surface } from "@/lib/districts";
+import { getLang, t } from "@/i18n";
 
 /**
  * Свободные рекламные места района (PR 4 районов, просьба Сергея): пока место не куплено, на нём не пустая рамка,
@@ -9,18 +10,19 @@ import type { Surface } from "@/lib/districts";
  */
 export type IdleKind = Surface["kind"];
 
-/** «1.50» → «1,5»: цена за сутки по-русски, без лишних нулей */
+/** «1.50» → «1,5» (en — «1.5»): цена за сутки без лишних нулей */
 export function tonRu(price: string | null | undefined): string | null {
   if (price == null || price === "") return null;
   const n = Number(price);
   if (!Number.isFinite(n) || n <= 0) return null;
-  return String(Math.round(n * 1000) / 1000).replace(".", ",");
+  const s = String(Math.round(n * 1000) / 1000);
+  return getLang() === "en" ? s : s.replace(".", ",");
 }
 
 /** строка цены: «от 1,5 TON/сутки» (если цена известна) */
 export const priceLine = (price: string | null | undefined) => {
-  const t = tonRu(price);
-  return t ? `от ${t} TON/сутки` : null;
+  const tv = tonRu(price);
+  return tv ? t("idle.price", { tv }) : null;
 };
 
 /**
@@ -29,20 +31,20 @@ export const priceLine = (price: string | null | undefined) => {
  */
 export function idleSlogans(kind: IdleKind, price?: string | null, compact = false): string[] {
   const p = priceLine(price);
-  if (compact && kind === "neon") return ["Засветись", "Свободно", "Твой неон"];
-  if (compact && kind === "banner") return ["Засветись тут", "Место для рекламы", "Твой баннер тут"];
+  if (compact && kind === "neon") return [t("idle.shine"), t("idle.vacant"), t("idle.yourNeon")];
+  if (compact && kind === "banner") return [t("idle.shineHere"), t("idle.adSpace"), t("idle.yourBanner")];
   switch (kind) {
     case "facade_screen":
-      return ["Место для рекламы", "Засветись тут", "Твой бренд — на весь рынок", "Этот экран ждёт тебя"];
+      return [t("idle.adSpace"), t("idle.shineHere"), t("idle.yourBrand"), t("idle.screenWaits")];
     case "banner":
-      return ["Засветись тут", "Место для рекламы", "Видно со всей улицы"];
+      return [t("idle.shineHere"), t("idle.adSpace"), t("idle.seenStreet")];
     case "neon":
-      return ["Засветись тут", "Твоя вывеска", "Свободно"];
+      return [t("idle.shineHere"), t("idle.yourSign"), t("idle.vacant")];
     case "line":
       return [
-        p ? `Место для рекламы · ${p}` : "Место для рекламы",
-        "Засветись на Неон-рядах",
-        "Бегущая строка ждёт твой текст",
+        p ? t("idle.adSpacePrice", { p }) : t("idle.adSpace"),
+        t("idle.shineRows"),
+        t("idle.lineWaits"),
       ];
   }
 }

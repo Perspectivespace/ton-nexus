@@ -3,6 +3,7 @@ import { useCitySignal } from "@/api/hooks";
 import { useCityWalk } from "@/lib/cityWalk";
 import { motionAllowed } from "@/lib/walkPrefs";
 import "@/styles/secret-signal.css";
+import { t } from "@/i18n";
 
 /**
  * Секретный промокод «Прогулки» (пасхалка, без анонсов): маленькая голо-табличка с кодом в своей точке сцены —
@@ -31,10 +32,8 @@ export function SecretSignal({ place, active, still }: { place: SignalPlace; act
   const fit = Math.min(17, 86 / (0.68 * Math.max(code.length, 4)));
   const style = { left: pct(x), top: pct(y), width: pct(w), height: pct(h), ["--ss-fit" as string]: `${fit.toFixed(2)}cqw` } as CSSProperties;
   return (
-    <div className={`ss-holo${still ? " still" : ""}`} style={style} role="img" aria-label={`Сигнал: ${code}`} data-place={place}>
-      <span className="ss-k" aria-hidden="true">
-        сигнал
-      </span>
+    <div className={`ss-holo${still ? " still" : ""}`} style={style} role="img" aria-label={t("city.signalAria", { code })} data-place={place}>
+      <span className="ss-k" aria-hidden="true">{t("city.signal")}</span>
       <b className="ss-c" aria-hidden="true">
         {code}
       </b>

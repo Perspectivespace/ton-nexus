@@ -33,6 +33,10 @@ describe("словари", () => {
     for (const l of LANGS) for (const k of Object.keys(ru) as Key[]) expect(DICTS[l][k], `${l}.${k}`).not.toMatch(/&[a-z]+;|&#\d+;/i);
   });
 
+  it("в английском — английские кавычки, без «ёлочек»", () => {
+    for (const k of Object.keys(ru) as Key[]) expect(DICTS.en[k], `en.${k}`).not.toMatch(/[«»]/);
+  });
+
   it("пробелы по краям как в русском — строки склеиваются с соседним текстом", () => {
     const edges = (s: string) => [/^\s*/.exec(s)![0], /\s*$/.exec(s)![0]];
     for (const k of Object.keys(ru) as Key[]) {

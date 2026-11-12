@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 /**
  * Картинка экрана на фасаде — проверка файла и подготовка перед загрузкой (сервер проверяет и пережимает ещё раз:
  * WebP 640×520 без метаданных). Перед отправкой большие фото уменьшаются в браузере (≤ 1600 px, JPEG):
@@ -17,9 +18,9 @@ const SHRINK_OVER_BYTES = 900 * 1024;
 /** null — файл подходит для отправки на сервер */
 export function facadeFileError(f: { type: string; size: number } | null): string | null {
   if (!f) return null;
-  if (!FACADE_OK_TYPES.includes(f.type)) return "Нужна картинка PNG, JPG или WebP.";
-  if (f.size <= 0) return "Пустой файл.";
-  if (f.size > FACADE_MAX_BYTES) return "Файл больше 5 МБ — выберите картинку поменьше.";
+  if (!FACADE_OK_TYPES.includes(f.type)) return t("ad.pic.badType");
+  if (f.size <= 0) return t("ad.pic.empty");
+  if (f.size > FACADE_MAX_BYTES) return t("ad.pic.tooBig");
   return null;
 }
 

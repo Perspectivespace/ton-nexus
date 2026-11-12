@@ -4,6 +4,7 @@
  * мгновенные подсказки до ответа сервера.
  */
 import type { CityAdMine, CityAdOwner } from "@/api/hooks";
+import { getLang, t as tr, tAll, tmap, tp, type Key } from "@/i18n";
 
 const DAY = 86_400_000;
 const t = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
@@ -20,19 +21,25 @@ export const addMonths = (ym: string, n: number) => {
   return `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
 };
 
-const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
-const MONTHS_SHORT = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
-const MONTHS_TITLE = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const mon = (d: string) => Number(d.slice(5, 7));
+const dayOf = (d: string) => Number(d.slice(8, 10));
+const en = () => getLang() === "en";
 
-export const monthTitle = (ym: string) => `${MONTHS_TITLE[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
-/** «12 ноября» */
-export const fmtDay = (d: string) => `${Number(d.slice(8, 10))} ${MONTHS[Number(d.slice(5, 7)) - 1]}`;
-/** «12 ноя» */
-export const fmtDayShort = (d: string) => `${Number(d.slice(8, 10))} ${MONTHS_SHORT[Number(d.slice(5, 7)) - 1]}`;
-/** «12–18 ноя», «28 ноя – 3 дек», один день — «12 ноя» */
+export const monthTitle = (ym: string) => `${tr(`month.${Number(ym.slice(5, 7))}` as Key)} ${ym.slice(0, 4)}`;
+/** «12 ноября» · en «November 12» */
+export const fmtDay = (d: string) => {
+  const m = tr(`month.gen.${mon(d)}` as Key);
+  return en() ? `${m} ${dayOf(d)}` : `${dayOf(d)} ${m}`;
+};
+/** «12 ноя» · en «Nov 12» */
+export const fmtDayShort = (d: string) => {
+  const m = tr(`monthShort.${mon(d)}` as Key);
+  return en() ? `${m} ${dayOf(d)}` : `${dayOf(d)} ${m}`;
+};
+/** «12–18 ноя», «28 ноя – 3 дек», один день — «12 ноя» · en «Nov 12–18», «Nov 28 – Dec 3» */
 export function fmtRange(a: string, b: string): string {
   if (a === b) return fmtDayShort(a);
-  if (monthOf(a) === monthOf(b)) return `${Number(a.slice(8, 10))}–${fmtDayShort(b)}`;
+  if (monthOf(a) === monthOf(b)) return en() ? `${fmtDayShort(a)}–${dayOf(b)}` : `${dayOf(a)}–${fmtDayShort(b)}`;
   return `${fmtDayShort(a)} – ${fmtDayShort(b)}`;
 }
 
@@ -54,7 +61,7 @@ export function plural(n: number, one: string, few: string, many: string): strin
   if (b === 1) return one;
   return many;
 }
-export const daysWord = (n: number) => `${n} ${plural(n, "сутки", "суток", "суток")}`;
+export const daysWord = (n: number) => tp("ad.days", n);
 
 /** нанотоны → «1.25» (до 4 знаков, без хвостовых нулей) */
 export function tonStr(nano: number): string {
@@ -68,53 +75,48 @@ export function tonToNano(s: string | number | null | undefined): number {
   return Number.isFinite(v) ? Math.round(v * 1e9) : 0;
 }
 
-export const FORMAT_RU: Record<string, string> = {
-  line: "Бегущая строка",
-  banner: "Голо-баннер",
-  neon: "Неоновая вывеска",
-  facade_screen: "Экран на фасаде",
-};
-/** короткие русские названия мест (полные — title с сервера) */
-export const SPOT_SHORT: Record<string, string> = {
-  tower_line: "Строка на башне",
-  banner_sky: "Баннер над площадью",
-  banner_street: "Баннер у мостовой",
-  neon_left: "Вывеска слева",
-  neon_right: "Вывеска справа",
-  rows_facade: "Экран на фасаде рынка",
-  rows_line: "Строка над навесами",
-  rows_neon: "Вывеска у входа на рынок",
-  rows_banner: "Баннер над крышей рынка",
-  port_line: "Строка на стреле крана",
-  port_banner_cargo: "Баннер на контейнерах",
-  port_banner_tram: "Баннер на станции трамвая",
-  port_neon: "Вывеска над воротами склада",
-};
+const FORMATS = ["line", "banner", "neon", "facade_screen"] as const;
+const SPOTS = [
+  "tower_line", "banner_sky", "banner_street", "neon_left", "neon_right",
+  "rows_facade", "rows_line", "rows_neon", "rows_banner",
+  "port_line", "port_banner_cargo", "port_banner_tram", "port_neon",
+] as const;
+/** названия форматов на языке игрока */
+export const FORMAT_RU = tmap("fmt.", FORMATS);
+/** короткие названия мест на языке игрока (полные — title с сервера) */
+export const SPOT_SHORT = tmap("spot.", SPOTS);
 export type AdDistrict = "centre" | "rows" | "port";
 export const AD_DISTRICTS: AdDistrict[] = ["centre", "rows", "port"];
-export const AD_DISTRICT_RU: Record<AdDistrict, string> = { centre: "Центр", rows: "Неон-ряды", port: "Порт" };
+/** названия районов на языке игрока */
+export const AD_DISTRICT_RU = tmap("district.", AD_DISTRICTS);
+/** то же для админки владельца — всегда по-русски */
+export const AD_DISTRICT_OWNER = tmap("district.", AD_DISTRICTS, "ru");
 export const isAdDistrict = (v: unknown): v is AdDistrict => v === "centre" || v === "rows" || v === "port";
 /** район места по ключу (как на сервере: rows_… / port_…, остальные — Центр) */
 export const districtOfSpot = (key: string | null | undefined): AdDistrict =>
   key?.startsWith("rows_") ? "rows" : key?.startsWith("port_") ? "port" : "centre";
-/** «Неон-ряды · Экран на фасаде рынка» — русское название места с районом (никогда не ключ) */
+/** «Неон-ряды · Экран на фасаде рынка» — название места с районом на языке игрока (никогда не ключ) */
 export function spotName(spot: string, title?: string | null, district?: string | null): string {
   const d = isAdDistrict(district) ? district : districtOfSpot(spot);
-  const name = SPOT_SHORT[spot] ?? (title || "Место в городе");
+  const name = SPOT_SHORT[spot] ?? (title || tr("spot.any"));
   return `${AD_DISTRICT_RU[d]} · ${name}`;
 }
+/** название места для игрока: по-русски — полное с сервера, на других языках — из словаря */
+export const spotTitle = (key: string, title?: string | null): string =>
+  (getLang() === "ru" ? title || SPOT_SHORT[key] : SPOT_SHORT[key] ?? title) ?? tr("spot.any");
 /** у формата есть подпись под надписью: голо-баннер и экран на фасаде */
 export const hasSubtitle = (f: string) => f === "banner" || f === "facade_screen";
-export const COLOR_RU: Record<string, string> = { cyan: "Циан", magenta: "Маджента", amber: "Янтарь", mint: "Мята", violet: "Фиалка" };
+export const COLOR_RU = tmap("ad.color.", ["cyan", "magenta", "amber", "mint", "violet"] as const);
 
 export type ContentField = "title" | "subtitle" | "body" | "link" | "color";
-/** К какому полю относится ошибка проверки текста с сервера (по началу сообщения) */
+const starts = (detail: string, ...keys: Key[]) => keys.some((k) => tAll(k).some((p) => detail.startsWith(p)));
+/** К какому полю относится ошибка проверки текста с сервера (по началу сообщения на любом языке) */
 export function contentField(detail: string): ContentField | null {
-  if (/^Ссылка/.test(detail)) return "link";
-  if (/^Подпись/.test(detail)) return "subtitle";
-  if (/^Текст в городе/.test(detail)) return "title";
-  if (/^Текст|^Описание/.test(detail)) return "body";
-  if (/^Цвет/.test(detail)) return "color";
+  if (starts(detail, "ad.field.link")) return "link";
+  if (starts(detail, "ad.field.subtitle")) return "subtitle";
+  if (starts(detail, "ad.field.title")) return "title";
+  if (starts(detail, "ad.field.body", "ad.field.body2")) return "body";
+  if (starts(detail, "ad.field.color")) return "color";
   return null;
 }
 
@@ -125,35 +127,34 @@ const SHORTENERS = new Set(
     "cli.re kutt.it shrtco.de x.gd urlz.fr l.ead.me").split(" "),
 );
 const TG = new Set(["t.me", "telegram.me"]);
-const SHORT_MSG = "Ссылка: сокращатели запрещены — укажите полный адрес";
 const isShortener = (host: string) => [...SHORTENERS].some((d) => host === d || host.endsWith(`.${d}`));
 
 /** null — подсказки нет (пусто или похоже на правильную ссылку) */
 export function linkHint(raw: string): string | null {
   const s = raw.trim();
   if (!s) return null;
-  if (/\s/.test(s)) return "Ссылка: без пробелов";
+  if (/\s/.test(s)) return tr("ad.link.noSpaces");
   let url = s;
   if (/^(t\.me|telegram\.me)\//i.test(s)) url = `https://${s}`;
-  if (/^http:\/\//i.test(url)) return "Ссылка: нужен защищённый адрес https://";
+  if (/^http:\/\//i.test(url)) return tr("ad.link.http");
   if (!/^https:\/\//i.test(url)) {
     // голый адрес без схемы: сокращатель узнаём сразу, остальное — подсказка про https://
     const bare = /^([a-z0-9-]+(\.[a-z0-9-]+)+)(\/|$)/i.exec(url);
-    if (bare && isShortener(bare[1].toLowerCase())) return SHORT_MSG;
-    return bare ? "Ссылка: начните с https://" : "Ссылка: только https:// или t.me/…";
+    if (bare && isShortener(bare[1].toLowerCase())) return tr("ad.link.short");
+    return bare ? tr("ad.link.startHttps") : tr("ad.link.only");
   }
   let u: URL;
   try {
     u = new URL(url);
   } catch {
-    return "Ссылка: неверный адрес сайта";
+    return tr("ad.link.bad");
   }
   const host = u.hostname.toLowerCase().replace(/\.$/, "");
-  if (u.username || u.password) return "Ссылка: логин и пароль в адресе запрещены";
-  if (/^\d+(\.\d+){3}$/.test(host) || host.startsWith("[")) return "Ссылка: адрес по IP запрещён — нужен домен";
-  if (!host.includes(".")) return "Ссылка: неверный адрес сайта";
-  if (isShortener(host)) return SHORT_MSG;
-  if (TG.has(host) && u.pathname.replace(/\/+/g, "") === "") return "Ссылка t.me: укажите канал, бота или чат";
+  if (u.username || u.password) return tr("ad.link.creds");
+  if (/^\d+(\.\d+){3}$/.test(host) || host.startsWith("[")) return tr("ad.link.ip");
+  if (!host.includes(".")) return tr("ad.link.bad");
+  if (isShortener(host)) return tr("ad.link.short");
+  if (TG.has(host) && u.pathname.replace(/\/+/g, "") === "") return tr("ad.link.tg");
   return null;
 }
 
@@ -168,19 +169,19 @@ export type AdTone = "ok" | "warn" | "danger" | "neon" | "neutral" | "amber";
 export function statusView(ad: CityAdMine, today: string): { label: string; tone: AdTone } {
   switch (ad.status) {
     case "pending":
-      return { label: ad.moderated ? "Снова на проверке" : "На проверке", tone: "amber" };
+      return { label: tr(ad.moderated ? "adStatus.repending" : "adStatus.pending"), tone: "amber" };
     case "approved": {
       const tl = adTimeline(ad, today);
-      if (tl === "live") return { label: "В эфире", tone: "ok" };
-      if (tl === "upcoming") return { label: "Одобрено", tone: "neon" };
-      return { label: "Завершено", tone: "neutral" };
+      if (tl === "live") return { label: tr("adStatus.live"), tone: "ok" };
+      if (tl === "upcoming") return { label: tr("adStatus.approved"), tone: "neon" };
+      return { label: tr("adStatus.ended"), tone: "neutral" };
     }
     case "rejected":
-      return ad.refunded_nano < ad.paid_nano ? { label: "Снято", tone: "danger" } : { label: "Отклонено", tone: "danger" };
+      return ad.refunded_nano < ad.paid_nano ? { label: tr("adStatus.removed"), tone: "danger" } : { label: tr("adStatus.rejected"), tone: "danger" };
     case "cancelled":
-      return { label: "Отменено", tone: "neutral" };
+      return { label: tr("adStatus.cancelled"), tone: "neutral" };
     case "expired":
-      return { label: "Завершено", tone: "neutral" };
+      return { label: tr("adStatus.ended"), tone: "neutral" };
     default:
       return { label: ad.status, tone: "neutral" };
   }
