@@ -184,6 +184,57 @@ class Spots(unittest.TestCase):
         with engine.connect() as conn:
             self.assertEqual(conn.scalar(sa.text("SELECT count(*) FROM economy_settings")), 0)
 
+    def test_migration_023_any_level(self):
+        import json
+
+        import sqlalchemy as sa
+        from alembic.migration import MigrationContext
+        from alembic.operations import Operations
+
+        from app.models import EconomySetting
+
+        mod = _migration("023_city_ads_any_level.py")
+        self.assertEqual((mod.revision, mod.down_revision), ("023", "022"))
+        self.assertEqual(mod.NEW_DEFAULT, DEFAULTS["city_ads"][0]["min_level"])
+        # прежний порог по умолчанию → 1; свой порог владельца (5) не трогается; без поля — считается прежним
+        no_field = {k: v for k, v in OLD_SETTING.items() if k != "min_level"}
+        for name, value, up, down in (
+            ("default", OLD_SETTING, 1, 3),
+            ("owner", {**OLD_SETTING, "min_level": 5}, 5, 5),
+            ("no_field", no_field, 1, 3),
+        ):
+            with self.subTest(name):
+                engine = sa.create_engine("sqlite://")
+                EconomySetting.__table__.create(engine)
+                with engine.begin() as conn:
+                    conn.execute(sa.insert(EconomySetting.__table__).values(key="city_ads", value_json=json.dumps(value, ensure_ascii=False)))
+                    conn.execute(sa.insert(EconomySetting.__table__).values(key="other", value_json='{"min_level": 3}'))
+
+                def run(fn):
+                    with engine.begin() as conn, Operations.context(MigrationContext.configure(conn)):
+                        fn()
+
+                def stored(key="city_ads"):
+                    with engine.connect() as conn:
+                        return json.loads(conn.scalar(sa.text("SELECT value_json FROM economy_settings WHERE key = :k"), {"k": key}))
+
+                run(mod.upgrade)
+                got = stored()
+                self.assertEqual(ads.normalize(got)["min_level"], up)
+                self.assertEqual({k: v for k, v in got.items() if k != "min_level"}, {k: v for k, v in value.items() if k != "min_level"})
+                self.assertEqual(stored("other"), {"min_level": 3})
+                run(mod.upgrade)  # повторный запуск ничего не меняет
+                self.assertEqual(stored(), got)
+                run(mod.downgrade)
+                self.assertEqual(ads.normalize(stored())["min_level"], down)
+        # нет строки настройки — ничего не делается
+        engine = sa.create_engine("sqlite://")
+        EconomySetting.__table__.create(engine)
+        with engine.begin() as conn, Operations.context(MigrationContext.configure(conn)):
+            mod.upgrade()
+        with engine.connect() as conn:
+            self.assertEqual(conn.scalar(sa.text("SELECT count(*) FROM economy_settings")), 0)
+
     def test_ensure_spots_sets_district(self):
         async def body(s):
             rows = (await s.execute(select(CityAdSpot.key, CityAdSpot.district, CityAdSpot.enabled))).all()
@@ -307,6 +358,10 @@ class QuoteAndBook(unittest.TestCase):
 
     def test_level_needed(self):
         async def body(s):
+            first = await _user(s, level=1)
+            q = await ads.quote(s, user=first, spot_key="rows_line", start=D(1), days=1, today=TODAY, district="rows")
+            self.assertTrue(q.available)  # районы — тоже с любого уровня
+            await set_setting(s, key="city_ads", value={"min_level": 3})
             u = await _user(s, level=2)
             with self.assertRaises(ads.CityAdPermissionError):
                 await ads.quote(s, user=u, spot_key="rows_line", start=D(1), days=1, today=TODAY, district="rows")

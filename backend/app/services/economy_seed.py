@@ -85,7 +85,7 @@ DEFAULTS: dict[str, tuple[object, str]] = {
     ),
     "city_ads": (
         {
-            "min_level": 3,
+            "min_level": 1,  # покупать рекламу может игрок любого уровня; владелец может поднять порог
             "min_days": 1,
             "max_days": 30,
             "body_max": 500,

@@ -17,7 +17,7 @@ import { CityAdsOwner } from "@/components/owner/CityAdsOwner";
 const BOARD = {
   day: "2026-11-08",
   palette: {},
-  min_level: 3,
+  min_level: 1, // по умолчанию — любой уровень
   min_days: 1,
   max_days: 30,
   body_max: 500,
@@ -180,12 +180,24 @@ async function toPay() {
 }
 
 describe("покупка рекламы", () => {
-  it("ниже минимального уровня — замок, расчёт не запрашивается", async () => {
-    me = { ...ME, level: 2 };
+  it("по умолчанию — с любого уровня: у игрока 1-го уровня замка нет", async () => {
+    me = { ...ME, level: 1 };
     await render(<CityAds />);
-    expect(text()).toContain("Реклама в городе — с 3-го уровня");
-    expect(text()).toContain("ур. 2 / 3");
-    expect(calls.some((c) => c.path.endsWith("/quote"))).toBe(false);
+    expect(text()).not.toContain("Закрыто до");
+    expect(text()).toContain("Бегущая строка на реакторной башне");
+  });
+
+  it("порог поднял владелец: ниже него — замок, расчёт не запрашивается", async () => {
+    me = { ...ME, level: 2 };
+    BOARD.min_level = 3;
+    try {
+      await render(<CityAds />);
+      expect(text()).toContain("Реклама в городе — с 3-го уровня");
+      expect(text()).toContain("ур. 2 / 3");
+      expect(calls.some((c) => c.path.endsWith("/quote"))).toBe(false);
+    } finally {
+      BOARD.min_level = 1;
+    }
   });
 
   it("шаги: место → даты (занятое — с подсказкой) → текст с проверкой ссылки → оплата", async () => {
@@ -369,12 +381,17 @@ describe("покупка в районах (PR 6)", () => {
     expect(calls.filter((c) => c.path.endsWith("/quote")).at(-1)!.body).toMatchObject({ spot: "port_line", district: "port" });
   });
 
-  it("ниже 3-го уровня район тоже закрыт", async () => {
+  it("порог владельца действует и в районе", async () => {
     me = { ...ME, level: 2 };
-    await render(<CityAds />, "/ads?district=port");
-    expect(text()).toContain("Реклама в городе — с 3-го уровня");
-    expect(text()).toContain("4 места в районе");
-    expect(calls.some((c) => c.path.endsWith("/quote"))).toBe(false);
+    PORT_BOARD.min_level = 3;
+    try {
+      await render(<CityAds />, "/ads?district=port");
+      expect(text()).toContain("Реклама в городе — с 3-го уровня");
+      expect(text()).toContain("4 места в районе");
+      expect(calls.some((c) => c.path.endsWith("/quote"))).toBe(false);
+    } finally {
+      PORT_BOARD.min_level = 1;
+    }
   });
 });
 
