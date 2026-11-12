@@ -1,0 +1,17 @@
+export const friend = {
+  "friend.tasks": "{n} задание|{n} задания|{n} заданий",
+  "friend.reachedLevel": "дошли до {n}-го уровня",
+  "friend.reachLevel": "дойдёт до {n}-го уровня",
+  "friend.completed": "выполнили {tasks}",
+  "friend.complete": "выполнит {tasks}",
+  "friend.and": " и ",
+  "friend.or": " или ",
+  "friend.who": "Друзья, которые {cond}",
+  "friend.all": "Все приглашённые друзья",
+  "friend.soon": "Будем считать друзей, которые {cond}",
+  "friend.soonAll": "Будем считать всех приглашённых друзей",
+  "friend.joinHint": "Друг засчитается, когда {cond}",
+  "friend.joinNow": "Друг засчитается сразу после приглашения",
+  "friend.lvlShort": "{n}-й ур.",
+  "friend.noCondition": "Сразу, без условий",
+};

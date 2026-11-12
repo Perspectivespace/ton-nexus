@@ -1,0 +1,15 @@
+export const reactor = {
+  "reactor.nextAt": "На {from} ур. · ещё {level}",
+  "reactor.topLook": "Высший облик",
+  "reactor.toLook": "До облика «{name}»: {from} из {from2} ур.",
+  "reactor.now": "Сейчас:",
+  "reactor.lvl": "ур.",
+  "reactor.tier0": "Прототип",
+  "reactor.tier0Look": "циановое ядро, базовый корпус",
+  "reactor.tier1": "Контур",
+  "reactor.tier1Look": "стальная броня, световые швы, HUD-кольцо",
+  "reactor.tier2": "Марк",
+  "reactor.tier2Look": "золото-титан, катушки, ядро добела",
+  "reactor.tier3": "Сингулярность",
+  "reactor.tier3Look": "призменное ядро, орбиты, маджента",
+};
