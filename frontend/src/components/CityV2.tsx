@@ -14,6 +14,7 @@ import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { TOWER_SILHOUETTE, towerRim } from "@/lib/towerSilhouette";
 import { useCityAds } from "@/api/hooks";
 import { CityAdSpots, idleTower } from "./CityAdSpots";
+import { CentreSignal } from "./SecretSignal";
 import type { ReactNode } from "react";
 
 /**
@@ -231,6 +232,8 @@ export function CityV2({ tier }: { tier: number }) {
         {!towerSold && <TowerScreen />}
         {/* ── реклама в городе: голо-баннеры и вывески, LED-строка на башне; касаемы только в «Прогулке» ── */}
         <CityAdSpots phase={phase} />
+        {/* ── пасхалка «Прогулки»: секретный промокод в своей точке, пока идёт появление ── */}
+        <CentreSignal />
       </div>
       {/* ── редкая молния ночью: разовая вспышка раз в 25–60 с (п. 12.1) ── */}
       {phase === "night" && <CityLightning />}
