@@ -15,6 +15,7 @@ from app.api.withdraw import router as withdraw_router
 from app.api.wallet import router as wallet_router
 from app.api.deposits import router as deposits_router
 from app.api.balance import router as balance_router
+from app.api.secret_promo import router as secret_promo_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(me_router)
@@ -32,3 +33,4 @@ api_router.include_router(tower_router)
 api_router.include_router(ratings_router)
 api_router.include_router(arena_router)
 api_router.include_router(city_ads_router)
+api_router.include_router(secret_promo_router)
