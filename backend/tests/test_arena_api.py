@@ -103,7 +103,7 @@ class AuthAndFlagTest(ApiBase):
         with mock.patch.object(settings, "debug", False):
             for method, path in (
                 ("get", "/rooms"), ("post", "/join"), ("post", "/leave"), ("get", "/rooms/1"),
-                ("get", "/rooms/1/state"), ("post", "/rooms/1/plan"), ("post", "/rooms/1/cancel"),
+                ("get", "/rooms/1/state"), ("post", "/rooms/1/plan"), ("post", "/rooms/1/cancel"), ("get", "/history"),
             ):
                 r = await getattr(self.client, method)(f"/api/v1/arena{path}")
                 self.assertEqual(r.status_code, 401, (method, path))
@@ -233,6 +233,34 @@ class RoomsApiTest(ApiBase):
             await s.commit()
         a4 = next(t for t in (await self.get("/rooms", tg)).json()["types"] if t["type"] == "a4")
         self.assertEqual((a4["prizes_nano"], a4["commission_bps"]), (["360000000"], 1000))
+
+    async def test_history(self):
+        """История: только бои (прерванный владельцем — тоже, итог 0); недобор и выход до старта — нет."""
+        tg = await self.user(balance="2")
+        owner = await self.user(is_owner=True)
+        empty = (await self.get("/history", tg)).json()
+        self.assertEqual(empty, {"items": [], "next_before": None,
+                                 "summary": {"played": 0, "wins": 0, "prizes_nano": "0", "net_nano": "0"}})
+        # вышел до старта — не бой
+        self.assertEqual((await self.post("/join", tg, {"type": "a4"})).status_code, 200)
+        self.assertEqual((await self.post("/leave", tg)).status_code, 200)
+        # бой, прерванный владельцем, — в истории, ставка вернулась
+        others = [await self.user() for _ in range(3)]
+        views = [(await self.post("/join", x, {"type": "a4"})).json() for x in [tg, *others]]
+        rid = views[0]["id"]
+        self.assertEqual(views[-1]["status"], "running")
+        r = await self.client.post(f"/api/v1/arena/rooms/{rid}/cancel", headers=self.h(owner))
+        self.assertEqual(r.status_code, 200, r.text)
+        h = (await self.get("/history", tg)).json()
+        self.assertEqual([(i["room_id"], i["status"], i["net_nano"], i["place"]) for i in h["items"]],
+                         [(rid, "cancelled", "0", None)])
+        self.assertEqual(h["summary"]["played"], 0)
+        # чужая история не видна; страницы
+        self.assertEqual((await self.get("/history", owner)).json()["items"], [])
+        r = await self.get("/history?limit=0", tg)
+        self.assertEqual(r.status_code, 422)
+        h = (await self.get(f"/history?before={rid}", tg)).json()
+        self.assertEqual(h["items"], [])
 
     async def test_join_errors(self):
         tg = await self.user()

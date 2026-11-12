@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, select, text
+from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.arena import ArenaEntry, ArenaMatch, ArenaRoom
@@ -308,8 +308,99 @@ async def room_view(session: AsyncSession, room_id: int, *, user_id: int, with_m
         "match": match,
         "server_time": escrow.utcnow().isoformat(),
     }
+    if room.status == "finished" and results:
+        # итоги боя: убийства, урон, ход гибели (null — дожил до конца) — из финального состояния движка
+        stats = await _final_stats(session, room.id)
+        for r in results:
+            r.update(stats.get(r["seat"], {"kills": 0, "dealt": 0, "death_turn": None}))
     if room.status in _REVEALED:
         # commit–reveal: seed и соль — только когда комната закрыта; sha256("<соль>:<seed>") == seed_hash
         out["seed"] = int(room.seed)
         out["seed_salt"] = room.seed_salt
     return out
+
+
+async def _final_state(session: AsyncSession, room_id: int) -> arena_engine.MatchState | None:
+    raw = await session.scalar(
+        select(ArenaMatch.state_json).where(ArenaMatch.room_id == room_id).execution_options(populate_existing=True)
+    )
+    return arena_engine.state_from_json(raw) if raw else None
+
+
+async def _final_stats(session: AsyncSession, room_id: int) -> dict[int, dict]:
+    s = await _final_state(session, room_id)
+    if s is None:
+        return {}
+    return {p.id: {"kills": p.kills, "dealt": p.dealt, "death_turn": p.death_turn} for p in s.players}
+
+
+HISTORY_LIMIT = 20
+HISTORY_MAX = 50
+
+
+async def history(session: AsyncSession, *, user_id: int, limit: int = HISTORY_LIMIT, before: int | None = None) -> dict:
+    """Мои сыгранные бои, новые сверху: доигранные (место, приз) и прерванные владельцем (ставка вернулась).
+
+    Комнаты, которые не набрались, и выход до старта — не бои, их здесь нет. Пагинация — before = id комнаты.
+    summary — по всем доигранным боям: сколько, побед (1-е место), призы и итог (призы − ставки), нанотоны строками.
+    """
+    limit = max(1, min(int(limit), HISTORY_MAX))
+    played = (ArenaEntry.status.in_(("paid", "lost")) & (ArenaRoom.status == "finished")) | (
+        (ArenaEntry.status == "refunded") & (ArenaRoom.status == "cancelled") & ArenaRoom.started_at.is_not(None)
+    )
+    q = (
+        select(ArenaEntry, ArenaRoom)
+        .join(ArenaRoom, ArenaRoom.id == ArenaEntry.room_id)
+        .where(ArenaEntry.user_id == user_id, played)
+        .order_by(ArenaRoom.id.desc())
+        .limit(limit + 1)
+    )
+    if before is not None:
+        q = q.where(ArenaRoom.id < before)
+    rows = (await session.execute(q)).all()
+    more = len(rows) > limit
+    items = []
+    for e, room in rows[:limit]:
+        item = {
+            "room_id": room.id,
+            "type": room.room_type,
+            "status": room.status,
+            "seats": room.seats,
+            "stake_nano": str(room.stake_nano),
+            "place": e.place,
+            "prize_nano": str(e.prize_nano),
+            # итог для игрока: приз − ставка; прерванный бой — 0 (ставка вернулась)
+            "net_nano": str(e.prize_nano - room.stake_nano) if room.status == "finished" else "0",
+            "kills": 0,
+            "turns": None,
+            "finished_at": _iso(room.finished_at),
+        }
+        st = await _final_state(session, room.id)
+        if st is not None:
+            me = next((p for p in st.players if p.id == e.seat), None) if e.seat is not None else None
+            item["kills"] = me.kills if me else 0
+            item["turns"] = st.turn if st.finished else st.turn - 1  # прерванный: текущий ход не разыгран
+        items.append(item)
+    agg = (
+        await session.execute(
+            select(
+                func.count(ArenaEntry.id),
+                func.coalesce(func.sum(case((ArenaEntry.place == 1, 1), else_=0)), 0),
+                func.coalesce(func.sum(ArenaEntry.prize_nano), 0),
+                func.coalesce(func.sum(ArenaRoom.stake_nano), 0),
+            )
+            .join(ArenaRoom, ArenaRoom.id == ArenaEntry.room_id)
+            .where(ArenaEntry.user_id == user_id, ArenaEntry.status.in_(("paid", "lost")), ArenaRoom.status == "finished")
+        )
+    ).one()
+    played_n, wins, prizes, stakes = (int(x) for x in agg)
+    return {
+        "items": items,
+        "next_before": items[-1]["room_id"] if more and items else None,
+        "summary": {
+            "played": played_n,
+            "wins": wins,
+            "prizes_nano": str(prizes),
+            "net_nano": str(prizes - stakes),
+        },
+    }

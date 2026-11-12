@@ -141,6 +141,20 @@ async def leave(user: User = Depends(get_current_user), db: AsyncSession = Depen
     return {"ok": True, "room_id": entry.room_id, "refunded_nano": str(entry.held_nano)}
 
 
+@router.get("/history")
+async def history(
+    limit: int = Query(rooms.HISTORY_LIMIT, ge=1, le=rooms.HISTORY_MAX),
+    before: int | None = Query(None, ge=1),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Мои бои, новые сверху: место, приз, итог (приз − ставка), убийства, ходы; и сводка по всем боям.
+
+    Только чтение своих данных — работает и при выключенной «Арене». Следующая страница — before=next_before.
+    """
+    return await rooms.history(db, user_id=user.id, limit=limit, before=before)
+
+
 @router.get("/rooms/{room_id}")
 async def get_room(room_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Комната: места (имена без id), срок набора, статус, id боя и ход; после конца — seed, соль и итоги."""
