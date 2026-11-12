@@ -156,7 +156,17 @@ class AuthAndFlagTest(ApiBase):
         owner = await self.user(is_owner=True)
         r = await self.client.put("/api/v1/economy/settings/arena", headers=self.h(tg), json={"value": {"enabled": True}})
         self.assertEqual(r.status_code, 403)
-        for bad in ({"enabled": "yes"}, {"enabled": 1}, [True], True):
+        for bad in (
+            {"enabled": "yes"},
+            {"enabled": 1},
+            [True],
+            True,
+            {"enabled": True, "commission_bp": 3001},
+            {"enabled": True, "commission_bp": -1},
+            {"enabled": True, "commission_bp": "10"},
+            {"enabled": True, "commission_bp": 10.5},
+            {"enabled": True, "commission_bp": True},
+        ):
             r = await self.client.put("/api/v1/economy/settings/arena", headers=self.h(owner), json={"value": bad})
             self.assertEqual(r.status_code, 400, bad)
         self.assertEqual((await self.get("/rooms", tg)).status_code, 403)
@@ -164,7 +174,11 @@ class AuthAndFlagTest(ApiBase):
             "/api/v1/economy/settings/arena", headers=self.h(owner), json={"value": {"enabled": True, "junk": 1}}
         )
         self.assertEqual(r.status_code, 200, r.text)
-        self.assertEqual((r.json()["value"], r.json()["group"]), ({"enabled": True}, "arena"))
+        self.assertEqual((r.json()["value"], r.json()["group"]), ({"enabled": True, "commission_bp": 1000}, "arena"))
+        r = await self.client.put(
+            "/api/v1/economy/settings/arena", headers=self.h(owner), json={"value": {"enabled": True, "commission_bp": 1250}}
+        )
+        self.assertEqual((r.status_code, r.json()["value"]), (200, {"enabled": True, "commission_bp": 1250}))
         self.assertEqual((await self.get("/rooms", tg)).status_code, 200)
         listing = (await self.client.get("/api/v1/economy/settings", headers=self.h(owner))).json()
         self.assertIn("arena", {x["key"] for x in listing})
@@ -195,6 +209,30 @@ class RoomsApiTest(ApiBase):
         j = (await self.get("/rooms", tg)).json()
         self.assertEqual(j["active_room_id"], room["id"])
         self.assertEqual({t["type"]: t["waiting"] for t in j["types"]}, {"a4": 1, "a8": 0})
+
+    async def test_commission_setting(self):
+        """Лобби — по текущей комиссии; комната держит свою (снимок при создании)."""
+        tg = await self.user()
+        async with self.S() as s:
+            await set_setting(s, key="arena", value={"enabled": True, "commission_bp": 2000})
+            await s.commit()
+        a4 = next(t for t in (await self.get("/rooms", tg)).json()["types"] if t["type"] == "a4")
+        self.assertEqual((a4["prizes_nano"], a4["commission_bps"]), (["320000000"], 2000))
+        room = (await self.post("/join", tg, {"type": "a4"})).json()
+        self.assertEqual((room["prizes_nano"], room["commission_bps"]), (["320000000"], 2000))
+        async with self.S() as s:
+            await set_setting(s, key="arena", value={"enabled": True, "commission_bp": 500})
+            await s.commit()
+        room = (await self.get(f"/rooms/{room['id']}", tg)).json()
+        self.assertEqual((room["prizes_nano"], room["commission_bps"]), (["320000000"], 2000))
+        a4 = next(t for t in (await self.get("/rooms", tg)).json()["types"] if t["type"] == "a4")
+        self.assertEqual((a4["prizes_nano"], a4["commission_bps"]), (["380000000"], 500))
+        # старая настройка без ключа — 10 %
+        async with self.S() as s:
+            await set_setting(s, key="arena", value={"enabled": True})
+            await s.commit()
+        a4 = next(t for t in (await self.get("/rooms", tg)).json()["types"] if t["type"] == "a4")
+        self.assertEqual((a4["prizes_nano"], a4["commission_bps"]), (["360000000"], 1000))
 
     async def test_join_errors(self):
         tg = await self.user()

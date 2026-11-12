@@ -23,7 +23,7 @@ from app.db.base import Base
 from app.models import ArenaEntry, ArenaRoom, BalanceHistory, User
 from app.services import arena_escrow as ae
 from app.services import balance_history as bh
-from app.services.arena_config import ARENA_ROOMS, FILL_TIMEOUT_S, NANO_PER_TON
+from app.services.arena_config import ARENA_ROOMS, FILL_TIMEOUT_S, NANO_PER_TON, clamp_commission_bps, prizes_for
 
 warnings.filterwarnings("ignore", message=".*Decimal objects natively.*")
 
@@ -71,10 +71,10 @@ async def ledger(s, uid=None, balance_type=None):
     return list((await s.scalars(q)).all())
 
 
-async def full_room(s, code, *, balance="1"):
+async def full_room(s, code, *, balance="1", commission_bps=None):
     rt = ARENA_ROOMS[code]
     ids = await users(s, rt.seats, balance)
-    room = await ae.create_room(s, code, now=NOW)
+    room = await ae.create_room(s, code, now=NOW, commission_bps=commission_bps)
     for uid in ids:
         await ae.join(s, room_id=room.id, user_id=uid, now=NOW)
     await ae.start(s, room.id, now=NOW + timedelta(seconds=5))
@@ -89,6 +89,27 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(FILL_TIMEOUT_S, 180)
         for rt in ARENA_ROOMS.values():
             self.assertEqual(sum(rt.prizes_nano) + rt.pot_nano * rt.commission_bps // 10_000, rt.pot_nano)
+
+    def test_prizes_for_commission(self):
+        a4, a8 = ARENA_ROOMS["a4"], ARENA_ROOMS["a8"]
+        self.assertEqual(prizes_for(a4, 1000), (360_000_000,))
+        self.assertEqual(prizes_for(a8, 1000), (500_000_000, 220_000_000))
+        self.assertEqual(prizes_for(a4, 2000), (320_000_000,))
+        self.assertEqual(prizes_for(a4, 0), (400_000_000,))
+        # 50 : 22 от 720·(1−0,3)… вниз до 10 нанотонов, пыль — в комиссию
+        self.assertEqual(prizes_for(a8, 3000), (388_888_880, 171_111_110))
+        for rt in ARENA_ROOMS.values():
+            for bps in range(0, 3001, 37):
+                ps = prizes_for(rt, bps)
+                pool = rt.pot_nano * (10_000 - bps) // 10_000
+                self.assertTrue(all(p % 10 == 0 for p in ps), (rt.code, bps))
+                self.assertLessEqual(sum(ps), pool)
+                self.assertLess(pool - sum(ps), 10 * len(ps) + 1)
+        # за границами и мусор — зажимается
+        self.assertEqual(prizes_for(a4, 9999), prizes_for(a4, 3000))
+        self.assertEqual(prizes_for(a4, -5), prizes_for(a4, 0))
+        self.assertEqual(clamp_commission_bps("abc"), 1000)
+        self.assertEqual(clamp_commission_bps(True), 1000)
 
     def test_nano_to_ton(self):
         self.assertEqual(ae.nano_to_ton(100_000_000), D("0.1"))
@@ -308,6 +329,17 @@ class EscrowTests(unittest.TestCase):
             (p,) = await ledger(s, ids[1], "arena_prize")
             self.assertEqual((D(p.amount), p.description), (D("0.36"), f"Комната #{room.id}, 1 место"))
             self.assertEqual(await ae.house_revenue_nano(s), 40_000_000)
+        run_sqlite(body)
+
+    def test_settle_uses_room_commission(self):
+        async def body(s):
+            room, ids = await full_room(s, "a8", commission_bps=2000)
+            self.assertEqual(room.commission_bps, 2000)
+            res = await ae.settle(s, room.id, {uid: i + 1 for i, uid in enumerate(ids)})
+            # фонд 640 млн: 50/72 и 22/72, вниз до 10 нанотонов
+            self.assertEqual(res.prizes_nano, {ids[0]: 444_444_440, ids[1]: 195_555_550})
+            self.assertEqual(res.commission_nano, 800_000_000 - 444_444_440 - 195_555_550)
+            self.assertEqual(await ae.house_revenue_nano(s), res.commission_nano)
         run_sqlite(body)
 
     def test_settle_a8_and_idempotent(self):
