@@ -14,13 +14,14 @@ import {
   IconWheel,
 } from "@/components/icons";
 import { Button, EmptyState, ErrorState, List, ListRow, Tabs, Tag, type Tone } from "@/components/ui";
+import { fmtDate, t } from "@/i18n";
 
 export const HISTORY_FILTERS: ReadonlyArray<{ value: HistoryFilter; label: string }> = [
-  { value: "all", label: "Все" },
-  { value: "deposits", label: "Пополнения" },
-  { value: "withdrawals", label: "Выводы" },
-  { value: "earnings", label: "Начисления" },
-  { value: "spending", label: "Траты" },
+  { value: "all", get label() { return t("history.all"); } },
+  { value: "deposits", get label() { return t("history.deposits"); } },
+  { value: "withdrawals", get label() { return t("history.withdrawals"); } },
+  { value: "earnings", get label() { return t("history.earnings"); } },
+  { value: "spending", get label() { return t("history.spending"); } },
 ];
 
 const ICON: Record<string, (p: { size?: number }) => ReactNode> = {
@@ -43,18 +44,18 @@ const ICON: Record<string, (p: { size?: number }) => ReactNode> = {
 const STATUS_TONE: Record<string, Tone> = { pending: "warn", review: "warn", sending: "neon", paid: "ok", rejected: "danger" };
 
 const EMPTY: Record<HistoryFilter, string> = {
-  all: "Здесь появятся пополнения, выводы, награды и траты.",
-  deposits: "Пополнений пока не было.",
-  withdrawals: "Заявок на вывод пока не было.",
-  earnings: "Начислений пока не было: майнер, задания, ежедневный бонус.",
-  spending: "Трат пока не было: усиления майнера, бюджеты заданий.",
+  get all() { return t("history.emptyAll"); },
+  get deposits() { return t("history.emptyDeposits"); },
+  get withdrawals() { return t("history.emptyWithdrawals"); },
+  get earnings() { return t("history.emptyEarnings"); },
+  get spending() { return t("history.emptySpending"); },
 };
 
 export function fmtWhen(iso: string) {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? ""
-    : d.toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    : fmtDate(d, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 /** «+1.5» / «−0.25»: минус — типографский, без лишних нулей */
@@ -72,8 +73,7 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
     <>
       {text} ·{" "}
       <a href={item.tx_url} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] underline-offset-2 hover:underline">
-        перевод ↗
-      </a>
+        {t("history.txLink")}</a>
     </>
   ) : (
     text
@@ -97,7 +97,7 @@ export function HistoryRow({ item }: { item: HistoryItem }) {
             <Tag tone={STATUS_TONE[item.status ?? ""] ?? "neutral"}>{item.status_label}</Tag>
           ) : item.balance_after != null ? (
             <span className="ui-num whitespace-nowrap text-[11px] leading-4 text-[var(--text-2)]">
-              остаток {item.balance_after}
+              {t("history.balanceAfter")}{" "}{item.balance_after}
             </span>
           ) : null}
         </span>
@@ -117,15 +117,14 @@ export function BalanceHistorySheet({ initialFilter = "all" }: { initialFilter?:
 
   return (
     <div className="space-y-3">
-      <Tabs kind="line" label="Тип операций" items={HISTORY_FILTERS} value={filter} onChange={setFilter} />
+      <Tabs kind="line" label={t("history.filterLabel")} items={HISTORY_FILTERS} value={filter} onChange={setFilter} />
       {q.isLoading ? (
         <p className="ui-sec" aria-busy="true">
-          Загрузка…
-        </p>
+          {t("ui.loadingDots")}</p>
       ) : q.isError ? (
-        <ErrorState title="История не загрузилась" message={q.error instanceof Error ? q.error.message : undefined} onRetry={() => q.refetch()} />
+        <ErrorState title={t("history.loadFailed")} message={q.error instanceof Error ? q.error.message : undefined} onRetry={() => q.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState icon={<IconHistory size={32} />} title="Операций нет" body={EMPTY[filter]} />
+        <EmptyState icon={<IconHistory size={32} />} title={t("history.none")} body={EMPTY[filter]} />
       ) : (
         <>
           <List>
@@ -135,7 +134,7 @@ export function BalanceHistorySheet({ initialFilter = "all" }: { initialFilter?:
           </List>
           {q.hasNextPage ? (
             <Button kind="secondary" block disabled={q.isFetchingNextPage} onClick={() => q.fetchNextPage()}>
-              {q.isFetchingNextPage ? "Загрузка…" : "Загрузить ещё"}
+              {q.isFetchingNextPage ? t("ui.loadingDots") : t("history.loadMore")}
             </Button>
           ) : null}
         </>
