@@ -310,3 +310,11 @@
 .ar-seed-r.ok { color: var(--ok); box-shadow: inset 2px 0 0 var(--ok); }
 .ar-seed-r.bad { color: var(--ar-danger); box-shadow: inset 2px 0 0 var(--ar-danger); }
 .ar-seed-r.na { color: var(--text-2); box-shadow: inset 2px 0 0 var(--ar-strong); }
+
+/* дневная тема: панели «Арены» остаются тёмным кибер-матом — внутри держим ночные токены текста, иначе тёмный текст на тёмном */
+[data-theme="light"] .ar-panel {
+  --text: #E6EBF5; --text-2: #9AA4BA; --text-3: #8590A8; --line: rgba(150,170,255,.10);
+  --neon: #2BF5FF; --ok: #5DFFB0;
+  --spec: linear-gradient(90deg, transparent 3%, rgba(225,240,255,.38) 22%, rgba(225,240,255,.08) 62%, transparent 90%) top / 100% 1px no-repeat;
+}
+[data-theme="light"] .ar-panel .ui-btn { --text: #0B0F1A; --text-2: #47506A; --neon: #007E95; --line: rgba(10,20,50,.10); --spec: linear-gradient(90deg, transparent, #fff 30%, transparent) top / 100% 1px no-repeat; }
