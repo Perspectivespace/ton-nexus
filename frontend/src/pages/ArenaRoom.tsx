@@ -4,6 +4,7 @@ import { Button, ErrorState, ScreenHeader, useToast } from "@/components/ui";
 import { BackLink } from "@/components/BackLink";
 import { IconCheck, IconChevron, IconRefresh } from "@/components/icons";
 import { ArenaBattle } from "@/components/arena/ArenaBattle";
+import { ArenaResults } from "@/components/arena/ArenaResults";
 import { useScreenBack } from "@/lib/backButton";
 import { ensureFreshForBattle, setBattleActive } from "@/lib/version";
 import { haptic } from "@/lib/haptics";
@@ -118,11 +119,11 @@ function Hold({ room, at }: { room: Room; at: ArenaType | undefined }) {
         <span>{t("arena.stakeHeldTag")}</span>
         <b>{fmtTon(room.stake_nano)} TON</b>
       </div>
-      {at && (
+      {(room.prizes_nano ?? at?.prizes_nano) && (
         <div className="ar-row">
           <span>{t("arena.prize")}</span>
           <b className="ok">
-            {at.prizes_nano
+            {(room.prizes_nano ?? at?.prizes_nano ?? [])
               .map((p, i) => t("arena.prizeN", { i: i + 1, p: fmtPrize(p) }))
               .join(" · ")}{" "}
             TON
@@ -270,38 +271,9 @@ export function ArenaRoomView({
     return <ArenaBattle room={room} onDone={onBattleDone ?? noop} />;
   }
   if (screen.kind === "finished") {
-    const res = [...room.results].sort((a, b) => a.place - b.place);
-    const mine = res.find((r) => r.seat === room.my_seat);
     return (
       <div className="ar-body">
-        <div className="ar-panel ar-end">
-          <span className="ui-label ar-neon">{name}{" "}{t("arena.battleOver")}</span>
-          <b>
-            {mine
-              ? Number(mine.prize_nano) > 0
-                ? t("arena.placePrize", { place: mine.place, prizeNano: fmtPrize(mine.prize_nano) })
-                : t("arena.placeOnly", { place: mine.place })
-              : t("arena.results")}
-          </b>
-          <ol className="ar-res">
-            {res.map((r) => (
-              <li
-                key={r.seat}
-                className={r.seat === room.my_seat ? "me" : undefined}
-              >
-                <span>{r.place}</span>
-                <span className="min-w-0 flex-1 truncate">
-                  {r.seat === room.my_seat ? t("ratings.you") : r.name}
-                </span>
-                <b>
-                  {Number(r.prize_nano) > 0
-                    ? `+${fmtPrize(r.prize_nano)}`
-                    : "—"}
-                </b>
-              </li>
-            ))}
-          </ol>
-        </div>
+        <ArenaResults room={room} name={name} />
         <Again again={again} onAgain={onAgain} />
       </div>
     );
