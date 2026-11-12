@@ -16,6 +16,7 @@ import { ArenaLobbyView, type ArenaLobbyViewProps } from "./Arena";
 import { ArenaRoomView } from "./ArenaRoom";
 import { ArenaRules } from "@/components/arena/ArenaRules";
 import { roomScreen, type ArenaLobby, type ArenaRoom, type ArenaType } from "@/lib/arena/api";
+import { setLang } from "@/i18n";
 
 const html = (n: ReactNode) => renderToStaticMarkup(<MemoryRouter>{n}</MemoryRouter>);
 const A4: ArenaType = { type: "a4", seats: 4, board: 9, stake_nano: "100000000", prizes_nano: ["360000000"], pot_nano: "400000000", commission_bps: 1000, waiting: 2 };
@@ -143,7 +144,8 @@ describe("комната «Арены»", () => {
     expect(live).toContain("Бой окончен");
     expect(live).toContain('class="ar-bt"');
     const done = roomHtml(r);
-    expect(done).toContain("1 место · +0.36 TON");
+    expect(done).toContain("Победа");
+    expect(done).toContain("+0.26 TON");
     expect(done).not.toContain('class="ar-bt"');
   });
 
@@ -167,8 +169,43 @@ describe("комната «Арены»", () => {
       ],
     });
     const h = roomHtml(r);
-    expect(h).toContain("1 место · +0.36 TON");
+    expect(h).toContain("место из 4");
+    expect(h).toContain("+0.26 TON");
+    expect(h).toContain("Приз 0.36 · ставка 0.1 TON");
     expect(h).toMatch(/<li class="me">/);
+    expect(h).not.toContain("ar-seed"); // seed не раскрыт — панели нет
+  });
+
+  it("итоги: фраги, урон, ходы; проигрыш в минус; честная карта", () => {
+    const r = room({
+      status: "finished",
+      seed: 42,
+      seed_salt: "00ff",
+      seed_hash: "ab".repeat(32),
+      match: { id: 1, turn: 12 } as ArenaRoom["match"],
+      results: [
+        { seat: 1, name: "Kira", place: 1, prize_nano: "360000000", kills: 2, dealt: 140, death_turn: null },
+        { seat: 0, name: "@neo", place: 3, prize_nano: "0", kills: 1, dealt: 55, death_turn: 9 },
+      ],
+    });
+    const h = roomHtml(r);
+    expect(h).toContain("Без приза");
+    expect(h).toContain("−0.1 TON");
+    expect(h).toContain("Ходов в бою");
+    expect(h).toContain("2 фрага");
+    expect(h).toContain("1 фраг");
+    expect(h).toContain("Честная карта");
+    expect(h).toContain("00ff");
+    setLang("en");
+    try {
+      const e = roomHtml(r);
+      expect(e).toContain("place of 4");
+      expect(e).toContain("2 kills");
+      expect(e).toContain("Fair map");
+      expect(e).toContain("Verify");
+    } finally {
+      setLang("ru");
+    }
   });
 });
 

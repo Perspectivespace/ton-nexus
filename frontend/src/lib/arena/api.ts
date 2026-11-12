@@ -39,6 +39,11 @@ export interface ArenaResult {
   name: string;
   place: number;
   prize_nano: string;
+  /** итоги из финального состояния боя (PR 7) */
+  kills?: number;
+  dealt?: number;
+  /** ход гибели; null — дожил до конца */
+  death_turn?: number | null;
 }
 /** план хода в формате API: шаги [x, y], attack — место (seat) цели */
 export interface ApiPlan {
@@ -134,10 +139,16 @@ export interface ArenaRoom {
   taken: number;
   my_seat: number | null;
   stake_nano: string;
+  /** условия этой комнаты (комиссия зафиксирована при создании) */
+  prizes_nano?: string[];
+  commission_bps?: number;
   fill_deadline: string | null;
   started_at: string | null;
   finished_at: string | null;
   seed_hash: string | null;
+  /** commit–reveal: раскрываются, когда комната закрыта */
+  seed?: number;
+  seed_salt?: string;
   results: ArenaResult[];
   match: ArenaMatchView | null;
   /** журнал разыгранных ходов (только в /state) */
