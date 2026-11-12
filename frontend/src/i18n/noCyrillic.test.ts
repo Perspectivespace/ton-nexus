@@ -42,29 +42,7 @@ const STAFF = [
 const INTERNAL = ["lib/fontWarm.ts", "lib/payoutStorage.ts", "lib/payoutSession.ts", "lib/districtAssets.ts"];
 
 /** Ещё не переведено — список только сокращается (следующие PR серии i18n) */
-const TODO: string[] = [
-  "components/AdCard.tsx",
-  "components/CityAdSpots.tsx",
-  "components/CityV2.tsx",
-  "components/CityWalk.tsx",
-  "components/DistrictIdleAds.tsx",
-  "components/DistrictNav.tsx",
-  "components/IdleSpot.tsx",
-  "components/SecretSignal.tsx",
-  "components/cityads/AdCalendar.tsx",
-  "components/cityads/AdCardPreview.tsx",
-  "components/cityads/AdScene.tsx",
-  "components/cityads/BuyFlow.tsx",
-  "components/cityads/FacadeImage.tsx",
-  "components/cityads/MyAds.tsx",
-  "lib/buildings.ts",
-  "lib/cityAdBuy.ts",
-  "lib/districtIdle.ts",
-  "lib/districts.ts",
-  "lib/facadeImage.ts",
-  "pages/CityAds.tsx",
-  "pages/District.tsx",
-];
+const TODO: string[] = [];
 
 const ALLOWED = (f: string) => f.startsWith("i18n/") || INTERNAL.includes(f) || STAFF.some((p) => (p.endsWith("/") ? f.startsWith(p) : f === p));
 
