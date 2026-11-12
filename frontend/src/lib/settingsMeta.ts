@@ -159,7 +159,7 @@ export const SETTINGS: Record<string, SettingMeta> = {
         unit: "%",
         min: 0,
         max: 30,
-        hint: "Доля банка; 4 места при 10 % → приз 0,36 TON",
+        hint: "0–30 %, только для новых комнат",
       },
     },
     summary: (v) => {
