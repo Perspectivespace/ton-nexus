@@ -10,6 +10,7 @@ import { DistrictStrip, EdgeHints, type EdgeHintsHandle } from "@/components/Dis
 import { loadDistrict, preloadWhenIdle, type LayerUrls } from "@/lib/districtAssets";
 import { startDistrictLife } from "@/lib/districtLife";
 import { DistrictIdleAds } from "@/components/DistrictIdleAds";
+import { SecretSignal } from "@/components/SecretSignal";
 import {
   cameraXFor, DISTRICT_RU, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, restX, streetWidth,
   SURFACES, surfaceOnScreen, type SceneDistrict,
@@ -258,6 +259,7 @@ export function DistrictScene({
                   onAct={(k) => act.current(k)}
                 />
               )}
+              {(id === "mid" || id === "flat") && <SecretSignal place={district} active={!!urls} still={lite || !motionAllowed()} />}
             </div>
           );
         })}

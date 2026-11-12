@@ -16,6 +16,7 @@ const m = vi.hoisted(() => ({
   life: vi.fn(() => ({ stop: vi.fn(), spawn: vi.fn() })),
   phase: "night" as "dawn" | "day" | "dusk" | "night",
   event: vi.fn(),
+  signal: undefined as { code: string | null } | undefined,
   ads: { data: undefined } as {
     data?: {
       day?: string;
@@ -30,7 +31,7 @@ const m = vi.hoisted(() => ({
     };
   },
 }));
-vi.mock("@/api/hooks", () => ({ useMe: () => m.me, useDistrictAds: () => m.ads, sendCityAdEvent: m.event }));
+vi.mock("@/api/hooks", () => ({ useMe: () => m.me, useDistrictAds: () => m.ads, sendCityAdEvent: m.event, useCitySignal: () => ({ data: m.signal }) }));
 vi.mock("@/lib/districtAssets", () => ({ loadDistrict: m.load, preloadWhenIdle: () => () => {} }));
 vi.mock("@/lib/districtLife", () => ({ startDistrictLife: m.life }));
 vi.mock("@/lib/cityPhase", () => ({ useCityPhase: () => ({ phase: m.phase, upcoming: null }) }));
@@ -70,6 +71,7 @@ const render = async (url: string) => {
 beforeEach(() => {
   m.me = { data: { is_owner: true }, isLoading: false };
   m.phase = "night";
+  m.signal = undefined;
   m.ads = {
     data: {
       spots: [
@@ -100,6 +102,26 @@ afterEach(() => {
 });
 
 describe("district screen", () => {
+  it("secret code: shown in the street layer only while the server returns it; static on low-end", async () => {
+    await render("/district?d=port");
+    expect(el.querySelector(".ss-holo")).toBeNull();
+    act(() => root.unmount());
+    root = createRoot(el);
+    m.signal = { code: "NEON-42" };
+    await render("/district?d=port");
+    const holo = el.querySelector<HTMLElement>(".ss-holo")!;
+    expect(holo.closest(".dz-mid")).not.toBeNull(); // едет вместе с улицей, не в интерфейсе
+    expect(holo.closest(".dz-ui")).toBeNull();
+    expect(holo.textContent).toContain("NEON-42");
+    expect(holo.dataset.place).toBe("port");
+    expect(holo.classList.contains("still")).toBe(false);
+    act(() => root.unmount());
+    root = createRoot(el);
+    document.documentElement.classList.add("low-end");
+    await render("/district?d=rows");
+    expect(el.querySelector(".dz-flat .ss-holo")?.classList.contains("still")).toBe(true);
+  });
+
   it("final art (Неон-ряды and Порт) shows no «Черновик» badge", async () => {
     await render("/district?d=rows");
     expect(el.querySelector(".dz-badge")).toBeNull();

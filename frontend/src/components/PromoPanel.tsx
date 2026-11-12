@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePromoRedeem, type PromoRedeemOut } from "@/api/hooks";
+import { ApiError } from "@/api/client";
 import { Button, Field, Panel, useToast } from "@/components/ui";
 
 function rewardLine(r: PromoRedeemOut) {
@@ -10,6 +11,17 @@ function rewardLine(r: PromoRedeemOut) {
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+/** Ответ сервера → понятный текст. Неверный и «не вовремя» введённый секретный код — один и тот же ответ. */
+export function promoErrorText(e: unknown): string {
+  const status = e instanceof ApiError ? e.status : 0;
+  const msg = e instanceof Error ? e.message : "";
+  if (status === 429 || /too many/i.test(msg)) return "Слишком много попыток. Попробуйте позже";
+  if (/already redeemed/i.test(msg)) return "Этот код уже активирован на вашем аккаунте";
+  if (/fully used/i.test(msg)) return "Активации этого кода закончились";
+  if (/expired/i.test(msg)) return "Срок действия кода истёк";
+  return "Код не принят";
 }
 
 /** Ввод промокода — вкладка «Промокод» в «Заработке» (/tasks?tab=promo): код начисляет TON, опыт или фокус. */
@@ -34,7 +46,7 @@ export function PromoPanel() {
         <h2 className="ui-h">Промокод</h2>
         <p className="ui-sec mt-1">Начисляет TON, опыт или фокус. Один код — один раз на аккаунт.</p>
       </div>
-      <Field label="Код" error={promo.isError ? (promo.error instanceof Error ? promo.error.message : "Код не принят") : undefined}>
+      <Field label="Код" error={promo.isError ? promoErrorText(promo.error) : undefined}>
         <input
           className="ui-input uppercase tracking-wider"
           value={code}

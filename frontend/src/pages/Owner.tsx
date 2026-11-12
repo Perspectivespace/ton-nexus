@@ -11,6 +11,7 @@ import {
 import { OwnerShell } from "@/components/owner/OwnerShell";
 import { SettingsList } from "@/components/owner/SettingsList";
 import { CityAdsOwner } from "@/components/owner/CityAdsOwner";
+import { SecretPromosOwner } from "@/components/owner/SecretPromosOwner";
 import {
   StatusPill,
   LoadingPanel,
@@ -188,6 +189,7 @@ function PromosTab() {
       <Button kind="ghost" size="sm" onClick={() => refetch()}>
         Обновить список
       </Button>
+      <SecretPromosOwner />
     </div>
   );
 }
