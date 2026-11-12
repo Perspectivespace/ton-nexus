@@ -19,6 +19,8 @@ from aiogram.types import (
 )
 from dotenv import load_dotenv
 
+from texts import text
+
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
@@ -33,14 +35,14 @@ OWNER_IDS = {
 }
 
 
-def webapp_keyboard() -> InlineKeyboardMarkup | None:
+def webapp_keyboard(lang_code: str | None = None) -> InlineKeyboardMarkup | None:
     if not WEBAPP_URL:
         return None
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Открыть TON Nexus",
+                    text=text("open", lang_code),
                     web_app=WebAppInfo(url=WEBAPP_URL),
                 )
             ]
@@ -48,22 +50,17 @@ def webapp_keyboard() -> InlineKeyboardMarkup | None:
     )
 
 
-WELCOME = (
-    "<b>TON Nexus</b>\n\n"
-    "Задания · майнер · уровни · вывод TON\n\n"
-    "Нажми кнопку ниже, чтобы открыть приложение."
-)
+def _code(message: Message) -> str | None:
+    return message.from_user.language_code if message.from_user else None
 
 
 async def cmd_start(message: Message) -> None:
-    kb = webapp_keyboard()
-    text = WELCOME
+    code = _code(message)
+    kb = webapp_keyboard(code)
+    body = text("welcome", code)
     if not kb:
-        text += (
-            "\n\n⚠️ WEBAPP_URL не задан. "
-            "Укажи URL Mini App в переменных окружения бота."
-        )
-    await message.answer(text, reply_markup=kb, parse_mode="HTML")
+        body += text("no_url", code)
+    await message.answer(body, reply_markup=kb, parse_mode="HTML")
 
 
 async def cmd_app(message: Message) -> None:
@@ -71,13 +68,7 @@ async def cmd_app(message: Message) -> None:
 
 
 async def cmd_help(message: Message) -> None:
-    await message.answer(
-        "Команды:\n"
-        "/start — открыть Mini App\n"
-        "/app — то же\n"
-        "/help — справка\n\n"
-        "Вывод, майнер и задания — только внутри приложения."
-    )
+    await message.answer(text("help", _code(message)))
 
 
 async def cmd_ping(message: Message) -> None:
