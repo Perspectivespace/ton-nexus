@@ -228,6 +228,7 @@ export const arena = {
   "arena.r.noPrize": "Без приза",
   "arena.r.ofN": "место из {n}",
   "arena.r.prizeStake": "Приз {prize} · ставка {stake} TON",
+  "arena.r.stakeOnly": "Ставка {stake} TON",
   "arena.r.kills": "Фраги",
   "arena.r.dealt": "Урон",
   "arena.r.turnsAlive": "Ходов в бою",

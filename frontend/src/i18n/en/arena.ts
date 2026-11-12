@@ -230,6 +230,7 @@ export const arena: Record<keyof typeof ru, string> = {
   "arena.r.noPrize": "No prize",
   "arena.r.ofN": "place of {n}",
   "arena.r.prizeStake": "Prize {prize} · stake {stake} TON",
+  "arena.r.stakeOnly": "Stake {stake} TON",
   "arena.r.kills": "Kills",
   "arena.r.dealt": "Damage",
   "arena.r.turnsAlive": "Turns alive",

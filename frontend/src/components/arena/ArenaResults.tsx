@@ -69,7 +69,11 @@ function Hero({
         <div className="ar-rs-net">
           <span className="ar-rs-tag">{tag}</span>
           <b className={net > 0 ? "ok" : net < 0 ? "bad" : undefined}>{fmtNet(net)}{" "}TON</b>
-          <span>{t("arena.r.prizeStake", { prize: fmtPrize(prize), stake: fmtTon(room.stake_nano) })}</span>
+          <span>
+            {prize > 0
+              ? t("arena.r.prizeStake", { prize: fmtPrize(prize), stake: fmtTon(room.stake_nano) })
+              : t("arena.r.stakeOnly", { stake: fmtTon(room.stake_nano) })}
+          </span>
         </div>
       </div>
       {mine.kills != null && (

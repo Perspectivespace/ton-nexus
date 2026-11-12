@@ -191,6 +191,7 @@ describe("комната «Арены»", () => {
     const h = roomHtml(r);
     expect(h).toContain("Без приза");
     expect(h).toContain("−0.1 TON");
+    expect(h).toContain("Ставка 0.1 TON");
     expect(h).toContain("Ходов в бою");
     expect(h).toContain("2 фрага");
     expect(h).toContain("1 фраг");
