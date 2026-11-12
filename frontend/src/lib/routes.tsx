@@ -32,6 +32,7 @@ const LOADERS: Record<string, Loader> = {
   towerTop: () => import("@/pages/TowerTop").then((m) => m.default),
   arena: () => import("@/pages/Arena").then((m) => m.default),
   arenaRoom: () => import("@/pages/ArenaRoom").then((m) => m.default),
+  arenaHistory: () => import("@/pages/ArenaHistory").then((m) => m.default),
   ratings: () => import("@/pages/Ratings").then((m) => m.default),
   cityAds: () => import("@/pages/CityAds").then((m) => m.CityAds),
   // районы города — пока только dev и владелец (экран сам проверяет доступ)
@@ -101,6 +102,7 @@ export function routeKey(path: string): Key | null {
   if (p === "/ratings") return "ratings";
   if (p === "/ads") return "cityAds";
   if (p === "/arena") return "arena";
+  if (p === "/arena/history") return "arenaHistory";
   if (/^\/arena\/\d+$/.test(p)) return "arenaRoom";
   return null;
 }

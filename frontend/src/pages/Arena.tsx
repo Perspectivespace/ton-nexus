@@ -163,6 +163,10 @@ export function ArenaLobbyView({ lobby, balance, sel, onPick, onJoin, onRules, j
           <IconRules size={14} />
           {t("arena.rulesPayouts")}</button>
       </p>
+      <Link to="/arena/history" className="ar-h-link no-underline" onClick={() => haptic.tap()}>
+        <span>{t("arena.h.title")}</span>
+        <IconChevron size={14} />
+      </Link>
 
       {active ? (
         <div className="ar-foot">
