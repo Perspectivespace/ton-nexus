@@ -4,11 +4,14 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import api_router
 from app.core.config import settings
+from app.core.messages import localize, request_lang
 from app.db.session import SessionLocal
 from app.services.arena_rooms import poll_once as arena_poll_once
 from app.services.economy_seed import seed_economy
@@ -143,6 +146,18 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def localized_http_error(request: Request, exc: StarletteHTTPException):
+    """Текст ошибки — на языке интерфейса игрока (заголовок X-Lang); без заголовка — как есть."""
+    lang = request_lang(request.headers.get("x-lang"))
+    if lang:
+        if isinstance(exc.detail, str):
+            exc.detail = localize(exc.detail, lang)
+        elif isinstance(exc.detail, dict) and isinstance(exc.detail.get("message"), str):
+            exc.detail = {**exc.detail, "message": localize(exc.detail["message"], lang)}
+    return await http_exception_handler(request, exc)
 
 
 @app.get("/health")
