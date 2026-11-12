@@ -24,6 +24,7 @@ import { prefersReducedMotion } from "@/components/ui/press";
 import { haptic } from "@/lib/haptics";
 import { markTierSeen, reactorLevel, seenTier, tierFor } from "@/lib/reactorTiers";
 import { IconUp } from "@/components/icons";
+import { t } from "@/i18n";
 
 /** Стойка усиления — отдельный чанк (framer-motion), грузится при открытии шторки или заранее в простое */
 const loadStand = () => import("@/components/UpgradeStand");
@@ -39,9 +40,9 @@ const statusTone = {
 };
 
 const statusLabel: Record<string, string> = {
-  idle: "Ожидание",
-  running: "Цикл активен",
-  ready: "Хранилище полное",
+  get idle() { return t("miner.statusIdle"); },
+  get running() { return t("miner.statusRunning"); },
+  get ready() { return t("miner.statusReady"); },
 };
 
 export function Miner() {
@@ -96,7 +97,7 @@ export function Miner() {
     const t1 = window.setTimeout(() => {
       markTierSeen(tier.id);
       haptic.success();
-      toast({ kind: "ok", title: `Новый облик: «${tier.name}»`, sub: `Реактор ${tier.mk} · ${tier.look}` });
+      toast({ kind: "ok", title: t("miner.newLook", { name: tier.name }), sub: t("miner.reactorLook", { mk: tier.mk, look: tier.look }) });
     }, reduce ? 0 : 1500);
     const t2 = window.setTimeout(() => setReveal(false), reduce ? 300 : 2400);
     return () => {
@@ -150,17 +151,17 @@ export function Miner() {
         window.setTimeout(
           () => {
             haptic.success();
-            toast({ kind: "ok", title: "Собрано", sub: `${sum} TON` });
+            toast({ kind: "ok", title: t("miner.collected"), sub: `${sum} TON` });
           },
           reduce ? 0 : 600,
         );
       },
-      onError: (e) => toast({ kind: "danger", title: "Сбор не прошёл", sub: e.message }),
+      onError: (e) => toast({ kind: "danger", title: t("miner.collectFailed"), sub: e.message }),
     });
   }
 
-  if (isLoading) return <LoadingPanel label="Синхронизация реактора…" />;
-  if (error) return <ErrorPanel message="Не удалось загрузить майнер" />;
+  if (isLoading) return <LoadingPanel label={t("miner.syncing")} />;
+  if (error) return <ErrorPanel message={t("miner.loadFailed")} />;
   if (!m) return null;
 
   const draining = claimAt != null;
@@ -171,18 +172,18 @@ export function Miner() {
   const cost = m.upgrade_cost != null && Number.isFinite(Number(m.upgrade_cost)) ? Number(m.upgrade_cost) : null;
   const upgradeSub = (
     <>
-      Ур. <b className="ui-num text-[var(--text)]">{level}</b>
+      {t("home.lvl")}{" "}<b className="ui-num text-[var(--text)]">{level}</b>
       {boost > 0 ? (
         <>
           {" "}
-          · бонус шанса <b className="ui-num text-[var(--neon)]">+{Number(boost.toFixed(1))}%</b>
+          {t("miner.chanceBonus")}{" "}<b className="ui-num text-[var(--neon)]">+{Number(boost.toFixed(1))}%</b>
         </>
       ) : running ? (
-        " · после цикла"
+        t("miner.afterCycle")
       ) : cost != null ? (
         <>
           {" "}
-          · попытка <span className="ui-num">{cost.toFixed(4)}</span> TON
+          {t("miner.attempt")}{" "}<span className="ui-num">{cost.toFixed(4)}</span> TON
         </>
       ) : null}
     </>
@@ -191,10 +192,10 @@ export function Miner() {
   return (
     <div className="mn-page space-y-4">
       <ScreenHeader
-        title="Майнер"
+        title={t("nav.miner")}
         action={
           <StatusPill tone={statusTone[m.status as keyof typeof statusTone] || "neutral"}>
-            {ready && !full ? "Цикл завершён" : statusLabel[m.status] || m.status}
+            {ready && !full ? t("miner.cycleDone") : statusLabel[m.status] || m.status}
           </StatusPill>
         }
       />
@@ -212,7 +213,7 @@ export function Miner() {
               tier={tier.id}
               reveal={reveal}
             />
-            <p className="mn-acc ui-label ui-shade mt-5">Накоплено в цикле</p>
+            <p className="mn-acc ui-label ui-shade mt-5">{t("miner.accrued")}</p>
             <Num
               value={shown.toFixed(6)}
               unit="TON"
@@ -223,16 +224,16 @@ export function Miner() {
               className={cx("ui-shade mt-1", ignite && "ui-ignite")}
             />
             {m.cycle_hours != null && (
-              <p className="ui-sec ui-shade mt-1">Длительность цикла ~{m.cycle_hours.toFixed(1)} ч</p>
+              <p className="ui-sec ui-shade mt-1">{t("miner.cycleLength")}{m.cycle_hours.toFixed(1)}{" "}{t("miner.hoursShort")}</p>
             )}
           </div>
 
           <Scrim className="mn-scrim relative -mx-5 -mb-5 mt-4 px-5 pb-5 pt-4">
             <div className="min-w-0 space-y-2">
               <div className="grid grid-cols-2 gap-3">
-                <Readout label="Хранилище за цикл" value={cap.toFixed(6)} unit="TON" />
+                <Readout label={t("miner.storagePerCycle")} value={cap.toFixed(6)} unit="TON" />
                 <div className="relative min-w-0">
-                  <p className="ui-label">Баланс</p>
+                  <p className="ui-label">{t("home.balance")}</p>
                   <Num value={me ? Number(me.balance).toFixed(4) : "—"} unit="TON" size="m" className="mt-1 block truncate !text-[19px] !font-bold" />
                   {gain && (
                     <span className="ui-gain" aria-live="polite">
@@ -243,12 +244,12 @@ export function Miner() {
               </div>
               <p className="ui-sec !text-[12px] !leading-[16px]">
                 {full
-                  ? "Хранилище заполнено — соберите награду, иначе фарм остановлен."
+                  ? t("miner.hintFull")
                   : ready
-                    ? "Цикл завершён — соберите остаток и запустите новый цикл."
+                    ? t("miner.hintDone")
                     : running
-                      ? "Реактор работает: к концу цикла хранилище заполнится на 100%. Собрать можно раньше."
-                      : "Запустите цикл, чтобы начать накопление."}
+                      ? t("miner.hintRunning")
+                      : t("miner.hintIdle")}
               </p>
             </div>
           </Scrim>
@@ -260,11 +261,11 @@ export function Miner() {
           <span className="ui-spill">
             <Button kind="primary" size="lg" block disabled={start.isPending} onClick={() =>
                 start.mutate(undefined, {
-                  onSuccess: () => toast({ kind: "ok", title: "Цикл запущен", sub: "реактор копит TON в хранилище" }),
-                  onError: (e) => toast({ kind: "danger", title: "Цикл не запустился", sub: e.message }),
+                  onSuccess: () => toast({ kind: "ok", title: t("miner.started"), sub: t("miner.startedSub") }),
+                  onError: (e) => toast({ kind: "danger", title: t("miner.startFailed"), sub: e.message }),
                 })
               }>
-              {start.isPending ? "Запуск…" : "Запуск цикла"}
+              {start.isPending ? t("miner.starting") : t("miner.start")}
             </Button>
           </span>
         )}
@@ -279,7 +280,7 @@ export function Miner() {
               disabled={claim.isPending}
               onClick={onClaim}
             >
-              {claim.isPending ? "Сбор…" : ready ? "Собрать · хранилище полное" : "Собрать"}
+              {claim.isPending ? t("miner.collecting") : ready ? t("miner.collectFull") : t("miner.collect")}
             </Button>
           </span>
         )}
@@ -288,15 +289,15 @@ export function Miner() {
           <ListRow
             className="mn-up"
             icon={<IconUp size={20} />}
-            title="Усиление"
+            title={t("miner.boost")}
             sub={upgradeSub}
             onClick={() => setUpgradeOpen(true)}
           />
         </List>
       </div>
 
-      <Sheet open={upgradeOpen} onClose={() => setUpgradeOpen(false)} title="Усиление реактора" sub={`${tier.mk} «${tier.name}» · ур. ${level}`} className="us-sheet">
-        <Suspense fallback={<LoadingPanel label="Калибровка модуля усиления…" />}>
+      <Sheet open={upgradeOpen} onClose={() => setUpgradeOpen(false)} title={t("miner.boostReactor")} sub={t("miner.tierLine", { mk: tier.mk, name: tier.name, level })} className="us-sheet">
+        <Suspense fallback={<LoadingPanel label={t("upgrade.calibrating")} />}>
           <UpgradeStand />
         </Suspense>
       </Sheet>

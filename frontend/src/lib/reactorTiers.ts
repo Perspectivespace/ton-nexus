@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 /**
  * Облик реактора по уровню (docs/DESIGN.md, п. 8.1.1).
  * Уровень реактора = сумма пяти характеристик − 4 (на старте все по 1 → уровень 1).
@@ -14,10 +15,10 @@ export type ReactorTier = {
 };
 
 export const REACTOR_TIERS: readonly ReactorTier[] = [
-  { id: 0, from: 1, mk: "Mk I", name: "Прототип", look: "циановое ядро, базовый корпус" },
-  { id: 1, from: 5, mk: "Mk II", name: "Контур", look: "стальная броня, световые швы, HUD-кольцо" },
-  { id: 2, from: 10, mk: "Mk III", name: "Марк", look: "золото-титан, катушки, ядро добела" },
-  { id: 3, from: 20, mk: "Mk IV", name: "Сингулярность", look: "призменное ядро, орбиты, маджента" },
+  { id: 0, from: 1, mk: "Mk I", get name() { return t("reactor.tier0"); }, get look() { return t("reactor.tier0Look"); } },
+  { id: 1, from: 5, mk: "Mk II", get name() { return t("reactor.tier1"); }, get look() { return t("reactor.tier1Look"); } },
+  { id: 2, from: 10, mk: "Mk III", get name() { return t("reactor.tier2"); }, get look() { return t("reactor.tier2Look"); } },
+  { id: 3, from: 20, mk: "Mk IV", get name() { return t("reactor.tier3"); }, get look() { return t("reactor.tier3Look"); } },
 ];
 
 type Stats = { power: number; capacity: number; acceleration: number; luck: number; stability: number };

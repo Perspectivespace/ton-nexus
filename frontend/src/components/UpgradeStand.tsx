@@ -9,22 +9,23 @@ import { formatLeft, useCountdown } from "@/lib/countdown";
 import { reactorLevel, tierFor } from "@/lib/reactorTiers";
 import { ReactorTierPanel } from "@/components/ReactorTierPanel";
 import { useQueryClient } from "@tanstack/react-query";
+import { t } from "@/i18n";
 
 export const TYPE_RU: Record<string, string> = {
-  power: "Мощность",
-  capacity: "Ёмкость",
-  acceleration: "Длительность",
-  luck: "Удача",
-  stability: "Стабильность",
+  get power() { return t("stat.power"); },
+  get capacity() { return t("stat.capacity"); },
+  get acceleration() { return t("stat.acceleration"); },
+  get luck() { return t("stat.luck"); },
+  get stability() { return t("stat.stability"); },
 };
 
 /** Короткие подписи плиток (вместо PWR/CAP/ACC/LUC/STB) */
 const TYPE_SHORT: Record<string, string> = {
-  power: "Мощн.",
-  capacity: "Ёмк.",
-  acceleration: "Длит.",
-  luck: "Удача",
-  stability: "Стаб.",
+  get power() { return t("stat.powerShort"); },
+  get capacity() { return t("stat.capacityShort"); },
+  get acceleration() { return t("stat.accelerationShort"); },
+  get luck() { return t("stat.luckShort"); },
+  get stability() { return t("stat.stabilityShort"); },
 };
 
 export const TYPES = ["power", "capacity", "acceleration", "luck", "stability"] as const;
@@ -114,8 +115,8 @@ export function UpgradeStand() {
     else haptic.error();
   }
 
-  if (isLoading) return <LoadingPanel label="Калибровка модуля усиления…" />;
-  if (error) return <ErrorPanel message="Канал майнера недоступен" />;
+  if (isLoading) return <LoadingPanel label={t("upgrade.calibrating")} />;
+  if (error) return <ErrorPanel message={t("upgrade.channelDown")} />;
   if (!m) return null;
 
   const spinning = phase === "wait" || phase === "scan" || phase === "needle";
@@ -129,9 +130,9 @@ export function UpgradeStand() {
   const inCycle = m.status === "running";
   const short = cost != null && balance != null && balance < cost ? cost - balance : null;
   const blockReason = inCycle
-    ? "Реактор в цикле — усиление доступно, когда цикл закончится."
+    ? t("upgrade.inCycle")
     : short != null
-      ? `Не хватает ${short.toFixed(4)} TON. Пополните баланс майнингом, заданиями или промокодом.`
+      ? t("upgrade.short", { short: short.toFixed(4) })
       : null;
   const focusN = me?.focus_tokens ?? 0;
   const blockN = me?.block_tokens ?? 0;
@@ -160,80 +161,79 @@ export function UpgradeStand() {
           <Num value={chance != null ? Math.round(chance * 100) : "—"} decode={false} unit={chance != null ? "%" : undefined} size="l" glow={chance != null} className="ui-shade" />
           <p className="ui-label ui-shade mt-1">
             {chance != null
-              ? `Успех ${Math.round(chance * 100)}% / Сгорание ${100 - Math.round(chance * 100)}%`
+              ? t("upgrade.oddsAria", { chance: Math.round(chance * 100), v: 100 - Math.round(chance * 100) })
               : phase === "scan"
-                ? "Выбор параметра…"
-                : "Шанс покажет попытка"}
+                ? t("upgrade.picking")
+                : t("upgrade.oddsOnTry")}
           </p>
           {boost > 0 && (
-            <p className="ui-sys mt-1">бонус +{Number(boost.toFixed(1))}% к шансу следующей попытки</p>
+            <p className="ui-sys mt-1">{t("upgrade.bonus")}{Number(boost.toFixed(1))}{t("upgrade.bonusTail")}</p>
           )}
         </div>
       </Panel>
 
       <Panel className="p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
-          <p className="ui-label whitespace-nowrap">Стойка параметров</p>
+          <p className="ui-label whitespace-nowrap">{t("upgrade.rack")}</p>
           <span className="flex gap-1.5">
-            <Chip label="Фокус" value={focusN} className={cx(!canFocus && "is-off")} />
-            <Chip label="Запрет" value={blockN} className={cx(!canBlock && "is-off")} />
+            <Chip label={t("token.focus")} value={focusN} className={cx(!canFocus && "is-off")} />
+            <Chip label={t("token.block")} value={blockN} className={cx(!canBlock && "is-off")} />
           </span>
         </div>
         <div className="grid grid-cols-5 gap-2">
-          {TYPES.map((t) => {
-            const val = m[t] as number;
-            const focused = focusOn === t;
-            const blocked = blockType === t;
-            const scanned = scanAt === t && (animating || phase === "done");
+          {TYPES.map((ty) => {
+            const val = m[ty] as number;
+            const focused = focusOn === ty;
+            const blocked = blockType === ty;
+            const scanned = scanAt === ty && (animating || phase === "done");
             return (
               <button
-                key={t}
+                key={ty}
                 type="button"
                 disabled={busy || (!canFocus && !canBlock && !focused && !blocked)}
                 onClick={() => {
                   // цикл пропускает метку, если жетонов нет: нельзя выбрать то, что сервер отклонит
                   if (focused) {
                     setFocusOn(null);
-                    if (canBlock) setBlockType(t);
+                    if (canBlock) setBlockType(ty);
                   } else if (blocked) {
                     setBlockType(null);
                   } else if (canFocus) {
-                    setFocusOn(t);
-                    if (blockType === t) setBlockType(null);
+                    setFocusOn(ty);
+                    if (blockType === ty) setBlockType(null);
                   } else if (canBlock) {
-                    setBlockType(t);
+                    setBlockType(ty);
                   }
                 }}
-                title={TYPE_RU[t]}
-                aria-label={`${TYPE_RU[t]}, ур. ${val}${focused ? ", фокус" : blocked ? ", запрет" : ""}`}
+                title={TYPE_RU[ty]}
+                aria-label={t("upgrade.statAria", { ty: TYPE_RU[ty], val, blocked: focused ? t("upgrade.focusAria") : blocked ? t("upgrade.blockAria") : "" })}
                 aria-pressed={focused || blocked}
                 className={cx("ui-stat", focused && "focus", blocked && "blocked", scanned && "scan")}
               >
-                <span className="k block">{TYPE_SHORT[t]}</span>
+                <span className="k block">{TYPE_SHORT[ty]}</span>
                 <span className="v block">{val}</span>
-                <span className="p block">{focused ? "фокус" : blocked ? "запрет" : "\u00a0"}</span>
+                <span className="p block">{focused ? t("upgrade.focusLower") : blocked ? t("upgrade.blockLower") : "\u00a0"}</span>
               </button>
             );
           })}
         </div>
         <p className="ui-sec mt-3 !text-[12px] !leading-[16px]">
           {canFocus || canBlock
-            ? "Тап по параметру: Фокус → Запрет → сброс. Параметр выбирается при попытке."
-            : "Жетонов Фокус и Запрет нет — их дают колесо удачи, ежедневная отметка и промокоды."}
+            ? t("upgrade.tapHint")
+            : t("upgrade.noTokens")}
         </p>
         {(capBonus != null || (luckLo != null && luckHi != null)) && (
           <p className="ui-sec mt-1 !text-[12px] !leading-[16px]">
             {capBonus != null && (
               <>
-                Ёмкость ур. {m.capacity}: <span className="ui-num text-[var(--text)]">{pctFmt(capBonus)}</span> TON за цикл
-              </>
+                {t("upgrade.capLvl")}{" "}{m.capacity}: <span className="ui-num text-[var(--text)]">{pctFmt(capBonus)}</span>{" "}{t("upgrade.tonPerCycle")}</>
             )}
             {capBonus != null && luckLo != null && luckHi != null && " · "}
             {luckLo != null && luckHi != null && (
               <>
-                Удача ур. {m.luck}: сбор{" "}
+                {t("upgrade.luckLvl")}{" "}{m.luck}{t("upgrade.collect")}{" "}
                 <span className="ui-num text-[var(--text)]">
-                  {luckLo === 0 && luckHi === 0 ? "без разброса" : `${pctFmt(luckLo)}…${pctFmt(luckHi)}`}
+                  {luckLo === 0 && luckHi === 0 ? t("upgrade.noSpread") : `${pctFmt(luckLo)}…${pctFmt(luckHi)}`}
                 </span>
               </>
             )}
@@ -245,32 +245,32 @@ export function UpgradeStand() {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="ui-h">
-              {phase === "wait" ? "Связь с модулем…" : phase === "scan" ? "Выбор параметра" : phase === "needle" ? "Бросок шанса" : "Попытка усиления"}
+              {phase === "wait" ? t("upgrade.linking") : phase === "scan" ? t("upgrade.phasePick") : phase === "needle" ? t("upgrade.phaseRoll") : t("upgrade.phaseTry")}
             </p>
-            {animating && <p className="ui-sec !text-[12px]">Тап по экрану — сразу к результату</p>}
+            {animating && <p className="ui-sec !text-[12px]">{t("upgrade.tapSkip")}</p>}
           </div>
           {spinning ? (
-            <Tag tone="neon">идёт</Tag>
+            <Tag tone="neon">{t("upgrade.running")}</Tag>
           ) : cost != null ? (
             <Num value={cost.toFixed(4)} unit="TON" size="s" decode={false} />
           ) : null}
         </div>
         <span className="ui-spill">
           <Button kind="primary" size="lg" block icon={<IconSpark size={18} />} disabled={busy || !!blockReason} aria-describedby="upgrade-why" onClick={run}>
-            {busy ? "Усиление…" : inCycle ? (cycleLeft != null ? `Доступно через ${formatLeft(cycleLeft)}` : "Реактор в цикле") : short != null ? "Не хватает TON" : "Усилить"}
+            {busy ? t("upgrade.boosting") : inCycle ? (cycleLeft != null ? t("upgrade.availableIn", { cycleLeft: formatLeft(cycleLeft) }) : t("upgrade.reactorInCycle")) : short != null ? t("upgrade.notEnoughTon") : t("upgrade.boost")}
           </Button>
         </span>
         {!busy && (
           <p id="upgrade-why" className="ui-sec !text-[12px] !leading-[16px]">
             {blockReason ?? (
               <>
-                Провал — стоимость сгорает · баланс <span className="ui-num text-[var(--text)]">{me ? Number(me.balance).toFixed(4) : "—"}</span> TON
+                {t("upgrade.failNote")}{" "}<span className="ui-num text-[var(--text)]">{me ? Number(me.balance).toFixed(4) : "—"}</span> TON
               </>
             )}
           </p>
         )}
 
-        {upgrade.isError && <ErrorPanel message={upgrade.error instanceof Error ? upgrade.error.message : "Отказ модуля"} />}
+        {upgrade.isError && <ErrorPanel message={upgrade.error instanceof Error ? upgrade.error.message : t("upgrade.moduleFail")} />}
       </Panel>
 
       <AnimatePresence mode="wait">
@@ -286,9 +286,9 @@ export function UpgradeStand() {
           >
             <Panel danger={!last.success} className={cx("p-4", phase === "done" && !last.success && "ui-burn")}>
               <div className="flex items-center justify-between">
-                <p className="ui-label">{last.success ? "Закреплено" : "Сгорание"}</p>
+                <p className="ui-label">{last.success ? t("upgrade.locked") : t("upgrade.burn")}</p>
                 <span className={cx("ui-verdict", last.success ? "ok" : "burn", phase === "done" && last.success && "ui-ignite")}>
-                  {last.success ? "Успех" : `Сгорело −${Number(last.cost).toFixed(4)} TON`}
+                  {last.success ? t("upgrade.success") : t("upgrade.burned", { cost: Number(last.cost).toFixed(4) })}
                 </span>
               </div>
               <p className="ui-h mt-2 !text-[18px]">
@@ -301,10 +301,10 @@ export function UpgradeStand() {
                 )}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <Readout label="Стоимость" value={Number(last.cost).toFixed(4)} unit="TON" />
-                <Readout label="Шанс" value={`${(last.success_chance_bp / 100).toFixed(1)}`} unit="%" />
+                <Readout label={t("upgrade.cost")} value={Number(last.cost).toFixed(4)} unit="TON" />
+                <Readout label={t("upgrade.chance")} value={`${(last.success_chance_bp / 100).toFixed(1)}`} unit="%" />
               </div>
-              {last.burned && !last.success && <p className="ui-sec mt-3 !text-[12px] !text-[var(--magenta)]">Сумма списана без возврата.</p>}
+              {last.burned && !last.success && <p className="ui-sec mt-3 !text-[12px] !text-[var(--magenta)]">{t("upgrade.noRefund")}</p>}
             </Panel>
           </motion.div>
         )}

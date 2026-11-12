@@ -4,6 +4,7 @@ import { IconBolt, IconCheck, IconChevron } from "@/components/icons";
 import { Button, Panel, Skeleton, Tag, cx } from "@/components/ui";
 import { DailyWeek } from "@/components/DailyWeek";
 import type { DailyStatus } from "@/api/hooks";
+import { t, tp } from "@/i18n";
 
 /** TON без лишних нулей: 0.0025 → «0.0025», 0.0010 → «0.001» */
 const ton = (v: string) => {
@@ -11,12 +12,9 @@ const ton = (v: string) => {
   return Number.isFinite(n) ? String(Number(n.toFixed(4))) : v;
 };
 
-/** «1 день», «3 дня», «7 дней» */
+/** «1 день», «3 дня», «7 дней» / «1 day», «3 days» */
 export function days(n: number) {
-  const a = Math.abs(n) % 100;
-  const b = a % 10;
-  const w = a > 10 && a < 20 ? "дней" : b === 1 ? "день" : b >= 2 && b <= 4 ? "дня" : "дней";
-  return `${n} ${w}`;
+  return tp("time.days", n);
 }
 
 /** День цикла 1…7: с сервера (cycle_day), у старого сервера — из серии */
@@ -74,13 +72,13 @@ export function DailyCheckIn({ className }: { className?: string }) {
           </span>
           <span className="min-w-0 flex-1 text-left">
             <span className="flex items-center justify-between gap-2">
-              <span className="dc-t">Отметка получена</span>
+              <span className="dc-t">{t("daily.gotToast")}</span>
               <Tag tone="ok" dot={false}>
                 {today} / 7
               </Tag>
             </span>
             <span className="dc-s">
-              Серия {days(streak)} · <span className="whitespace-nowrap">следующая через <span className="ui-num">{hhmm(daily.countdown)}</span></span>
+              {t("daily.streak")}{" "}{days(streak)} · <span className="whitespace-nowrap">{t("daily.nextIn")}{" "}<span className="ui-num">{hhmm(daily.countdown)}</span></span>
             </span>
           </span>
           {week && <IconChevron size={18} className={cx("dc-chev", open && "open")} />}
@@ -101,8 +99,8 @@ export function DailyCheckIn({ className }: { className?: string }) {
           <IconBolt size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="dc-t">Ежедневная отметка</p>
-          <p className="dc-s">{streak > 0 ? `Серия ${days(streak)} · не прерывайте` : "Начните серию — награда растёт 7 дней"}</p>
+          <p className="dc-t">{t("daily.title")}</p>
+          <p className="dc-s">{streak > 0 ? t("daily.streakKeep", { streak: days(streak) }) : t("daily.streakStart")}</p>
         </div>
         <Tag tone="amber" dot={false}>
           {today} / 7
@@ -113,7 +111,7 @@ export function DailyCheckIn({ className }: { className?: string }) {
       )}
       <span className="ui-spill">
         <Button kind="primary" size="lg" block icon={<IconBolt size={18} />} disabled={!daily.ready} onClick={daily.claimNow}>
-          {daily.pending ? "Начисление…" : cur ? `Забрать · +${ton(cur.ton)} TON` : "Забрать"}
+          {daily.pending ? t("daily.claiming") : cur ? t("daily.claimTon", { ton: ton(cur.ton) }) : t("daily.claim")}
         </Button>
       </span>
     </Panel>

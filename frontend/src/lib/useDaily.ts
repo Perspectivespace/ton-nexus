@@ -4,6 +4,7 @@ import { useDailyClaim, useDailyStatus, type DailyClaim, type DailyStatus } from
 import { useToast } from "@/components/ui";
 import { setServerClock } from "@/lib/cityPhase";
 import { nextMskMidnight, useCountdown, formatLeft } from "@/lib/countdown";
+import { t } from "@/i18n";
 
 /**
  * Состояние ежедневной отметки для всех кнопок «Ежедневная отметка».
@@ -56,23 +57,23 @@ export function useDaily() {
       onSuccess: (r) => {
         remember(r);
         if (r.already_claimed) {
-          toast({ kind: "info", title: "Сегодня уже отмечено", sub: `серия ${r.streak} дн` });
+          toast({ kind: "info", title: t("daily.already"), sub: t("daily.streakDays", { streak: r.streak }) });
           return;
         }
         toast({
           kind: "ok",
-          title: "Отметка засчитана",
+          title: t("daily.counted"),
           sub: [
             `+${Number(r.reward_ton).toFixed(4)} TON`,
             r.reward_xp > 0 && `+${r.reward_xp} XP`,
-            r.reward_focus > 0 && `Фокус +${r.reward_focus}`,
-            `серия ${r.streak} дн`,
+            r.reward_focus > 0 && t("daily.focusBonus", { rewardFocus: r.reward_focus }),
+            t("daily.streakDays", { streak: r.streak }),
           ]
             .filter(Boolean)
             .join(" · "),
         });
       },
-      onError: (e) => toast({ kind: "danger", title: "Отметка не прошла", sub: e.message }),
+      onError: (e) => toast({ kind: "danger", title: t("daily.failed"), sub: e.message }),
     });
   }
 
