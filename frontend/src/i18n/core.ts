@@ -76,6 +76,27 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
   return fill(s, vars);
 }
 
+/** Название в кавычках по правилам языка: ru — «ёлочки», en — “лапки” */
+export const quote = (s: string | number | undefined): string => (getLang() === "en" ? `“${s ?? ""}”` : `«${s ?? ""}»`);
+
+/** Строка по ключу на заданном языке — для админки владельца, которая всегда на русском */
+export function tIn(l: Lang, key: Key, vars?: Record<string, string | number>): string {
+  return fill((DICTS[l] as Dict)[key] ?? ru[key] ?? key, vars);
+}
+
+/** Строка на всех языках — например, чтобы узнать начало серверного сообщения на любом из них */
+export const tAll = (key: Key): string[] => LANGS.map((l) => (DICTS[l] as Dict)[key] ?? ru[key]);
+
+/**
+ * Таблица «код → подпись» на текущем языке: каждое поле — геттер, поэтому подпись читается в момент показа.
+ * prefix + код должен быть ключом словаря; неизвестный код даёт undefined (как у обычного объекта).
+ */
+export function tmap<K extends string>(prefix: string, codes: readonly K[], l?: Lang): Record<K, string> & Record<string, string | undefined> {
+  const o = {} as Record<string, string>;
+  for (const c of codes) Object.defineProperty(o, c, { enumerable: true, get: () => (l ? tIn(l, `${prefix}${c}` as Key) : t(`${prefix}${c}` as Key)) });
+  return o as Record<K, string> & Record<string, string | undefined>;
+}
+
 const rules: Partial<Record<Lang, Intl.PluralRules>> = {};
 /** Номер формы для «|»-строки: ru — one / few / many, en — one / other */
 export function pluralIndex(n: number, l: Lang = getLang()): number {

@@ -1,4 +1,5 @@
 import { common } from "./common";
+import { ads } from "./ads";
 import { arena } from "./arena";
 import { city } from "./city";
 import { daily } from "./daily";
@@ -23,6 +24,7 @@ import { wheel } from "./wheel";
 /** Русский словарь — эталон набора ключей; английский обязан повторять его целиком (i18n.test.ts) */
 export const ru = {
   ...common,
+  ...ads,
   ...arena,
   ...city,
   ...daily,

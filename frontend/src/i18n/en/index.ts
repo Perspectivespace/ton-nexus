@@ -1,4 +1,5 @@
 import { common } from "./common";
+import { ads } from "./ads";
 import { arena } from "./arena";
 import { city } from "./city";
 import { daily } from "./daily";
@@ -22,6 +23,7 @@ import { wheel } from "./wheel";
 
 export const en = {
   ...common,
+  ...ads,
   ...arena,
   ...city,
   ...daily,
