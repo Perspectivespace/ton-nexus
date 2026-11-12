@@ -23,6 +23,7 @@ import {
   type ArenaType,
 } from "@/lib/arena/api";
 import "@/styles/arena.css";
+import { t } from "@/i18n";
 
 /** ~длительность матча: на поле 9×9 зона закрывается раньше (как в прототипе) */
 const matchLen = (board: number) => (board >= 9 && board < 11 ? "2–3" : "3–4");
@@ -38,58 +39,57 @@ function Pips({ n, of }: { n: number; of: number }) {
 }
 
 /** Карточка комнаты: название, игроки и поле, приз за 1 место, 2 место, сколько ждут */
-function RoomCard({ t, sel, onPick }: { t: ArenaType; sel: boolean; onPick: () => void }) {
+function RoomCard({ rt, sel, onPick }: { rt: ArenaType; sel: boolean; onPick: () => void }) {
   return (
     <button type="button" className={sel ? "ar-room sel" : "ar-room"} aria-pressed={sel} onClick={onPick}>
       <span className="ar-r-head">
-        <span className="ar-r-n">{roomName(t)}</span>
+        <span className="ar-r-n">{roomName(rt)}</span>
         <span className="ar-r-chk" aria-hidden="true" />
       </span>
       <span className="ar-r-m">
-        {t.seats} игроков · {t.board}×{t.board}
+        {rt.seats}{" "}{t("arena.playersDot")}{" "}{rt.board}×{rt.board}
       </span>
       <span className="ar-r-p">
-        {fmtPrize(t.prizes_nano[0] ?? 0)}
+        {fmtPrize(rt.prizes_nano[0] ?? 0)}
         <small>TON</small>
       </span>
-      <span className="ar-r-p2">{t.prizes_nano[1] ? `2 место · ${fmtPrize(t.prizes_nano[1])}` : "только 1 место"}</span>
+      <span className="ar-r-p2">{rt.prizes_nano[1] ? t("arena.place2", { prizesNano: fmtPrize(rt.prizes_nano[1]) }) : t("arena.only1")}</span>
       <span className="ar-r-q">
         {sel && <i className="ar-live" aria-hidden="true" />}
-        <Pips n={t.waiting} of={t.seats} />
+        <Pips n={rt.waiting} of={rt.seats} />
         <span>
-          {t.waiting}/{t.seats} ждут
-        </span>
+          {rt.waiting}/{rt.seats}{" "}{t("arena.waiting")}</span>
       </span>
     </button>
   );
 }
 
 /** Деньги выбранной комнаты: ставка, фонд, комиссия, призы, длительность */
-function MoneyPanel({ t }: { t: ArenaType }) {
-  const m = money(t);
+function MoneyPanel({ at }: { at: ArenaType }) {
+  const m = money(at);
   return (
     <div className="ar-panel ar-money">
       <div className="ar-row">
-        <span>Ставка</span>
-        <b>{fmtTon(t.stake_nano)} TON</b>
+        <span>{t("arena.stake")}</span>
+        <b>{fmtTon(at.stake_nano)} TON</b>
       </div>
       <div className="ar-row">
         <span>
-          Фонд · {t.seats} × {fmtTon(t.stake_nano)}
+          {t("arena.poolDot")}{" "}{at.seats} × {fmtTon(at.stake_nano)}
         </span>
-        <b>{fmtPrize(t.pot_nano)} TON</b>
+        <b>{fmtPrize(at.pot_nano)} TON</b>
       </div>
       <div className="ar-row">
-        <span>Комиссия {commissionPct(t.commission_bps)}</span>
+        <span>{t("arena.fee")}{" "}{commissionPct(at.commission_bps)}</span>
         <b>−{m.fee.toFixed(2)} TON</b>
       </div>
       <div className="ar-row">
-        <span>Призы</span>
-        <b className="ok">{t.prizes_nano.map((p, i) => `${i + 1}м ${fmtPrize(p)}`).join(" · ")}</b>
+        <span>{t("arena.prizes")}</span>
+        <b className="ok">{at.prizes_nano.map((p, i) => t("arena.prizeN", { i: i + 1, p: fmtPrize(p) })).join(" · ")}</b>
       </div>
       <div className="ar-row">
-        <span>Матч</span>
-        <b>~{matchLen(t.board)} мин</b>
+        <span>{t("arena.match")}</span>
+        <b>~{matchLen(at.board)}{" "}{t("arena.min")}</b>
       </div>
     </div>
   );
@@ -101,12 +101,11 @@ export function NeedFunds({ need }: { need: number | null }) {
     <div className="ar-need" role="alert">
       <IconAlert size={18} />
       <div className="min-w-0 flex-1">
-        <b>{need != null && need > 0 ? `Не хватает ${fmtTon(need * 1e9)} TON` : "Не хватает TON на балансе"}</b>
-        <p>Ставка списывается с баланса и держится до старта. Пополните баланс, чтобы войти.</p>
+        <b>{need != null && need > 0 ? t("arena.shortBy", { e9: fmtTon(need * 1e9) }) : t("arena.noTon")}</b>
+        <p>{t("arena.stakeNote")}</p>
       </div>
       <Link to="/wallet?topup=1" className="ui-btn secondary sm no-underline" onClick={() => haptic.tap()}>
-        Пополнить
-      </Link>
+        {t("wallet.topUp")}</Link>
     </div>
   );
 }
@@ -124,9 +123,9 @@ export interface ArenaLobbyViewProps {
 
 /** Лобби (чистый вид, без запросов — для тестов и скриншотов) */
 export function ArenaLobbyView({ lobby, balance, sel, onPick, onJoin, onRules, joining, err }: ArenaLobbyViewProps) {
-  const t = lobby.types.find((x) => x.type === sel) ?? lobby.types[0];
-  const stake = t ? tonOf(t.stake_nano) : 0;
-  const short = balance != null && t ? Math.round((stake - balance) * 1e4) / 1e4 : null;
+  const at = lobby.types.find((x) => x.type === sel) ?? lobby.types[0];
+  const stake = at ? tonOf(at.stake_nano) : 0;
+  const short = balance != null && at ? Math.round((stake - balance) * 1e4) / 1e4 : null;
   const need = err?.code === "insufficient_balance" || (short != null && short > 0);
   const active = lobby.active_room_id;
   return (
@@ -134,45 +133,43 @@ export function ArenaLobbyView({ lobby, balance, sel, onPick, onJoin, onRules, j
       <div className="ar-hero">
         <ArenaArt id="arh" h={196} className="ar-hero-art" sweep />
         <div className="ar-hero-txt">
-          <span className="ui-label ar-neon">PvP · королевская битва</span>
-          <h2 className="ar-hero-t">Арена</h2>
-          <p>Все ходят одновременно, 10&nbsp;секунд на ход. Зона сжимается — побеждает последний.</p>
+          <span className="ui-label ar-neon">{t("arena.kicker")}</span>
+          <h2 className="ar-hero-t">{t("games.arena")}</h2>
+          <p>{t("arena.heroText")}</p>
           <div className="ar-chips">
-            <span>10 с / ход</span>
-            <span>без рандома</span>
-            <span>честный seed</span>
+            <span>{t("arena.chip10s")}</span>
+            <span>{t("arena.chipNoRng")}</span>
+            <span>{t("arena.chipSeed")}</span>
           </div>
         </div>
       </div>
 
-      <div className="ar-sec">Комната</div>
+      <div className="ar-sec">{t("arena.room")}</div>
       <div className="ar-rooms">
         {lobby.types.map((x) => (
-          <RoomCard key={x.type} t={x} sel={x.type === t?.type} onPick={() => onPick(x.type)} />
+          <RoomCard key={x.type} rt={x} sel={x.type === at?.type} onPick={() => onPick(x.type)} />
         ))}
       </div>
 
-      {t && (
+      {at && (
         <>
-          <div className="ar-sec">Ставка и приз</div>
-          <MoneyPanel t={t} />
+          <div className="ar-sec">{t("arena.stakePrize")}</div>
+          <MoneyPanel at={at} />
         </>
       )}
       <p className="ar-note">
-        Ставка списывается с баланса и держится до старта. Не собрались за <b>3:00</b> — вернём её автоматически.{" "}
+        {t("arena.stakeHeld")}{" "}<b>3:00</b>{" "}{t("arena.stakeHeldTail")}{" "}
         <button type="button" className="ar-link" onClick={onRules}>
           <IconRules size={14} />
-          Правила и выплаты
-        </button>
+          {t("arena.rulesPayouts")}</button>
       </p>
 
       {active ? (
         <div className="ar-foot">
-          <div className="ar-active">Вы уже в комнате — бой или набор продолжается.</div>
+          <div className="ar-active">{t("arena.alreadyIn")}</div>
           <span className="ui-spill block">
             <Link to={`/arena/${active}`} className="ui-btn primary lg block no-underline" onClick={() => haptic.tap()}>
-              Вернуться в комнату
-              <IconChevron size={16} />
+              {t("arena.backToRoom")}<IconChevron size={16} />
             </Link>
           </span>
         </div>
@@ -181,10 +178,10 @@ export function ArenaLobbyView({ lobby, balance, sel, onPick, onJoin, onRules, j
           {need && <NeedFunds need={short != null && short > 0 ? short : null} />}
           {err && !need && <p className="ar-err" role="alert">{arenaErrorText(err)}</p>}
           <span className="ui-spill block">
-            <Button size="lg" block disabled={!t || need || joining} onClick={onJoin}>
-              {joining ? "Входим…" : (
+            <Button size="lg" block disabled={!at || need || joining} onClick={onJoin}>
+              {joining ? t("arena.joining") : (
                 <>
-                  Войти за <span className="ar-k">{fmtTon(t?.stake_nano ?? 0)} TON</span>
+                  {t("arena.joinFor")}{" "}<span className="ar-k">{fmtTon(at?.stake_nano ?? 0)} TON</span>
                 </>
               )}
             </Button>
@@ -212,10 +209,10 @@ export default function Arena() {
   const bal = me.data ? Number(me.data.balance) : NaN;
 
   const onJoin = () => {
-    const t = lobby.data?.types.find((x) => x.type === sel) ?? lobby.data?.types[0];
-    if (!t) return;
+    const at = lobby.data?.types.find((x) => x.type === sel) ?? lobby.data?.types[0];
+    if (!at) return;
     setErr(null);
-    join.mutate(t.type, {
+    join.mutate(at.type, {
       onSuccess: (room) => {
         haptic.collect();
         navigate(`/arena/${room.id}`);
@@ -230,7 +227,7 @@ export default function Arena() {
         if (pe.code === "insufficient_balance") void me.refetch();
         if (pe.code === "arena_disabled") void lobby.refetch();
         setErr(pe);
-        if (pe.code !== "insufficient_balance") toast({ kind: "danger", title: "Не удалось войти", sub: arenaErrorText(pe) });
+        if (pe.code !== "insufficient_balance") toast({ kind: "danger", title: t("arena.joinFailed"), sub: arenaErrorText(pe) });
       },
     });
   };
@@ -239,15 +236,15 @@ export default function Arena() {
   return (
     <div className="ar space-y-4">
       <BackLink />
-      <ScreenHeader eyebrow="Игра" title="Арена" action={me.data ? <span className="ar-bal"><i />{Number(me.data.balance).toFixed(4)} TON</span> : undefined} />
+      <ScreenHeader eyebrow={t("tower.game")} title={t("games.arena")} action={me.data ? <span className="ar-bal"><i />{Number(me.data.balance).toFixed(4)} TON</span> : undefined} />
       {lobby.data ? (
         <ArenaLobbyView
           lobby={lobby.data}
           balance={Number.isFinite(bal) ? bal : null}
           sel={sel ?? lobby.data.types[0]?.type ?? ""}
-          onPick={(t) => {
+          onPick={(at) => {
             haptic.select();
-            setSel(t);
+            setSel(at);
             setErr(null);
           }}
           onJoin={onJoin}
@@ -258,11 +255,11 @@ export default function Arena() {
       ) : lerr?.code === "arena_disabled" ? (
         <ArenaClosed />
       ) : lerr ? (
-        <ErrorState title="Не удалось загрузить «Арену»" message={arenaErrorText(lerr)} onRetry={() => void lobby.refetch()} />
+        <ErrorState title={t("arena.loadFailed")} message={arenaErrorText(lerr)} onRetry={() => void lobby.refetch()} />
       ) : (
         <div className="ar-skel" aria-busy="true" />
       )}
-      <Sheet open={rules} onClose={() => setRules(false)} title="Правила арены" className="ar-sheet">
+      <Sheet open={rules} onClose={() => setRules(false)} title={t("arena.rulesTitle")} className="ar-sheet">
         <ArenaRules types={lobby.data?.types} />
       </Sheet>
     </div>
@@ -272,11 +269,10 @@ export default function Arena() {
 export function ArenaClosed() {
   return (
     <div className="ar-panel ar-closed">
-      <b>«Арена» пока закрыта</b>
-      <p>Скоро откроем комнаты со ставкой. Загляните позже.</p>
+      <b>{t("arena.closed")}</b>
+      <p>{t("arena.closedSub")}</p>
       <Link to="/" className="ui-btn secondary sm no-underline">
-        На главную
-      </Link>
+        {t("arena.toHome")}</Link>
     </div>
   );
 }

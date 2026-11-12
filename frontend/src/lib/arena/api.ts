@@ -1,4 +1,5 @@
 import { api, ApiError } from "@/api/client";
+import { t } from "@/i18n";
 
 /**
  * Клиент API «Арены» (backend/app/api/arena.py, префикс /api/v1/arena).
@@ -202,28 +203,28 @@ export function parseArenaError(e: unknown): ArenaErr {
     if (e.status === 402) return { status: 402, code: "insufficient_balance", message: e.message };
     return { status: e.status, code: "http_" + e.status, message: e.message };
   }
-  return { status: 0, code: "network", message: "Нет связи с сервером" };
+  return { status: 0, code: "network", message: t("tower.noServer") };
 }
 
 /** Понятный текст ошибки для экрана */
 export function arenaErrorText(e: ArenaErr): string {
   switch (e.code) {
     case "insufficient_balance":
-      return "Не хватает TON на балансе для ставки. Пополните баланс и возвращайтесь.";
+      return t("arena.eNoTon");
     case "arena_disabled":
-      return "«Арена» пока закрыта.";
+      return t("arena.eClosed");
     case "already_in_room":
-      return "Вы уже в комнате — открываем её.";
+      return t("arena.eAlreadyIn");
     case "unknown_room_type":
-      return "Такой комнаты нет. Обновите список.";
+      return t("arena.eNoRoom");
     case "not_joined":
-      return "Вы уже не в комнате.";
+      return t("arena.eNotIn");
     case "room_state":
-      return "Комната уже собрана — выйти нельзя.";
+      return t("arena.eFull");
     case "network":
-      return "Нет связи с сервером. Попробуйте ещё раз.";
+      return t("arena.eNet");
     default:
-      return e.message || "Что-то пошло не так. Попробуйте ещё раз.";
+      return e.message || t("arena.eUnknown");
   }
 }
 
@@ -245,7 +246,7 @@ export const fmtPrize = (nano: string | number) => fmtTon(nano, 2);
 export const commissionPct = (bps: number) => `${Math.round(bps) / 100}%`.replace(".0%", "%");
 
 /** «Арена 4» / «Арена 8» */
-export const roomName = (t: Pick<ArenaType, "seats">) => `Арена ${t.seats}`;
+export const roomName = (at: Pick<ArenaType, "seats">) => t("arena.roomName", { seatsTotal: at.seats });
 
 /** Деньги комнаты: фонд, комиссия, призы по местам */
 export function money(t: ArenaType) {
