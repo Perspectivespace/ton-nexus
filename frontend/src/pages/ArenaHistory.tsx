@@ -62,13 +62,15 @@ export function ArenaHistoryView({ pages, hasMore, loadingMore, onMore }: ArenaH
   return (
     <div className="ar-body">
       {sum && (
-        <ArenaStats
+        <div className="ar-panel">
+          <ArenaStats
           items={[
             { v: String(sum.played), k: t("arena.h.played") },
             { v: String(sum.wins), k: t("arena.h.wins") },
             { v: fmtNet(net), k: t("arena.h.net"), cls: net > 0 ? "ok" : net < 0 ? "bad" : undefined },
           ]}
-        />
+          />
+        </div>
       )}
       <ul className="ar-h">
         {items.map((it) => (
