@@ -15,7 +15,8 @@ from app.services import prize_wheel as wheel_svc
 from app.services import promo as promo_svc
 from app.services.daily import DailyError
 from app.services.prize_wheel import WheelError
-from app.services.promo import PromoError, PromoPermissionError
+from app.services import secret_promo as secret_svc
+from app.services.promo import PromoError, PromoInvalid, PromoPermissionError, PromoRateLimited
 
 router = APIRouter(tags=["engagement"])
 
@@ -137,13 +138,24 @@ async def promo_redeem(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    uid = user.id  # после отката объект пользователя просрочен — id берём заранее
     try:
         r = await promo_svc.redeem(db, user=user, code=body.code)
         await db.commit()
         return PromoOut(
             code=r.code, reward_ton=r.reward_ton, reward_xp=r.reward_xp, reward_focus=r.reward_focus
         )
+    except PromoRateLimited as e:
+        await db.rollback()
+        raise HTTPException(status_code=429, detail=str(e)) from e
+    except PromoInvalid as e:
+        # неверный ввод считается для ограничения перебора (отдельной транзакцией: основная откатилась)
+        await db.rollback()
+        await secret_svc.record_failure(db, uid)
+        await db.commit()
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except PromoError as e:
+        await db.rollback()
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
@@ -200,6 +212,7 @@ async def wheel_spin(user: User = Depends(get_current_user), db: AsyncSession = 
 
 from sqlalchemy import select
 from app.models.promo import PromoCode
+from app.models.secret_promo import SecretPromoCampaign
 from app.services.roles import is_platform_owner
 
 
@@ -223,7 +236,11 @@ async def promo_list(
     if not is_platform_owner(user):
         raise HTTPException(status_code=403, detail="owner only")
 
-    rows = (await db.scalars(select(PromoCode).order_by(PromoCode.created_at.desc()))).all()
+    # коды секретных кампаний «Прогулки» — в своём разделе админки, не в общем списке
+    secret_ids = select(SecretPromoCampaign.promo_id)
+    rows = (
+        await db.scalars(select(PromoCode).where(PromoCode.id.not_in(secret_ids)).order_by(PromoCode.created_at.desc()))
+    ).all()
     return [
         PromoListItem(
             id=p.id,
