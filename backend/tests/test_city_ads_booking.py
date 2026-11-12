@@ -198,6 +198,10 @@ class Booking(unittest.TestCase):
 
     def test_level_gate(self):
         async def body(s):
+            first = await _user(s, level=1)
+            await _book(s, first, "tower_line", 1, 1)  # по умолчанию — любой уровень
+            await set_setting(s, key="city_ads", value={"min_level": 3})
+            await s.commit()
             low = await _user(s, level=2)
             with self.assertRaises(ads.CityAdPermissionError):
                 await ads.book(s, user=low, spot_key="neon_left", start=D(1), days=1, content=_c(), today=TODAY)
@@ -415,6 +419,8 @@ class Api(unittest.TestCase):
                 await _rb(s)
             self.assertEqual(await _bal(s, other), Decimal("10"))
             low = await _user(s, level=1)
+            await set_setting(s, key="city_ads", value={"min_level": 3})  # порог задаёт владелец
+            await s.commit()
             with self.assertRaises(HTTPException) as cm:
                 await ads_api.city_ads_book(mk(start=D(9)), user=low, db=s)
             self.assertEqual(cm.exception.status_code, 403)

@@ -19,6 +19,7 @@ from app.db.base import Base
 from app.models import CityAd, CityAdImage, User  # noqa: F401
 from app.services import city_ad_images as img_svc
 from app.services import city_ads as ads
+from app.services.economy_admin import set_setting
 from app.services.economy_seed import seed_economy
 
 warnings.filterwarnings("ignore", message=".*Decimal objects natively.*")
@@ -149,6 +150,8 @@ class Flow(unittest.TestCase):
     def test_upload_limits_and_level(self):
         async def body(s):
             low = await _user(s, level=1)
+            await img_svc.store_upload(s, user=low, data=pic(), declared="image/png")  # по умолчанию — любой уровень
+            await set_setting(s, key="city_ads", value={"min_level": 3})
             with self.assertRaises(img_svc.ImageForbidden):
                 await img_svc.store_upload(s, user=low, data=pic(), declared="image/png")
             # в час — не больше UPLOADS_PER_HOUR, даже если картинки сразу прикладывать к объявлению

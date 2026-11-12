@@ -71,7 +71,7 @@ async def _book(s, user, spot_key, start, days, status="approved", **kw):
 class Config(unittest.TestCase):
     def test_defaults(self):
         cfg = ads.normalize(DEFAULTS["city_ads"][0])
-        self.assertEqual(cfg["min_level"], 3)
+        self.assertEqual(cfg["min_level"], 1)  # по умолчанию — любой уровень
         self.assertEqual((cfg["min_days"], cfg["max_days"]), (1, 30))
         self.assertEqual(cfg["spots"]["tower_line"]["price_day"], "1")
         self.assertEqual(cfg["spots"]["banner_sky"]["price_day"], "0.5")
@@ -157,6 +157,10 @@ class QuoteValidation(unittest.TestCase):
     def test_level_days_dates_spot(self):
         async def body(s):
             low = await _user(s, level=2)
+            first = await _user(s, level=1)
+            q = await ads.quote(s, user=first, spot_key="tower_line", start=D(1), days=1, today=TODAY)
+            self.assertTrue(q.available)  # по умолчанию покупать может игрок любого уровня
+            await set_setting(s, key="city_ads", value={"min_level": 3})  # владелец поднял порог
             with self.assertRaises(ads.CityAdPermissionError):
                 await ads.quote(s, user=low, spot_key="tower_line", start=D(1), days=1, today=TODAY)
             await set_setting(s, key="city_ads", value={"min_level": 2})
@@ -190,6 +194,7 @@ class QuoteValidation(unittest.TestCase):
         async def body(s):
             low = await _user(s, level=1)
             u = await _user(s, level=3)
+            await set_setting(s, key="city_ads", value={"min_level": 3})
             await s.commit()
             with self.assertRaises(HTTPException) as cm:
                 await ads_api.city_ads_quote(ads_api.QuoteBody(spot="tower_line", start=D(1), days=1), user=low, db=s)

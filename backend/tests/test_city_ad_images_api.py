@@ -21,6 +21,7 @@ from app.db.base import Base
 from app.models import User
 from app.services import city_ad_images as img_svc
 from app.services import city_ads as ads
+from app.services.economy_admin import set_setting
 from app.services.economy_seed import seed_economy
 
 warnings.filterwarnings("ignore", message=".*Decimal objects natively.*")
@@ -138,6 +139,10 @@ class ImagesApi(unittest.IsolatedAsyncioTestCase):
         big = b"\x89PNG\r\n\x1a\n" + b"\x00" * (img_svc.MAX_BYTES + 10)
         self.assertEqual((await self.upload(buyer, big)).status_code, 413)
         low = await self.user(level=1)
+        self.assertEqual((await self.upload(low)).status_code, 201)  # по умолчанию — любой уровень
+        async with self.S() as s:
+            await set_setting(s, key="city_ads", value={"min_level": 3})  # порог поднял владелец
+            await s.commit()
         self.assertEqual((await self.upload(low)).status_code, 403)
         self.assertEqual((await self.client.get("/api/v1/city-ads/images/NOT-A-KEY.webp")).status_code, 422)
         with mock.patch.object(img_svc, "available", return_value=False):
