@@ -42,7 +42,7 @@ export const task: Record<keyof typeof ru, string> = {
   "task.screenshotFailed": "Screenshot didn't upload",
   "task.submitError": "Submission error",
   "task.sentToMod": "Sent to a moderator. After approval —",
-  "task.plusXp": "and +{xpReward} XP",
+  "task.plusXp": " and +{xpReward} XP",
   "taskNew.published": "published",
   "taskNew.inReview": "in review by an admin or the owner",
   "taskNew.created": "Task created",

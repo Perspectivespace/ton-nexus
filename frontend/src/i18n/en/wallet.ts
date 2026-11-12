@@ -89,7 +89,7 @@ export const wallet: Record<keyof typeof ru, string> = {
   "wallet.toAddress": "To address",
   "wallet.freezeNow": "The amount is frozen right away. The owner pays out manually; if declined, the TON goes back to your balance.",
   "wallet.freezeNote": "The amount is frozen until the owner decides. If declined, it's returned to your balance.",
-  "wallet.minNote": "Minimum — {v} TON.",
+  "wallet.minNote": " Minimum — {v} TON.",
   "wallet.tonAddress": "TON address",
   "wallet.topUpTitle": "Top-up",
   "wallet.allInTon": "All amounts in TON",

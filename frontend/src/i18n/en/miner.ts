@@ -11,7 +11,7 @@ export const miner: Record<keyof typeof ru, string> = {
   "miner.syncing": "Syncing the reactor…",
   "miner.loadFailed": "Couldn't load the miner",
   "miner.chanceBonus": "· odds bonus",
-  "miner.afterCycle": "· after the cycle",
+  "miner.afterCycle": " · after the cycle",
   "miner.attempt": "· attempt",
   "miner.cycleDone": "Cycle complete",
   "miner.accrued": "Accrued this cycle",
