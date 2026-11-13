@@ -491,21 +491,54 @@ async def approve_task(session: AsyncSession, *, task_id: int, actor: User) -> T
         raise TaskStateError("not pending approval")
     task.status = "draft"
     await session.flush()
+    from app.services import integrity as integrity_svc
+
+    await integrity_svc.safe_record(
+        session, user_id=task.creator_id, event_type="author_task_approved",
+        source_type="task", source_id=task.id, actor_id=actor.id,
+    )
     return _view(task)
 
 
+def check_reject_reason(code: str | None, note: str | None, allowed: tuple[str, ...]) -> str | None:
+    """Код причины отказа. Пусто — «other» без события (старые клиенты); «other» — нужен комментарий."""
+    if code is None:
+        return None
+    if code not in allowed:
+        raise TaskError("invalid reject reason")
+    if code == "other" and not (note or "").strip():
+        raise TaskError("reject reason note required")
+    return code
+
+
 async def reject_task(
-    session: AsyncSession, *, task_id: int, actor: User, note: str | None = None
+    session: AsyncSession,
+    *,
+    task_id: int,
+    actor: User,
+    note: str | None = None,
+    reject_reason: str | None = None,
 ) -> TaskView:
     if not can_approve_ambassador_task(actor):
         raise TaskPermissionError("admin or owner required")
+    from app.services import integrity_rules
+
+    reject_reason = check_reject_reason(reject_reason, note, integrity_rules.TASK_REASONS)
     task = await session.get(Task, task_id)
     if not task:
         raise TaskError("task not found")
     if task.status != "pending_approval":
         raise TaskStateError("not pending approval")
     task.status = "rejected"
+    task.reject_reason = reject_reason or "other"
     await session.flush()
+    if reject_reason == "bad_task":
+        from app.services import integrity as integrity_svc
+
+        await integrity_svc.safe_record(
+            session, user_id=task.creator_id, event_type="author_task_rejected_bad",
+            source_type="task", source_id=task.id, actor_id=actor.id, reason=note,
+        )
     return _view(task)
 
 
@@ -684,7 +717,14 @@ async def review_submission(
     submission_id: int,
     approve: bool,
     note: str | None = None,
+    reject_reason: str | None = None,
 ) -> TaskSubmission:
+    from app.services import integrity_rules
+
+    if approve:
+        reject_reason = None
+    else:
+        reject_reason = check_reject_reason(reject_reason, note, integrity_rules.SUBMISSION_REASONS)
     sub = await session.get(TaskSubmission, submission_id)
     if not sub or sub.status != "pending":
         raise TaskStateError("submission not pending")
@@ -738,6 +778,7 @@ async def review_submission(
             task.status = "completed"
     else:
         sub.status = "rejected"
+        sub.reject_reason = reject_reason or "other"
         if task.status == "cancelled":
             # задание отменено: резерв под эту заявку освободился — вернуть создателю
             from app.services import task_owner as owner_svc
@@ -752,6 +793,17 @@ async def review_submission(
 
     await proofs_svc.schedule_after_review(session, sub.id, now=now)
     await session.flush()
+
+    # «Честность» (теневой режим): после денежной части, в той же транзакции; ошибки — только в лог
+    from app.services import integrity as integrity_svc
+
+    try:
+        await integrity_svc.on_submission_reviewed(
+            session, sub=sub, task=task, approved=approve, reason_code=reject_reason, actor_id=actor.id,
+            now=now, task_completed=approve and task.status == "completed",
+        )
+    except Exception:  # noqa: BLE001
+        integrity_svc.log.exception("[integrity] review hook failed")
     return sub
 
 
@@ -907,6 +959,10 @@ async def buy_partner(session: AsyncSession, *, buyer: User, task_id: int) -> Pu
     if task.filled_slots >= task.total_slots:
         task.status = "completed"
     await session.flush()
+    if task.status == "completed":
+        from app.services import integrity as integrity_svc
+
+        await integrity_svc.on_task_completed(session, task=task, now=datetime.now(timezone.utc))
     return PurchaseResult(purchase, False)
 
 
