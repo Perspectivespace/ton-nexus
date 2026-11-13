@@ -151,7 +151,8 @@ class Cancel(unittest.TestCase):
             # заявка на проверке оплачивается из резерва
             await t_svc.review_submission(s, actor=admin, submission_id=pend[0].id, approve=True)
             # отклонённая — резерв возвращается создателю: 0.1 + 0.01
-            await t_svc.review_submission(s, actor=admin, submission_id=pend[1].id, approve=False)
+            await t_svc.review_submission(s, actor=admin, submission_id=pend[1].id, approve=False,
+                                          reject_reason="low_quality")
             await s.refresh(task)
             self.assertEqual(task.status, "cancelled")
             await s.refresh(admin)

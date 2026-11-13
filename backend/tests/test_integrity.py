@@ -234,9 +234,12 @@ class HooksTest(unittest.TestCase):
                                           reject_reason="low_quality", note="размыто")
             self.assertEqual(sub.reject_reason, "low_quality")
             self.assertEqual(w.integrity, 490)
-            # без кода (старый клиент): отказ проходит как «other», события нет
+            # без кода — ошибка; «other» с заметкой — отказ без события
             w2, sub2 = await _sub(s, tid)
-            await t_svc.review_submission(s, actor=admin, submission_id=sub2.id, approve=False)
+            with self.assertRaises(t_svc.TaskError):
+                await t_svc.review_submission(s, actor=admin, submission_id=sub2.id, approve=False)
+            await t_svc.review_submission(s, actor=admin, submission_id=sub2.id, approve=False,
+                                          reject_reason="other", note="не по теме")
             self.assertEqual(sub2.reject_reason, "other")
             self.assertEqual(await _count(s, user_id=w2.id), 0)
             # принятие: +3 и выплата как раньше
@@ -302,6 +305,8 @@ class HooksTest(unittest.TestCase):
             v = await t_svc.create_task(s, creator=amb, title="плохое", description="D", reward=D("0.1"), total_slots=1)
             with self.assertRaises(t_svc.TaskError):
                 await t_svc.reject_task(s, task_id=v.id, actor=admin, reject_reason="spam")
+            with self.assertRaises(t_svc.TaskError):
+                await t_svc.reject_task(s, task_id=v.id, actor=admin)
             await t_svc.reject_task(s, task_id=v.id, actor=admin, reject_reason="bad_task", note="мусор")
             self.assertEqual((await s.get(Task, v.id)).reject_reason, "bad_task")
             self.assertEqual(await _count(s, user_id=amb.id, event_type="author_task_rejected_bad"), 1)
