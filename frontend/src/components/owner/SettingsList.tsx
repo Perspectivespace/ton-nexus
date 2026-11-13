@@ -9,6 +9,7 @@ const GROUP_RU: Record<string, string> = {
   miner_upgrade: "Усиление",
   tasks: "Задания",
   city_ads: "Реклама в городе",
+  integrity: "Честность",
   withdraw: "Вывод",
   growth: "Рост",
   daily: "Ежедневная награда",
@@ -20,7 +21,7 @@ const GROUP_RU: Record<string, string> = {
   arena: "Арена",
   custom: "Прочее",
 };
-const GROUP_ORDER = ["miner", "miner_upgrade", "roulette", "tower", "ratings", "daily", "tasks", "city_ads", "withdraw", "ton", "arena", "growth", "progression", "custom"];
+const GROUP_ORDER = ["miner", "miner_upgrade", "roulette", "tower", "ratings", "daily", "tasks", "integrity", "city_ads", "withdraw", "ton", "arena", "growth", "progression", "custom"];
 
 const titleOf = (s: EconomySetting) => SETTINGS[s.key]?.title || s.label || "Настройка";
 

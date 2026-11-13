@@ -114,7 +114,7 @@ function Group({ ctx, value, path }: { ctx: Ctx; value: Obj; path: Path }) {
   return (
     <div className="grid grid-cols-2 gap-x-2 gap-y-3">
       {entries.map(([k, v]) => {
-        const m = fieldMeta(ctx.settingKey, k, v);
+        const m = fieldMeta(ctx.settingKey, k, v, [...path, k]);
         const p = [...path, k];
         if (asLeaf(m, v)) {
           const single = entries.length === 1 || m.kind === "text" || m.kind === "int_list" || m.label.length > 18;
@@ -172,7 +172,7 @@ function Rows({
   return (
     <div>
       {rows.map((row, i) => {
-        const title = String(row[titleKey ?? "label"] ?? row.label ?? `#${i + 1}`);
+        const title = meta?.rowLabel?.(row) ?? String(row[titleKey ?? "label"] ?? row.label ?? `#${i + 1}`);
         const fields = Object.entries(row).filter(
           ([k]) => !HIDDEN_KEYS.has(k) && k !== titleKey,
         );
@@ -205,7 +205,7 @@ function collect(settingKey: string, v: unknown, path: Path, out: Map<string, [P
     if (isObj(x)) {
       for (const [k, y] of Object.entries(x)) {
         if (HIDDEN_KEYS.has(k)) continue;
-        const m = fieldMeta(settingKey, k, y);
+        const m = fieldMeta(settingKey, k, y, [...p, k]);
         if (asLeaf(m, y)) {
           const locked = m.readOnly || (row && meta?.lockField?.(row, k)) || (row && k === meta?.rowTitle);
           out.set(pkey([...p, k]), [[...p, k], locked ? { ...m, readOnly: true } : m, y]);

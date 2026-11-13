@@ -30,6 +30,8 @@ export type SettingMeta = {
   lockField?: (row: Record<string, unknown>, field: string) => boolean;
   /** Field used as a row title in arrays of objects. */
   rowTitle?: string;
+  /** Подпись строки массива (если сырое значение rowTitle — технический ключ). */
+  rowLabel?: (row: Record<string, unknown>) => string | undefined;
   /** Show live "шанс ≈ x%" under each top-level weight field. */
   chanceHints?: boolean;
   summary?: (v: unknown) => string;
@@ -44,6 +46,16 @@ export const STAT_RU: Record<string, string> = {
   acceleration: "Ускорение",
   luck: "Удача",
   stability: "Стабильность",
+};
+
+export const INTEGRITY_TIER_RU: Record<string, string> = {
+  exalted: "Превознесение",
+  revered: "Почтение",
+  honored: "Уважение",
+  friendly: "Дружелюбие",
+  neutral: "Нейтрально",
+  unfriendly: "Настороженность",
+  hostile: "Неприязнь",
 };
 
 const COMMON: Record<string, FieldMeta> = {
@@ -393,6 +405,51 @@ export const SETTINGS: Record<string, SettingMeta> = {
       } · ${Number(o.min_level) <= 1 ? "любой ур." : `с ${String(o.min_level ?? "?")} ур.`}`;
     },
   },
+  integrity_rules: {
+    title: "Честность",
+    short: "Репутация 0–1000 · теневой режим",
+    about:
+      "Скрытый счёт добросовестности 0–1000 (старт 500) по семи тирам: Неприязнь 0–199, Настороженность 200–399, Нейтрально 400–599, Дружелюбие 600–749, Уважение 750–849, Почтение 850–949, Превознесение 950–1000. Счёт складывается из событий: принятые и отклонённые сдачи (по коду причины), одобрение, отклонение и завершение заданий автора, медленная проверка, ручные правки владельца. Каждое событие со временем затухает: через «полураспад» дней его вклад вдвое меньше (0 — не затухает). Принятые сдачи дают не больше лимита за сутки МСК, штраф за медленную проверку — не больше лимита за 7 дней. Крупные падения (событие ниже порога или сумма за сутки ниже порога) и «поддельное доказательство» ждут решения владельца. Теневой режим: счёт только копится — игроки его не видят, ни на что он не влияет; выключить теневой режим и включить ограничения пока нельзя.",
+    rowTitle: "key",
+    rowLabel: (row) => INTEGRITY_TIER_RU[String(row.key)],
+    fields: {
+      enabled: { label: "Копить события", kind: "bool" },
+      shadow_mode: { label: "Теневой режим", kind: "bool", readOnly: true, hint: "Пока всегда включён" },
+      start: { label: "Старт", kind: "int", min: 0, max: 1000, hint: "Счёт нового игрока" },
+      tiers: { label: "Тиры (нижняя граница)" },
+      min: { label: "От", kind: "int", min: 0, max: 1000 },
+      weights: { label: "События" },
+      delta: { label: "Изменение", kind: "int", min: -1000, max: 1000 },
+      half_life_days: { label: "Полураспад", kind: "int", unit: "дн", min: 0, max: 3650, hint: "0 — не затухает" },
+      submission_accepted: { label: "Сдача принята" },
+      submission_streak_10: { label: "10 принятых подряд" },
+      submission_rejected_low_quality: { label: "Отказ: низкое качество" },
+      submission_rejected_wrong_task: { label: "Отказ: не то задание" },
+      submission_rejected_duplicate: { label: "Отказ: повтор" },
+      submission_rejected_forged: { label: "Отказ: поддельное доказательство" },
+      author_task_approved: { label: "Задание автора одобрено" },
+      author_task_rejected_bad: { label: "Задание автора отклонено как плохое" },
+      author_task_completed: { label: "Задание автора выполнено" },
+      author_review_slow: { label: "Медленная проверка сдачи" },
+      appeal_upheld: { label: "Апелляция против игрока (позже)" },
+      month_clean: { label: "Месяц без отказов (позже)" },
+      stars_chargeback: { label: "Возврат Stars (позже)" },
+      fraud: { label: "Мошенничество (вручную)" },
+      caps: { label: "Лимиты" },
+      accepted_per_day: { label: "Принятые за сутки", kind: "int", min: 0, max: 1000 },
+      review_slow_per_week: { label: "Медленная проверка за 7 дн", kind: "int", min: -1000, max: 0 },
+      review_slow_hours: { label: "Медленно — дольше", kind: "int", unit: "ч", min: 1, max: 720 },
+      review_thresholds: { label: "На проверку владельцу" },
+      event: { label: "Событие от", kind: "int", min: -1000, max: -1 },
+      day: { label: "За сутки от", kind: "int", min: -1000, max: -1 },
+      gates: { label: "Ограничения по счёту" },
+      "gates.enabled": { label: "Включены", kind: "bool", readOnly: true, hint: "В теневом режиме — нет" },
+    },
+    summary: (v) => {
+      const o = v as { enabled?: boolean; start?: unknown };
+      return `${o.enabled === false ? "выключено" : "копит события"} · старт ${String(o.start ?? 500)} · теневой режим`;
+    },
+  },
   min_withdraw_ton: {
     title: "Минимальный вывод",
     short: "Наименьшая сумма заявки на вывод",
@@ -527,8 +584,16 @@ export function taskTariffExamples(v: {
   };
 }
 
-export function fieldMeta(settingKey: string, field: string, sample: unknown): FieldMeta {
-  const own = SETTINGS[settingKey]?.fields?.[field];
+export function fieldMeta(
+  settingKey: string,
+  field: string,
+  sample: unknown,
+  /** полный путь до поля: подпись по «a.b» важнее подписи по имени поля */
+  path?: ReadonlyArray<string | number>,
+): FieldMeta {
+  const fields = SETTINGS[settingKey]?.fields;
+  const byPath = path && path.length > 1 ? fields?.[path.filter((x) => typeof x === "string").join(".")] : undefined;
+  const own = byPath ? { ...fields?.[field], ...byPath } : fields?.[field];
   const base: FieldMeta | undefined = COMMON[field];
   const inferred: FieldMeta = {
     label: field.replace(/_/g, " "),
