@@ -22,6 +22,7 @@ import {
 import { useScreenBack } from "@/lib/backButton";
 import { BackLink } from "@/components/BackLink";
 import { ProofImage } from "@/components/tasks/ProofUpload";
+import { RejectReasonSheet } from "@/components/tasks/RejectReasonSheet";
 import { t } from "@/i18n";
 
 function SubmissionCard({
@@ -34,16 +35,19 @@ function SubmissionCard({
   const review = useReviewSubmission();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+  const [reasonOpen, setReasonOpen] = useState(false);
   const toast = useToast();
 
-  async function act(approve: boolean) {
+  async function act(approve: boolean, rejectReason?: string, rejectNote?: string | null) {
     setBusy(approve ? "approve" : "reject");
     try {
       await review.mutateAsync({
         id: item.id,
         approve,
-        note: note.trim() || null,
+        note: approve ? note.trim() || null : rejectNote ?? null,
+        rejectReason: approve ? null : rejectReason,
       });
+      setReasonOpen(false);
       toast({ kind: approve ? "ok" : "info", title: approve ? t("inbox.approved") : t("inbox.rejected"), sub: `#${item.id}` });
       onDone();
     } catch (e) {
@@ -117,11 +121,20 @@ function SubmissionCard({
           type="button"
           className="ui-btn danger flex-1"
           disabled={!!busy}
-          onClick={() => act(false)}
+          onClick={() => setReasonOpen(true)}
         >
           {busy === "reject" ? "…" : t("inbox.reject")}
         </button>
       </div>
+
+      <RejectReasonSheet
+        open={reasonOpen}
+        kind="submission"
+        initialNote={note.trim()}
+        busy={busy === "reject"}
+        onClose={() => setReasonOpen(false)}
+        onConfirm={(reason, n) => act(false, reason, n)}
+      />
 
       {review.isError && (
         <p className="text-[12px] text-[var(--danger)]">
@@ -139,6 +152,7 @@ export function Inbox() {
   const approvals = usePendingTaskApprovals();
   const approveTask = useApproveTask();
   const rejectTask = useRejectTask();
+  const [rejectingTask, setRejectingTask] = useState<number | null>(null);
   const toast = useToast();
 
   const canModerate = me?.is_owner || me?.is_admin || me?.is_ambassador;
@@ -229,17 +243,32 @@ export function Inbox() {
                   type="button"
                   className="ui-btn danger flex-1"
                   disabled={rejectTask.isPending}
-                  onClick={() =>
-                    rejectTask.mutate(task.id, {
-                      onSuccess: () => toast({ kind: "info", title: t("inbox.taskRejected"), sub: `#${task.id}` }),
-                      onError: (e) => toast({ kind: "danger", title: t("inbox.rejectFailed"), sub: e.message }),
-                    })
-                  }
+                  onClick={() => setRejectingTask(task.id)}
                 >
                   {t("inbox.reject")}</button>
               </div>
             </div>
           ))}
+          <RejectReasonSheet
+            open={rejectingTask != null}
+            kind="task"
+            busy={rejectTask.isPending}
+            onClose={() => setRejectingTask(null)}
+            onConfirm={(reason, note) => {
+              const id = rejectingTask;
+              if (id == null) return;
+              rejectTask.mutate(
+                { taskId: id, reason, note },
+                {
+                  onSuccess: () => {
+                    setRejectingTask(null);
+                    toast({ kind: "info", title: t("inbox.taskRejected"), sub: `#${id}` });
+                  },
+                  onError: (e) => toast({ kind: "danger", title: t("inbox.rejectFailed"), sub: e.message }),
+                },
+              );
+            }}
+          />
         </section>
       )}
 
