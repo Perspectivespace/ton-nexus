@@ -1,1 +1,1 @@
-"""TON Nexus API."""
+"""Neon Nexus API."""

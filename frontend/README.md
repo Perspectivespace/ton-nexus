@@ -1,4 +1,4 @@
-# TON Nexus Mini App
+# Neon Nexus Mini App
 
 Vite + React 19 + TypeScript + Tailwind 4 + Framer Motion + TanStack Query.
 

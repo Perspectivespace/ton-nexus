@@ -8,7 +8,7 @@ export const onboarding: Record<keyof typeof ru, string> = {
   "onboarding.s3Title": "Withdraw in TON",
   "onboarding.s3Text": "Your balance grows from mining and tasks. Withdraw to your TON wallet; an operator checks each request.",
   "onboarding.requestCreated": "Request created",
-  "onboarding.aria": "Welcome to TON Nexus",
+  "onboarding.aria": "Welcome to Neon Nexus",
   "onboarding.skip": "Skip",
   "onboarding.screen": "Screen {k}",
   "onboarding.start": "Start the reactor",

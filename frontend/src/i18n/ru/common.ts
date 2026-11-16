@@ -45,7 +45,7 @@ export const common = {
   "ui.retry": "Повторить",
   "ui.loadingSection": "Загрузка раздела",
   "ui.loading": "Загрузка",
-  "ui.splashTagline": "Сеть TON · майнинг и задания",
+  "ui.splashTagline": "Майнинг и задания · на TON",
   "ui.sectionFailed": "Раздел не загрузился",
   "ui.checkConnection": "Проверьте связь и попробуйте ещё раз.",
   "ui.walletNotConnected": "Кошелёк не подключён",

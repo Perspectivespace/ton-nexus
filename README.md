@@ -1,4 +1,4 @@
-# TON Nexus / Task Forge
+# Neon Nexus / Task Forge
 
 Telegram Mini App: **рынок заданий (TON)** + **майнер-контур** + рулетки + ручные выводы.
 
