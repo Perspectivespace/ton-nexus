@@ -63,7 +63,7 @@ async def manifest(response: Response):
     response.headers["Cache-Control"] = "public, max-age=300"
     return {
         "url": base,
-        "name": "TON Nexus",
+        "name": "Neon Nexus",
         "iconUrl": f"{base}/apple-touch-icon.png",
     }
 

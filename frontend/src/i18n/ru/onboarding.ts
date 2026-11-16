@@ -6,7 +6,7 @@ export const onboarding = {
   "onboarding.s3Title": "Выводите в TON",
   "onboarding.s3Text": "Баланс растёт от майнинга и заданий. Вывод — на ваш TON-кошелёк, заявку проверяет оператор.",
   "onboarding.requestCreated": "Заявка создана",
-  "onboarding.aria": "Знакомство с TON Nexus",
+  "onboarding.aria": "Знакомство с Neon Nexus",
   "onboarding.skip": "Пропустить",
   "onboarding.screen": "Экран {k}",
   "onboarding.start": "Запустить реактор",

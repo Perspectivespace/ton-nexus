@@ -167,7 +167,7 @@ function HomeMain() {
     <div className="home-in space-y-5">
       <div {...r("head")}>
         <ScreenHeader
-          eyebrow="TON Nexus"
+          eyebrow="Neon Nexus"
           title={me?.first_name || me?.username || t("nav.home")}
           action={
             me ? (

@@ -49,7 +49,7 @@ export const ads: Record<keyof typeof ru, string> = {
   "ad.leave2": ". We don't check it, so be careful with payments and personal data.",
   "ad.openSite": "Open site",
   "ad.go": "Go",
-  "ad.note": "This ad passed moderation. City ads come from Nexus residents.",
+  "ad.note": "This ad passed moderation. City ads come from Neon Nexus residents.",
   "ad.prevMonth": "Previous month",
   "ad.nextMonth": "Next month",
   "ad.calAria": "Start date, {ym}",

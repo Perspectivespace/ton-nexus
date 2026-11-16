@@ -6,8 +6,8 @@ RU_FAMILY = frozenset({"ru", "uk", "be", "kk"})
 
 TEXTS: dict[str, dict[str, str]] = {
     "ru": {
-        "open": "Открыть TON Nexus",
-        "welcome": "<b>TON Nexus</b>\n\nЗадания · майнер · уровни · вывод TON\n\nНажми кнопку ниже, чтобы открыть приложение.",
+        "open": "Открыть Neon Nexus",
+        "welcome": "<b>Neon Nexus</b>\n<i>на TON</i>\n\nЗадания · майнер · уровни · вывод TON\n\nНажми кнопку ниже, чтобы открыть приложение.",
         "no_url": "\n\n⚠️ WEBAPP_URL не задан. Укажи URL Mini App в переменных окружения бота.",
         "help": (
             "Команды:\n"
@@ -18,8 +18,8 @@ TEXTS: dict[str, dict[str, str]] = {
         ),
     },
     "en": {
-        "open": "Open TON Nexus",
-        "welcome": "<b>TON Nexus</b>\n\nTasks · miner · levels · TON withdrawals\n\nTap the button below to open the app.",
+        "open": "Open Neon Nexus",
+        "welcome": "<b>Neon Nexus</b>\n<i>on TON</i>\n\nTasks · miner · levels · TON withdrawals\n\nTap the button below to open the app.",
         "no_url": "\n\n⚠️ WEBAPP_URL is not set. Add the Mini App URL to the bot's environment.",
         "help": (
             "Commands:\n"

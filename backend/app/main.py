@@ -1,4 +1,4 @@
-"""FastAPI entrypoint — TON Nexus."""
+"""FastAPI entrypoint — Neon Nexus."""
 
 import asyncio
 import logging
@@ -131,7 +131,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="TON Nexus API",
+    title="Neon Nexus API",
     version="0.3.0",
     description="Task marketplace + miner circuit Mini App backend",
     lifespan=lifespan,

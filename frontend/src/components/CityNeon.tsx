@@ -31,7 +31,9 @@ type Sign = {
   pw?: number; // размер области путей
   ph?: number;
   c: Rgb;
+  cs?: Record<number, Rgb>; // свой цвет отдельных глифов (O-узел в NEON — циан, остальное — сталь)
   kind: Kind;
+  with?: string; // мерцает вместе с другой вывеской (один таймер на обе строки)
   frame?: boolean; // тонкий LED-контур панели
   panel?: boolean; // тёмная стеклянная подложка (голо-панель)
   buzz?: number; // какая буква «больная»
@@ -52,6 +54,8 @@ const G: Record<string, string> = {
   X: "M1.2 1 8.8 13M8.8 1 1.2 13",
   U: "M1.5 1V9.6C1.5 12 3 13 5 13S8.5 12 8.5 9.6V1",
   S: "M8.6 2.4C7.8 1.4 6.6 1 5 1 2.6 1 1.4 2.2 1.4 3.8 1.4 7.6 8.6 6 8.6 10.2 8.6 12 7.2 13 5 13 3.2 13 2 12.4 1.2 11.4",
+  // O-узел бренда Neon Nexus: восьмигранник с ромбом-ядром (ядро мельче, чтобы на телефоне не слиплось в «Ø»)
+  "◈": "M3.6 1H6.4L9 3.6V10.4L6.4 13H3.6L1 10.4V3.6ZM5 5.6L6.4 7L5 8.4L3.6 7Z",
   // ромб-логотип (в духе знака TON): грань и ось
   "◇": "M1 2.4H9L5 12.6ZM5 2.4V12.6",
   // катакана-акцент ネオン
@@ -60,6 +64,9 @@ const G: Record<string, string> = {
   ン: "M2 2.4 4.2 4.6M1.4 12.6C5 11.6 7.6 9 9 3.4",
 };
 
+const STEEL: Rgb = [214, 228, 255]; // «хром» надписи бренда
+const NODE: Rgb = [43, 245, 255]; // неоновый узел бренда (#2BF5FF)
+
 export const SIGNS: Sign[] = [
   // HOTEL — узкая вертикальная голо-панель на фасаде башни слева, загорается по букве
   { id: "hotel", from: 1, x: 126, y: 540, s: 0.85, v: true, glyphs: ["H", "O", "T", "E", "L"], c: [255, 92, 170], kind: "seq", panel: true, frame: true },
@@ -67,8 +74,10 @@ export const SIGNS: Sign[] = [
   { id: "bar", from: 1, x: 209, y: 633, s: 1.3, glyphs: ["B", "A", "R"], c: [255, 70, 210], kind: "buzz", buzz: 1, lw: 1.4, panel: true },
   // LED-полоса по фасаду низкого дома под BAR — ровный холодный свет
   { id: "edge-c", from: 1, x: 214, y: 662, s: 1, glyphs: [], paths: ["M0 0H42"], pw: 42, ph: 0, c: [80, 230, 255], kind: "still" },
-  // NEXUS — горизонтальная строка на правом корпусе, изредка моргает
-  { id: "nexus", from: 2, x: 617, y: 664, s: 0.9, glyphs: ["N", "E", "X", "U", "S"], c: [150, 240, 255], kind: "flick" },
+  // NEON NEXUS (бренд, концепт «Узел»): две строки на правом корпусе — сталь, O-узел в NEON горит цианом; изредка моргают вместе.
+  // В одну строку на корпус не помещается: при допустимой ширине буквы выходят ~4 px — не читаются.
+  { id: "neon", from: 2, x: 623, y: 647, s: 0.9, glyphs: ["N", "E", "◈", "N"], c: STEEL, cs: { 2: NODE }, kind: "flick", with: "nexus" },
+  { id: "nexus", from: 2, x: 617, y: 664, s: 0.9, glyphs: ["N", "E", "X", "U", "S"], c: STEEL, kind: "flick" },
   // узкая панель: ромб-логотип + катакана ネオン
   { id: "panel", from: 2, x: 529, y: 684, s: 0.72, v: true, glyphs: ["◇", "ネ", "オ", "ン"], c: [176, 132, 255], kind: "flick", panel: true, frame: true },
   // LED-линия под NEXUS: бегущий огонь сегментами слева направо
@@ -172,7 +181,7 @@ function paintSign(cv: HTMLCanvasElement, s: Sign, wCss: number, hCss: number, k
     p.addPath(new Path2D((s.paths ? s.paths[i] : G[s.glyphs[i]]) ?? ""), new DOMMatrix([1, 0, 0, 1, x, y]));
     const lw = (s.paths ? LW * 1.6 : LW) * (s.lw ?? 1); // LED-полосы чуть толще букв
     if (part === "off") glass(g, p, lw);
-    else tube(g, p, s.c, lw);
+    else tube(g, p, s.cs?.[i] ?? s.c, lw);
   }
   if (s.frame && (part === "off" || part === "all" || part === 0)) {
     const { fw: w, fh: h } = signUnits(s);
@@ -417,9 +426,11 @@ export function CityNeon({ tier, phase }: { tier: number; phase: CityPhase }) {
       next();
     };
     for (const s of signs) {
+      if (s.with && signs.some((o) => o.id === s.with)) continue; // мерцает таймером ведущей вывески
       const node = el.querySelector<HTMLElement>(`[data-s="${s.id}"]`);
       if (!node) continue;
       const parts = Array.from(node.querySelectorAll<HTMLElement>("canvas.lit"));
+      for (const f of signs) if (f.with === s.id) parts.push(...el.querySelectorAll<HTMLElement>(`[data-s="${f.id}"] canvas.lit`));
       if (s.kind === "flick")
         loop(
           () => rnd(6000, 16000),

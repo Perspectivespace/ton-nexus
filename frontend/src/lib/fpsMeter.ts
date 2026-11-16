@@ -157,7 +157,7 @@ export function startFpsMeter() {
     const tg = (window as { Telegram?: { WebApp?: { platform?: string; version?: string } } }).Telegram?.WebApp;
     const c = nav.connection;
     const build = [...document.scripts].map((s) => s.src.split("/").pop()).find((n) => n?.startsWith("index")) ?? "—";
-    out.push(`TON Nexus · отчёт счётчика FPS · ${new Date().toLocaleString("ru-RU")}`);
+    out.push(`Neon Nexus · отчёт счётчика FPS · ${new Date().toLocaleString("ru-RU")}`);
     out.push(`сборка ${build} · ${here()}`);
     out.push(
       `экран ${innerWidth}×${innerHeight} @${devicePixelRatio} · ядер ${nav.hardwareConcurrency ?? "—"} · память ${nav.deviceMemory ?? "—"} ГБ · ` +

@@ -46,7 +46,7 @@ export const common: Record<keyof typeof ru, string> = {
   "ui.retry": "Retry",
   "ui.loadingSection": "Loading section",
   "ui.loading": "Loading",
-  "ui.splashTagline": "TON network · mining and tasks",
+  "ui.splashTagline": "Mining and tasks · on TON",
   "ui.sectionFailed": "Section failed to load",
   "ui.checkConnection": "Check your connection and try again.",
   "ui.walletNotConnected": "Wallet not connected",
