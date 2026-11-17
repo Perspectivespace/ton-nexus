@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { cityWalk } from "@/lib/cityWalk";
-import { useLangSync } from "@/api/hooks";
+import { useLangSync, useMe, useOnboardingSave } from "@/api/hooks";
+import { hintToShow, introDecision, useOnboardingUi, type HintKey } from "@/lib/onboarding";
+import { SectionHint } from "./SectionHint";
 import { districtFromStart } from "@/lib/districts";
 import { WebApp } from "@/lib/telegram";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -8,7 +10,7 @@ import { CityBackdrop } from "./CityBackdrop";
 import { Nav, isDockRoute } from "./Nav";
 import { AppHeader } from "./Brand";
 import { Splash, shouldShowSplash } from "./Splash";
-import { shouldShowOnboarding } from "./onboardingFlag";
+import { markDone, shouldShowOnboarding } from "./onboardingFlag";
 
 // знакомство нужно только при первом запуске — его чанк начинает грузиться сразу, пока играет заставка
 const loadOnboarding = () => import("./Onboarding");
@@ -18,13 +20,44 @@ import { ToastProvider } from "./ui/index";
 
 export function Layout() {
   const [splash, setSplash] = useState(shouldShowSplash);
-  const [onboarding, setOnboarding] = useState(shouldShowOnboarding);
   const endSplash = useCallback(() => setSplash(false), []);
-  const endOnboarding = useCallback(() => setOnboarding(false), []);
   useLangSync();
   // DESIGN п. 14.2: док только на четырёх разделах; на вложенных экранах — «Назад» (Telegram или ссылка)
   const loc = useLocation();
   const dock = isDockRoute(loc.pathname);
+
+  // знакомство: что показано, хранит сервер (me.onboarding); отметка на устройстве — запасная (lib/onboarding.ts)
+  const { data: me, isError: meFailed } = useMe();
+  const save = useOnboardingSave();
+  const replay = useOnboardingUi((s) => s.replay);
+  const endReplay = useOnboardingUi((s) => s.endReplay);
+  const [introClosed, setIntroClosed] = useState(false);
+  const decision = introDecision(me?.onboarding, meFailed, !shouldShowOnboarding());
+  const onboarding = replay || (decision === "show" && !introClosed);
+  useEffect(() => {
+    if (decision === "resync" && !save.isPending) save.mutate({ intro_done: true });
+  }, [decision]);
+  const endOnboarding = () => {
+    markDone();
+    setIntroClosed(true);
+    endReplay();
+    save.mutate({ intro_done: true });
+  };
+  // разовые подсказки разделов: после заставки и знакомства, с паузой — экран успевает отрисоваться
+  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
+  const due = splash || onboarding ? null : hintToShow(loc.pathname, me?.onboarding, dismissed);
+  const [hint, setHint] = useState<HintKey | null>(null);
+  useEffect(() => {
+    setHint(null);
+    if (!due) return;
+    const id = window.setTimeout(() => setHint(due), 700);
+    return () => window.clearTimeout(id);
+  }, [due]);
+  const closeHint = (k: HintKey) => {
+    setHint(null);
+    setDismissed((d) => new Set(d).add(k));
+    save.mutate({ hint: k });
+  };
   // «Прогулка» живёт только на главной: уход на другой экран её закрывает
   useEffect(() => {
     if (loc.pathname !== "/" && cityWalk.get().active) cityWalk.exit();
@@ -40,7 +73,6 @@ export function Layout() {
     }
     const d = districtFromStart(sp);
     if (d && window.location.pathname === "/") navigate(`/district?d=${d}`, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <ToastProvider>
@@ -52,6 +84,7 @@ export function Layout() {
         </main>
         {dock && <Nav />}
       </div>
+      {hint && dock && <SectionHint hint={hint} onClose={() => closeHint(hint)} />}
       {onboarding && (
         <Suspense fallback={null}>
           <Onboarding onDone={endOnboarding} />

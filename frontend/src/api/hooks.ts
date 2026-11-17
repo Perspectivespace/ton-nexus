@@ -1514,3 +1514,27 @@ export const useCityAdReject = () =>
   useOwnerAdAction(({ id, note }: { id: number; note: string }) =>
     api<CityAdOwner>(`/api/v1/city-ads/${id}/reject`, { method: "POST", body: JSON.stringify({ note: note || null }) }),
   );
+
+/* ── знакомство игрока: что уже показано (сервер, для всех устройств) ── */
+export type OnboardingPatch = { intro_done?: boolean; hint?: string; reset?: boolean };
+
+export function useOnboardingSave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OnboardingPatch) =>
+      api<NonNullable<MeOut["onboarding"]>>("/api/v1/me/onboarding", { method: "PUT", body: JSON.stringify(body) }),
+    // сразу в кэш me: подсказка не должна мигнуть снова, пока идёт запрос
+    onMutate: (body: OnboardingPatch) => {
+      qc.setQueryData<MeOut>(["me"], (m) => {
+        if (!m) return m;
+        const cur = body.reset ? { intro_done: false, hints: [] } : (m.onboarding ?? { intro_done: false, hints: [] });
+        const next = {
+          intro_done: body.intro_done ?? cur.intro_done,
+          hints: body.hint && !cur.hints.includes(body.hint) ? [...cur.hints, body.hint] : cur.hints,
+        };
+        return { ...m, onboarding: next };
+      });
+    },
+    onSuccess: (st) => qc.setQueryData<MeOut>(["me"], (m) => (m ? { ...m, onboarding: st } : m)),
+  });
+}
