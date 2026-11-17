@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useMe, useSetLang, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink, useDepositInfo, useRecentHistory } from "@/api/hooks";
+import { useMe, useOnboardingSave, useSetLang, useMyWithdrawals, useWithdrawLimits, useWallet, useWalletUnlink, useDepositInfo, useRecentHistory } from "@/api/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
 import { ProfileRanks } from "@/components/RatingLinks";
 import { api } from "@/api/client";
-import { IconGear, IconHistory, IconOut, IconWallet } from "@/components/icons";
+import { IconGear, IconHistory, IconOut, IconRefresh, IconWallet } from "@/components/icons";
+import { clearDone } from "@/components/onboardingFlag";
+import { useOnboardingUi } from "@/lib/onboarding";
 import { WalletConnectSheet } from "@/components/WalletConnectSheet";
 import { TopUpSheet } from "@/components/TopUpSheet";
 import { BalanceHistorySheet, HistoryRow } from "@/components/BalanceHistory";
@@ -293,7 +295,7 @@ export function Wallet() {
       </Sheet>
 
       <Sheet open={sheet === "settings"} onClose={closeSheet} title={t("settings.title")} sub={t("settings.sub")}>
-        <SettingsInfo />
+        <SettingsInfo onReplay={closeSheet} />
       </Sheet>
     </div>
   );
@@ -303,7 +305,16 @@ export function Wallet() {
  * Настройки: тема идёт из Telegram, анимации — из системы и мощности устройства; язык выбирается здесь
  * («Язык / Language» — подпись на обоих языках, чтобы найти её на любом) и хранится на сервере.
  */
-function SettingsInfo() {
+function SettingsInfo({ onReplay }: { onReplay: () => void }) {
+  const save = useOnboardingSave();
+  const startReplay = useOnboardingUi((st) => st.startReplay);
+  // повтор знакомства: сбрасываем на сервере (подсказки разделов покажутся снова) и на устройстве, открываем экраны
+  const replay = () => {
+    clearDone();
+    save.mutate({ reset: true });
+    onReplay();
+    startReplay();
+  };
   const root = typeof document !== "undefined" ? document.documentElement : null;
   const theme = root?.dataset.theme === "light" ? t("settings.themeDay") : t("settings.themeNight");
   const lowEnd = !!root?.classList.contains("low-end");
@@ -325,6 +336,7 @@ function SettingsInfo() {
       <List>
         <ListRow title={t("settings.theme")} sub={t("settings.themeSub")} value={theme} />
         <ListRow title={t("settings.motion")} sub={t("settings.motionSub")} value={motionMode} />
+        <ListRow icon={<IconRefresh size={20} />} iconTone="muted" title={t("onboarding.replay")} sub={t("onboarding.replaySub")} onClick={replay} />
       </List>
       <p className="ui-sec !text-[12px] !leading-[16px]">{t("settings.note")}</p>
     </div>
