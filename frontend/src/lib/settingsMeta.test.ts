@@ -208,3 +208,24 @@ describe("реклама в городе в редакторе владельц�
     expect(cityAdsExample("1", 0)).toBeNull();
   });
 });
+
+describe("«Честность» (integrity_rules) в редакторе владельца", () => {
+  it("русские подписи, теневой режим и ограничения — только чтение", () => {
+    expect(SETTINGS.integrity_rules.title).toBe("Честность");
+    expect(fieldMeta("integrity_rules", "shadow_mode", true)).toMatchObject({ kind: "bool", readOnly: true });
+    expect(fieldMeta("integrity_rules", "enabled", false, ["gates", "enabled"])).toMatchObject({
+      kind: "bool",
+      readOnly: true,
+      label: "Включены",
+    });
+    expect(fieldMeta("integrity_rules", "enabled", true, ["enabled"]).readOnly).toBeFalsy();
+    expect(fieldMeta("integrity_rules", "submission_rejected_forged", {}).label).toBe("Отказ: поддельное доказательство");
+    expect(fieldMeta("integrity_rules", "half_life_days", 90)).toMatchObject({ kind: "int", unit: "дн", min: 0 });
+  });
+
+  it("тиры подписаны по-русски, сводка", () => {
+    expect(SETTINGS.integrity_rules.rowLabel?.({ key: "exalted", min: 950 })).toBe("Превознесение");
+    expect(SETTINGS.integrity_rules.rowLabel?.({ key: "hostile", min: 0 })).toBe("Неприязнь");
+    expect(summarize("integrity_rules", { enabled: true, start: 500 })).toBe("копит события · старт 500 · теневой режим");
+  });
+});

@@ -405,14 +405,17 @@ export function useReviewSubmission() {
       id,
       approve,
       note,
+      rejectReason,
     }: {
       id: number;
       approve: boolean;
       note?: string | null;
+      /** при отказе обязателен: low_quality | wrong_task | duplicate | forged | other */
+      rejectReason?: string | null;
     }) =>
       api<InboxSubmission>(`/api/v1/tasks/submissions/${id}/review`, {
         method: "POST",
-        body: JSON.stringify({ approve, note: note || null }),
+        body: JSON.stringify({ approve, note: note || null, reject_reason: approve ? null : rejectReason ?? null }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbox"] });
@@ -443,8 +446,11 @@ export function useApproveTask() {
 export function useRejectTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (taskId: number) =>
-      api<TaskOut>(`/api/v1/tasks/${taskId}/reject`, { method: "POST" }),
+    mutationFn: ({ taskId, reason, note }: { taskId: number; reason: string; note?: string | null }) =>
+      api<TaskOut>(`/api/v1/tasks/${taskId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ reject_reason: reason, note: note || null }),
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
   });
 }

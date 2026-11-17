@@ -500,10 +500,10 @@ async def approve_task(session: AsyncSession, *, task_id: int, actor: User) -> T
     return _view(task)
 
 
-def check_reject_reason(code: str | None, note: str | None, allowed: tuple[str, ...]) -> str | None:
-    """Код причины отказа. Пусто — «other» без события (старые клиенты); «other» — нужен комментарий."""
-    if code is None:
-        return None
+def check_reject_reason(code: str | None, note: str | None, allowed: tuple[str, ...]) -> str:
+    """Код причины отказа обязателен; «other» — только с заметкой."""
+    if not code:
+        raise TaskError("reject reason required")
     if code not in allowed:
         raise TaskError("invalid reject reason")
     if code == "other" and not (note or "").strip():
@@ -530,7 +530,7 @@ async def reject_task(
     if task.status != "pending_approval":
         raise TaskStateError("not pending approval")
     task.status = "rejected"
-    task.reject_reason = reject_reason or "other"
+    task.reject_reason = reject_reason
     await session.flush()
     if reject_reason == "bad_task":
         from app.services import integrity as integrity_svc
@@ -778,7 +778,7 @@ async def review_submission(
             task.status = "completed"
     else:
         sub.status = "rejected"
-        sub.reject_reason = reject_reason or "other"
+        sub.reject_reason = reject_reason
         if task.status == "cancelled":
             # задание отменено: резерв под эту заявку освободился — вернуть создателю
             from app.services import task_owner as owner_svc

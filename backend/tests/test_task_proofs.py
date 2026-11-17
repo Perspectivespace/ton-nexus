@@ -265,7 +265,8 @@ class Cleanup(Base_):
                 p = await pf.store_upload(s, user=w, task=task, data=png(), declared="image/png")
                 sub = await t_svc.submit(s, user=w, task_id=task.id, proof_upload_id=p.id)
                 self.assertEqual(pf._aware(p.delete_after) - pf._aware(p.created_at), pf.NEVER_REVIEWED)
-                await t_svc.review_submission(s, actor=owner, submission_id=sub.id, approve=approve)
+                await t_svc.review_submission(s, actor=owner, submission_id=sub.id, approve=approve,
+                                              reject_reason=None if approve else "low_quality")
                 await s.refresh(p)
                 reviewed = pf._aware(p.reviewed_at)
                 self.assertIsNotNone(reviewed)
