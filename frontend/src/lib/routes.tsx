@@ -1,5 +1,6 @@
 import { idleWhenQuiet } from "@/lib/quiet";
-import { Component, lazy, Suspense, createElement, type ComponentType, type ReactNode } from "react";
+import { Component, lazy, Suspense, createElement, type ComponentType, type ErrorInfo, type ReactNode } from "react";
+import { reportError } from "@/lib/errorReport";
 import { Navigate, useLocation } from "react-router-dom";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { ErrorState } from "@/components/ui/States";
@@ -138,8 +139,9 @@ class ChunkBoundary extends Component<{ children: ReactNode }, { failed: boolean
   static getDerivedStateFromError() {
     return { failed: true };
   }
-  componentDidCatch(e: unknown) {
+  componentDidCatch(e: unknown, info: ErrorInfo) {
     if (isChunkError(e)) reloadOnce();
+    else reportError("render", e, info.componentStack?.split("\n").slice(0, 6).join("\n") ?? "");
   }
   render() {
     if (!this.state.failed) return this.props.children;

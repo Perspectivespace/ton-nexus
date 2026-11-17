@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.admin import router as admin_router
 from app.api.arena import router as arena_router
 from app.api.city_ads import router as city_ads_router
+from app.api.client_errors import router as client_errors_router
 from app.api.deploy import router as deploy_router
 from app.api.economy import router as economy_router
 from app.api.engagement import router as engagement_router
@@ -36,3 +37,4 @@ api_router.include_router(arena_router)
 api_router.include_router(city_ads_router)
 api_router.include_router(secret_promo_router)
 api_router.include_router(integrity_router)
+api_router.include_router(client_errors_router)
