@@ -3,7 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Integer, Numeric, String, func
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, Integer, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -20,6 +20,8 @@ class User(Base):
     language_code: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # Язык приложения, выбранный игроком в Профиле (ru / en). Пусто — берём из Telegram (app/core/i18n.py).
     lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # Знакомство: {"intro": bool, "hints": [...]} — что уже показано (services/onboarding.py). Пусто — новый игрок.
+    onboarding: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"), nullable=False)
 

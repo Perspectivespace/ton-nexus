@@ -12,7 +12,8 @@ html.city-walk .cv2-life > .cads-live { --u: calc(max(100vw, 100vh * 720 / 1280)
 html.city-walk .app-brand,
 html.city-walk .app-shell > .dock-layer,
 html.city-walk .ui-dock,
-html.city-walk .dock-games { display: none !important; }
+html.city-walk .dock-games,
+html.city-walk .hint-layer { display: none !important; }
 html.city-walk .app-shell,
 html.city-walk .app-stage { pointer-events: none; }
 html.city-walk .city .c-stage { width: max(100%, calc(100vh * 720 / 1280)); width: max(100%, calc(100dvh * 720 / 1280)); max-width: none;

@@ -40,6 +40,8 @@ export type MeOut = {
   /** язык приложения: выбор в Профиле или язык Telegram (ru / en); lang_chosen — выбран вручную */
   lang?: string;
   lang_chosen?: boolean;
+  /** знакомство: пройдены ли вводные экраны и какие подсказки разделов показаны (на сервере, для всех устройств) */
+  onboarding?: { intro_done: boolean; hints: string[] } | null;
   miner: MinerOut | null;
 };
 
