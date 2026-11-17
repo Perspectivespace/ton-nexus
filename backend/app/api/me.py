@@ -12,6 +12,7 @@ from app.core.i18n import SUPPORTED, normalize, user_lang
 from app.db.session import get_db
 from app.models.miner import Miner
 from app.models.user import User
+from app.services import onboarding as onb
 from app.services.roles import can_deploy, is_deployer, is_platform_owner
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -27,6 +28,11 @@ class MinerOut(BaseModel):
     pending_reward: Decimal
 
     model_config = {"from_attributes": True}
+
+
+class OnboardingOut(BaseModel):
+    intro_done: bool
+    hints: list[str]
 
 
 class MeOut(BaseModel):
@@ -48,6 +54,8 @@ class MeOut(BaseModel):
     # язык приложения: выбор в Профиле или язык Telegram; lang_chosen — выбран ли вручную
     lang: str = "en"
     lang_chosen: bool = False
+    # знакомство: пройдены ли вводные экраны и какие подсказки разделов уже показаны
+    onboarding: "OnboardingOut | None" = None
     miner: MinerOut | None
 
     model_config = {"from_attributes": True}
@@ -77,6 +85,7 @@ async def me(
         can_deploy=can_deploy(user),
         lang=user_lang(user),
         lang_chosen=normalize(user.lang) is not None,
+        onboarding=OnboardingOut(**onb.state(user)),
         miner=MinerOut.model_validate(miner) if miner else None,
     )
 
@@ -103,3 +112,24 @@ async def set_lang(
     user.lang = lang
     await db.commit()
     return LangOut(lang=lang, lang_chosen=True)
+
+
+class OnboardingIn(BaseModel):
+    intro_done: bool | None = None
+    hint: str | None = None
+    reset: bool = False
+
+
+@router.put("/onboarding", response_model=OnboardingOut)
+async def set_onboarding(
+    body: OnboardingIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Знакомство: отметить вводные экраны / подсказку раздела показанными или начать заново (Профиль → Настройки)."""
+    try:
+        out = onb.apply(user, intro_done=body.intro_done, hint=body.hint, reset=body.reset)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"code": "bad_hint", "supported": list(onb.HINTS)}) from e
+    await db.commit()
+    return OnboardingOut(**out)
