@@ -1514,3 +1514,39 @@ export const useCityAdReject = () =>
   useOwnerAdAction(({ id, note }: { id: number; note: string }) =>
     api<CityAdOwner>(`/api/v1/city-ads/${id}/reject`, { method: "POST", body: JSON.stringify({ note: note || null }) }),
   );
+
+/* ── ошибки клиента (P6), только владелец ── */
+export type ClientErrorItem = {
+  id: number;
+  kind: "error" | "rejection" | "render";
+  message: string;
+  route: string | null;
+  build: string | null;
+  platform: string | null;
+  count: number;
+  users: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  stack?: string | null;
+};
+export type ClientErrorsOut = { groups: number; events: number; groups_24h: number; groups_7d: number; items: ClientErrorItem[] };
+
+export function useClientErrors() {
+  return useQuery({ queryKey: ["owner", "client-errors"], queryFn: () => api<ClientErrorsOut>("/api/v1/client-errors") });
+}
+
+export function useClientErrorDetail(id: number | null) {
+  return useQuery({
+    queryKey: ["owner", "client-errors", id],
+    queryFn: () => api<ClientErrorItem>(`/api/v1/client-errors/${id}`),
+    enabled: id != null,
+  });
+}
+
+export function useClientErrorsClear() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id?: number) => api<{ deleted: number }>(id != null ? `/api/v1/client-errors/${id}` : "/api/v1/client-errors", { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["owner", "client-errors"] }),
+  });
+}

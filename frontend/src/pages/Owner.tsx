@@ -12,6 +12,7 @@ import { OwnerShell } from "@/components/owner/OwnerShell";
 import { SettingsList } from "@/components/owner/SettingsList";
 import { CityAdsOwner } from "@/components/owner/CityAdsOwner";
 import { SecretPromosOwner } from "@/components/owner/SecretPromosOwner";
+import { ClientErrorsOwner } from "@/components/owner/ClientErrorsOwner";
 import {
   StatusPill,
   LoadingPanel,
@@ -311,6 +312,7 @@ export function Owner() {
       {tab === "overview" && (
         <div className="space-y-4">
           <OverviewTab />
+          <ClientErrorsOwner />
           <FpsToggle />
         </div>
       )}
