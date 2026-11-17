@@ -6,6 +6,7 @@ from app.models.miner import Miner, MinerUpgradeLog
 from app.models.promo import DailyCheckIn, PromoCode, PromoRedemption
 from app.models.secret_promo import PromoFailedAttempt, SecretPromoAppearance, SecretPromoCampaign, SecretPromoClaim
 from app.models.task import Task, TaskOwnerAction, TaskProof, TaskPurchase, TaskSubmission
+from app.models.client_error import ClientError
 from app.models.city_ad import CityAd, CityAdDay, CityAdEvent, CityAdImage, CityAdSpot
 from app.models.tower import TowerDailyAttempts, TowerGame, TowerMonth, TowerMonthlyBest, TowerMonthResult
 from app.models.user import User
@@ -16,6 +17,7 @@ from app.models.withdraw import WithdrawRequest
 from app.models.xp_event import XpEvent
 
 __all__ = [
+    "ClientError",
     "IntegrityEvent",
     "ArenaRoom",
     "ArenaEntry",
