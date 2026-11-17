@@ -6,7 +6,7 @@ PostgreSQL · SQLAlchemy 2 async · Alembic (миграции — следующ
 
 | Таблица | Назначение |
 |---------|------------|
-| `users` | Telegram-пользователь, баланс, XP/level, Фокус/Запрет; `integrity` / `integrity_tier` — «Честность» (теневой режим, игроку не видна) |
+| `users` | Telegram-пользователь, баланс, XP/level, Фокус/Запрет; `integrity` / `integrity_tier` — «Честность» (теневой режим, игроку не видна); `onboarding` (JSON, миграция 028) — знакомство: `intro` пройдено, `hints` — показанные подсказки разделов |
 | `balance_history` | Леджер credit/debit |
 | `miners` | 1 слот: статы + сессия |
 | `miner_upgrade_logs` | Аудит double-wheel и burn |
