@@ -77,6 +77,13 @@ class SubmitBody(BaseModel):
 class ReviewBody(BaseModel):
     approve: bool
     note: str | None = None
+    # причина отказа: low_quality | wrong_task | duplicate | forged | other (для «Честности», игроку не показывается)
+    reject_reason: str | None = None
+
+
+class RejectTaskBody(BaseModel):
+    note: str | None = None
+    reject_reason: str | None = None  # bad_task | other
 
 
 class SubmissionOut(BaseModel):
@@ -183,7 +190,8 @@ async def review_submission(submission_id: int, body: ReviewBody,
                             user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     try:
         sub = await tasks_svc.review_submission(db, actor=user, submission_id=submission_id,
-                                                 approve=body.approve, note=body.note)
+                                                 approve=body.approve, note=body.note,
+                                                 reject_reason=body.reject_reason)
         proofs = await proofs_svc.for_submissions(db, [sub.id])
         out = _sub_out(sub, proofs.get(sub.id))
         await db.commit()
@@ -344,9 +352,12 @@ async def approve_task(task_id: int, user: User = Depends(get_current_user), db:
 
 
 @router.post("/{task_id}/reject", response_model=TaskOut)
-async def reject_task(task_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def reject_task(task_id: int, body: RejectTaskBody | None = None,
+                      user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    body = body or RejectTaskBody()
     try:
-        t = await tasks_svc.reject_task(db, task_id=task_id, actor=user)
+        t = await tasks_svc.reject_task(db, task_id=task_id, actor=user, note=body.note,
+                                        reject_reason=body.reject_reason)
         await db.commit()
         return _task_out(t)
     except TaskPermissionError as e:

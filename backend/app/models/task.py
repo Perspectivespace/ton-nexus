@@ -44,6 +44,9 @@ class Task(Base):
     partner_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # «Честность»: код причины отказа модерации (bad_task / other) и задел под допуск по счёту (пока не проверяется)
+    reject_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    min_integrity: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -70,6 +73,8 @@ class TaskSubmission(Base):
 
     status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False, index=True)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # код причины отказа: low_quality · wrong_task · duplicate · forged · other
+    reject_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
     reviewed_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

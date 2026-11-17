@@ -6,6 +6,7 @@ from app.api.city_ads import router as city_ads_router
 from app.api.deploy import router as deploy_router
 from app.api.economy import router as economy_router
 from app.api.engagement import router as engagement_router
+from app.api.integrity import router as integrity_router
 from app.api.me import router as me_router
 from app.api.miner import router as miner_router
 from app.api.ratings import router as ratings_router
@@ -34,3 +35,4 @@ api_router.include_router(ratings_router)
 api_router.include_router(arena_router)
 api_router.include_router(city_ads_router)
 api_router.include_router(secret_promo_router)
+api_router.include_router(integrity_router)

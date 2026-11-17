@@ -38,6 +38,10 @@ class User(Base):
     is_deployer: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Владелец, назначенный в приложении (вдобавок к TELEGRAM_OWNER_IDS). Назначают только деплойеры.
     is_owner: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # «Честность» (репутация), теневой режим: 0–1000, старт 500; игрокам не показывается (services/integrity.py)
+    integrity: Mapped[int] = mapped_column(Integer, default=500, server_default="500", nullable=False)
+    integrity_tier: Mapped[str] = mapped_column(String(16), default="neutral", server_default="neutral", nullable=False)
+    integrity_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deposit_memo: Mapped[str | None] = mapped_column(String(16), nullable=True, unique=True)
 
     created_at: Mapped[datetime] = mapped_column(

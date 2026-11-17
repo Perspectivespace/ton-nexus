@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
 from app.services.arena_config import DEFAULT_COMMISSION_BPS, MAX_COMMISSION_BPS, MIN_COMMISSION_BPS
-from app.services import city_ads, ratings, task_tariff, tower_prizes
+from app.services import city_ads, integrity_rules, ratings, task_tariff, tower_prizes
 from app.services.economy_seed import DEFAULTS, seed_economy
 
 
@@ -36,6 +36,8 @@ def _fill_missing(key: str, value: Any) -> Any:
         return merged
     if key == "arena" and isinstance(value, dict) and "commission_bp" not in value:
         return {**value, "commission_bp": DEFAULT_COMMISSION_BPS}
+    if key == integrity_rules.KEY:
+        return integrity_rules.merged(value)
     return value
 
 
@@ -122,6 +124,11 @@ async def set_setting(
         try:
             value = city_ads.normalize(value)
         except city_ads.CityAdError as e:
+            raise EconomyAdminError(str(e)) from e
+    elif key == integrity_rules.KEY:
+        try:
+            value = integrity_rules.normalize(value)
+        except integrity_rules.IntegrityRulesError as e:
             raise EconomyAdminError(str(e)) from e
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
@@ -265,6 +272,7 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "task_platform_commission_bp", "group": "tasks", "label": "Комиссия платформы (bp)"},
     {"key": "task_tariff", "group": "tasks", "label": "Тариф заданий"},
     {"key": "city_ads", "group": "city_ads", "label": "Реклама в городе"},
+    {"key": "integrity_rules", "group": "integrity", "label": "Честность (теневой режим)"},
     {"key": "min_withdraw_ton", "group": "withdraw", "label": "Мин. вывод TON"},
     {"key": "referral_reward", "group": "growth", "label": "Реферальная награда"},
     {"key": "daily_rewards", "group": "daily", "label": "Награды daily/streak"},

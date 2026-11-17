@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
+from app.services import integrity_rules
 
 _PRIZES_OFF: dict = {
     "enabled": False,
@@ -192,6 +193,9 @@ DEFAULTS: dict[str, tuple[object, str]] = {
     "friend_rule": (
         {"min_level": 3, "min_tasks": 20, "need_both": False},
         "Когда приглашённый друг засчитывается: уровень и/или принятые задания (0 — условие выключено)",
+    ),    integrity_rules.KEY: (
+        integrity_rules.defaults(),
+        "Честность: веса событий, затухание, лимиты, тиры. Теневой режим — только копим данные, эффектов нет",
     ),
 }
 
