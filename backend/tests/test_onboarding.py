@@ -113,3 +113,26 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(onb.state(u), {"intro_done": True, "hints": list(onb.HINTS)})
         apply(mod.downgrade)
         self.assertNotIn("onboarding", [c["name"] for c in sa.inspect(eng).get_columns("users")])
+
+    def test_028_backfill_param_is_json_for_postgres(self):
+        """В Postgres users.onboarding — json: строковый (VARCHAR) параметр UPDATE там не проходит,
+        `alembic upgrade head` падал (SQLite такое прощает, поэтому тест выше этого не ловил)."""
+        import importlib.util
+        import pathlib
+
+        import sqlalchemy as sa
+        from sqlalchemy.dialects.postgresql import asyncpg as pg_asyncpg
+
+        path = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions" / "028_user_onboarding.py"
+        spec = importlib.util.spec_from_file_location("m028pg", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        fake_op = mock.MagicMock()
+        insp = mock.MagicMock()
+        insp.get_columns.return_value = [{"name": "id"}]
+        with mock.patch.object(mod, "op", fake_op), mock.patch.object(mod.sa, "inspect", return_value=insp):
+            mod.upgrade()
+        stmt = fake_op.execute.call_args.args[0]
+        sql = str(stmt.compile(dialect=pg_asyncpg.dialect()))
+        self.assertNotIn("VARCHAR", sql)
+        self.assertIsInstance(stmt._bindparams["v"].type, sa.JSON)
