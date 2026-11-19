@@ -63,7 +63,14 @@ async function mount(el: React.ReactNode) {
       </QueryClientProvider>,
     ),
   );
-  await act(async () => new Promise((r) => setTimeout(r, 0)));
+  await until(() => true); // один такт на первые запросы
+}
+/** дождаться условия: ответы «сервера» приходят асинхронно, под нагрузкой — не за один такт */
+async function until(ok: () => boolean, tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    await act(async () => new Promise((r) => setTimeout(r, 10)));
+    if (ok()) return;
+  }
 }
 const btn = (text: string) => [...document.querySelectorAll("button")].find((b) => b.textContent?.includes(text)) as HTMLButtonElement;
 
@@ -82,6 +89,7 @@ afterEach(() => {
 describe("достижения: экран игрока", () => {
   it("ветка с прогрессом: сколько до следующей ступени, сколько ступеней осталось", async () => {
     await mount(<Achievements />);
+    await until(() => !!host.querySelector(".ach-tier"));
     expect(host.textContent).toContain("Задания");
     expect(host.textContent).toContain("До ступени 25: ещё 8");
     expect(host.textContent).toContain("осталось ступеней: 2");
@@ -91,8 +99,10 @@ describe("достижения: экран игрока", () => {
 
   it("полученную ступень можно закрепить в профиле", async () => {
     await mount(<Achievements />);
+    await until(() => !!host.querySelector(".ach-tier"));
     await act(async () => (host.querySelector(".ach-tier.done") as HTMLButtonElement).click());
     await act(async () => btn("Закрепить в профиле").click());
+    await until(() => m.calls.some((c) => c.path === "/api/v1/achievements/pin"));
     const pin = m.calls.find((c) => c.path === "/api/v1/achievements/pin");
     expect(pin?.init?.method).toBe("PUT");
     expect(JSON.parse(String(pin?.init?.body))).toEqual({ branch: "tasks", tier: 10 });
@@ -100,6 +110,7 @@ describe("достижения: экран игрока", () => {
 
   it("неполученную ступень закрепить нельзя", async () => {
     await mount(<Achievements />);
+    await until(() => !!host.querySelector(".ach-tier"));
     await act(async () => (host.querySelector(".ach-tier:not(.done)") as HTMLButtonElement).click());
     expect(btn("Закрепить в профиле")).toBeUndefined();
     expect(document.body.textContent).toContain("Не открыто");
@@ -108,6 +119,7 @@ describe("достижения: экран игрока", () => {
   it("на английском — английский текст", async () => {
     setLang("en");
     await mount(<Achievements />);
+    await until(() => !!host.querySelector(".ach-tier"));
     expect(host.textContent).toContain("8 more to reach 25");
     expect(host.textContent).toContain("tiers left: 2");
   });
@@ -116,6 +128,7 @@ describe("достижения: экран игрока", () => {
 describe("достижения: профиль, окно, значок автора", () => {
   it("карточка профиля: подсказка закрепить и прогресс веток", async () => {
     await mount(<AchievementsCard />);
+    await until(() => !!host.querySelector(".ach-mini"));
     expect(host.textContent).toContain("Откройте полученную ступень");
     expect(host.textContent).toContain("17 / 25");
     expect(branchShare(VIEW.branches[0])).toBeCloseTo(7 / 15);
@@ -124,9 +137,11 @@ describe("достижения: профиль, окно, значок авто�
   it("праздничное окно: награда и отметка «показано»", async () => {
     m.fresh = { items: [{ id: 7, branch: "tasks", tier: 10, ton: "0.03", xp: 10, status: "paid", created_at: null, metal: "bronze", index: 1, of: 3 }] };
     await mount(<AchCelebration enabled />);
+    await until(() => !!document.querySelector(".ach-cel"));
     expect(document.body.textContent).toContain("Новое достижение");
     expect(document.body.textContent).toContain("+0,03 TON");
     await act(async () => btn("Отлично").click());
+    await until(() => !document.querySelector(".ach-cel"));
     const seen = m.calls.find((c) => c.path === "/api/v1/achievements/seen");
     expect(JSON.parse(String(seen?.init?.body))).toEqual({ ids: [7] });
     expect(document.querySelector(".ach-cel")).toBeNull();
@@ -135,6 +150,7 @@ describe("достижения: профиль, окно, значок авто�
   it("крупная награда ждёт подтверждения — так и написано", async () => {
     m.fresh = { items: [{ id: 8, branch: "level", tier: 150, ton: "10", xp: 90, status: "pending", created_at: null, metal: "gold", index: 8, of: 11 }] };
     await mount(<AchCelebration enabled />);
+    await until(() => !!document.querySelector(".ach-cel"));
     expect(document.body.textContent).toContain("Награда 10 TON придёт после подтверждения");
     await act(async () => btn("Отлично").click());
   });
