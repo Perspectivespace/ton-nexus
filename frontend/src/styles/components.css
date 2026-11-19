@@ -820,8 +820,24 @@ button.ui-stat.scan:disabled { opacity: 1; }
 .ow-about p + p { margin-top: 6px; }
 /* 4 раздела на 360px: ширина вкладки по подписи, без обрезки */
 .ow-tabs .ui-tab { flex: 1 1 auto; padding: 0 4px; }
-/* 5 разделов (с «Рекламой») на 360–400px: кегль и разрядка мельче, всё в одну строку */
-@media (max-width: 420px) { .ow-tabs .ui-tab { padding: 0 2px; font-size: 11.5px; letter-spacing: .03em; } }
+/* 6 разделов (с «Достижениями») в строку на 360–420px не влезают: сетка 3×2, кегль чуть мельче */
+@media (max-width: 420px) {
+  .ow-tabs .ui-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ow-tabs .ui-tab { height: 40px; padding: 0 2px; font-size: 12px; letter-spacing: .04em; }
+}
+
+/* Кабинет → «Достижения»: таблица ступеней ветки (порог · TON · XP · вкл · убрать) */
+.ach-ow-title { margin: 0; font: 700 16px/20px var(--f-display); color: var(--text); }
+.ach-ow-sw { width: 88px; flex: none; }
+.ach-ow-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, .8fr) 36px 28px; gap: 6px 6px; align-items: start; }
+.ach-ow-grid.no-ton { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 36px 28px; }
+.ach-ow-h { font: 600 11px/14px var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
+.ach-ow-cell { display: grid; gap: 2px; min-width: 0; }
+.ach-ow-cell .ui-input { width: 100%; min-width: 0; height: 40px; padding: 0 8px; font: 500 14px/1 var(--f-mono); }
+.ach-ow-check { width: 22px; height: 22px; margin: 9px 0 0 6px; accent-color: var(--neon); }
+.ach-ow-x { width: 28px; height: 40px; border: 0; background: none; color: var(--text-3); font: 400 20px/1 var(--f-sans); cursor: pointer; }
+.ach-ow-x:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
+.ach-ow-save { position: sticky; bottom: calc(12px + var(--safe-b, 0px)); z-index: 5; }
 
 /* —— Кабинет: деплой (фаза 3) —— */
 .dp-rail { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; }

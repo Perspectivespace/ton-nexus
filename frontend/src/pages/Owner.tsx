@@ -13,6 +13,7 @@ import { SettingsList } from "@/components/owner/SettingsList";
 import { CityAdsOwner } from "@/components/owner/CityAdsOwner";
 import { SecretPromosOwner } from "@/components/owner/SecretPromosOwner";
 import { ClientErrorsOwner } from "@/components/owner/ClientErrorsOwner";
+import { AchievementsOwner } from "@/components/owner/AchievementsOwner";
 import {
   StatusPill,
   LoadingPanel,
@@ -255,13 +256,14 @@ function TasksTab() {
   );
 }
 
-const TABS = ["overview", "tasks", "promos", "ads", "economy"] as const;
+const TABS = ["overview", "tasks", "promos", "ads", "achievements", "economy"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_RU: Record<Tab, string> = {
   overview: "Обзор",
   tasks: "Задания",
   promos: "Промо",
   ads: "Реклама",
+  achievements: "Достижения",
   economy: "Экономика",
 };
 
@@ -319,6 +321,7 @@ export function Owner() {
       {tab === "tasks" && <TasksTab />}
       {tab === "promos" && <PromosTab />}
       {tab === "ads" && <CityAdsOwner />}
+      {tab === "achievements" && <AchievementsOwner />}
       {tab === "economy" && (
         <>
           {isLoading && <LoadingPanel label="Загрузка настроек…" />}

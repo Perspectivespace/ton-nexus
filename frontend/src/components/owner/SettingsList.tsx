@@ -34,6 +34,7 @@ export function SettingsList({ items, onSaved }: { items: EconomySetting[]; onSa
   const groups = useMemo(() => {
     const map = new Map<string, EconomySetting[]>();
     for (const s of items) {
+      if (s.key === "achievements") continue; // своя вкладка «Достижения»: ступени веток удобнее таблицей
       const g = GROUP_RU[s.group || ""] ? s.group! : "custom";
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(s);
