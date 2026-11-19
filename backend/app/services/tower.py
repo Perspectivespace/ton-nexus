@@ -287,6 +287,11 @@ async def finish_game(
             best_row.achieved_at = now
             new_best = True
     await session.flush()
+    if res.score > 0:
+        # достижения: ветка «игры» (засчитываются забеги со счётом); ошибка не мешает итогу забега
+        from app.services import achievements as achievements_svc
+
+        await achievements_svc.safe_check(session, user.id, now=now)
     best, rank = await month_standing(session, user.id, month)
     return FinishResult(game=game, result=res, new_best=new_best, best_month=best or 0, rank=rank)
 

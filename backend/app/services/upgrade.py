@@ -171,6 +171,11 @@ async def attempt_upgrade(
         )
     )
     await session.flush()
+    if success:
+        # достижения: ветка «уровень майнера»; ошибка не мешает усилению
+        from app.services import achievements as achievements_svc
+
+        await achievements_svc.safe_check(session, user_id)
 
     return UpgradeResult(
         upgrade_type=upgrade_type,

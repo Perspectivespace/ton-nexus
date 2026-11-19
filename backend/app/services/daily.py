@@ -131,6 +131,11 @@ async def claim_daily(session: AsyncSession, *, user: User, now: datetime | None
         DailyCheckIn(user_id=user.id, check_date=today, streak=streak, reward_ton=ton)
     )
     await session.flush()
+    if xp > 0:
+        # достижения: ветка «уровень аккаунта»; ошибка не мешает ежедневной награде
+        from app.services import achievements as achievements_svc
+
+        await achievements_svc.safe_check(session, user.id, now=now)
 
     return DailyResult(
         already_claimed=False,
