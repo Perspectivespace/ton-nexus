@@ -41,6 +41,8 @@ PLACED = ("active", "paused", "completed", "closed")  # задание опуб�
 DONE = ("paid", "pending", "rejected", "baseline")  # ступень пройдена (для экрана)
 NOTIFY_MAX_AGE = timedelta(days=3)  # старше — в бот не шлём (после долгого простоя рассылки)
 BALANCE_TYPE = "achievement"
+WALL = ("paid", "baseline")  # на «Стене славы»: отклонённые и ждущие подтверждения не в счёт
+WALL_MAX = 50
 
 
 def ton_str(v) -> str:
@@ -365,6 +367,66 @@ async def badges_for(session: AsyncSession, user_ids: list[int], branch: str = "
         .group_by(AchievementAward.user_id)
     )).all()
     return {uid: {"branch": branch, "tier": int(t), **badge(cfg, branch, int(t))} for uid, t in rows}
+
+
+# ── «Стена славы» ─────────────────────────────────────────────────────────────
+
+
+def _wall_name(u: User) -> str | None:
+    """Имя на стене; пусто — экран подпишет «Игрок» на языке зрителя."""
+    name = (u.first_name or u.username or "").strip()
+    return name[:24] or None
+
+
+async def wall(session: AsyncSession, user_id: int, limit: int = WALL_MAX) -> dict[str, Any]:
+    """Игроки с самыми редкими достижениями.
+
+    Редкость ступени — сколько игроков её получили (без забаненных; отклонённые и ждущие подтверждения не в счёт).
+    Порядок: самая редкая ступень игрока (меньше обладателей — выше; при равенстве — ступень выше в своей ветке),
+    затем число ступеней ↓, затем кто раньше получил последнюю ↑, затем id ↑.
+    Считается в памяти по всем выданным ступеням: одна строка на ступень игрока, при нынешних объёмах это дёшево.
+    """
+    cfg = await load_rules(session)
+    rows = (await session.execute(
+        select(AchievementAward.user_id, AchievementAward.branch, AchievementAward.tier, AchievementAward.created_at)
+        .join(User, User.id == AchievementAward.user_id)
+        .where(AchievementAward.status.in_(WALL), User.is_banned.is_(False))
+    )).all()
+    holders: dict[tuple[str, int], set[int]] = {}
+    for uid, branch, tier, _ in rows:
+        holders.setdefault((branch, int(tier)), set()).add(uid)
+    floor = datetime.min.replace(tzinfo=timezone.utc)
+    per: dict[int, dict[str, Any]] = {}
+    for uid, branch, tier, at in rows:
+        b = badge(cfg, branch, int(tier))
+        cand = {"branch": branch, "tier": int(tier), **b, "holders": len(holders[(branch, int(tier))])}
+        at = (at.replace(tzinfo=timezone.utc) if at and at.tzinfo is None else at) or floor
+        p = per.setdefault(uid, {"rarest": cand, "count": 0, "last_at": floor})
+        p["count"] += 1
+        p["last_at"] = max(p["last_at"], at)
+        cur = p["rarest"]
+        if (cand["holders"], -cand["index"] / cand["of"]) < (cur["holders"], -cur["index"] / cur["of"]):
+            p["rarest"] = cand
+
+    def key(uid: int):
+        p = per[uid]
+        r = p["rarest"]
+        return (r["holders"], -r["index"] / r["of"], -p["count"], p["last_at"], uid)
+
+    order = sorted(per, key=key)
+    top = order[:limit]
+    users = {u.id: u for u in (await session.scalars(select(User).where(User.id.in_(top)))).all()} if top else {}
+    entries = [
+        {
+            "rank": i, "name": _wall_name(users[uid]), "level": int(users[uid].level or 1), "count": per[uid]["count"],
+            "rarest": per[uid]["rarest"], "pin": pin_view(cfg, users[uid]), "is_me": uid == user_id,
+        }
+        for i, uid in enumerate(top, start=1)
+    ]
+    me = None
+    if user_id in per:
+        me = {"rank": order.index(user_id) + 1, "count": per[user_id]["count"], "rarest": per[user_id]["rarest"]}
+    return {"entries": entries, "total_players": len(order), "me": me}
 
 
 # ── владелец ──────────────────────────────────────────────────────────────────

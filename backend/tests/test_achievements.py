@@ -256,6 +256,54 @@ class CheckTest(Base_):
                 self.assertEqual(one["creator_badge"]["metal"], "bronze")
 
 
+class WallTest(Base_):
+    async def award(self, s, user, branch, tier, status="paid", when=NOW):
+        s.add(AchievementAward(user_id=user.id, branch=branch, tier=tier, ton=Decimal("0"), xp=0, status=status, created_at=when))
+        await s.flush()
+
+    async def test_rarest_first_then_count(self):
+        async with self.S() as s:
+            a = await self.user(s, first_name="Ann")
+            b = await self.user(s, username="bob")
+            c = await self.user(s, first_name="Cid")
+            d = await self.user(s)
+            banned = await self.user(s, first_name="X", is_banned=True)
+            for u in (a, b, c, d, banned):
+                await self.award(s, u, "tasks", 10)
+            await self.award(s, b, "tasks", 25)
+            await self.award(s, c, "tasks", 25)
+            await self.award(s, c, "games", 50)
+            await self.award(s, a, "level", 300)  # одна у одного игрока — самая редкая
+            await self.award(s, banned, "level", 300)  # забаненный не в счёт ни в редкости, ни на стене
+            await self.award(s, d, "miner", 120, status="rejected")  # отклонённая не в счёт
+            await self.award(s, d, "tasks", 50, status="pending")  # и ждущая подтверждения тоже
+            await s.commit()
+            out = await svc.wall(s, user_id=d.id)
+        names = [(e["rank"], e["name"], e["count"], e["rarest"]["branch"], e["rarest"]["tier"], e["rarest"]["holders"]) for e in out["entries"]]
+        self.assertEqual(names, [
+            (1, "Ann", 2, "level", 300, 1),  # редкость равна — выше ступень старше в ветке (неон)
+            (2, "Cid", 3, "games", 50, 1),
+            (3, "bob", 2, "tasks", 25, 2),
+            (4, None, 1, "tasks", 10, 4),
+        ])
+        self.assertEqual(out["entries"][0]["rarest"]["metal"], "neon")
+        self.assertEqual(out["total_players"], 4)
+        self.assertEqual(out["me"]["rank"], 4)
+        self.assertTrue(out["entries"][3]["is_me"])
+
+    async def test_limit_and_my_place_outside_top(self):
+        async with self.S() as s:
+            users = [await self.user(s, first_name=f"P{i}") for i in range(5)]
+            for i, u in enumerate(users):
+                await self.award(s, u, "tasks", 10, when=NOW + timedelta(minutes=i))
+            await s.commit()
+            out = await svc.wall(s, user_id=users[4].id, limit=2)
+            none = await svc.wall(s, user_id=999999)
+        self.assertEqual([e["name"] for e in out["entries"]], ["P0", "P1"])  # при равенстве — кто раньше
+        self.assertEqual(out["me"]["rank"], 5)
+        self.assertIsNone(none["me"])
+
+
 class HookTest(Base_):
     async def test_accepting_tenth_submission_awards_tier(self):
         from app.services import tasks as tasks_svc
@@ -358,6 +406,8 @@ class ApiTest(Base_):
         self.assertEqual((await c.get("/api/v1/achievements", headers=h)).json()["pin"]["tier"], 10)
         r = await c.put("/api/v1/achievements/pin", json={"branch": None}, headers=h)
         self.assertIsNone(r.json()["pin"])
+        wall = (await c.get("/api/v1/achievements/wall", headers=h)).json()
+        self.assertEqual((wall["total_players"], wall["me"]["rank"], wall["entries"][0]["is_me"]), (1, 1, True))
         self.assertEqual((await c.get("/api/v1/achievements/owner", headers=h)).status_code, 403)
         self.assertEqual((await c.post("/api/v1/achievements/owner/1/approve", headers=h)).status_code, 403)
 
