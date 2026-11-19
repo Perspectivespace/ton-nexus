@@ -43,6 +43,12 @@ NOTIFY_MAX_AGE = timedelta(days=3)  # старше — в бот не шлём (
 BALANCE_TYPE = "achievement"
 
 
+def ton_str(v) -> str:
+    """TON строкой без экспоненты: 10 → "10", 0.03 → "0.03" (Decimal.normalize дал бы "1E+1")."""
+    d = Decimal(str(v or 0)).quantize(Decimal("0.00000001")).normalize()
+    return format(d, "f") if d else "0"
+
+
 class AchievementError(Exception):
     pass
 
@@ -240,7 +246,7 @@ async def snapshot_baseline(session: AsyncSession, now: datetime | None = None) 
 
 def award_out(a: AchievementAward, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     out = {
-        "id": a.id, "branch": a.branch, "tier": a.tier, "ton": str(Decimal(a.ton or 0).normalize()) if a.ton else "0",
+        "id": a.id, "branch": a.branch, "tier": a.tier, "ton": ton_str(a.ton),
         "xp": int(a.xp or 0), "status": a.status, "created_at": a.created_at.isoformat() if a.created_at else None,
     }
     if cfg is not None:
@@ -290,7 +296,7 @@ async def player_view(session: AsyncSession, user: User) -> dict[str, Any]:
     earned = sum((Decimal(a.ton or 0) for a in awards.values() if a.status == "paid"), Decimal("0"))
     return {
         "enabled": cfg["enabled"], "branches": branches, "pin": pin_view(cfg, user, awards),
-        "earned_ton": str(earned.normalize()) if earned else "0",
+        "earned_ton": ton_str(earned),
         "done": sum(1 for a in awards.values() if a.status in DONE),
         "total": sum(len([t for t in cfg["branches"][k]["tiers"] if t["enabled"]]) for k in rules_mod.BRANCHES if cfg["branches"][k]["enabled"]),
     }
@@ -428,8 +434,8 @@ async def owner_summary(session: AsyncSession) -> dict[str, Any]:
         )).all()
     )
     return {
-        "paid_ton": str(Decimal(paid or 0).normalize()) if paid else "0",
-        "pending_ton": str(Decimal(pending_ton or 0).normalize()) if pending_ton else "0",
+        "paid_ton": ton_str(paid),
+        "pending_ton": ton_str(pending_ton),
         "counts": {s: int(counts.get(s, 0)) for s in ("paid", "pending", "rejected", "baseline")},
         "pending": [
             {**award_out(a, cfg), "user_id": a.user_id, "user": _name(users.get(a.user_id)),
@@ -478,7 +484,7 @@ def message(cfg: dict[str, Any], lang: str, awards: list[AchievementAward]) -> s
     tx = TEXT["ru" if lang == "ru" else "en"]
     lines = [tx["head_many"] if len(awards) > 1 else tx["head"], ""]
     for a in awards:
-        ton = format(Decimal(a.ton or 0).normalize(), "f")
+        ton = ton_str(a.ton)
         parts = []
         if a.status == "pending":
             parts.append(tx["pending"].format(ton=ton))

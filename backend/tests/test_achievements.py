@@ -72,6 +72,9 @@ class RulesTest(unittest.TestCase):
         self.assertEqual([rules.metal(i, 5) for i in range(5)], list(rules.METALS))
         self.assertEqual(rules.metal(6, 7), "neon")
 
+    def test_ton_str_has_no_exponent(self):
+        self.assertEqual([svc.ton_str(Decimal(x)) for x in ("10", "20.00000000", "0.03", "0", "100")], ["10", "20", "0.03", "0", "100"])
+
 
 class Base_(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
