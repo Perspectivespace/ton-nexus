@@ -10,12 +10,13 @@ import type { AchView } from "@/api/achievements";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const m = vi.hoisted(() => ({ calls: [] as { path: string; init?: RequestInit }[], view: null as unknown, fresh: { items: [] as unknown[] } }));
+const m = vi.hoisted(() => ({ calls: [] as { path: string; init?: RequestInit }[], view: null as unknown, fresh: { items: [] as unknown[] }, wall: null as unknown }));
 vi.mock("@/api/client", () => ({
   api: async (path: string, init?: RequestInit) => {
     m.calls.push({ path, init });
     if (path === "/api/v1/achievements") return m.view;
     if (path === "/api/v1/achievements/fresh") return m.fresh;
+    if (path === "/api/v1/achievements/wall") return m.wall;
     if (path === "/api/v1/achievements/seen") return { seen: 1 };
     if (path === "/api/v1/achievements/pin") return { pin: JSON.parse(String(init?.body)).branch ? { branch: "tasks", tier: 10, metal: "bronze", index: 1, of: 3 } : null };
     throw new Error(`unexpected ${path}`);
@@ -26,6 +27,7 @@ import { Achievements } from "@/pages/Achievements";
 import { AchCelebration } from "./AchCelebration";
 import { AchievementsCard, branchShare } from "./AchievementsCard";
 import { AuthorBadge } from "./AuthorBadge";
+import { AchievementsWall } from "@/pages/AchievementsWall";
 
 const VIEW: AchView = {
   enabled: true,
@@ -167,5 +169,43 @@ describe("достижения: профиль, окно, значок авто�
     setLang("en");
     await mount(<AuthorBadge badge={{ branch: "ambassador", tier: 300, metal: "neon", index: 5, of: 5 }} />);
     expect(host.textContent).toBe("Legendary Ambassador");
+  });
+});
+
+describe("«Стена славы»", () => {
+  const entry = (rank: number, name: string | null, holders: number, is_me = false) => ({
+    rank, name, level: 10 + rank, count: 5 - rank, is_me, pin: null,
+    rarest: { branch: "level" as const, tier: 300, metal: "neon" as const, index: 11, of: 11, holders },
+  });
+
+  it("редкая ступень, сколько у кого, и моё место ниже топа", async () => {
+    m.wall = { entries: [entry(1, "Ann", 1), entry(2, null, 3)], total_players: 12, me: { rank: 9, count: 2, rarest: null } };
+    await mount(<AchievementsWall />);
+    await until(() => !!host.querySelector(".ach-wall-row"));
+    const rows = [...host.querySelectorAll(".ach-wall-list .ach-wall-row")].map((r) => r.textContent);
+    expect(rows[0]).toContain("Ann");
+    expect(rows[0]).toContain("единственный обладатель");
+    expect(rows[1]).toContain("Игрок");
+    expect(rows[1]).toContain("есть у 3 игроков");
+    expect(host.textContent).toContain("12 игроков с достижениями");
+    expect(host.querySelector(".ach-wall-me")?.textContent).toContain("Ваше место");
+    expect(host.querySelector(".ach-wall-me")?.textContent).toContain("9");
+  });
+
+  it("я в топе — отдельной строки нет; EN", async () => {
+    setLang("en");
+    m.wall = { entries: [entry(1, "Ann", 2, true)], total_players: 1, me: { rank: 1, count: 4, rarest: null } };
+    await mount(<AchievementsWall />);
+    await until(() => !!host.querySelector(".ach-wall-row"));
+    expect(host.querySelector(".ach-wall-me")).toBeNull();
+    expect(host.textContent).toContain("held by 2 players");
+    expect(host.textContent).toContain("Account level · 300");
+  });
+
+  it("пустая стена", async () => {
+    m.wall = { entries: [], total_players: 0, me: null };
+    await mount(<AchievementsWall />);
+    await until(() => host.textContent!.includes("Стена пока пуста"));
+    expect(host.textContent).toContain("Получите ступень, чтобы попасть на стену");
   });
 });

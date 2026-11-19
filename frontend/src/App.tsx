@@ -20,6 +20,7 @@ export default function App() {
           <Route path="/tasks/:id" element={route("taskDetail")} />
           <Route path="/wallet" element={route("wallet")} />
           <Route path="/achievements" element={route("achievements")} />
+          <Route path="/achievements/wall" element={route("achWall")} />
           <Route path="/wheel" element={route("wheel")} />
           <Route path="/owner" element={route("owner")} />
           <Route path="/inbox" element={route("inbox")} />

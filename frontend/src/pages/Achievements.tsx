@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAchievements, useAchPin, type AchBranchView, type AchTierView } from "@/api/achievements";
 import { BackLink } from "@/components/BackLink";
 import { AchBadge } from "@/components/achievements/AchBadge";
@@ -7,6 +8,7 @@ import { branchHow, branchMetric, branchName, metalName, statusName, tierTitle, 
 import { Bar, Button, EmptyPanel, ErrorPanel, LoadingPanel, Panel, ScreenHeader, Sheet, useToast } from "@/components/ui";
 import { fmtDate, fmtNum, t } from "@/i18n";
 import { haptic } from "@/lib/haptics";
+import { IconChevron } from "@/components/icons";
 
 type Pick = { branch: AchBranchView; tier: AchTierView };
 
@@ -57,6 +59,17 @@ export function Achievements() {
           </div>
         </div>
       </Panel>
+
+      <Link to="/achievements/wall" className="block no-underline text-inherit" onClick={() => haptic.tap()}>
+        <Panel className="ach-wall-link p-4">
+          <AchBadge metal="neon" branch="ambassador" size={40} />
+          <div className="min-w-0 flex-1">
+            <p className="ui-h !text-[15px] !leading-[20px]">{t("ach.wall")}</p>
+            <p className="ui-sec !text-[12px] !leading-[16px]">{t("ach.wallLinkSub")}</p>
+          </div>
+          <IconChevron size={18} />
+        </Panel>
+      </Link>
 
       {!data.enabled && <EmptyPanel title={t("ach.off")} body={t("ach.offSub")} />}
 
