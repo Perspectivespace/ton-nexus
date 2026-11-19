@@ -1,3 +1,4 @@
+import { AuthorBadge } from "@/components/achievements/AuthorBadge";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -119,6 +120,7 @@ export function TaskDetail() {
           {!levelOk && <StatusPill tone="danger">{t("task.needLvl")}{" "}{task.min_level}</StatusPill>}
           {proofRequired && <StatusPill tone="neutral">{t("task.needScreenshot")}</StatusPill>}
           {isOwn && <StatusPill tone="neutral">{t("task.yours")}</StatusPill>}
+          {task.creator_badge && <AuthorBadge badge={task.creator_badge} />}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

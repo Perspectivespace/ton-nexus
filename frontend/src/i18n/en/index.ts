@@ -1,4 +1,5 @@
 import { common } from "./common";
+import { ach } from "./ach";
 import { ads } from "./ads";
 import { arena } from "./arena";
 import { city } from "./city";
@@ -23,6 +24,7 @@ import { wheel } from "./wheel";
 
 export const en = {
   ...common,
+  ...ach,
   ...ads,
   ...arena,
   ...city,

@@ -59,6 +59,8 @@ export type TaskOut = {
   xp_reward: number;
   creator_id: number;
   proof_required?: boolean;
+  /** высшая ступень ветки «Размещения амбассадора» у автора (значок на карточке) */
+  creator_badge?: { branch: "ambassador"; tier: number; metal: "bronze" | "silver" | "gold" | "platinum" | "neon"; index: number; of: number } | null;
 };
 
 export type DeployStatus = "queued" | "running" | "success" | "failed";

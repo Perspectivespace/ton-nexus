@@ -1,3 +1,4 @@
+import { AuthorBadge } from "@/components/achievements/AuthorBadge";
 import { motion } from "framer-motion";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMe, useTasks } from "@/api/hooks";
@@ -112,6 +113,7 @@ function TaskFeed() {
                   <p className="ui-sec mt-2 line-clamp-2">{task.description}</p>
                   <Bar value={fillPct / 100} className="mt-3" label={t("tasks.slotsTaken")} />
                   <div className="mt-3 flex flex-wrap gap-2">
+                    {task.creator_badge && <AuthorBadge badge={task.creator_badge} />}
                     <Tag tone="neutral" dot={false}>
                       {slotsLeft} {tp("tasks.slots", slotsLeft)}
                     </Tag>

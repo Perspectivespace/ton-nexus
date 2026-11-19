@@ -17,6 +17,7 @@ const loadOnboarding = () => import("./Onboarding");
 if (shouldShowOnboarding()) void loadOnboarding();
 const Onboarding = lazy(() => loadOnboarding().then((m) => ({ default: m.Onboarding })));
 import { ToastProvider } from "./ui/index";
+import { AchCelebration } from "./achievements/AchCelebration";
 
 export function Layout() {
   const [splash, setSplash] = useState(shouldShowSplash);
@@ -90,6 +91,8 @@ export function Layout() {
           <Onboarding onDone={endOnboarding} />
         </Suspense>
       )}
+      {/* новая ступень достижений — после заставки и знакомства, не поверх подсказки раздела */}
+      <AchCelebration enabled={!!me && !splash && !onboarding && !hint} />
       {splash && <Splash onDone={endSplash} />}
     </ToastProvider>
   );

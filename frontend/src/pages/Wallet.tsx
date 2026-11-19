@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { MeOut } from "@/api/types";
 import { WorkArea } from "@/components/WorkArea";
 import { ProfileRanks } from "@/components/RatingLinks";
+import { AchievementsCard } from "@/components/achievements/AchievementsCard";
 import { api } from "@/api/client";
 import { IconGear, IconHistory, IconOut, IconRefresh, IconWallet } from "@/components/icons";
 import { clearDone } from "@/components/onboardingFlag";
@@ -150,6 +151,8 @@ export function Wallet() {
       </motion.div>
 
       <ProfileRanks />
+
+      <AchievementsCard />
 
       <List>
         <ListRow
