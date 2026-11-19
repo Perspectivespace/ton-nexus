@@ -99,6 +99,22 @@ async def city_ads_expire_loop():
         await asyncio.sleep(CITY_ADS_EXPIRE_S)
 
 
+# Достижения: сообщения в бот о новых и подтверждённых наградах — раз в 30 с
+ACHIEVEMENTS_NOTIFY_S = 30
+
+
+async def achievements_notify_loop():
+    """Рассылка в бот о достижениях (services/achievements.notify_once). Ошибки не останавливают цикл."""
+    from app.services.achievements import notify_once
+
+    while True:
+        try:
+            await notify_once(SessionLocal)
+        except Exception:
+            logging.getLogger(__name__).exception("[achievements] notify error")
+        await asyncio.sleep(ACHIEVEMENTS_NOTIFY_S)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -121,6 +137,7 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(arena_loop()),
         asyncio.create_task(proof_cleanup_loop()),
         asyncio.create_task(city_ads_expire_loop()),
+        asyncio.create_task(achievements_notify_loop()),
     ]
     yield
     for task in tasks:

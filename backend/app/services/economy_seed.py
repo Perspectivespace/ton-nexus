@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
-from app.services import integrity_rules
+from app.services import achievement_rules, integrity_rules
 
 _PRIZES_OFF: dict = {
     "enabled": False,
@@ -196,6 +196,10 @@ DEFAULTS: dict[str, tuple[object, str]] = {
     ),    integrity_rules.KEY: (
         integrity_rules.defaults(),
         "Честность: веса событий, затухание, лимиты, тиры. Теневой режим — только копим данные, эффектов нет",
+    ),
+    achievement_rules.KEY: (
+        achievement_rules.defaults(),
+        "Достижения: ступени веток (порог, TON, XP, вкл.), порог ручного подтверждения, засчитывать ли прошлое",
     ),
 }
 

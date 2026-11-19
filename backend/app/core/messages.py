@@ -206,6 +206,7 @@ EN: dict[str, str] = {
     "Сбор майнера": "Miner collect",
     "Усиление майнера": "Miner boost",
     "Рулетка": "Wheel",
+    "Награда за достижение": "Achievement reward",
     "Промокод": "Promo code",
     "Приз «Башни»": "Tower prize",
     "Ставка «Арены»": "Arena stake",
