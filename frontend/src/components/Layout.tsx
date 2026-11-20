@@ -6,6 +6,7 @@ import { SectionHint } from "./SectionHint";
 import { districtFromStart } from "@/lib/districts";
 import { WebApp } from "@/lib/telegram";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useRouteBackFallback } from "@/lib/backButton";
 import { CityBackdrop } from "./CityBackdrop";
 import { Nav, isDockRoute } from "./Nav";
 import { AppHeader } from "./Brand";
@@ -26,6 +27,7 @@ export function Layout() {
   // DESIGN п. 14.2: док только на четырёх разделах; на вложенных экранах — «Назад» (Telegram или ссылка)
   const loc = useLocation();
   const dock = isDockRoute(loc.pathname);
+  useRouteBackFallback(!dock);
 
   // знакомство: что показано, хранит сервер (me.onboarding); отметка на устройстве — запасная (lib/onboarding.ts)
   const { data: me, isError: meFailed } = useMe();

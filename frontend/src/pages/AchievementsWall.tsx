@@ -1,5 +1,6 @@
 import { useAchWall, type AchRarest, type AchWallEntry } from "@/api/achievements";
 import { BackLink } from "@/components/BackLink";
+import { useScreenBack } from "@/lib/backButton";
 import { AchBadge } from "@/components/achievements/AchBadge";
 import { tierTitle } from "@/components/achievements/text";
 import { EmptyPanel, ErrorPanel, LoadingPanel, Panel, ScreenHeader } from "@/components/ui";
@@ -9,6 +10,7 @@ const holders = (r: AchRarest) => (r.holders <= 1 ? t("ach.wallOnly") : tp("ach.
 
 /** «Стена славы»: игроки с самыми редкими достижениями (топ 50) и место игрока */
 export function AchievementsWall() {
+  useScreenBack("/achievements");
   const { data, isLoading, error } = useAchWall();
   if (isLoading) return <LoadingPanel label={t("ach.loading")} />;
   if (error || !data) return <ErrorPanel message={t("ach.wallFailed")} />;
