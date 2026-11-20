@@ -26,7 +26,7 @@ export function AchievementsCard() {
     <section className="space-y-2" aria-label={t("ach.title")}>
       <SectionLabel
         action={
-          <Link to="/achievements" className="ui-btn ghost sm no-underline" onClick={() => haptic.tap()}>
+          <Link to="/achievements" className="ui-btn secondary night sm no-underline" onClick={() => haptic.tap()}>
             {t("ach.all")}
           </Link>
         }
