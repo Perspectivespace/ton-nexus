@@ -40,8 +40,9 @@
 }
 
 /* светлая тема: шапка приложения и экрана лежат прямо на (всегда тёмном) городе — для них «ночные» чернила (п. 3.8).
- * Внутри здания (.in-bld) у светлой темы свой светлый скрим интерьера — там остаются обычные светлые чернила. */
-html[data-theme="light"]:not(.in-bld) .on-city {
+ * Внутри здания (.in-bld) у светлой темы свой светлый скрим интерьера — там остаются обычные светлые чернила;
+ * исключение — шапка экрана (.scr-head): она всегда на тёмной плите, поэтому чернила ночные в любом месте. */
+html[data-theme="light"]:not(.in-bld) .on-city, html[data-theme="light"] .scr-head {
   --text: #E6EBF5; --text-2: #9AA4BA; --text-3: #8F99B0; --text-shade: 0 1px 2px rgba(0, 0, 0, .9);
   --neon: #2BF5FF; --neon-soft: rgba(43,245,255,.12); --neon-dim: rgba(43,245,255,.35);
   --ok: #5DFFB0; --ok-soft: rgba(93,255,176,.11); --amber: #FFB547; --amber-soft: rgba(255,181,71,.13);
@@ -49,11 +50,25 @@ html[data-theme="light"]:not(.in-bld) .on-city {
   --surface-3: #181C2A; --onbg-plate: rgba(6, 8, 14, .86);
 }
 /* кнопки в шапке экрана (BackLink и др.) лежат на тёмном городе — ночной металл, иначе светлые чернила на светлой плашке */
-html[data-theme="light"]:not(.in-bld) .on-city .ui-btn.secondary { background: linear-gradient(180deg, rgba(43,245,255,.55), rgba(43,245,255,.18) 50%, rgba(0,0,0,.6)); color: #E6EBF5; }
-html[data-theme="light"]:not(.in-bld) .on-city .ui-btn.secondary::before {
+html[data-theme="light"] :is(.on-city, .scr-head) .ui-btn.ui-btn.secondary, html[data-theme="light"] .ui-btn.ui-btn.secondary.night { background: linear-gradient(180deg, rgba(43,245,255,.55), rgba(43,245,255,.18) 50%, rgba(0,0,0,.6)); color: #E6EBF5; }
+html[data-theme="light"] :is(.on-city, .scr-head) .ui-btn.ui-btn.secondary::before, html[data-theme="light"] .ui-btn.ui-btn.secondary.night::before {
   background: linear-gradient(90deg, transparent 3%, rgba(225,240,255,.38) 22%, rgba(225,240,255,.08) 62%, transparent 90%) top / 100% 1px no-repeat,
     linear-gradient(180deg, rgba(200,220,255,.055), rgba(200,220,255,0) 42%), linear-gradient(180deg, #161B2A, #0D1019);
 }
+/* шапка экрана (ScreenHeader) лежит на городе или зале в любой фазе суток: под ней тёмная плита «Ночного контура»
+ * во всю ширину экрана — плотная под текстом, растворяется книзу; сверху тонкая металлическая кромка.
+ * Без backdrop-filter: только градиенты. Подпись над заголовком — светлая с тенью, в любой теме. */
+.scr-head { position: relative; isolation: isolate; }
+.scr-head::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none; left: -16px; right: -16px; top: -14px; bottom: -22px;
+  background:
+    linear-gradient(90deg, transparent 4%, rgba(190, 215, 255, .16) 30%, rgba(43, 245, 255, .22) 62%, transparent 96%) top / 100% 1px no-repeat,
+    linear-gradient(90deg, rgba(6, 8, 14, .9), rgba(6, 8, 14, .86) 55%, rgba(6, 8, 14, .78));
+  -webkit-mask: linear-gradient(180deg, rgba(0,0,0,.92), #000 14px, #000 calc(100% - 26px), transparent);
+  mask: linear-gradient(180deg, rgba(0,0,0,.92), #000 14px, #000 calc(100% - 26px), transparent);
+}
+.scr-head .ui-label { color: #DCE3F0; text-shadow: 0 1px 2px rgba(0, 0, 0, .9); }
+.scr-head .ui-title { color: #F2F5FB; text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 14px rgba(0, 0, 0, .55); }
 html[data-theme="light"]:not(.in-bld) .on-city .brand-pair > .b-dark { display: block; }
 html[data-theme="light"]:not(.in-bld) .on-city .brand-pair > .b-light { display: none; }
 
