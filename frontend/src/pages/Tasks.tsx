@@ -79,7 +79,7 @@ function TaskFeed() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="ui-sec ui-shade !text-[12px] !leading-[16px]">{t("tasks.feedSub")}</p>
+        <p className="ui-sec ui-onbg night !text-[12px] !leading-[16px]">{t("tasks.feedSub")}</p>
         <StatusPill tone={isFetching ? "live" : "neutral"}>{isFetching ? t("home.syncing") : t("tasks.activeN", { data: data?.length ?? 0 })}</StatusPill>
       </div>
 
