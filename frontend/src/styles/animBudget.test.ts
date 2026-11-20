@@ -52,3 +52,12 @@ describe("district nav styles", () => {
     expect(css).toMatch(/html\.dz-going[^{]*\{ opacity: 0; transition: opacity \.2s ease; \}/);
   });
 });
+
+/* Достижения: значки, праздничное окно, экран веток — только разовые движения и без backdrop-filter. */
+describe("anim budget: achievements", () => {
+  it("no infinite animations and no backdrop-filter", () => {
+    const css = read("achievements.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css).not.toMatch(/infinite/);
+    expect(css).not.toMatch(/backdrop-filter/);
+  });
+});

@@ -239,6 +239,7 @@ export type TaskDetail = {
   partner_name?: string | null;
   purchased?: boolean | null;
   proof_required?: boolean;
+  creator_badge?: TaskOut["creator_badge"];
 };
 
 export type PurchaseOut = {

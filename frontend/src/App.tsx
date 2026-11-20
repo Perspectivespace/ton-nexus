@@ -19,6 +19,7 @@ export default function App() {
           <Route path="/tasks/new" element={route("taskCreate")} />
           <Route path="/tasks/:id" element={route("taskDetail")} />
           <Route path="/wallet" element={route("wallet")} />
+          <Route path="/achievements" element={route("achievements")} />
           <Route path="/wheel" element={route("wheel")} />
           <Route path="/owner" element={route("owner")} />
           <Route path="/inbox" element={route("inbox")} />

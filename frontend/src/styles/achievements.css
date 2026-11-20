@@ -1,0 +1,93 @@
+/* Достижения — «Luxury Metal»: значки-медали, профиль, экран веток, праздничное окно, значок автора на заданиях.
+ * Только разовые движения (бюджет петель занят городом), без backdrop-filter. */
+
+.ach-badge { display: block; flex: none; overflow: visible; }
+.ach-badge.m-gold { filter: drop-shadow(0 0 6px rgba(233, 183, 70, .28)); }
+.ach-badge.m-platinum { filter: drop-shadow(0 0 6px rgba(168, 220, 238, .3)); }
+.ach-badge.m-neon { filter: drop-shadow(0 0 5px rgba(25, 211, 255, .55)) drop-shadow(0 0 12px rgba(255, 46, 126, .28)); }
+.ach-badge.locked { filter: none; opacity: .7; }
+
+/* профиль */
+.ach-pin-slot { flex: none; display: grid; place-items: center; width: 72px; height: 72px;
+  background: radial-gradient(closest-side, rgba(43, 245, 255, .12), transparent 70%); }
+.ach-card-t { margin-top: 2px; font: 700 15px/20px var(--f-display); color: var(--text); overflow-wrap: anywhere; }
+.ach-card-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font: 400 12px/16px var(--f-sans); color: var(--text-2); }
+.ach-card-meta b { color: var(--text); font-weight: 600; }
+.ach-mini { display: grid; gap: 10px; margin: 14px 0 0; padding: 12px 0 0; list-style: none; border-top: 1px solid var(--line); }
+.ach-mini li { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ach-mini-h { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; font: 500 12px/16px var(--f-sans); color: var(--text-2); }
+.ach-mini-h .ui-num { flex: none; color: var(--text); }
+
+/* экран достижений */
+.ach-hero-t { margin-top: 2px; font: 700 18px/24px var(--f-display); color: var(--text); overflow-wrap: anywhere; }
+.ach-hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.ach-hero-stats .ui-num { margin-top: 2px; font-size: 18px; line-height: 24px; color: var(--text); }
+.ach-br-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin-top: 8px; font: 400 12px/16px var(--f-sans); color: var(--text-2); }
+.ach-tiers { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.ach-tier { --c: 7px; width: 100%; min-height: 84px; padding: 8px 2px 6px; display: grid; justify-items: center; gap: 2px; border: 0; cursor: pointer;
+  color: var(--text-3); background: var(--mat-0, var(--surface-2)); box-shadow: inset 0 0 0 1px var(--line);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.ach-tier .at { font: 700 12px/16px var(--f-mono); color: var(--text-2); }
+.ach-tier .ton { font: 500 10px/12px var(--f-mono); color: var(--text-3); }
+.ach-tier.done { background: linear-gradient(180deg, rgba(43, 245, 255, .07), transparent 70%), var(--mat-0, var(--surface-2)); }
+.ach-tier.done .at { color: var(--text); }
+.ach-tier.done .ton { color: var(--amber); }
+.ach-tier.pinned { box-shadow: inset 0 0 0 1px var(--neon), 0 0 10px var(--neon-soft); }
+.ach-tier:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
+
+.ach-detail { display: grid; justify-items: center; gap: 4px; padding: 8px 0 4px; }
+.ach-detail-m { font: 600 11px/16px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--text-2); }
+.ach-dl { width: 100%; display: grid; gap: 1px; margin: 12px 0 0; background: var(--line); }
+.ach-dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 2px; background: var(--surface-1); }
+.ach-dl dt { font: 400 13px/18px var(--f-sans); color: var(--text-2); }
+.ach-dl dd { margin: 0; text-align: right; font: 600 14px/18px var(--f-sans); color: var(--text); }
+.ach-st.s-paid { color: var(--ok, var(--neon)); }
+.ach-st.s-pending { color: var(--amber); }
+.ach-st.s-rejected, .ach-st.s-locked, .ach-st.s-baseline { color: var(--text-3); }
+
+/* значок автора на карточке задания */
+.ach-auth { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px 0 4px; white-space: nowrap;
+  font: 600 11px/1 var(--f-sans); letter-spacing: .02em; color: var(--text);
+  background: linear-gradient(90deg, rgba(255, 255, 255, .06), transparent), var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-strong, var(--line));
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
+.ach-auth.m-gold { box-shadow: inset 0 0 0 1px rgba(233, 183, 70, .5); }
+.ach-auth.m-platinum { box-shadow: inset 0 0 0 1px rgba(168, 220, 238, .5); }
+.ach-auth.m-neon { box-shadow: inset 0 0 0 1px rgba(25, 211, 255, .6); }
+
+/* праздничное окно */
+.ach-cel { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; }
+.ach-cel-scrim { position: absolute; inset: 0; background: rgba(3, 5, 10, .8); animation: ach-fade .24s ease-out both; }
+.ach-cel-card { --c: 16px; --glow: rgba(43, 245, 255, .22); position: relative; width: min(340px, 100%); padding: 24px 20px 18px; text-align: center; overflow: hidden;
+  background: radial-gradient(120% 70% at 50% 0, var(--glow), transparent 60%), linear-gradient(180deg, #141a28, #080b13);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), inset 0 1px 0 rgba(255, 255, 255, .18);
+  clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c)));
+  animation: ach-pop .42s cubic-bezier(.2, 1.3, .4, 1) both; }
+.ach-cel-card.m-bronze { --glow: rgba(192, 122, 69, .3); }
+.ach-cel-card.m-silver { --glow: rgba(188, 198, 214, .26); }
+.ach-cel-card.m-gold { --glow: rgba(233, 183, 70, .3); }
+.ach-cel-card.m-platinum { --glow: rgba(168, 220, 238, .28); }
+.ach-cel-card.m-neon { --glow: rgba(255, 46, 126, .26); }
+.ach-cel-rays { position: absolute; left: 50%; top: 108px; width: 360px; height: 360px; margin: -180px 0 0 -180px; pointer-events: none; opacity: 0;
+  background: repeating-conic-gradient(from 0deg, var(--glow) 0 6deg, transparent 6deg 22deg);
+  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 75%); mask: radial-gradient(closest-side, #000 20%, transparent 75%);
+  animation: ach-rays 1.6s ease-out .1s both; }
+.ach-cel-eb { position: relative; font: 600 11px/16px var(--f-mono); letter-spacing: .16em; text-transform: uppercase; color: #FFB547; }
+.ach-cel-badge { position: relative; display: grid; place-items: center; margin: 10px 0 8px; animation: ach-badge .7s cubic-bezier(.2, 1.4, .4, 1) .08s both; }
+.ach-cel-t { position: relative; font: 700 20px/26px var(--f-display); color: #F2F6FF; overflow-wrap: anywhere; }
+.ach-cel-m { position: relative; margin-top: 2px; font: 600 11px/16px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: #9AA4BA; }
+.ach-cel-rest { position: relative; display: flex; justify-content: center; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.ach-cel-rw { position: relative; margin-top: 12px; font: 700 18px/24px var(--f-mono); color: #2BF5FF; text-shadow: 0 0 10px rgba(43, 245, 255, .45); }
+.ach-cel-note { position: relative; margin-top: 8px; font: 400 12px/16px var(--f-sans); color: #FFB547; }
+.ach-cel-act { position: relative; display: grid; gap: 6px; margin-top: 18px; }
+/* карточка окна тёмная и днём: вторичная кнопка — светлым неоном */
+.ach-cel-act .ui-btn.ghost { color: #2BF5FF; }
+
+@keyframes ach-fade { from { opacity: 0; } }
+@keyframes ach-pop { from { opacity: 0; transform: translateY(16px) scale(.92); } }
+@keyframes ach-badge { from { opacity: 0; transform: scale(.4) rotate(-12deg); } }
+@keyframes ach-rays { 0% { opacity: 0; transform: rotate(-30deg) scale(.6); } 40% { opacity: 1; } 100% { opacity: .55; transform: rotate(0) scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ach-cel-scrim, .ach-cel-card, .ach-cel-badge, .ach-cel-rays { animation: none; }
+  .ach-cel-rays { opacity: .5; }
+}

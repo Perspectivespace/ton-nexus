@@ -21,6 +21,7 @@ const LOADERS: Record<string, Loader> = {
   taskDetail: () => import("@/pages/TaskDetail").then((m) => m.TaskDetail),
   taskCreate: () => import("@/pages/TaskCreate").then((m) => m.TaskCreate),
   wallet: () => import("@/pages/Wallet").then((m) => m.Wallet),
+  achievements: () => import("@/pages/Achievements").then((m) => m.Achievements),
   // не раздел, а чанк стойки для шторки «Усиление реактора» на Майнере — только для фоновой подгрузки
   upgrade: () => import("@/components/UpgradeStand").then((m) => m.UpgradeStand),
   wheel: () => import("@/pages/Wheel").then((m) => m.Wheel),
