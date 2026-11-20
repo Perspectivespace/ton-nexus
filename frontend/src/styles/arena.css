@@ -19,6 +19,8 @@
 .ar-panel { position: relative; isolation: isolate; --c: 12px; clip-path: var(--ar-cut); background: var(--edge-1); padding: 14px; }
 .ar-panel::before { content: ""; position: absolute; inset: 1px; z-index: -1; --c: 11.5px; clip-path: var(--ar-cut); background: var(--spec), var(--ar-mat); }
 .ar-sec { display: flex; align-items: center; gap: 8px; font: 700 11px/16px var(--f-display); letter-spacing: .16em; text-transform: uppercase; color: var(--text-3); margin: 18px 0 8px !important; }
+/* подпись секции лежит на городе — на тёмной плите по ширине текста (.ui-onbg.night), тик даёт ::before */
+.ar-sec.ui-onbg { display: flex; width: fit-content; box-shadow: none; }
 .ar-sec::before { content: ""; width: 10px; height: 2px; background: var(--neon); box-shadow: var(--halo-neon); }
 .ar-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; color: var(--text-2); min-width: 0; }
 .ar-row:first-child { border-top: 0; padding-top: 0; }

@@ -144,7 +144,7 @@ export function ArenaLobbyView({ lobby, balance, sel, onPick, onJoin, onRules, j
         </div>
       </div>
 
-      <div className="ar-sec">{t("arena.room")}</div>
+      <div className="ar-sec ui-onbg night">{t("arena.room")}</div>
       <div className="ar-rooms">
         {lobby.types.map((x) => (
           <RoomCard key={x.type} rt={x} sel={x.type === at?.type} onPick={() => onPick(x.type)} />
@@ -153,7 +153,7 @@ export function ArenaLobbyView({ lobby, balance, sel, onPick, onJoin, onRules, j
 
       {at && (
         <>
-          <div className="ar-sec">{t("arena.stakePrize")}</div>
+          <div className="ar-sec ui-onbg night">{t("arena.stakePrize")}</div>
           <MoneyPanel at={at} />
         </>
       )}
