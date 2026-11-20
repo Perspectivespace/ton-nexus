@@ -102,9 +102,9 @@
 
 /* вывески — живой текст поверх нарисованных панелей */
 .cv2 .sign { display: flex; align-items: center; justify-content: center; flex-direction: column;
-  font: 700 clamp(9px, 2.6vw, 13px)/1 var(--font-display, "Unbounded", sans-serif); letter-spacing: .08em; color: #DFFBFF; text-align: center; }
+  font: 700 clamp(10px, 2.7vw, 13px)/1 var(--font-display, "Unbounded", sans-serif); letter-spacing: .08em; color: #DFFBFF; text-align: center; }
 .cv2 .sign.v { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: .02em; }
-.cv2 .sign small { display: block; margin-top: 4px; font: 600 clamp(6px, 1.5vw, 8px)/1 var(--font-mono, monospace); letter-spacing: .14em; color: #FFC7F0; }
+.cv2 .sign small { display: none; } /* подпись «MK IV · ОНЛАЙН» (6 px) не читалась — на вывеске только название, ≥ 10 px */
 .cv2 .sign.quiet { opacity: .55; text-shadow: 0 0 6px rgba(43,245,255,.6); }
 .cv2 .sign.holo { text-shadow: 0 0 8px rgba(43,245,255,.85), 0 0 2px #fff; }
 .cv2 .sign.wide { color: #FFE9FB; text-shadow: 0 0 8px rgba(255,79,154,.8), 0 0 2px #fff; font-size: clamp(9px, 2.8vw, 14px); }
@@ -282,12 +282,14 @@ html.low-end .cv2-back { display: none; }
 .cv2 .ad { overflow: hidden; pointer-events: none; border-radius: 3px;
   background: linear-gradient(160deg, rgba(255,255,255,.92), rgba(214,242,255,.86) 60%, rgba(190,232,255,.82));
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), 0 0 10px rgba(150,225,255,.35);
-  font: 700 clamp(5px, 1.6vw, 9px)/1.1 var(--font-mono, monospace); letter-spacing: .08em; color: #064457; }
+  font: 700 clamp(9.5px, 2.64vw, 12px)/1 var(--f-display); letter-spacing: .03em; color: #064457;
+  /* плашка по ширине названия (самый длинный слайд), слайды стоят друг на друге в одной ячейке сетки */
+  display: grid; align-items: center; width: max-content; padding: 0 7px 0 9px; }
 .cv2 .ad::before { content: ""; position: absolute; left: 0; top: 18%; bottom: 18%; width: 2px; background: #2BC8E8; border-radius: 1px; }
-.cv2 .ad span { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding-left: 10%;
+.cv2 .ad span { grid-area: 1 / 1; display: flex; flex-direction: column; justify-content: center;
   opacity: 0; transform: translateY(12%); transition: opacity .9s ease-in-out, transform .9s ease-in-out; white-space: nowrap; }
 .cv2 .ad span.on { opacity: 1; transform: none; }
-.cv2 .ad small { display: block; margin-top: 2px; font-weight: 500; font-size: .78em; letter-spacing: .04em; color: #24566A; }
+.cv2 .ad small { display: none; color: #24566A; } /* подпись («next 4 min», 4.5 px) не читалась — только название, ≥ 9.5 px */
 .ph-dawn.cv2 .ad { color: #5A1F48; background: linear-gradient(160deg, rgba(255,250,248,.92), rgba(255,226,232,.86) 60%, rgba(255,214,200,.82));
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), 0 0 10px rgba(255,190,200,.35); }
 .ph-dawn.cv2 .ad::before { background: #F07AA6; }
@@ -327,18 +329,16 @@ html.cv2-home .city .c-stage { transform: translate3d(-50%, -120px, 0); }
 :is(.ph-dawn,.ph-day).cv2 .win { background: #FFC266; box-shadow: none; } /* при свете окна не светятся ореолом */
 :is(.ph-dawn,.ph-day).cv2 .puddle { opacity: .45; } /* брызги — без ночного блеска мокрой площади */
 :is(.ph-dawn,.ph-day).cv2 .steam { background: radial-gradient(closest-side, rgba(255,255,255,.85), rgba(255,255,255,0)); }
-:is(.ph-dawn,.ph-day).cv2 .sign { padding: 3px; color: #00788C; text-shadow: 0 0 6px rgba(43,245,255,.55);
-  background: linear-gradient(180deg, rgba(240,253,255,.72), rgba(214,246,252,.58));
-  box-shadow: inset 0 0 0 1px rgba(0,150,175,.38), 0 2px 10px rgba(30,40,90,.18); }
+:is(.ph-dawn,.ph-day).cv2 .sign { padding: 3px; color: #E9FDFF; text-shadow: 0 0 1px rgba(2,5,14,.95), 0 0 3px rgba(2,5,14,.85);
+  /* днём — тёмное стекло и светлые буквы (бледное стекло с бирюзой давало 1.1–2 : 1 на солнечном небе) */
+  background: linear-gradient(180deg, rgba(8,16,28,.84), rgba(6,12,22,.78));
+  box-shadow: inset 0 0 0 1px rgba(43,245,255,.4), 0 2px 10px rgba(30,40,90,.18); }
 :is(.ph-dawn,.ph-day).cv2 .sign.quiet { opacity: .9; }
-:is(.ph-dawn,.ph-day).cv2 .sign.wide { color: #B4106A; text-shadow: 0 0 6px rgba(255,79,154,.45);
-  background: linear-gradient(180deg, rgba(255,242,250,.74), rgba(252,224,242,.6));
-  box-shadow: inset 0 0 0 1px rgba(200,16,90,.32), 0 2px 10px rgba(60,20,70,.18); }
-:is(.ph-dawn,.ph-day).cv2 .sign small { color: #00788C; }
-:is(.ph-dawn,.ph-day).cv2 .sign.scan::after { background: linear-gradient(180deg, transparent, rgba(255,255,255,.55), transparent); }
+:is(.ph-dawn,.ph-day).cv2 .sign.wide { color: #FFE9FB; text-shadow: 0 0 1px rgba(2,5,14,.95), 0 0 3px rgba(2,5,14,.85);
+  background: linear-gradient(180deg, rgba(20,8,24,.84), rgba(14,6,18,.78));
+  box-shadow: inset 0 0 0 1px rgba(255,79,154,.45), 0 2px 10px rgba(60,20,70,.18); }
+:is(.ph-dawn,.ph-day).cv2 .sign.scan::after { background: linear-gradient(180deg, transparent, rgba(255,255,255,.16), transparent); } /* по тёмному стеклу — мягкий блик */
 [data-theme="light"] .cv2-chip { color: var(--text); background: rgba(255,255,255,.9); border-color: var(--line-strong); }
-/* вне главной вывески на светлом стекле чуть тише, чтобы не спорить с цифрами панелей */
-html:not(.cv2-home) .cv2:is(.ph-dawn,.ph-day) .sign { opacity: .75; }
 
 /* день: окна в солнце не мигают, прожектора нет; дождь тоньше и реже, дымка голубая */
 .cv2.ph-day .win, :is(.ph-dawn,.ph-day).cv2 .beam { display: none; } /* прожектор — только вечером и ночью */
