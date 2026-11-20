@@ -101,3 +101,9 @@
 }
 .tw-top:active { transform: scale(.97); }
 .tw-top .ui-icon:last-child { margin-left: -2px; opacity: .8; }
+
+/* светлая тема: шапка экрана лежит на тёмной плите — «Топ месяца» в ночном металле, иначе ночной натрий на светлой плашке */
+html[data-theme="light"] .scr-head .tw-top {
+  background: linear-gradient(180deg, rgba(255, 181, 71, .13), transparent), linear-gradient(180deg, rgba(210, 225, 255, .08), rgba(210, 225, 255, 0) 38%), linear-gradient(180deg, rgba(27, 32, 49, .97), rgba(14, 16, 26, .98));
+  box-shadow: inset 0 0 0 1px rgba(255, 181, 71, .36), inset 0 1px 0 rgba(255, 255, 255, .1), inset 0 -1px 0 rgba(0, 0, 0, .6);
+}
