@@ -29,7 +29,7 @@ export function ClientErrorsOwner() {
     <div className="space-y-2">
       <SectionLabel
         action={
-          <Button kind="ghost" size="sm" onClick={() => refetch()} disabled={isFetching}>
+          <Button kind="secondary" className="night" size="sm" onClick={() => refetch()} disabled={isFetching}>
             {isFetching ? "обновляю…" : "обновить"}
           </Button>
         }

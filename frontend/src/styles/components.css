@@ -120,6 +120,9 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
   color: var(--text-2); text-shadow: var(--text-shade);
 }
 .ui-label.ui-onbg { color: var(--text-2); }
+/* .night — тёмная плита «Ночного контура» в любой теме: текст прямо на городе (подзаголовок ленты, подпись секции),
+ * где светлая плашка спорит с тёмным кадром. Светлые чернила, плотность ≥ .9 — читается и над дневным небом. */
+.ui-onbg.night { --onbg-plate: rgba(6, 8, 14, .9); --onbg-tick: rgba(43, 245, 255, .5); color: #DCE3F0; text-shadow: 0 1px 2px rgba(0, 0, 0, .9); }
 
 
 /* —— Типографика —— */
