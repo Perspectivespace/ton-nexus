@@ -145,3 +145,12 @@ export function useAchPin() {
     },
   });
 }
+
+/* «Стена славы» */
+export type AchRarest = AchBadge & { holders: number };
+export type AchWallEntry = { rank: number; name: string | null; level: number; count: number; rarest: AchRarest | null; pin: AchBadge | null; is_me: boolean };
+export type AchWall = { entries: AchWallEntry[]; total_players: number; me: { rank: number; count: number; rarest: AchRarest | null } | null };
+
+export function useAchWall() {
+  return useQuery({ queryKey: ["achievements", "wall"], queryFn: () => api<AchWall>("/api/v1/achievements/wall"), staleTime: 60_000 });
+}

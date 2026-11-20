@@ -70,6 +70,12 @@ async def pin(body: PinIn, user: User = Depends(get_current_user), db: AsyncSess
     return {"pin": out}
 
 
+@router.get("/wall")
+async def wall(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    """«Стена славы»: игроки с самыми редкими достижениями (топ 50) и место игрока."""
+    return await svc.wall(db, user.id)
+
+
 # ── владелец ──────────────────────────────────────────────────────────────────
 
 

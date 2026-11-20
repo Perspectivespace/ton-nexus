@@ -91,3 +91,30 @@
   .ach-cel-scrim, .ach-cel-card, .ach-cel-badge, .ach-cel-rays { animation: none; }
   .ach-cel-rays { opacity: .5; }
 }
+
+/* «Стена славы» */
+.ach-wall-link { display: flex; align-items: center; gap: 12px; }
+.ach-wall-list { margin: 0; padding: 0; list-style: none; }
+.ach-wall-row { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 8px 14px 8px 10px; position: relative; }
+.ach-wall-list .ach-wall-row + .ach-wall-row::before { content: ""; position: absolute; left: 44px; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, var(--line-strong), var(--line) 60%, transparent); }
+.ach-wall-row.me { background: linear-gradient(90deg, var(--neon-soft), transparent 70%); box-shadow: inset 2px 0 0 var(--neon); }
+.ach-wall-row.top { min-height: 76px; }
+.ach-wall-row.p1 { background: linear-gradient(90deg, rgba(233, 183, 70, .12), transparent 70%); }
+.ach-wall-row.p2 { background: linear-gradient(90deg, rgba(188, 198, 214, .1), transparent 70%); }
+.ach-wall-row.p3 { background: linear-gradient(90deg, rgba(192, 122, 69, .1), transparent 70%); }
+.ach-wall-rank { flex: none; width: 26px; text-align: center; font: 700 14px/20px var(--f-mono); color: var(--text-3); }
+.ach-wall-row.p1 .ach-wall-rank { color: #E9B746; }
+.ach-wall-row.p2 .ach-wall-rank { color: #BCC6D6; }
+.ach-wall-row.p3 .ach-wall-rank { color: #C07A45; }
+[data-theme="light"] .ach-wall-row.p1 .ach-wall-rank { color: #9A6A10; }
+[data-theme="light"] .ach-wall-row.p2 .ach-wall-rank { color: #5D6880; }
+[data-theme="light"] .ach-wall-row.p3 .ach-wall-rank { color: #9A5622; }
+.ach-wall-row.me .ach-wall-rank, .ach-wall-row.me .ach-wall-name { color: var(--neon); }
+.ach-wall-ph { flex: none; width: 40px; height: 40px; }
+.ach-wall-name { display: flex; align-items: baseline; gap: 8px; min-width: 0; font: 600 14px/20px var(--f-sans); color: var(--text); }
+.ach-wall-lvl { flex: none; font: 500 11px/16px var(--f-mono); color: var(--text-3); }
+.ach-wall-sub { margin-top: 1px; font: 400 12px/16px var(--f-sans); color: var(--text-2); overflow-wrap: anywhere; }
+.ach-wall-sub b { font-weight: 600; color: var(--text); }
+.ach-wall-sub b.only { color: var(--amber); }
+.ach-wall-cnt { flex: none; max-width: 76px; text-align: right; font: 600 11px/14px var(--f-mono); color: var(--text-2); }
+.ach-wall-hd { padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
