@@ -29,7 +29,9 @@ STAFF: dict[str, object] = {
     "services/arena_config.py": "*",
     "services/city_ads.py": {"normalize", "moderation_queue", "approve", "reject"},
     "services/economy_admin.py": "*",
-    "services/integrity_rules.py": "*",  # настройка «Честности» — только владелец
+    "services/integrity_rules.py": "*",
+    "services/achievement_rules.py": "*",  # настройка достижений — только владелец
+    "services/achievements.py": {"approve", "reject", "_award"},  # решения владельца по наградам  # настройка «Честности» — только владелец
     "services/ratings.py": {"normalize_friend_rule"},
     "services/secret_promo.py": {"create_campaign", "disable", "list_campaigns"},
     "services/task_owner.py": "*",

@@ -41,6 +41,7 @@ _KINDS: dict[str, tuple[str, str]] = {
     "task_refund": ("task_refund", "task_refund"),
     "city_ads": ("city_ad_refund", "city_ad"),
     "city_ads_refund": ("city_ad_refund", "city_ad_refund"),
+    "achievement": ("achievement", "achievement"),
 }
 
 LABELS: dict[str, str] = {
@@ -63,6 +64,7 @@ LABELS: dict[str, str] = {
     "task_refund": "Возврат бюджета задания",
     "city_ad": "Реклама в городе",
     "city_ad_refund": "Возврат за рекламу в городе",
+    "achievement": "Награда за достижение",
     "credit": "Начисление",
     "debit": "Списание",
 }

@@ -590,6 +590,10 @@ async def publish_task(session: AsyncSession, *, task_id: int, actor: User) -> T
     task.platform_payout_nano = task.platform_payout_nano or 0
     task.status = "active"
     await session.flush()
+    # достижения: ветка «амбассадор» (размещённые задания) — ошибка не мешает публикации
+    from app.services import achievements as achievements_svc
+
+    await achievements_svc.safe_check(session, task.creator_id)
     return _view(task)
 
 
@@ -804,6 +808,11 @@ async def review_submission(
         )
     except Exception:  # noqa: BLE001
         integrity_svc.log.exception("[integrity] review hook failed")
+    if approve:
+        # достижения: ветка «задания» (и уровень аккаунта — от XP задания); ошибка не мешает проверке заявки
+        from app.services import achievements as achievements_svc
+
+        await achievements_svc.safe_check(session, sub.user_id, now=now)
     return sub
 
 

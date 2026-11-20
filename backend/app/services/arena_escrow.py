@@ -435,6 +435,11 @@ async def settle(
                 reference_type=REF,
                 reference_id=e.id,
             )
+    # достижения: ветка «игры» — бой засчитан каждому участнику; ошибка не мешает расчёту комнаты
+    from app.services import achievements as achievements_svc
+
+    for e in held:
+        await achievements_svc.safe_check(session, e.user_id, now=now)
     return Settlement(
         room_id=room.id,
         pot_nano=pot,

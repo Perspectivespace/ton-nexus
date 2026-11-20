@@ -66,6 +66,8 @@ class TaskOut(BaseModel):
     partner_name: str | None = None
     purchased: bool | None = None  # partner: купил ли текущий пользователь
     proof_required: bool = False
+    # значок амбассадора у автора (высшая ступень ветки «амбассадор»): исполнитель видит проверенного заказчика
+    creator_badge: dict | None = None
 
 
 class SubmitBody(BaseModel):
@@ -135,6 +137,17 @@ def _task_out(v: tasks_svc.TaskView, **extra) -> TaskOut:
     )
 
 
+async def _creator_badges(db: AsyncSession, items: list[tasks_svc.TaskView]) -> dict[int, dict]:
+    """Значки амбассадоров-авторов; ошибка достижений не ломает список заданий."""
+    from app.services import achievements as achievements_svc
+
+    try:
+        return await achievements_svc.badges_for(db, [t.creator_id for t in items])
+    except Exception:  # noqa: BLE001
+        achievements_svc.log.exception("[achievements] creator badges failed")
+        return {}
+
+
 async def _partner_extra(db: AsyncSession, v: tasks_svc.TaskView, user: User) -> dict:
     if v.task_type != tasks_svc.PARTNER:
         return {}
@@ -151,8 +164,9 @@ async def _partner_extra(db: AsyncSession, v: tasks_svc.TaskView, user: User) ->
 async def list_tasks(limit: int = Query(50, ge=1, le=100), offset: int = Query(0, ge=0),
                      user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     items = await tasks_svc.list_active(db, limit=limit, offset=offset)
+    badges = await _creator_badges(db, items)
     await db.commit()
-    return [_task_out(t) for t in items]
+    return [_task_out(t, creator_badge=badges.get(t.creator_id)) for t in items]
 
 
 @router.get("/approval/pending", response_model=list[TaskOut])
@@ -209,6 +223,7 @@ async def get_task(task_id: int, user: User = Depends(get_current_user), db: Asy
     try:
         t = await tasks_svc.get_task(db, task_id)
         extra = await _partner_extra(db, t, user)
+        extra["creator_badge"] = (await _creator_badges(db, [t])).get(t.creator_id)
         await db.commit()
         return _task_out(t, **extra)
     except TaskError as e:

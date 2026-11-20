@@ -198,6 +198,10 @@ async def spin(session: AsyncSession, *, user: User) -> SpinResult:
 
     await session.flush()
     left = max(0, free - used - 1)
+    # достижения: ветка «игры» (вращение колеса) и уровень аккаунта; ошибка не мешает вращению
+    from app.services import achievements as achievements_svc
+
+    await achievements_svc.safe_check(session, user.id)
 
     return SpinResult(
         item_id=str(item.get("id", "unknown")),

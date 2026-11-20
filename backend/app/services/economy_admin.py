@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.economy import EconomySetting
 from app.services.arena_config import DEFAULT_COMMISSION_BPS, MAX_COMMISSION_BPS, MIN_COMMISSION_BPS
-from app.services import city_ads, integrity_rules, ratings, task_tariff, tower_prizes
+from app.services import achievement_rules, city_ads, integrity_rules, ratings, task_tariff, tower_prizes
 from app.services.economy_seed import DEFAULTS, seed_economy
 
 
@@ -38,6 +38,8 @@ def _fill_missing(key: str, value: Any) -> Any:
         return {**value, "commission_bp": DEFAULT_COMMISSION_BPS}
     if key == integrity_rules.KEY:
         return integrity_rules.merged(value)
+    if key == achievement_rules.KEY:
+        return achievement_rules.merged(value)
     return value
 
 
@@ -130,6 +132,17 @@ async def set_setting(
             value = integrity_rules.normalize(value)
         except integrity_rules.IntegrityRulesError as e:
             raise EconomyAdminError(str(e)) from e
+    baseline = False
+    if key == achievement_rules.KEY:
+        from app.services.economy import get_setting
+
+        prev = achievement_rules.merged(await get_setting(session, key))
+        try:
+            value = achievement_rules.normalize(value, prev=prev)
+        except achievement_rules.AchievementRulesError as e:
+            raise EconomyAdminError(str(e)) from e
+        # «засчитывать прошлое» выключили — фиксируем уже пройденные уровни без награды (services/achievements.py)
+        baseline = prev["retroactive"] and not value["retroactive"]
     row = await session.scalar(select(EconomySetting).where(EconomySetting.key == key))
     payload = json.dumps(value, ensure_ascii=False)
     if row:
@@ -142,6 +155,10 @@ async def set_setting(
             desc = DEFAULTS[key][1]
         session.add(EconomySetting(key=key, value_json=payload, description=desc))
     await session.flush()
+    if baseline:
+        from app.services import achievements as achievements_svc
+
+        await achievements_svc.snapshot_baseline(session)
     return SettingView(
         key=key,
         value=value,
@@ -273,6 +290,7 @@ SETTING_CATALOG: list[dict[str, str]] = [
     {"key": "task_tariff", "group": "tasks", "label": "Тариф заданий"},
     {"key": "city_ads", "group": "city_ads", "label": "Реклама в городе"},
     {"key": "integrity_rules", "group": "integrity", "label": "Честность (теневой режим)"},
+    {"key": "achievements", "group": "achievements", "label": "Достижения: ступени и награды"},
     {"key": "min_withdraw_ton", "group": "withdraw", "label": "Мин. вывод TON"},
     {"key": "referral_reward", "group": "growth", "label": "Реферальная награда"},
     {"key": "daily_rewards", "group": "daily", "label": "Награды daily/streak"},

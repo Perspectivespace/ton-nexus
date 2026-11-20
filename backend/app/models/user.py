@@ -22,6 +22,8 @@ class User(Base):
     lang: Mapped[str | None] = mapped_column(String(8), nullable=True)
     # Знакомство: {"intro": bool, "hints": [...]} — что уже показано (services/onboarding.py). Пусто — новый игрок.
     onboarding: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Достижения: значок, закреплённый в профиле, — "ветка:порог" (services/achievements.py). Пусто — не выбран.
+    ach_pin: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"), nullable=False)
 
