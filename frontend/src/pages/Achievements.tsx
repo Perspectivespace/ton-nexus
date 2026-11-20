@@ -8,12 +8,14 @@ import { branchHow, branchMetric, branchName, metalName, statusName, tierTitle, 
 import { Bar, Button, EmptyPanel, ErrorPanel, LoadingPanel, Panel, ScreenHeader, Sheet, useToast } from "@/components/ui";
 import { fmtDate, fmtNum, t } from "@/i18n";
 import { haptic } from "@/lib/haptics";
+import { useScreenBack } from "@/lib/backButton";
 import { IconChevron } from "@/components/icons";
 
 type Pick = { branch: AchBranchView; tier: AchTierView };
 
 /** Профиль → «Достижения»: ветки, пройденные ступени, сколько осталось; тап по ступени — подробности и закрепление значка. */
 export function Achievements() {
+  useScreenBack("/wallet");
   const { data, isLoading, error } = useAchievements();
   const [pick, setPick] = useState<Pick | null>(null);
   const pinM = useAchPin();

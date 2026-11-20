@@ -25,10 +25,11 @@ export function hasBackButton() {
   return bb() !== null;
 }
 
-/** Повесить обработчик; возвращает функцию снятия. */
-export function pushBack(handler: () => void): () => void {
+/** Повесить обработчик; возвращает функцию снятия. bottom — под всеми остальными (запасной «назад» маршрута). */
+export function pushBack(handler: () => void, bottom = false): () => void {
   const b = bb();
-  stack.push(handler);
+  if (bottom) stack.unshift(handler);
+  else stack.push(handler);
   if (b) {
     if (!bound) {
       b.onClick(fire);
@@ -43,6 +44,23 @@ export function pushBack(handler: () => void): () => void {
   };
 }
 
+/** Шаг назад по истории приложения, а если её нет (открыли по прямой ссылке) — на fallback. */
+function goBack(navigate: ReturnType<typeof useNavigate>, fallback: string) {
+  const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+  if (idx > 0) navigate(-1);
+  else navigate(fallback, { replace: true });
+}
+
+/**
+ * Страховка для экранов вне дока (Layout): системная «Назад» видна всегда, даже если экран забыл useScreenBack —
+ * иначе в Telegram (своей ссылки «Назад» там нет) игрок застревает. Обработчик лежит под экранными,
+ * поэтому useScreenBack экрана и открытые шторки отвечают первыми.
+ */
+export function useRouteBackFallback(active: boolean) {
+  const navigate = useNavigate();
+  useEffect(() => (active ? pushBack(() => goBack(navigate, "/"), true) : undefined), [active, navigate]);
+}
+
 /**
  * Вложенный экран: системная «Назад» Telegram.
  * Если в приложении есть куда вернуться — шаг назад по истории, иначе (открыли по прямой ссылке) — на `fallback`.
@@ -51,11 +69,7 @@ export function useScreenBack(fallback = "/") {
   const navigate = useNavigate();
   useEffect(
     () =>
-      pushBack(() => {
-        const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
-        if (idx > 0) navigate(-1);
-        else navigate(fallback, { replace: true });
-      }),
+      pushBack(() => goBack(navigate, fallback)),
     [navigate, fallback],
   );
 }
