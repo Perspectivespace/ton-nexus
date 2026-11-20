@@ -195,7 +195,7 @@ export function Wallet() {
         <section className="space-y-2" aria-label={t("wallet.recent")}>
           <SectionLabel
             action={
-              <Button kind="ghost" size="sm" onClick={() => setSheet("history")}>
+              <Button kind="secondary" className="night" size="sm" onClick={() => setSheet("history")}>
                 {t("wallet.allHistory")}</Button>
             }
           >
