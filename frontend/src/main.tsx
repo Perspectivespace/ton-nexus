@@ -7,6 +7,7 @@ import { initTelegram, telegramReady } from "./lib/telegram";
 import { initTheme } from "./lib/theme";
 import { initRoutePrefetch } from "./lib/routes";
 import { initFps } from "./lib/fps";
+import { initSignScale } from "./lib/signScale";
 import { initVersionCheck } from "./lib/version";
 import { LangRoot, getLang } from "./i18n";
 import { initErrorReporting } from "./lib/errorReport";
@@ -24,6 +25,7 @@ function boot() {
   initTheme();
   initRoutePrefetch();
   initFps();
+  initSignScale();
   initVersionCheck();
   document.documentElement.lang = getLang();
   createRoot(document.getElementById("root")!).render(
