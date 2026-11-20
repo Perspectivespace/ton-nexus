@@ -33,12 +33,18 @@ const box = ([x, y, w, h]: [number, number, number, number]): CSSProperties => (
 
 /** кегль (px кадра), средняя ширина знака в em с разрядкой и поля (px кадра): заголовок баннера, подпись баннера, вывеска.
  * Ширины сверены с утверждённым макетом: названия из образца идут базовым кеглем. */
-const FONT = { banner: [14.5, 0.6, 10], sub: [10.5, 0.5, 14], neon: [17.5, 0.64, 6] } as const;
+const FONT = { banner: [14.5, 0.6, 10], sub: [10.5, 0.5, 14], neon: [17.5, 0.64, 6], line: [15, 0.66, 12] } as const;
 /** кегль, при котором текст помещается в место (px кадра): длинные названия мельчают, а не обрезаются */
 export function fitFont(kind: keyof typeof FONT, text: string, w: number): number {
   const [base, em, pad] = FONT[kind];
   const fit = (w - pad) / (Math.max(1, [...text].length) * em);
   return Math.max(7, Math.min(base, Math.floor(fit * 10) / 10));
+}
+
+/** стиль места вывески: у неона высота — нижняя граница (длинное название при минимальном кегле переносится, плашка растёт вниз) */
+export function holoBox(r: [number, number, number, number], neon: boolean): CSSProperties {
+  const b = box(r);
+  return neon ? { ...b, height: undefined, minHeight: b.height } : b;
 }
 
 /** места с объявлением на сегодня, которые умеем нарисовать */
@@ -137,7 +143,7 @@ export function CityAdSpots({ phase }: { phase: CityPhase }) {
         const w = AD_SPOT_BOX[s.key][2];
         const banner = s.format === "banner";
         const style = {
-          ...box(AD_SPOT_BOX[s.key]),
+          ...holoBox(AD_SPOT_BOX[s.key], !banner),
           ...adVars(ad.color),
           "--fs": fitFont(banner ? "banner" : "neon", ad.title, w),
           "--fs2": banner && ad.subtitle ? fitFont("sub", ad.subtitle, w) : undefined,
