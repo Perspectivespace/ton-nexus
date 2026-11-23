@@ -152,6 +152,10 @@ html { --gap-plate: rgba(8, 10, 17, .94); }
   left: -16px; right: -16px; top: -12px; bottom: -12px;
   background: var(--gap-plate);
 }
+/* колонка без «окна в город»: заливка щелей между любыми блоками, не только плитами с lift */
+.app-stage :is(.space-y-5, .space-y-4, .space-y-3, .space-y-2):not(:has(.ui-cut.see)) {
+  background: var(--gap-plate);
+}
 .ui-spill { position: relative; isolation: isolate; display: block; }
 .ui-spill::after { content: ""; position: absolute; z-index: -1; left: 6%; right: 6%; bottom: -22px; height: 44px; background: var(--spill-neon); pointer-events: none; }
 
