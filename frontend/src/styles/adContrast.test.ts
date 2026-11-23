@@ -130,6 +130,20 @@ describe("реклама читается в любое время суток (�
     expect(city).not.toMatch(/\.cv2 \.ad \{[^}]*opacity:\s*\./);
   });
 
+  it("вывески ОБМЕН / РЕАКТОР днём: светлые буквы на тёмном стекле поверх белого неба (PR C)", () => {
+    const bad: string[] = [];
+    for (const sel of [":is(.ph-dawn,.ph-day).cv2 .sign", ":is(.ph-dawn,.ph-day).cv2 .sign.wide"]) {
+      const r = rule(city, sel);
+      const bg = r.slice(r.indexOf("background"));
+      const minA = Math.min(...[...bg.slice(0, bg.indexOf(";")).matchAll(/rgba\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/g)].map((m) => +m[1]));
+      const glass = over(css(bg.match(/rgba\((\d+,\s*\d+,\s*\d+)/)![0]), minA, WHITE);
+      const k = ratio(hex(r.match(/color:\s*(#[0-9A-Fa-f]{6})/)![1]), glass);
+      if (k < MIN) bad.push(`${sel} ${k.toFixed(2)}`);
+    }
+    expect(bad).toEqual([]);
+    expect(city).not.toMatch(/\.sign \{[^}]*backdrop-filter/);
+  });
+
   it("купленные места районов (PR 6): экран фасада цвета объявления — светлые буквы на тёмном экране; подпись баннера — на плашке", () => {
     const fac = rule(idle, ".dz-idle.dz-ad.k-facade_screen");
     const a = Number(fac.match(/rgba\(var\(--ac-rgb\), ([\d.]+)\)/)![1]);

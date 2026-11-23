@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { CityAdFormat } from "@/api/hooks";
-import { AD_SPOT_BOX, fitFont } from "@/components/CityAdSpots";
+import { AD_SPOT_BOX, fitFont, holoBox } from "@/components/CityAdSpots";
 import { loadCityFrame, useCityTier } from "@/components/CityV2";
 import { adVars } from "@/lib/cityAdPalette";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
@@ -39,7 +39,7 @@ export function Sign({ spot, format, ad }: { spot: string; format: CityAdFormat;
   if (!r) return null;
   if (format === "line") {
     return (
-      <div className="cad-spot cad-tick" style={{ ...box(r), ...adVars(ad.color) }}>
+      <div className="cad-spot cad-tick" style={{ ...box(r), ...adVars(ad.color), "--fsl": Math.max(8, fitFont("line", ad.title, r[2])) } as CSSProperties}>
         <span className="tk m-still">
           <span className="own">{t("city.signMiner")}</span>
           <span className="tw-win">
@@ -51,7 +51,7 @@ export function Sign({ spot, format, ad }: { spot: string; format: CityAdFormat;
   }
   const banner = format === "banner";
   const style = {
-    ...box(r),
+    ...holoBox(r, !banner),
     ...adVars(ad.color),
     "--fs": fitFont(banner ? "banner" : "neon", ad.title, r[2]),
     "--fs2": banner && ad.subtitle ? fitFont("sub", ad.subtitle, r[2]) : undefined,

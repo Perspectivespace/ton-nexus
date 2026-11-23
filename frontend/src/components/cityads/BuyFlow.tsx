@@ -320,7 +320,7 @@ export function BuyFlow({
                 label={fmt === "facade_screen" ? t("ad.screenSub") : t("ad.signSub")}
                 unit={<Count n={subtitle.length} max={lim.subtitle_max ?? 18} />}
                 error={fieldErr("subtitle")}
-                hint={t("ad.optional")}
+                hint={fmt === "facade_screen" ? t("ad.optional") : t("ad.subCardOnly")}
               >
                 <input className="ui-input" value={subtitle} maxLength={lim.subtitle_max ?? 18} placeholder={t("ad.subPlaceholder")} onChange={(e) => setSubtitle(e.target.value)} />
               </Field>

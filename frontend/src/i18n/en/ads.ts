@@ -100,6 +100,7 @@ export const ads: Record<keyof typeof ru, string> = {
   "ad.screenSub": "Screen subtitle",
   "ad.signSub": "Text under the sign",
   "ad.optional": "Optional",
+  "ad.subCardOnly": "Optional · shown in the ad card; the sign shows the name only",
   "ad.subPlaceholder": "e.g. “20% off”",
   "ad.cardText": "Card text",
   "ad.cardTextHint": "Opens when someone taps your sign on a Walk. Optional",

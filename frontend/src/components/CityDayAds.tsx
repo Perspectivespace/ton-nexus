@@ -10,6 +10,7 @@ import { blocked, rnd } from "./CityDaySky";
  * Бесконечных анимаций нет.
  */
 
+/** w — место на фасаде (для расстановки); ширина плашки — по самому длинному названию (city.css) */
 type Ad = { x: number; y: number; w: number; h: number; slides: [string, string][] };
 const ADS: Ad[] = [
   { x: 168, y: 656, w: 92, h: 44, slides: [["SKY TRAM", "next 4 min"], ["SOLAR GRID", "98% clean"], ["NEXUS AIR", "fresh 21°"]] },
@@ -33,7 +34,7 @@ function AdPanel({ ad, delay }: { ad: Ad; delay: number }) {
     return () => window.clearTimeout(t);
   }, [ad, delay]);
   return (
-    <b className="ad" style={{ left: pc(ad.x, W), top: pc(ad.y, H), width: pc(ad.w, W), height: pc(ad.h, H) }}>
+    <b className="ad" style={{ left: pc(ad.x, W), top: pc(ad.y, H), height: pc(ad.h, H) }}>
       {ad.slides.map(([t, s], i) => (
         <span key={t} className={i === n ? "on" : undefined}>
           {t}

@@ -45,9 +45,19 @@
 .cad-holo .t { color: var(--ad-ink);
   text-shadow: calc(var(--u)*-.7) 0 rgba(255, 46, 126, .55), calc(var(--u)*.7) 0 rgba(43, 245, 255, .55), 0 0 calc(var(--u)*2.5) rgba(var(--ac-rgb), .95), 0 0 calc(var(--u)*9) rgba(var(--ac-rgb), .6); }
 .cad-holo.f-banner .t { font: 700 calc(var(--u) * var(--fs, 14.5)) / 1 var(--f-display); letter-spacing: .02em; }
+/* минимальный кегль (PR C): название не мельче 9.5 px экрана на улице (--sign-px, lib/signScale.ts), до двух строк
+ * в той же плашке; подпись на вывеске не показываем — она в карточке объявления (касание в «Прогулке») */
+.cad-holo.f-banner .t { font-size: calc(var(--u) * max(var(--fs, 14.5), 9.5 * var(--sign-px, 2))); line-height: 1.05; letter-spacing: -.01em;
+  white-space: normal; text-align: center; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.cad-holo.f-banner small { display: none; }
+.cad-holo.f-banner { padding: 0 calc(var(--u) * 4); } /* по 2 px полей на 360 — двум строкам названия нужна вся ширина плашки */
 .cad-holo.f-banner small { font: 700 calc(var(--u) * var(--fs2, 10.5)) / 1 var(--f-sans); letter-spacing: .01em; color: var(--ac-core);
   text-shadow: 0 0 calc(var(--u)*1.5) rgba(2, 5, 14, .95), 0 0 calc(var(--u)*4) rgba(2, 5, 14, .7); }
 .cad-holo.f-neon .t { color: var(--ac-core); font: 700 calc(var(--u) * var(--fs, 17.5)) / 1 var(--f-display); letter-spacing: .07em; }
+/* вывеска — тоже не мельче 9.5 px; длинное название переносится, плашка растёт вниз (высота места — min-height) */
+.cad-holo.f-neon .t { font-size: calc(var(--u) * max(var(--fs, 17.5), 9.5 * var(--sign-px, 2))); line-height: 1.05; letter-spacing: .03em;
+  white-space: normal; text-align: center; max-width: 100%; }
+.cad-holo.f-neon { padding-top: calc(var(--u) * 3); padding-bottom: calc(var(--u) * 3); }
 
 /* ореол за вывеской — отдельный слой с радиальным градиентом (не тень, не filter) */
 .cads-live .cad-halo { pointer-events: none; opacity: 0; transform: scale(1.55, 2.3);
@@ -70,7 +80,7 @@
   /* сетка светодиодов неподвижна (точки крупные, почти смыкаются — буквы читаются и днём на мелком экране): маска на окне, буквы «перескакивают» по точкам, а не едут вместе с ними */
   -webkit-mask: radial-gradient(circle, #000 62%, transparent 70%) 0 0 / calc(var(--u)*3) calc(var(--u)*3);
           mask: radial-gradient(circle, #000 62%, transparent 70%) 0 0 / calc(var(--u)*3) calc(var(--u)*3); }
-.cad-tick .own { justify-content: center; color: #E2FEFF; font: 800 calc(var(--u) * 15) / 1 var(--f-mono); letter-spacing: .3em; padding-left: .3em;
+.cad-tick .own { justify-content: center; color: #E2FEFF; font: 800 calc(var(--u) * max(15, 10 * var(--sign-px, 2))) / 1 var(--f-mono); letter-spacing: .14em; padding-left: .14em; /* ≥ 10 px экрана, разрядка плотнее, чтобы влезло */
   text-shadow: 0 0 calc(var(--u)*3) #2BF5FF, 0 0 calc(var(--u)*8) rgba(43,245,255,.6); }
 .cad-tick .tw-win { justify-content: flex-start; overflow: hidden;
   /* края окна гаснут: бегущая строка уходит в темноту, а не обрывается на полубукве («т 1 TON/сутки») */
@@ -79,12 +89,14 @@
           mask: radial-gradient(circle, #000 62%, transparent 70%) 0 0 / calc(var(--u)*3) calc(var(--u)*3), linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
           mask-composite: intersect; }
 .cad-tick .trk { display: inline-block; white-space: nowrap; will-change: transform; transform: translateX(200%);
-  font: 800 calc(var(--u) * 18) / 1 var(--f-mono); letter-spacing: .02em; color: #FFF3DC;
+  font: 800 calc(var(--u) * max(18, 10 * var(--sign-px, 2))) / 1 var(--f-mono); letter-spacing: .02em; color: #FFF3DC;
   text-shadow: 0 0 calc(var(--u)*1.5) #fff, 0 0 calc(var(--u)*4) var(--ac), 0 0 calc(var(--u)*9) var(--ac); }
 .cad-tick .tk.m-own .tw-win, .cad-tick .tk:is(.m-ad, .m-still) .own { opacity: 0; }
 /* без движения: строка стоит в окне (с многоточием), потом уступает «МАЙНЕР» */
 .cad-tick .tk.m-still .tw-win { justify-content: center; padding: 0 calc(var(--u)*6); }
-.cad-tick .tk.m-still .trk { transform: none; will-change: auto; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: calc(var(--u) * 15); }
+.cad-tick .tk.m-still .trk { transform: none; will-change: auto; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: calc(var(--u) * max(15, 10 * var(--sign-px, 2))); }
+/* превью на экране покупки (кадр крупнее, строка стоит): кегль подогнан под ширину места (--fsl, AdScene.tsx) — текст целиком */
+.cab-live .cad-tick .tk.m-still .trk { font-size: calc(var(--u) * var(--fsl, 15)); }
 
 /* выбранное место в «Прогулке» — контур */
 html.city-walk .cad-spot { pointer-events: auto; cursor: pointer; }
