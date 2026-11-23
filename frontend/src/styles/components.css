@@ -926,7 +926,10 @@ button.ui-stat.scan:disabled { opacity: 1; }
 [data-theme="light"] .dw-day.today .dw-v,
 [data-theme="light"] .dw-day.today .dw-p,
 [data-theme="light"] .dw-day.today .dw-ic { color: #5C3200; text-shadow: none; }
-[data-theme="light"] .ui-tag.amber { color: #5C3200; }
+[data-theme="light"] .ui-cut .ui-tag.amber { color: #5C3200; }
+/* шапка всегда на тёмном скриме города — светлый янтарь, не чернила панели */
+[data-theme="light"] .on-city .ui-tag.amber,
+[data-theme="light"] .scr-head .ui-tag.amber { color: #FFE7C2; }
 [data-theme="light"] .dw-day.got { background: linear-gradient(180deg, var(--ok), rgba(14,138,85,.35)); }
 [data-theme="light"] .dw-fill { background: linear-gradient(90deg, var(--ok), var(--amber)); }
 @media (prefers-reduced-motion: reduce) { .dw-fill { transition: none; } }
