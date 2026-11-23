@@ -74,7 +74,7 @@
 .ach-cel-eb { position: relative; font: 600 11px/16px var(--f-mono); letter-spacing: .16em; text-transform: uppercase; color: #FFB547; }
 .ach-cel-badge { position: relative; display: grid; place-items: center; margin: 10px 0 8px; animation: ach-badge .7s cubic-bezier(.2, 1.4, .4, 1) .08s both; }
 .ach-cel-t { position: relative; font: 700 20px/26px var(--f-display); color: #F2F6FF; overflow-wrap: anywhere; }
-.ach-cel-m { position: relative; margin-top: 2px; font: 600 11px/16px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: #9AA4BA; }
+.ach-cel-m { position: relative; margin-top: 2px; font: 600 13px/18px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: #DCE3F0; }
 .ach-cel-rest { position: relative; display: flex; justify-content: center; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
 .ach-cel-rw { position: relative; margin-top: 12px; font: 700 18px/24px var(--f-mono); color: #2BF5FF; text-shadow: 0 0 10px rgba(43, 245, 255, .45); }
 .ach-cel-note { position: relative; margin-top: 8px; font: 400 12px/16px var(--f-sans); color: #FFB547; }
@@ -113,8 +113,8 @@
 .ach-wall-ph { flex: none; width: 40px; height: 40px; }
 .ach-wall-name { display: flex; align-items: baseline; gap: 8px; min-width: 0; font: 600 14px/20px var(--f-sans); color: var(--text); }
 .ach-wall-lvl { flex: none; font: 500 11px/16px var(--f-mono); color: var(--text-3); }
-.ach-wall-sub { margin-top: 1px; font: 400 12px/16px var(--f-sans); color: var(--text-2); overflow-wrap: anywhere; }
-.ach-wall-sub b { font-weight: 600; color: var(--text); }
+.ach-wall-sub { margin-top: 1px; font: 400 12px/16px var(--f-sans); color: var(--text-2); overflow-wrap: break-word; }
+.ach-wall-sub b { font-weight: 600; color: var(--text); white-space: nowrap; }
 .ach-wall-sub b.only { color: var(--amber); }
 .ach-wall-cnt { flex: none; max-width: 76px; text-align: right; font: 600 11px/14px var(--f-mono); color: var(--text-2); }
 .ach-wall-hd { padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }

@@ -92,11 +92,22 @@ export function Gauge({ value, max = 100, label, sub }: { value: number; max?: n
  * тип объекта); повтор названия раздела другим словом не ставим (DESIGN п. 14.14).
  */
 export function ScreenHeader({ eyebrow, title, action }: { eyebrow?: string; title: string; action?: ReactNode }) {
+  /* действие на строке подписи, заголовок на всю ширину — иначе на 360 «Кабинет владельца» обрезается */
+  if (eyebrow) {
+    return (
+      <header className="on-city scr-head scr-head-stack">
+        <div className="scr-head-top">
+          <p className="ui-label">{eyebrow}</p>
+          {action}
+        </div>
+        <h1 className="ui-title ui-shade mt-1">{title}</h1>
+      </header>
+    );
+  }
   return (
-    <header className={`on-city scr-head flex justify-between gap-3 ${eyebrow ? "items-start" : "min-h-[40px] items-center"}`}>
+    <header className="on-city scr-head flex min-h-[40px] items-center justify-between gap-3">
       <div className="min-w-0">
-        {eyebrow && <p className="ui-label">{eyebrow}</p>}
-        <h1 className={`ui-title ui-shade truncate ${eyebrow ? "mt-1" : ""}`}>{title}</h1>
+        <h1 className="ui-title ui-shade truncate">{title}</h1>
       </div>
       {action}
     </header>

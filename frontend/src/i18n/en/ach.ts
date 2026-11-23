@@ -67,7 +67,7 @@ export const ach: Record<keyof typeof ru, string> = {
   "ach.wallSub": "Players with the rarest achievements",
   "ach.wallLinkSub": "Who has the rarest tiers",
   "ach.wallHolders": "held by {n} player|held by {n} players",
-  "ach.wallOnly": "only holder",
+  "ach.wallOnly": "sole holder",
   "ach.wallCount": "{n} tier|{n} tiers",
   "ach.wallPlayers": "player with achievements|players with achievements",
   "ach.wallMe": "Your place",
