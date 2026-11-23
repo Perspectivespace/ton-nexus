@@ -66,8 +66,9 @@ html[data-theme="light"] :is(.on-city, .scr-head) .ui-btn.ui-btn.secondary::befo
   background:
     linear-gradient(90deg, transparent 4%, rgba(190, 215, 255, .16) 30%, rgba(43, 245, 255, .22) 62%, transparent 96%) top / 100% 1px no-repeat,
     linear-gradient(90deg, rgba(6, 8, 14, .9), rgba(6, 8, 14, .86) 55%, rgba(6, 8, 14, .78));
-  -webkit-mask: linear-gradient(180deg, rgba(0,0,0,.92), #000 14px, #000 calc(100% - 26px), transparent);
-  mask: linear-gradient(180deg, rgba(0,0,0,.92), #000 14px, #000 calc(100% - 26px), transparent);
+  /* щель под шапкой (~20 px) остаётся плотной: раньше маска растворялась как раз в зазоре, и вывески просвечивали */
+  -webkit-mask: linear-gradient(180deg, rgba(0,0,0,.92), #000 14px, #000 calc(100% - 8px), transparent);
+  mask: linear-gradient(180deg, rgba(0,0,0,.92), #000 14px, #000 calc(100% - 8px), transparent);
 }
 .scr-head .ui-label { color: #DCE3F0; text-shadow: 0 1px 2px rgba(0, 0, 0, .9); }
 .scr-head .ui-title { color: #F2F5FB; text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 14px rgba(0, 0, 0, .55); }
@@ -119,8 +120,20 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 
 /* тень-подложка без filter (п. 3.5) */
 .ui-lift { position: relative; isolation: isolate; }
-.ui-lift::after { content: ""; position: absolute; z-index: -1; left: 4%; right: 4%; bottom: -12px; height: 34px; background: var(--plate-1); pointer-events: none; }
-.ui-lift.l2::after { left: -4%; right: -4%; bottom: -22px; height: 60px; background: var(--plate-2); }
+/* подложка в щелях и срезах плит — иначе вывески города читаются между панелями. Без backdrop-filter. */
+.ui-lift::after {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  left: -16px; right: -16px; top: -10px; bottom: -10px; height: auto;
+  background: rgba(8, 10, 17, .94);
+}
+[data-theme="light"] .ui-lift::after { background: rgba(246, 248, 252, .96); }
+.ui-lift.l2::after { top: -12px; bottom: -12px; }
+/* «окно в город»: подложка только в щели под героем, не за стеклом */
+.ui-lift:has(> .ui-cut.see)::after {
+  top: auto; bottom: -16px; height: 20px;
+  background: rgba(8, 10, 17, .94);
+}
+[data-theme="light"] .ui-lift:has(> .ui-cut.see)::after { background: rgba(246, 248, 252, .96); }
 .ui-spill { position: relative; isolation: isolate; display: block; }
 .ui-spill::after { content: ""; position: absolute; z-index: -1; left: 6%; right: 6%; bottom: -22px; height: 44px; background: var(--spill-neon); pointer-events: none; }
 
