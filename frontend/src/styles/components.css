@@ -103,6 +103,7 @@ html[data-theme="light"]:not(.in-bld) .on-city .brand-pair > .b-light { display:
 /* подписи на «окне в город»: на тон светлее обычного text-3 */
 .ui-cut.hero.see .ui-label { color: var(--text-2); }
 [data-theme="light"] .ui-cut.hero.see .ui-shade { text-shadow: 0 1px 1px rgba(255, 255, 255, .9); }
+[data-theme="light"] .ui-cut.hero .ui-sys { text-shadow: 0 1px 1px rgba(255, 255, 255, .9); }
 
 html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"]) .ui-cut.hero.see {
   --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(246, 248, 251, .88) 40%, rgba(246, 248, 251, .88) 62%, rgba(255, 255, 255, .95));
@@ -132,8 +133,8 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 
 
 /* —— Типографика —— */
-.ui-label { font: 600 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
-.ui-sys { font: 500 11px/16px var(--f-mono); letter-spacing: .06em; color: var(--text-3); }
+.ui-label { font: 600 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .14em; text-transform: uppercase; color: var(--text-2); }
+.ui-sys { font: 500 11px/16px var(--f-mono); letter-spacing: .06em; color: var(--text-2); }
 .ui-title { font: 700 24px/28px var(--f-display); font-stretch: 85%; letter-spacing: .01em; color: var(--text); }
 .ui-h { font: 600 17px/24px var(--f-sans); color: var(--text); }
 .ui-sec { font: 400 13px/20px var(--f-sans); color: var(--text-2); }
@@ -264,7 +265,7 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 .ui-tabs { --c: 10px; display: flex; gap: 4px; padding: 4px; position: relative; isolation: isolate; background: var(--edge-0); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
 .ui-tabs::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--mat-0); box-shadow: var(--bevel-0); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
 .ui-tab { --c: 7px; flex: 1; min-width: 0; height: 44px; padding: 0 6px; display: grid; place-items: center; border: 0; background: none; cursor: pointer; white-space: nowrap;
-  font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; }
+  font: 700 13px var(--f-display); font-stretch: 80%; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); position: relative; }
 .ui-tab[aria-selected="true"] { color: var(--neon-ink); background: var(--btn-primary); box-shadow: var(--btn-primary-bevel); }
 .ui-tab:focus-visible, .ui-segline button:focus-visible { outline: 2px solid var(--neon); outline-offset: -2px; }
 .ui-segline { display: flex; gap: 20px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
@@ -921,8 +922,11 @@ button.ui-stat.scan:disabled { opacity: 1; }
 .dw-day.bonus .dw-ic b { color: var(--magenta); text-shadow: var(--halo-magenta); }
 .dw-day.bonus:not(.done):not(.got)::after { content: ""; position: absolute; top: 0; right: 0; width: 6px; height: 6px; background: var(--magenta); box-shadow: var(--halo-magenta); }
 .dw-day.bonus.next { --tone: var(--text-2); }
-[data-theme="light"] .dw-day.today { background: linear-gradient(180deg, var(--amber), rgba(163,95,0,.45)); }
-[data-theme="light"] .dw-day.today .dw-v { color: var(--amber); }
+[data-theme="light"] .dw-day.today { --tone: #5C3200; background: linear-gradient(180deg, #C9842A, rgba(163,95,0,.4)); }
+[data-theme="light"] .dw-day.today .dw-v,
+[data-theme="light"] .dw-day.today .dw-p,
+[data-theme="light"] .dw-day.today .dw-ic { color: #5C3200; text-shadow: none; }
+[data-theme="light"] .ui-tag.amber { color: #5C3200; }
 [data-theme="light"] .dw-day.got { background: linear-gradient(180deg, var(--ok), rgba(14,138,85,.35)); }
 [data-theme="light"] .dw-fill { background: linear-gradient(90deg, var(--ok), var(--amber)); }
 @media (prefers-reduced-motion: reduce) { .dw-fill { transition: none; } }
