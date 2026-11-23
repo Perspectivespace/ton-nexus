@@ -17,8 +17,9 @@
   --sheet-scrim: rgba(2, 3, 6, .72);
   --text-shade: 0 1px 2px rgba(0, 0, 0, .9);
   /* «окно в город» (hero.see): плотное ядро там, где лежат цифры и кольцо, город — только полосой сверху и у краёв */
-  --see-core: radial-gradient(82% 64% at 50% 60%, rgba(6, 8, 14, .66), rgba(6, 8, 14, .36) 62%, rgba(6, 8, 14, 0) 100%);
-  --see-fill: linear-gradient(180deg, rgba(12, 15, 25, .48), rgba(8, 10, 17, .7) 30%, rgba(8, 10, 17, .8) 70%, rgba(8, 10, 17, .88));
+  --see-core: radial-gradient(82% 64% at 50% 60%, rgba(6, 8, 14, .78), rgba(6, 8, 14, .5) 62%, rgba(6, 8, 14, 0) 100%);
+  /* PR D: верх панели не светлее .84 — иначе «Доступно» / «Баланс» на дневном небе падают ниже 4.5:1 */
+  --see-fill: linear-gradient(180deg, rgba(12, 15, 25, .84), rgba(8, 10, 17, .86) 30%, rgba(8, 10, 17, .9) 70%, rgba(8, 10, 17, .92));
   --scrim-panel: linear-gradient(180deg, rgba(5, 6, 11, .0), rgba(5, 6, 11, .62) 30%, rgba(5, 6, 11, .8));
   /* подложка для текста, который лежит прямо на городе (п. 3.8): плотная, без blur */
   --onbg-plate: rgba(6, 8, 14, .86);
@@ -32,7 +33,8 @@
   --tile-muted: var(--surface-3);
   --sheet-scrim: rgba(11, 15, 26, .35);
   --text-shade: none;
-  --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .86), rgba(246, 248, 251, .62) 40%, rgba(246, 248, 251, .62) 62%, rgba(255, 255, 255, .9));
+  /* середина тоже ≥ .88: днём город просвечивал и контраст подписей падал до 3.2–3.4 */
+  --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(246, 248, 251, .88) 40%, rgba(246, 248, 251, .88) 62%, rgba(255, 255, 255, .95));
   --scrim-panel: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .7) 40%, rgba(255, 255, 255, .85));
   --see-core: linear-gradient(transparent, transparent);
   --onbg-plate: rgba(255, 255, 255, .9);
@@ -98,6 +100,10 @@ html[data-theme="light"]:not(.in-bld) .on-city .brand-pair > .b-light { display:
 [data-theme="light"] .ui-cut.hero { --edge: linear-gradient(160deg, var(--neon), rgba(10,20,50,.14) 30%, rgba(10,20,50,.26)); --fill: radial-gradient(90% 60% at 18% 0%, var(--neon-soft), transparent 70%), var(--mat-1); }
 [data-theme="light"] .ui-cut.hero.see { --fill: var(--see-fill); }
 /* светлая тема над вечерним/ночным городом: стекло плотнее, иначе белое поверх тёмного даёт серость (п. 3.8.2) */
+/* подписи на «окне в город»: на тон светлее обычного text-3 */
+.ui-cut.hero.see .ui-label { color: var(--text-2); }
+[data-theme="light"] .ui-cut.hero.see .ui-shade { text-shadow: 0 1px 1px rgba(255, 255, 255, .9); }
+
 html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"]) .ui-cut.hero.see {
   --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(246, 248, 251, .88) 40%, rgba(246, 248, 251, .88) 62%, rgba(255, 255, 255, .95));
 }
@@ -219,9 +225,9 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 /* —— Stat-ячейка —— */
 .ui-stat { --c: 7px; padding: 8px 2px; text-align: center; background: var(--edge-1); position: relative; isolation: isolate; clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); min-width: 0; }
 .ui-stat::before { content: ""; position: absolute; inset: 1px; z-index: -1; background: var(--spec), var(--mat-1); box-shadow: var(--bevel-1); clip-path: polygon(0 0, calc(100% - var(--c) + .5px) 0, 100% calc(var(--c) - .5px), 100% 100%, calc(var(--c) - .5px) 100%, 0 calc(100% - var(--c) + .5px)); }
-.ui-stat .k { font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .08em; color: var(--text-3); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-stat .k { font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .08em; color: var(--text-2); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-stat .v { font: 700 21px/28px var(--f-mono); color: var(--text); font-variant-numeric: tabular-nums; }
-.ui-stat .p { font: 500 11px/16px var(--f-mono); color: var(--text-3); }
+.ui-stat .p { font: 500 11px/16px var(--f-mono); color: var(--text-2); }
 .ui-stat.focus { background: linear-gradient(180deg, var(--neon-core), var(--neon) 40%, rgba(43,245,255,.5)); }
 .ui-stat.focus::before { background: radial-gradient(80% 60% at 50% 100%, rgba(43,245,255,.30), transparent 70%), var(--mat-1); }
 .ui-stat.focus .k, .ui-stat.focus .p { color: var(--neon); } .ui-stat.focus .v { color: var(--neon-core); text-shadow: var(--halo-neon); }
@@ -274,7 +280,7 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 .ui-dock .ui-lift { max-width: 28rem; margin: 0 auto; pointer-events: auto; }
 .ui-dock .ui-cut { --c: var(--cut-dock); height: 66px; display: flex; padding: 0 4px; }
 .ui-dock a { flex: 1; min-width: 0; display: grid; justify-items: center; align-content: center; gap: 4px; text-decoration: none; position: relative;
-  font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+  font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
 .ui-dock a span { white-space: nowrap; }
 .ui-dock a.active { color: var(--neon); text-shadow: var(--halo-neon); background: radial-gradient(60% 70% at 50% 0%, rgba(43,245,255,.20), transparent 75%); }
 .ui-dock a.active::before { content: ""; position: absolute; top: 0; left: 50%; width: 28px; margin-left: -14px; height: 2px; background: var(--neon-core); box-shadow: 0 0 8px var(--neon), 0 0 16px var(--neon); }
@@ -287,7 +293,7 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 .app-shell > .dock-layer { position: relative; z-index: 20; }
 .ui-dock .dg { flex: 1 1 0; min-width: 0; display: flex; }
 .dock-mid { flex: 0 0 48px; display: grid; justify-items: center; align-content: center; gap: 4px; pointer-events: none;
-  font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+  font: 700 11px/16px var(--f-display); font-stretch: 75%; letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
 .dock-mid i { display: block; width: 22px; height: 22px; }
 .dock-mid span { white-space: nowrap; }
 .dock-mid.on { color: var(--neon); }
@@ -492,7 +498,7 @@ a.ui-btn { text-decoration: none; }
 .pw {
   --pw-edge: rgba(190,210,255,.28); --pw-inner: rgba(0,0,0,.7);
   --pw-b0: #EEF3FF; --pw-b1: #6A7390; --pw-b2: #232A3B;
-  --pw-tick: rgba(4,6,12,.62); --pw-tick-maj: rgba(4,6,12,.9); --pw-deg: rgba(4,6,12,.78); --pw-groove: rgba(4,6,12,.35); --pw-ring: rgba(43,245,255,.30);
+  --pw-tick: rgba(4,6,12,.62); --pw-tick-maj: rgba(4,6,12,.9); --pw-deg: #E6EBF5; --pw-deg-stroke: rgba(4,6,12,.92); --pw-groove: rgba(4,6,12,.35); --pw-ring: rgba(43,245,255,.30);
   --pw-tab: #1A2030; --pw-plate: rgba(4,6,12,.86);
   --pw-face: rgba(5,8,14,.84);
   --pw-hot: #FFE7C2; --pw-amber: #FFB547; --pw-neon: #2BF5FF; --pw-magenta: #FF2E7E; --pw-steel: rgba(180,198,255,.62); --pw-void: rgba(150,170,255,.22);
@@ -502,13 +508,13 @@ a.ui-btn { text-decoration: none; }
   --pw-sub: rgba(220,228,245,.55); --pw-div: rgba(170,190,255,.16);
   --pw-win: rgba(255,181,71,.20); --pw-win-edge: #FFD08A;
   --pw-ptr: #F2FEFF; --pw-ptr-edge: #2BF5FF; --pw-shine: rgba(230,245,255,.6);
-  --pw-hud: rgba(200,214,245,.48); --pw-hud-v: #DDE6FA;
+  --pw-hud: rgba(200,214,245,.86); --pw-hud-v: #DDE6FA;
   position: relative; width: min(100%, 300px); aspect-ratio: 1; margin-inline: auto; contain: layout paint;
 }
 [data-theme="light"] .pw {
   --pw-edge: rgba(10,20,50,.20); --pw-inner: rgba(10,20,50,.14);
   --pw-b0: #FFFFFF; --pw-b1: #B9C2D2; --pw-b2: #7C879B;
-  --pw-tick: rgba(10,20,50,.35); --pw-tick-maj: rgba(10,20,50,.62); --pw-deg: rgba(10,20,50,.62); --pw-groove: rgba(10,20,50,.18); --pw-ring: rgba(0,126,149,.35);
+  --pw-tick: rgba(10,20,50,.35); --pw-tick-maj: rgba(10,20,50,.62); --pw-deg: #1B2333; --pw-deg-stroke: rgba(255,255,255,.92); --pw-groove: rgba(10,20,50,.18); --pw-ring: rgba(0,126,149,.35);
   --pw-tab: #E3E8F1; --pw-plate: rgba(236,240,246,.9);
   --pw-face: rgba(251,252,254,.88);
   --pw-hot: #C77E12; --pw-amber: #A35F00; --pw-neon: #007E95; --pw-magenta: #C8105A; --pw-steel: rgba(10,20,50,.40); --pw-void: rgba(10,20,50,.18);
@@ -518,7 +524,7 @@ a.ui-btn { text-decoration: none; }
   --pw-sub: rgba(27,35,51,.58); --pw-div: rgba(10,20,50,.12);
   --pw-win: rgba(255,181,71,.24); --pw-win-edge: #A35F00;
   --pw-ptr: #007E95; --pw-ptr-edge: #007E95; --pw-shine: rgba(255,255,255,.9);
-  --pw-hud: rgba(27,35,51,.52); --pw-hud-v: #1B2333;
+  --pw-hud: rgba(27,35,51,.86); --pw-hud-v: #1B2333;
 }
 .pw-l, .pw-disc, .pw-shine { position: absolute; inset: 0; width: 100%; height: 100%; }
 .pw-l { overflow: visible; }
@@ -526,13 +532,14 @@ a.ui-btn { text-decoration: none; }
 .pw.is-spinning .pw-disc { will-change: transform; }
 .pw-tk { stroke: var(--pw-tick); }
 .pw-tk.maj { stroke: var(--pw-tick-maj); }
-.pw-deg { font: 500 6.5px/1 var(--f-mono); letter-spacing: .04em; fill: var(--pw-deg); }
+/* числа на ободе: 9 px, заливка + обводка — читаются и на светлом, и на тёмном хроме (PR D) */
+.pw-deg { font: 500 9px/1 var(--f-mono); letter-spacing: .04em; fill: var(--pw-deg); stroke: var(--pw-deg-stroke); stroke-width: 2.2px; paint-order: stroke fill; stroke-linejoin: round; }
 .pw-ring { stroke: var(--pw-ring); }
 .pw-t1 { font: 600 10.5px/1 var(--f-display); letter-spacing: .22em; text-transform: uppercase; }
-.pw-t2 { font: 500 6.8px/1 var(--f-mono); letter-spacing: .26em; text-transform: uppercase; fill: var(--pw-sub); }
+.pw-t2 { font: 500 8px/1 var(--f-mono); letter-spacing: .2em; text-transform: uppercase; fill: var(--pw-sub); }
 /* широкая разрядка добавляет хвост справа — сдвигаем на полшага, чтобы подпись стояла по центру сектора */
 .pw-t1 { transform: translateX(.11em); transform-box: fill-box; }
-.pw-t2 { transform: translateX(.13em); transform-box: fill-box; }
+.pw-t2 { transform: translateX(.10em); transform-box: fill-box; }
 .pw-div { stroke: var(--pw-div); }
 .pw-sec, .pw-txt { transition: opacity .32s var(--ease-out, ease-out); }
 .pw-sec.dim, .pw-txt.dim { opacity: .38; }
@@ -550,7 +557,7 @@ a.ui-btn { text-decoration: none; }
 .pw-hub { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; display: grid; place-items: center; pointer-events: none; }
 /* табло по углам: моно, мелко, разрядка; значение чуть ярче подписи */
 .pw-hud { position: absolute; display: flex; flex-direction: column; gap: 3px; pointer-events: none; font-family: var(--f-mono); text-transform: uppercase; contain: layout paint; }
-.pw-hud i { font: 500 8px/1 var(--f-mono); font-style: normal; letter-spacing: .2em; color: var(--pw-hud); }
+.pw-hud i { font: 500 10px/1.15 var(--f-mono); font-style: normal; letter-spacing: .14em; color: var(--pw-hud); }
 .pw-hud b { font: 500 12px/1 var(--f-mono); letter-spacing: .1em; color: var(--pw-hud-v); font-variant-numeric: tabular-nums; }
 .pw-hud.tl { left: 0; top: 0; }
 .pw-hud.tr { right: 0; top: 0; align-items: flex-end; }
@@ -897,8 +904,10 @@ button.ui-stat.scan:disabled { opacity: 1; }
 .dw-ic { width: 20px; height: 20px; display: grid; place-items: center; color: var(--tone); }
 .dw-ic i, .dw-ic b { font: 700 12px/1 var(--f-mono); font-style: normal; }
 .dw-v { font: 600 10px/13px var(--f-mono); letter-spacing: -.03em; color: var(--text-2); font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap; }
-.dw-p { font: 500 9px/11px var(--f-mono); color: var(--text-3); white-space: nowrap; }
-.dw-day.next { opacity: .72; }
+.dw-p { font: 500 10px/12px var(--f-mono); color: var(--text-2); white-space: nowrap; }
+/* будущие дни: не opacity на всю ячейку — иначе металл становится стеклом и контраст падает до ~2.8 */
+.dw-day.next { --tone: var(--text-2); }
+.dw-day.next .dw-p, .dw-day.next .dw-v { color: var(--text-2); }
 .dw-day.done { --tone: var(--ok); }
 .dw-day.done::before { background: radial-gradient(90% 70% at 50% 0%, var(--ok-soft), transparent 70%), var(--mat-1), var(--surface-1); }
 .dw-day.done .dw-v { color: var(--text-3); }
@@ -911,7 +920,7 @@ button.ui-stat.scan:disabled { opacity: 1; }
 .dw-day.got .dw-v { color: var(--text); }
 .dw-day.bonus .dw-ic b { color: var(--magenta); text-shadow: var(--halo-magenta); }
 .dw-day.bonus:not(.done):not(.got)::after { content: ""; position: absolute; top: 0; right: 0; width: 6px; height: 6px; background: var(--magenta); box-shadow: var(--halo-magenta); }
-.dw-day.bonus.next { opacity: .9; }
+.dw-day.bonus.next { --tone: var(--text-2); }
 [data-theme="light"] .dw-day.today { background: linear-gradient(180deg, var(--amber), rgba(163,95,0,.45)); }
 [data-theme="light"] .dw-day.today .dw-v { color: var(--amber); }
 [data-theme="light"] .dw-day.got { background: linear-gradient(180deg, var(--ok), rgba(14,138,85,.35)); }
