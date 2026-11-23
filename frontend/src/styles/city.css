@@ -107,7 +107,7 @@
 .cv2 .sign small { display: none; } /* подпись «MK IV · ОНЛАЙН» (6 px) не читалась — на вывеске только название, ≥ 10 px */
 .cv2 .sign.quiet { opacity: .55; text-shadow: 0 0 6px rgba(43,245,255,.6); }
 .cv2 .sign.holo { text-shadow: 0 0 8px rgba(43,245,255,.85), 0 0 2px #fff; }
-.cv2 .sign.wide { color: #FFE9FB; text-shadow: 0 0 8px rgba(255,79,154,.8), 0 0 2px #fff; font-size: clamp(9px, 2.8vw, 14px); }
+.cv2 .sign.wide { color: #FFE9FB; text-shadow: 0 0 8px rgba(255,79,154,.8), 0 0 2px #fff; font-size: clamp(10px, 2.8vw, 14px); }
 /* голо-развёртка: полоса света проходит по панели (opacity + transform, без анимации свечения) */
 .cv2 .sign.scan { overflow: hidden; }
 .cv2 .sign.scan::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 30%;

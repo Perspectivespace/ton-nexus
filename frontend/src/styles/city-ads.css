@@ -47,9 +47,10 @@
 .cad-holo.f-banner .t { font: 700 calc(var(--u) * var(--fs, 14.5)) / 1 var(--f-display); letter-spacing: .02em; }
 /* минимальный кегль (PR C): название не мельче 9.5 px экрана на улице (--sign-px, lib/signScale.ts), до двух строк
  * в той же плашке; подпись на вывеске не показываем — она в карточке объявления (касание в «Прогулке») */
-.cad-holo.f-banner .t { font-size: calc(var(--u) * max(var(--fs, 14.5), 9.5 * var(--sign-px, 2))); line-height: 1.05; letter-spacing: 0;
+.cad-holo.f-banner .t { font-size: calc(var(--u) * max(var(--fs, 14.5), 9.5 * var(--sign-px, 2))); line-height: 1.05; letter-spacing: -.01em;
   white-space: normal; text-align: center; max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .cad-holo.f-banner small { display: none; }
+.cad-holo.f-banner { padding: 0 calc(var(--u) * 4); } /* по 2 px полей на 360 — двум строкам названия нужна вся ширина плашки */
 .cad-holo.f-banner small { font: 700 calc(var(--u) * var(--fs2, 10.5)) / 1 var(--f-sans); letter-spacing: .01em; color: var(--ac-core);
   text-shadow: 0 0 calc(var(--u)*1.5) rgba(2, 5, 14, .95), 0 0 calc(var(--u)*4) rgba(2, 5, 14, .7); }
 .cad-holo.f-neon .t { color: var(--ac-core); font: 700 calc(var(--u) * var(--fs, 17.5)) / 1 var(--f-display); letter-spacing: .07em; }
