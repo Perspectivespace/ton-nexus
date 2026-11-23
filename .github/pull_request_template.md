@@ -17,6 +17,7 @@
 
 ## Проверки
 
+- [ ] docs/agent обновлён: JOURNAL / DECISIONS / ROADMAP (or not required — say why)
 - [ ] Тесты и сборка проходят (если есть код)
 - [ ] Пользовательские строки — RU и EN
 - [ ] В diff нет секретов (см. `docs/agent/WORKFLOW.md`)
