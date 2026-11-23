@@ -63,11 +63,12 @@ html:not(.cv2-home) .cv2:is(.ph-dawn, .ph-day) .tw-scr { opacity: .75; }
 /* зал читается вокруг реактора: у героя «Майнера» верх (кольцо реактора) почти прозрачный,
  * плотность нарастает к цифрам и подписям — текст по-прежнему на подложке */
 html.in-bld .ui-cut.hero.see {
-  --see-core: radial-gradient(74% 34% at 50% 72%, rgba(6, 8, 14, .58), rgba(6, 8, 14, 0) 100%);
-  --see-fill: linear-gradient(180deg, rgba(8, 12, 22, .06), rgba(8, 12, 22, .16) 36%, rgba(8, 10, 17, .6) 58%, rgba(8, 10, 17, .82)); }
+  --see-core: radial-gradient(74% 34% at 50% 72%, rgba(6, 8, 14, .7), rgba(6, 8, 14, 0) 100%);
+  /* верх остаётся чуть открытым (реактор виден), с середины — плотность ≥ .78 под «Накоплено» и цифрами */
+  --see-fill: linear-gradient(180deg, rgba(8, 12, 22, .2), rgba(8, 12, 22, .42) 36%, rgba(8, 10, 17, .78) 52%, rgba(8, 10, 17, .9)); }
 /* .in-bld.in-bld — перебить правило «светлая тема над ночным городом» (components.css, та же специфичность, идёт позже) */
 html[data-theme="light"].in-bld.in-bld .ui-cut.hero.see {
-  --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .22) 36%, rgba(248, 252, 255, .84) 58%, rgba(255, 255, 255, .93)); }
+  --see-fill: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .52) 36%, rgba(248, 252, 255, .9) 52%, rgba(255, 255, 255, .96)); }
 /* светлая тема внутри здания: короткие скримы под шапкой и доком, без молочной дымки по залу */
 html[data-theme="light"].in-bld { --scrim-top: linear-gradient(180deg, rgba(238, 246, 252, .9) 0, rgba(238, 246, 252, .55) 46px, rgba(238, 246, 252, 0) 92px);
   --scrim-bottom: linear-gradient(0deg, rgba(238, 246, 252, .88), rgba(238, 246, 252, 0) 110px); }
