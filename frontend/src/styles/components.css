@@ -124,10 +124,11 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 .ui-lift::after {
   content: ""; position: absolute; z-index: -1; pointer-events: none;
   left: -16px; right: -16px; top: -12px; bottom: -22px; height: auto;
-  background: var(--gap-plate, rgba(8, 10, 17, .94));
+  background: var(--gap-plate, rgba(8, 10, 17, .82));
 }
-html { --gap-plate: rgba(8, 10, 17, .94); }
-[data-theme="light"] { --gap-plate: rgba(246, 248, 252, .96); }
+/* 0.82 / 0.86: силуэты и огни города в щелях видны, мелкий текст вывесок уже не читается (при 0.70 ещё читался) */
+html { --gap-plate: rgba(8, 10, 17, .82); }
+[data-theme="light"] { --gap-plate: rgba(246, 248, 252, .86); }
 [data-theme="light"] .ui-lift::after { background: var(--gap-plate); }
 .ui-lift.l2::after { top: -12px; bottom: -22px; }
 /* «окно в город»: подложка только в щели под героем, не за стеклом */
