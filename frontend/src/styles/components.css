@@ -123,17 +123,35 @@ html[data-theme="light"]:is([data-city-phase="night"], [data-city-phase="dusk"])
 /* подложка в щелях и срезах плит — иначе вывески города читаются между панелями. Без backdrop-filter. */
 .ui-lift::after {
   content: ""; position: absolute; z-index: -1; pointer-events: none;
-  left: -16px; right: -16px; top: -10px; bottom: -10px; height: auto;
-  background: rgba(8, 10, 17, .94);
+  left: -16px; right: -16px; top: -12px; bottom: -22px; height: auto;
+  background: var(--gap-plate, rgba(8, 10, 17, .94));
 }
-[data-theme="light"] .ui-lift::after { background: rgba(246, 248, 252, .96); }
-.ui-lift.l2::after { top: -12px; bottom: -12px; }
+html { --gap-plate: rgba(8, 10, 17, .94); }
+[data-theme="light"] { --gap-plate: rgba(246, 248, 252, .96); }
+[data-theme="light"] .ui-lift::after { background: var(--gap-plate); }
+.ui-lift.l2::after { top: -12px; bottom: -22px; }
 /* «окно в город»: подложка только в щели под героем, не за стеклом */
 .ui-lift:has(> .ui-cut.see)::after {
-  top: auto; bottom: -16px; height: 20px;
-  background: rgba(8, 10, 17, .94);
+  top: auto; bottom: -22px; height: 22px;
+  background: var(--gap-plate);
 }
-[data-theme="light"] .ui-lift:has(> .ui-cut.see)::after { background: rgba(246, 248, 252, .96); }
+/* сетки статов, вкладки и секции без .ui-lift — те же щели */
+.grid:has(> .ui-stat),
+.ow-tabs,
+.space-y-5 > section,
+.space-y-4 > section,
+.space-y-3 > section {
+  position: relative; isolation: isolate;
+}
+.grid:has(> .ui-stat)::before,
+.ow-tabs::before,
+.space-y-5 > section::before,
+.space-y-4 > section::before,
+.space-y-3 > section::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  left: -16px; right: -16px; top: -12px; bottom: -12px;
+  background: var(--gap-plate);
+}
 .ui-spill { position: relative; isolation: isolate; display: block; }
 .ui-spill::after { content: ""; position: absolute; z-index: -1; left: 6%; right: 6%; bottom: -22px; height: 44px; background: var(--spill-neon); pointer-events: none; }
 
