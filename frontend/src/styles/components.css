@@ -71,6 +71,14 @@ html[data-theme="light"] :is(.on-city, .scr-head) .ui-btn.ui-btn.secondary::befo
 }
 .scr-head .ui-label { color: #DCE3F0; text-shadow: 0 1px 2px rgba(0, 0, 0, .9); }
 .scr-head .ui-title { color: #F2F5FB; text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 14px rgba(0, 0, 0, .55); }
+.scr-head-stack { display: flex; flex-direction: column; align-items: stretch; }
+.scr-head-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.scr-head-top .ui-label { min-width: 0; }
+.scr-head-stack .ui-title { overflow: visible; }
+.scr-head-stack { display: flex; flex-direction: column; align-items: stretch; }
+.scr-head-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.scr-head-top .ui-label { min-width: 0; }
+.scr-head-stack .ui-title { overflow: visible; }
 html[data-theme="light"]:not(.in-bld) .on-city .brand-pair > .b-dark { display: block; }
 html[data-theme="light"]:not(.in-bld) .on-city .brand-pair > .b-light { display: none; }
 
