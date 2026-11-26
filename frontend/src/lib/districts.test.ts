@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, isCodeArt, isFinalArt, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
+  ARENA_PANELS, ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, isFinalArt, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
   SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES, surfaceBounds,
 } from "./districts";
 
@@ -26,10 +26,12 @@ describe("districts: layers and speeds", () => {
   });
 
   it("files: 4 layers (own far plan for final districts, shared skyline for sketches), one flattened image on low-end; every file exists", () => {
-    expect(OWN_FAR).toEqual(["rows", "port"]); // оба района — финальный рисунок
+    expect(OWN_FAR).toEqual(["rows", "port", "arena"]);
     expect(layerFiles("rows", "night", false).map((f) => f.file)).toEqual(["rows-night-sky", "rows-night-far", "rows-night-mid", "rows-night-near"]);
     expect(layerFiles("port", "day", false).map((f) => f.file)).toEqual(["port-day-sky", "port-day-far", "port-day-mid", "port-day-near"]);
     expect(layerFiles("port", "day", true)).toEqual([{ id: "flat", file: "port-day-flat" }]);
+    expect(layerFiles("arena", "night", false).map((f) => f.file)).toEqual(["arena-night-sky", "arena-night-far", "arena-night-mid", "arena-night-near"]);
+    expect(layerFiles("arena", "day", true)).toEqual([{ id: "flat", file: "arena-day-flat" }]);
     let total = 0;
     for (const d of SCENE_DISTRICTS)
       for (const art of ["day", "night"] as const)
@@ -92,18 +94,23 @@ describe("districts: launch link and street lanes", () => {
     expect(districtFromStart(undefined)).toBeNull();
   });
 
-  it("arena art is drawn in code: final, no webp, no ad spots yet, no street life", () => {
-    expect(isCodeArt("arena")).toBe(true);
-    expect(isCodeArt("port")).toBe(false);
+  it("arena is final painted art: webp layers, no ad spots in SURFACES yet, no street life", () => {
     expect(isFinalArt("arena")).toBe(true);
-    expect(layerFiles("arena", "night", false)).toEqual([]);
-    expect(layerFiles("arena", "day", true)).toEqual([]);
     expect(SURFACES.arena).toBeUndefined();
     expect(LANES.arena).toEqual([]);
+    expect(ARENA_PANELS.map((s) => s.spot)).toEqual(["arena_facade", "arena_line", "arena_neon", "arena_banner"]);
+    expect(ARENA_PANELS.map((s) => s.kind)).toEqual(["facade_screen", "line", "neon", "banner"]);
+    for (const s of ARENA_PANELS) {
+      expect(s.x).toBeGreaterThan(0);
+      expect(s.y).toBeGreaterThan(0);
+      expect(s.x + s.w).toBeLessThan(1);
+      expect(s.y + s.h).toBeLessThan(1);
+    }
   });
 
   it("lanes stay inside the picture", () => {
     for (const d of SCENE_DISTRICTS) {
+      if (!LANES[d].length) continue; // Арена: уличной жизни нет (умолчание PR 3)
       expect(LANES[d].length).toBeGreaterThan(0);
       for (const l of LANES[d]) {
         expect(l.y).toBeGreaterThan(0);
@@ -231,7 +238,7 @@ describe("camera to a spot (PR 6b)", () => {
 
 describe("restX: точка покоя камеры не режет места рекламы краем экрана", () => {
   const screens: [number, number][] = [[360, 780], [390, 844], [412, 892], [411, 870], [430, 932]];
-  for (const d of SCENE_DISTRICTS)
+  for (const d of SCENE_DISTRICTS.filter((d) => SURFACES[d]?.length))
     for (const [vw, vh] of screens)
       it(`${d} ${vw}×${vh}`, () => {
         const x = restX(d, vw, vh);

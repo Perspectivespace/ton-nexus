@@ -44,39 +44,6 @@ html.district-open, html.district-open body { overscroll-behavior: none; }
 .dz-ui { position: absolute; inset: 0; pointer-events: none; }
 .dz-ui > * { pointer-events: auto; }
 .dz-ui .walk-top { position: absolute; }
-/* шапка района «Арена»: тёмная плита в любой теме Telegram, чтобы заголовок держал 4.5:1 */
-.dz-head { position: absolute; top: 0; left: 0; right: 0; height: 112px; pointer-events: none;
-  background: linear-gradient(180deg, #06080E 0 78px, rgba(6, 8, 14, 0) 100%); }
-.dz-head h1 { margin: 58px 16px 0; color: #E6EBF5; font: 700 20px/24px var(--f-display, sans-serif); letter-spacing: .01em; }
-.dz[data-district="arena"] {
-  --bowl-sky-0: #05040E; --bowl-sky-1: #1A0B2E; --bowl-sky-2: #3A0C35; --bowl-star: #E6EBF5;
-  --bowl-glow: #FF2E7E; --bowl-far: #07061A; --bowl-far-2: #0C0B1C;
-  --bowl-mass: #1A2230; --bowl-mass-hi: #3A4A62; --bowl-concrete: #141A24; --bowl-rim: #B7C6DC;
-  --bowl-ring: #2BF5FF; --bowl-ground: #0A0618; --bowl-street: #0C1018; --bowl-street-hi: #161B28;
-  --bowl-cobble: rgba(43, 245, 255, .12); --bowl-grid: rgba(43, 245, 255, .22);
-  --bowl-line: #2BF5FF; --bowl-win: #2BF5FF; --bowl-win-warm: #FFB547; --bowl-win-off: #151924;
-  --bowl-gate: #1A2433; --bowl-gate-hi: #3A4A62;
-  --bowl-slot: #07090F; --bowl-slot-edge: rgba(43, 245, 255, .7);
-  --bowl-seat: #161B28; --bowl-field: #070A10; --bowl-lamp: #FFE7C2;
-  --bowl-reflect-c: rgba(43, 245, 255, .20); --bowl-reflect-m: rgba(255, 46, 126, .16);
-  --bowl-build: #161C28; --bowl-build-side: #0C1018; --bowl-cloud: transparent;
-}
-.dz[data-district="arena"][data-art="day"] {
-  --bowl-sky-0: #4A7AAB; --bowl-sky-1: #87B4D8; --bowl-sky-2: #C9B4AE; --bowl-star: transparent;
-  --bowl-glow: #FF8FC0; --bowl-far: #3A4A5E; --bowl-far-2: #4A5A6E;
-  --bowl-mass: #1E2836; --bowl-mass-hi: #2A3548; --bowl-concrete: #252C38; --bowl-rim: #1C2838;
-  --bowl-ring: #007E95; --bowl-ground: #2A3340; --bowl-street: #3A4452; --bowl-street-hi: #4E5968;
-  --bowl-cobble: rgba(0, 30, 40, .28); --bowl-grid: rgba(0, 40, 50, .22);
-  --bowl-line: #007E95; --bowl-win: #FFE7C2; --bowl-win-warm: #FFD39A; --bowl-win-off: #2A3140;
-  --bowl-gate: #1A2433; --bowl-gate-hi: #2A3548;
-  --bowl-slot: #0A0E14; --bowl-slot-edge: #007E95;
-  --bowl-seat: #252C38; --bowl-field: #1A2028; --bowl-lamp: #FFF6E0;
-  --bowl-reflect-c: rgba(0, 80, 100, .12); --bowl-reflect-m: rgba(160, 80, 100, .08);
-  --bowl-build: #2A3340; --bowl-build-side: #1E2630; --bowl-cloud: rgba(255, 255, 255, .28);
-}
-.dz[data-art="day"] .bowl-star { opacity: 0; }
-.dz[data-art="night"] .bowl-daycloud { opacity: 0; }
-.dz-bowl { display: block; width: 100%; height: 100%; }
 .dz-badge { position: absolute; right: 12px; top: 21px; margin: 0; padding: 7px 10px;
   pointer-events: none; white-space: nowrap; background: rgba(6, 9, 16, .78); border: 1px solid rgba(150, 170, 255, .28);
   color: #D5E6F2; font: 600 11px/1 var(--f-display, sans-serif); letter-spacing: .14em; text-transform: uppercase; }

@@ -184,6 +184,7 @@ describe("реклама читается в любое время суток (�
     const kinds = new Set(["facade_screen", "line", "banner", "neon"]);
     for (const d of SCENE_DISTRICTS) {
       const list = SURFACES[d] ?? [];
+      if (!list.length) continue; // Арена: панели записаны в ARENA_PANELS, SURFACES — PR 4
       expect(list.length, d).toBe(4);
       for (const s of list) {
         expect(kinds.has(s.kind), `${d} ${s.spot}`).toBe(true);
