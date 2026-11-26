@@ -12,16 +12,19 @@ afterEach(() => {
 });
 
 describe("district nav: math", () => {
-  it("neighbours follow the strip order Центр · Неон-ряды · Порт", () => {
+  it("neighbours follow the strip order Центр · Неон-ряды · Порт · Арена", () => {
     expect(neighbourOf("centre", 1)).toBe("rows");
     expect(neighbourOf("centre", -1)).toBeNull();
     expect(neighbourOf("rows", -1)).toBe("centre");
     expect(neighbourOf("rows", 1)).toBe("port");
-    expect(neighbourOf("port", 1)).toBeNull();
-    expect(dirBetween("centre", "port")).toBe(1);
-    expect(dirBetween("port", "rows")).toBe(-1);
+    expect(neighbourOf("port", 1)).toBe("arena");
+    expect(neighbourOf("arena", -1)).toBe("port");
+    expect(neighbourOf("arena", 1)).toBeNull();
+    expect(dirBetween("centre", "arena")).toBe(1);
+    expect(dirBetween("arena", "port")).toBe(-1);
     expect(placePath("centre")).toBe("/");
     expect(placePath("port")).toBe("/district?d=port");
+    expect(placePath("arena")).toBe("/district?d=arena");
   });
 
   it("edge pull: past the right end → right neighbour, past the left end → left one", () => {

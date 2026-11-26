@@ -254,7 +254,7 @@ describe("районы в «Прогулке»", () => {
       render();
       act(() => cityWalk.enter());
       expect(el.querySelector(".walk-ui")?.classList.contains("has-strip")).toBe(true);
-      expect([...strip()!.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["Центр", "Неон-ряды", "Порт"]);
+      expect([...strip()!.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["Центр", "Неон-ряды", "Порт", "Арена"]);
       expect(strip()!.querySelector("[aria-current=page]")?.textContent).toBe("Центр");
       expect(el.querySelector(".dz-edge.r")?.textContent).toContain("Неон-ряды");
       expect(el.querySelector(".dz-edge.l")).toBeNull(); // левее Центра ничего нет
