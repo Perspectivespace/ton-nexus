@@ -6,9 +6,17 @@ import { getLang, t } from "@/i18n";
  * а самореклама места — короткие слоганы по очереди в утверждённых стилях (экран фасада — янтарная рамка и развёртка,
  * строка — LED-матрица A, баннер и вывеска — голо-проекция B). Смена слогана — разовый прогон по JS-таймеру,
  * бесконечных CSS-анимаций нет; на слабых устройствах и при «меньше движения» — первый слоган неподвижно.
- * Покупка мест в районах — PR 6: касание здесь пока ничего не делает.
+ * Касание свободного места ведёт к покупке, купленного — к карточке (как в Неон-рядах и Порте).
  */
 export type IdleKind = Surface["kind"];
+
+/** слоган «Засветись на …» для бегущей строки: район места, иначе общий */
+function shineLine(spot?: string): string {
+  if (spot?.startsWith("port_")) return t("idle.shinePort");
+  if (spot?.startsWith("arena_")) return t("idle.shineArena");
+  if (spot?.startsWith("rows_")) return t("idle.shineRows");
+  return t("idle.shineHere");
+}
 
 /** «1.50» → «1,5» (en — «1.5»): цена за сутки без лишних нулей */
 export function tonRu(price: string | null | undefined): string | null {
@@ -29,7 +37,7 @@ export const priceLine = (price: string | null | undefined) => {
  * Слоганы места по типу; первый — неподвижный вариант (слабое устройство, «меньше движения»).
  * compact — маленькие места Центра: вывеска в одну строку (до 9 знаков), баннер — короче.
  */
-export function idleSlogans(kind: IdleKind, price?: string | null, compact = false): string[] {
+export function idleSlogans(kind: IdleKind, price?: string | null, compact = false, spot?: string): string[] {
   const p = priceLine(price);
   if (compact && kind === "neon") return [t("idle.shine"), t("idle.vacant"), t("idle.yourNeon")];
   if (compact && kind === "banner") return [t("idle.shineHere"), t("idle.adSpace"), t("idle.yourBanner")];
@@ -43,7 +51,7 @@ export function idleSlogans(kind: IdleKind, price?: string | null, compact = fal
     case "line":
       return [
         p ? t("idle.adSpacePrice", { p }) : t("idle.adSpace"),
-        t("idle.shineRows"),
+        shineLine(spot),
         t("idle.lineWaits"),
       ];
   }

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { adVars } from "@/lib/cityAdPalette";
 import { IDLE_COLOR, IDLE_IN, IDLE_OUT, idleDelay, idleSlogans, idleTickerMs, priceLine, type IdleKind } from "@/lib/districtIdle";
+import { AD_DISTRICT_RU, districtOfSpot } from "@/lib/cityAdBuy";
 import { t } from "@/i18n";
 
 /**
@@ -28,7 +29,7 @@ type IdleProps = {
 const can = (el: Element | null): el is HTMLElement => !!el && typeof (el as HTMLElement).animate === "function";
 
 export function IdleSurface({ spot, kind, i, price, still, style, compact = false, ad = null }: IdleProps) {
-  const slogans = ad ? [ad.title] : idleSlogans(kind, price, compact);
+  const slogans = ad ? [ad.title] : idleSlogans(kind, price, compact, spot);
   const [n, setN] = useState(0);
   const [broken, setBroken] = useState<string | null>(null);
   const text = useRef<HTMLSpanElement>(null);
@@ -109,7 +110,7 @@ export function IdleSurface({ spot, kind, i, price, still, style, compact = fals
           <span className="t" ref={text}>
             {slogan}
           </span>
-          <span className="p">{p ?? t("district.rows")}</span>
+          <span className="p">{p ?? AD_DISTRICT_RU[districtOfSpot(spot)]}</span>
         </>
       )}
       {pic && (

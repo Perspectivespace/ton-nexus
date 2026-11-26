@@ -193,7 +193,7 @@ describe("district screen", () => {
   it("production: open to every player (not only the owner), both districts; promo stays non-interactive", async () => {
     vi.stubEnv("DEV", false);
     try {
-      for (const d of ["rows", "port"]) {
+      for (const d of ["rows", "port", "arena"]) {
         m.me = { data: { is_owner: false }, isLoading: false };
         await render(`/district?d=${d}`);
         expect(path).toBe("/district");
@@ -233,10 +233,20 @@ describe("district screen", () => {
     expect(cityWalk.get().active).toBe(false);
   });
 
-  it("arena: four webp layers, no draft badge, no ad spots and no secret promo", async () => {
+  it("arena: four webp layers, no draft badge, four ad spots, no secret promo", async () => {
     m.load.mockClear();
     m.life.mockClear();
     m.signal = { code: "NEON-42" };
+    m.ads = {
+      data: {
+        spots: [
+          { key: "arena_facade", price_day: "1.5", on_sale: true, ad: null },
+          { key: "arena_line", price_day: "1", on_sale: true, ad: null },
+          { key: "arena_neon", price_day: "0.3", on_sale: true, ad: null },
+          { key: "arena_banner", price_day: "0.5", on_sale: true, ad: null },
+        ],
+      },
+    };
     await render("/district?d=arena");
     expect(m.load).toHaveBeenCalledWith("arena", "night", false);
     expect(m.life).not.toHaveBeenCalled();
@@ -253,7 +263,10 @@ describe("district screen", () => {
     expect(el.querySelector(".dz-strip [aria-current=page]")?.textContent).toBe("Арена");
     expect(el.querySelector(".dz-edge.l")?.textContent).toContain("Порт");
     expect(el.querySelector(".dz-edge.r")).toBeNull();
-    expect(el.querySelector(".dz-idle, .dz-hit, .ss-holo")).toBeNull();
+    expect(el.querySelector(".ss-holo")).toBeNull();
+    const idle = [...el.querySelectorAll<HTMLElement>(".dz-mid .dz-idle")];
+    expect(idle.map((n) => n.dataset.spot)).toEqual(["arena_facade", "arena_line", "arena_neon", "arena_banner"]);
+    expect(el.querySelectorAll(".dz-mid .dz-hit")).toHaveLength(4);
   });
 
   it("arena lite: one flat picture", async () => {
@@ -323,6 +336,21 @@ describe("district: idle promo on free ad spots (Неон-ряды)", () => {
     expect(idle[0].style.transform).toBe("rotate(16deg)");
     expect(idle[1].style.transform).toBe("");
     expect(idle[0].textContent).toBe("Место для рекламы · от 1 TON/сутки");
+  });
+
+  it("Арена: the 4 free spots show promo; the ring ticker and sky banner sit in the street layer", async () => {
+    m.ads = { data: { spots: [], prices: { facade_screen: "1.5", line: "1", banner: "0.5", neon: "0.3" } } };
+    await render("/district?d=arena");
+    const idle = [...el.querySelectorAll<HTMLElement>(".dz-mid .dz-idle")];
+    expect(idle.map((n) => n.dataset.spot)).toEqual(["arena_facade", "arena_line", "arena_neon", "arena_banner"]);
+    expect(idle.map((n) => n.className.split(" ")[1])).toEqual(["k-facade_screen", "k-line", "k-neon", "k-banner"]);
+    expect(idle.every((n) => n.style.transform === "")).toBe(true);
+    expect(idle[0].querySelector(".t")?.textContent).toBe("Место для рекламы");
+    expect(idle[0].querySelector(".p")?.textContent).toBe("от 1,5 TON/сутки");
+    expect(idle[1].textContent).toBe("Место для рекламы · от 1 TON/сутки");
+    expect(idle[2].textContent).toBe("Засветись тут");
+    expect(idle[3].textContent).toBe("Засветись тут");
+    expect(el.querySelector(".ss-holo")).toBeNull();
   });
 
   it("low-end: promo stays on the flattened image, still (first slogan, no rotation)", async () => {
@@ -456,6 +484,28 @@ describe("district: taps on ad spots (PR 6b)", () => {
     await tap(hit("port_line"));
     expect(el.querySelector(".cad-card .cc-title")?.textContent).toBe("ДОСТАВКА ГРУЗОВ");
     expect(el.querySelector(".cad-card .cc-link")).toBeNull();
+  });
+
+  it("Арена: tapping a free ring line opens buying of that spot in the Arena district", async () => {
+    m.ads = {
+      data: {
+        day: "2026-11-10",
+        spots: [
+          { key: "arena_facade", format: "facade_screen", price_day: "1.5", on_sale: true, ad: { id: 31, title: "ARENA CUP", subtitle: "финал сезона", color: "violet", until: "2026-11-12" } },
+          { key: "arena_line", format: "line", price_day: "1", on_sale: true, ad: null },
+          { key: "arena_neon", format: "neon", price_day: "0.3", on_sale: true, ad: null },
+          { key: "arena_banner", format: "banner", price_day: "0.5", on_sale: true, ad: null },
+        ],
+      },
+    };
+    await render("/district?d=arena");
+    expect(hit("arena_facade").dataset.kind).toBe("ad");
+    expect(hit("arena_line").dataset.kind).toBe("buy");
+    expect(hit("arena_line").style.left).toBe("37.85%");
+    await tap(hit("arena_line"));
+    expect(path).toBe("/ads");
+    expect(new URLSearchParams(search).get("district")).toBe("arena");
+    expect(new URLSearchParams(search).get("spot")).toBe("arena_line");
   });
 });
 

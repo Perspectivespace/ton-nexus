@@ -26,6 +26,9 @@ describe("districtIdle: self-promo of free spots", () => {
     expect(Math.max(...idleSlogans("facade_screen").map((t) => t.length))).toBeLessThanOrEqual(26);
     expect(idleSlogans("line", "0.5")[0]).toBe("Место для рекламы · от 0,5 TON/сутки");
     expect(idleSlogans("line")[0]).toBe("Место для рекламы");
+    expect(idleSlogans("line", "1", false, "rows_line")[1]).toBe("Засветись на Неон-рядах");
+    expect(idleSlogans("line", "1", false, "port_line")[1]).toBe("Засветись в Порту");
+    expect(idleSlogans("line", "1", false, "arena_line")[1]).toBe("Засветись на Арене");
   });
 
   it("compact (места Центра): вывеска в одну короткую строку, баннер — короче", () => {

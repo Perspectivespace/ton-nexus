@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { CityAdFormat } from "@/api/hooks";
 import { IdleSurface } from "@/components/IdleSpot";
 import { loadDistrict } from "@/lib/districtAssets";
-import { ART_ASPECT, SURFACES, lookFor, surfaceBounds, type SceneDistrict, type Surface } from "@/lib/districts";
+import { ART_ASPECT, SCENE_DISTRICTS, SURFACES, lookFor, surfaceBounds, type SceneDistrict, type Surface } from "@/lib/districts";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { AdScene, CROP_ALL, cropAround, type SceneSlot, type SignContent } from "./AdScene";
 import "@/styles/idle-ads.css";
@@ -23,7 +23,7 @@ const boxOf = (s: Surface): CSSProperties => ({
   ...(s.rot ? { transform: `rotate(${s.rot}deg)` } : {}),
 });
 export const surfaceOf = (spot: string): { district: SceneDistrict; s: Surface } | null => {
-  for (const d of ["rows", "port"] as SceneDistrict[]) {
+  for (const d of SCENE_DISTRICTS) {
     const s = SURFACES[d]?.find((x) => x.spot === spot);
     if (s) return { district: d, s };
   }
@@ -176,7 +176,7 @@ export function PlaceScene({
   label?: string;
   children?: ReactNode;
 }) {
-  if (district === "rows" || district === "port") {
+  if (district === "rows" || district === "port" || district === "arena") {
     const crop = spot ? districtCropAround(spot, zoom + 0.4, aspect) : districtCropAll(district);
     return <DistrictAdScene district={district} crop={crop} {...rest} />;
   }

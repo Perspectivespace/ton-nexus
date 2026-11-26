@@ -94,9 +94,9 @@ describe("districts: launch link and street lanes", () => {
     expect(districtFromStart(undefined)).toBeNull();
   });
 
-  it("arena is final painted art: webp layers, no ad spots in SURFACES yet, no street life", () => {
+  it("arena is final painted art: webp layers, four ad spots in SURFACES, no street life", () => {
     expect(isFinalArt("arena")).toBe(true);
-    expect(SURFACES.arena).toBeUndefined();
+    expect(SURFACES.arena).toBe(ARENA_PANELS);
     expect(LANES.arena).toEqual([]);
     expect(ARENA_PANELS.map((s) => s.spot)).toEqual(["arena_facade", "arena_line", "arena_neon", "arena_banner"]);
     expect(ARENA_PANELS.map((s) => s.kind)).toEqual(["facade_screen", "line", "neon", "banner"]);
@@ -162,6 +162,26 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
     const b = surfaceBounds(line);
     expect(b.h).toBeGreaterThan(line.h * 2);
     expect(b.y + b.h / 2).toBeCloseTo(line.y + line.h / 2, 6);
+  });
+
+  it("Арена: four ad surfaces (bowl facade screen, ring ticker, gate sign, sky holo-banner), inside the frame", () => {
+    const arena = SURFACES.arena ?? [];
+    expect(arena).toBe(ARENA_PANELS);
+    expect(arena.map((s) => s.spot)).toEqual(["arena_facade", "arena_line", "arena_neon", "arena_banner"]);
+    expect(arena.map((s) => s.kind)).toEqual(["facade_screen", "line", "neon", "banner"]);
+    for (const s of arena) {
+      expect(s.rot).toBeUndefined();
+      const b = surfaceBounds(s);
+      expect(b.x).toBeGreaterThan(0);
+      expect(b.y).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.w).toBeLessThan(1);
+      expect(b.y + b.h).toBeLessThan(1);
+    }
+    // голо-баннер — в чистом небе над кольцом, выше экрана на фасаде
+    expect(arena[3].y + arena[3].h).toBeLessThan(arena[0].y);
+    // вывеска — ниже строки, строка — ниже экрана
+    expect(arena[2].y).toBeGreaterThan(arena[1].y + arena[1].h);
+    expect(arena[1].y).toBeGreaterThan(arena[0].y + arena[0].h);
   });
 
   it("street-life lanes never cross an ad surface (rotated surfaces by their bounds; lanes ride their whole stretch)", () => {

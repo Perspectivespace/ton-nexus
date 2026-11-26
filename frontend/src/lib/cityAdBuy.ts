@@ -80,21 +80,22 @@ const SPOTS = [
   "tower_line", "banner_sky", "banner_street", "neon_left", "neon_right",
   "rows_facade", "rows_line", "rows_neon", "rows_banner",
   "port_line", "port_banner_cargo", "port_banner_tram", "port_neon",
+  "arena_facade", "arena_line", "arena_neon", "arena_banner",
 ] as const;
 /** названия форматов на языке игрока */
 export const FORMAT_RU = tmap("fmt.", FORMATS);
 /** короткие названия мест на языке игрока (полные — title с сервера) */
 export const SPOT_SHORT = tmap("spot.", SPOTS);
-export type AdDistrict = "centre" | "rows" | "port";
-export const AD_DISTRICTS: AdDistrict[] = ["centre", "rows", "port"];
+export type AdDistrict = "centre" | "rows" | "port" | "arena";
+export const AD_DISTRICTS: AdDistrict[] = ["centre", "rows", "port", "arena"];
 /** названия районов на языке игрока */
 export const AD_DISTRICT_RU = tmap("district.", AD_DISTRICTS);
 /** то же для админки владельца — всегда по-русски */
 export const AD_DISTRICT_OWNER = tmap("district.", AD_DISTRICTS, "ru");
-export const isAdDistrict = (v: unknown): v is AdDistrict => v === "centre" || v === "rows" || v === "port";
-/** район места по ключу (как на сервере: rows_… / port_…, остальные — Центр) */
+export const isAdDistrict = (v: unknown): v is AdDistrict => v === "centre" || v === "rows" || v === "port" || v === "arena";
+/** район места по ключу (как на сервере: rows_… / port_… / arena_…, остальные — Центр) */
 export const districtOfSpot = (key: string | null | undefined): AdDistrict =>
-  key?.startsWith("rows_") ? "rows" : key?.startsWith("port_") ? "port" : "centre";
+  key?.startsWith("rows_") ? "rows" : key?.startsWith("port_") ? "port" : key?.startsWith("arena_") ? "arena" : "centre";
 /** «Неон-ряды · Экран на фасаде рынка» — название места с районом на языке игрока (никогда не ключ) */
 export function spotName(spot: string, title?: string | null, district?: string | null): string {
   const d = isAdDistrict(district) ? district : districtOfSpot(spot);
