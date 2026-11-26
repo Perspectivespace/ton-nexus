@@ -33,7 +33,17 @@ from app.services.ton_wallet import WalletError, normalize_address
 
 logger = logging.getLogger(__name__)
 
+
+def deposits_enabled(cfg: object) -> bool:
+    """Пополнение открыто: флаг включён и адрес проекта задан. Сам адрес сюда не входит."""
+    if not isinstance(cfg, dict):
+        return False
+    return bool(cfg.get("enabled", False)) and bool(cfg.get("project_address"))
+
+
 NANO = Decimal("1000000000")
+# Потолок одного пополнения. Тот же предел проверяет POST /deposits/tx-payload и отдаёт сводка помощи.
+MAX_DEPOSIT_TON = Decimal("10000")
 TONCENTER_MAINNET = "https://toncenter.com/api/v2"
 TONCENTER_TESTNET = "https://testnet.toncenter.com/api/v2"
 PAGE_LIMIT = 100  # toncenter v2 maximum

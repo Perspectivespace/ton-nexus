@@ -48,6 +48,19 @@ ARENA_ROOMS: dict[str, ArenaRoomType] = {
 }
 
 
+def stake_nano() -> int:
+    """Текущая ставка комнаты, нанотоны.
+
+    Сейчас все типы делят одну ставку из ARENA_ROOMS. Сводка помощи читает ставку
+    только здесь: когда она станет настройкой владельца, источник меняется в этой функции.
+    Создание комнат пока копирует поле типа; тот PR переведёт его сюда же.
+    """
+    stakes = {rt.stake_nano for rt in ARENA_ROOMS.values()}
+    if len(stakes) != 1:
+        raise RuntimeError("arena_config: у типов комнат разная ставка")
+    return next(iter(stakes))
+
+
 def clamp_commission_bps(v: object) -> int:
     """Комиссия из настройки → целые bp в границах; мусор — значение по умолчанию."""
     if isinstance(v, bool):
@@ -81,6 +94,7 @@ def _check(ok: bool, code: str, what: str) -> None:
 
 
 def _validate() -> None:
+    stake_nano()  # одна ставка на все типы — иначе сводка и комнаты разъедутся
     for rt in ARENA_ROOMS.values():
         _check(rt.seats >= 2 and 0 < len(rt.prize_weights) < rt.seats, rt.code, "места и призы")
         _check(all(w > 0 for w in rt.prize_weights), rt.code, "веса призов")
