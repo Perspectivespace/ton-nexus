@@ -291,6 +291,7 @@ describe("покупка в районах (PR 6)", () => {
     // на картинке — места района (рамки на рисунке района), а не кадр Центра
     expect(document.querySelector('.cab-dz[data-district="rows"]')).not.toBeNull();
     expect(document.querySelectorAll(".cab-dz .cab-slot").length).toBe(4);
+    expect(document.querySelectorAll(".cab-dz .cab-slot.s-badge-below")).toHaveLength(0);
     await click(btn("Выбрать даты"));
     await wait(30);
     const q = calls.find((c) => c.path.endsWith("/quote"))!;
@@ -398,6 +399,9 @@ describe("покупка в районах (PR 6)", () => {
     await render(<CityAds />, "/ads?district=arena&spot=arena_line");
     expect(btn("Арена").getAttribute("aria-checked")).toBe("true");
     expect(document.querySelector('.cab-dz[data-district="arena"]')).not.toBeNull();
+    expect(document.querySelector('.cab-slot[data-spot="arena_banner"]')?.classList.contains("s-badge-below")).toBe(true);
+    expect(document.querySelector('.cab-slot[data-spot="arena_line"]')?.classList.contains("s-badge-below")).toBe(false);
+    expect(document.querySelectorAll(".cab-slot.s-badge-below")).toHaveLength(1);
     expect(calls.some((c) => c.path === "/api/v1/city-ads?district=arena")).toBe(true);
     expect(btn(/Бегущая строка вдоль кольца/).getAttribute("aria-checked")).toBe("true");
     expect(btn(/Экран на фасаде чаши/).textContent).toContain("1.5 TON");

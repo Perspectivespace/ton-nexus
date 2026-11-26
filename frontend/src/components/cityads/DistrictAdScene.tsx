@@ -4,7 +4,7 @@ import { IdleSurface } from "@/components/IdleSpot";
 import { loadDistrict } from "@/lib/districtAssets";
 import { ART_ASPECT, SCENE_DISTRICTS, SURFACES, lookFor, surfaceBounds, type SceneDistrict, type Surface } from "@/lib/districts";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
-import { AdScene, CROP_ALL, cropAround, type SceneSlot, type SignContent } from "./AdScene";
+import { AdScene, CROP_ALL, cropAround, slotBadgeBelow, type SceneSlot, type SignContent } from "./AdScene";
 import "@/styles/idle-ads.css";
 
 /**
@@ -135,7 +135,8 @@ export function DistrictAdScene({
               <button
                 key={sl.key}
                 type="button"
-                className={`cab-slot s-${sl.state}`}
+                className={`cab-slot s-${sl.state}${slotBadgeBelow(s.y, y, ch) ? " s-badge-below" : ""}`}
+                data-spot={s.spot}
                 style={boxOf(s)}
                 disabled={sl.state === "off" || !onPick}
                 aria-pressed={sl.state === "picked"}
