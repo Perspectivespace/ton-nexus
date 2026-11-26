@@ -35,8 +35,8 @@ export const LAYERS: { id: LayerId; k: number }[] = [
 export const ART_ASPECT = 4 / 3;
 
 export const isSceneDistrict = (v: unknown): v is SceneDistrict => v === "rows" || v === "port" || v === "arena";
-/** черновик без арта: заглушка вместо слоёв, без рекламных мест и без уличной жизни */
-export const isDraftDistrict = (d: SceneDistrict): d is "arena" => d === "arena";
+/** арт нарисован кодом (SVG), без файлов webp. Финальный: значка «Черновик» нет. Рекламу повесит PR 4. */
+export const isCodeArt = (d: SceneDistrict): d is "arena" => d === "arena";
 
 /** рисунок и подкраска для фазы суток */
 export function lookFor(phase: CityPhase): { art: Art; tint: Tint } {
@@ -48,15 +48,15 @@ export function lookFor(phase: CityPhase): { art: Art; tint: Tint } {
 
 /** районы с собственным дальним планом (финальный рисунок); у остальных — общий горизонт skyline-<день/ночь> */
 export const OWN_FAR: SceneDistrict[] = ["rows", "port"];
-/** у района финальный рисунок (свой дальний план) — значок «Черновик» не показывается */
-export const isFinalArt = (d: SceneDistrict) => OWN_FAR.includes(d);
+/** у района финальный рисунок — значок «Черновик» не показывается */
+export const isFinalArt = (d: SceneDistrict) => OWN_FAR.includes(d) || isCodeArt(d);
 
 /**
  * Имена файлов (src/assets/districts/*.webp). Дальний горизонт — свой у районов с финальным рисунком (OWN_FAR),
  * у черновых (если появится новый район-эскиз) — общий (skyline-<день/ночь>). lite — слабое устройство: одна сведённая картинка района.
  */
 export function layerFiles(d: SceneDistrict, art: Art, lite: boolean): { id: LayerId | "flat"; file: string }[] {
-  if (isDraftDistrict(d)) return [];
+  if (isCodeArt(d)) return [];
   if (lite) return [{ id: "flat", file: `${d}-${art}-flat` }];
   return [
     { id: "sky", file: `${d}-${art}-sky` },

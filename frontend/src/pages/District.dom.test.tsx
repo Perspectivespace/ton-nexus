@@ -228,21 +228,28 @@ describe("district screen", () => {
     expect(cityWalk.get().active).toBe(false);
   });
 
-  it("arena draft: placeholder bowl, header, strip, no art and no ad spots", async () => {
+  it("arena: four SVG layers, header, no draft badge and no ad spots", async () => {
     m.load.mockClear();
     m.life.mockClear();
     await render("/district?d=arena");
     expect(m.load).not.toHaveBeenCalled();
     expect(m.life).not.toHaveBeenCalled();
-    expect(el.querySelector(".dz-bowl")).not.toBeNull();
+    const layers = [...el.querySelectorAll<HTMLElement>(".dz-layer")];
+    expect(layers.map((l) => l.dataset.k)).toEqual(["0.25", "0.55", "1", "1.3"]);
+    expect(layers.every((l) => l.querySelector(".dz-bowl"))).toBe(true);
     expect(el.querySelector(".dz-head h1")?.textContent).toBe("Арена-дистрикт");
-    expect(el.querySelector(".dz-badge")?.textContent).toBe("Черновик");
+    expect(el.querySelector(".dz-badge")).toBeNull();
     expect(el.querySelector(".dz-strip [aria-current=page]")?.textContent).toBe("Арена");
-    expect([...el.querySelectorAll(".dz-strip button")].map((b) => b.textContent)).toEqual(["Центр", "Неон-ряды", "Порт", "Арена"]);
     expect(el.querySelector(".dz-edge.l")?.textContent).toContain("Порт");
     expect(el.querySelector(".dz-edge.r")).toBeNull();
     expect(el.querySelector(".dz-idle, .dz-hit, .ss-holo")).toBeNull();
     expect(el.querySelectorAll("img").length).toBe(0);
+  });
+
+  it("arena lite: one flat picture", async () => {
+    await render("/district?d=arena&lite=1");
+    expect([...el.querySelectorAll(".dz-layer")].map((l) => l.className)).toEqual(["dz-layer dz-flat"]);
+    expect(el.querySelector(".dz-badge")).toBeNull();
   });
 
   it("unknown district falls back to Неон-ряды", async () => {

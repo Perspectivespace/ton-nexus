@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, isDraftDistrict, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
+  ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, isCodeArt, isFinalArt, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
   SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES, surfaceBounds,
 } from "./districts";
 
@@ -92,9 +92,10 @@ describe("districts: launch link and street lanes", () => {
     expect(districtFromStart(undefined)).toBeNull();
   });
 
-  it("arena is a draft: no art files, no ad spots, no street life", () => {
-    expect(isDraftDistrict("arena")).toBe(true);
-    expect(isDraftDistrict("port")).toBe(false);
+  it("arena art is drawn in code: final, no webp, no ad spots yet, no street life", () => {
+    expect(isCodeArt("arena")).toBe(true);
+    expect(isCodeArt("port")).toBe(false);
+    expect(isFinalArt("arena")).toBe(true);
     expect(layerFiles("arena", "night", false)).toEqual([]);
     expect(layerFiles("arena", "day", true)).toEqual([]);
     expect(SURFACES.arena).toBeUndefined();
