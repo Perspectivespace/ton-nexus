@@ -1,4 +1,4 @@
-import { isDraftDistrict, layerFiles, type Art, type LayerId, type SceneDistrict } from "@/lib/districts";
+import { layerFiles, type Art, type LayerId, type SceneDistrict } from "@/lib/districts";
 
 /**
  * Загрузка слоёв района по требованию: каждый файл — отдельный адрес (import.meta.glob, ?url), качается только
@@ -25,7 +25,6 @@ function decode(src: string): Promise<void> {
 const cache = new Map<string, Promise<LayerUrls>>();
 
 export function loadDistrict(d: SceneDistrict, art: Art, lite: boolean): Promise<LayerUrls> {
-  if (isDraftDistrict(d)) return Promise.resolve({});
   const key = `${d}:${art}:${lite ? 1 : 0}`;
   let p = cache.get(key);
   if (!p) {
