@@ -11,14 +11,15 @@ import { tmap } from "@/i18n";
  * Оба района — финальный рисунок (свой дальний план, спрайты жизни улицы): «Неон-ряды» — PR 4, «Порт» — PR 5.
  * На слабых устройствах — одна сведённая картинка без параллакса и без уличных событий.
  */
-export type DistrictId = "centre" | "rows" | "port";
+export type DistrictId = "centre" | "rows" | "port" | "arena";
 export type SceneDistrict = Exclude<DistrictId, "centre">;
 export type LayerId = "sky" | "far" | "mid" | "near";
 export type Art = "day" | "night";
 export type Tint = "dawn" | "dusk" | null;
 
-/** порядок районов на полоске навигации (PR 3): Центр — главная, районы — справа от него */
-export const DISTRICT_ORDER: DistrictId[] = ["centre", "rows", "port"];
+/** порядок районов на полоске: Центр — главная, дальше Неон-ряды, Порт, Арена (справа от Порта) */
+export const DISTRICT_ORDER: DistrictId[] = ["centre", "rows", "port", "arena"];
+/** районы с нарисованными слоями. «Арена» пока черновик: сцена-заглушка, без файлов (их заменит PR 3) */
 export const SCENE_DISTRICTS: SceneDistrict[] = ["rows", "port"];
 /** названия районов на языке игрока */
 export const DISTRICT_RU = tmap("district.", DISTRICT_ORDER);
@@ -33,7 +34,9 @@ export const LAYERS: { id: LayerId; k: number }[] = [
 /** пропорции рисунка слоя (ширина / высота) */
 export const ART_ASPECT = 4 / 3;
 
-export const isSceneDistrict = (v: unknown): v is SceneDistrict => v === "rows" || v === "port";
+export const isSceneDistrict = (v: unknown): v is SceneDistrict => v === "rows" || v === "port" || v === "arena";
+/** черновик без арта: заглушка вместо слоёв, без рекламных мест и без уличной жизни */
+export const isDraftDistrict = (d: SceneDistrict): d is "arena" => d === "arena";
 
 /** рисунок и подкраска для фазы суток */
 export function lookFor(phase: CityPhase): { art: Art; tint: Tint } {
@@ -53,6 +56,7 @@ export const isFinalArt = (d: SceneDistrict) => OWN_FAR.includes(d);
  * у черновых (если появится новый район-эскиз) — общий (skyline-<день/ночь>). lite — слабое устройство: одна сведённая картинка района.
  */
 export function layerFiles(d: SceneDistrict, art: Art, lite: boolean): { id: LayerId | "flat"; file: string }[] {
+  if (isDraftDistrict(d)) return [];
   if (lite) return [{ id: "flat", file: `${d}-${art}-flat` }];
   return [
     { id: "sky", file: `${d}-${art}-sky` },
@@ -173,10 +177,10 @@ export const layerBoxWidth = (k: number, vw: number, vh: number) => Math.round(v
 export const layerX = (k: number, x: number) => k * x;
 
 /**
- * Запуск по прямой ссылке: start_param «district-rows» / «district-port» (открыта всем игрокам).
+ * Запуск по прямой ссылке: start_param «district-rows» / «district-port» / «district-arena» (открыта всем игрокам).
  */
 export function districtFromStart(startParam: string | null | undefined): SceneDistrict | null {
-  const m = /^district-(rows|port)$/.exec(String(startParam ?? ""));
+  const m = /^district-(rows|port|arena)$/.exec(String(startParam ?? ""));
   return m ? (m[1] as SceneDistrict) : null;
 }
 
@@ -211,6 +215,7 @@ const sized = (sprite: Sprite, y: number, w: number, dur: [number, number], bob?
 });
 /** трассы событий по районам (в долях рисунка улицы); не пересекают рекламные поверхности (SURFACES) */
 export const LANES: Record<SceneDistrict, Lane[]> = {
+  arena: [], // черновик: уличной жизни нет, её нарисует PR 3
   rows: [
     sized("car", 0.21, 0.05, [6500, 8500]), // ховер-кар над куполом рынка
     sized("car", 0.15, 0.028, [9000, 12000]), // дальняя воздушная трасса

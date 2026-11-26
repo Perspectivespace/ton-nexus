@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
+  ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, isDraftDistrict, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
   SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES, surfaceBounds,
 } from "./districts";
 
@@ -50,7 +50,8 @@ describe("districts: layers and speeds", () => {
 
   it("neighbours with their own scene (centre is the main page)", () => {
     expect(neighbours("rows")).toEqual(["port"]);
-    expect(neighbours("port")).toEqual(["rows"]);
+    expect(neighbours("port")).toEqual(["rows", "arena"]);
+    expect(neighbours("arena")).toEqual(["port"]);
   });
 });
 
@@ -82,12 +83,22 @@ describe("districts: street geometry", () => {
 });
 
 describe("districts: launch link and street lanes", () => {
-  it("start_param district-rows / district-port only", () => {
+  it("start_param district-rows / district-port / district-arena", () => {
     expect(districtFromStart("district-rows")).toBe("rows");
     expect(districtFromStart("district-port")).toBe("port");
+    expect(districtFromStart("district-arena")).toBe("arena");
     expect(districtFromStart("district-centre")).toBeNull();
     expect(districtFromStart("fps1")).toBeNull();
     expect(districtFromStart(undefined)).toBeNull();
+  });
+
+  it("arena is a draft: no art files, no ad spots, no street life", () => {
+    expect(isDraftDistrict("arena")).toBe(true);
+    expect(isDraftDistrict("port")).toBe(false);
+    expect(layerFiles("arena", "night", false)).toEqual([]);
+    expect(layerFiles("arena", "day", true)).toEqual([]);
+    expect(SURFACES.arena).toBeUndefined();
+    expect(LANES.arena).toEqual([]);
   });
 
   it("lanes stay inside the picture", () => {

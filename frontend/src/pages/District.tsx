@@ -7,14 +7,16 @@ import { useCityPhase } from "@/lib/cityPhase";
 import { DistrictCamera, type CamLayer } from "@/lib/districtCamera";
 import { ARRIVE_MS, districtNav, neighbourOf } from "@/lib/districtNav";
 import { DistrictStrip, EdgeHints, type EdgeHintsHandle } from "@/components/DistrictNav";
-import { loadDistrict, preloadWhenIdle, type LayerUrls } from "@/lib/districtAssets";
+import { loadDistrict, preloadWhenIdle } from "@/lib/districtAssets";
 import { startDistrictLife } from "@/lib/districtLife";
+import { ArenaBowl } from "@/components/ArenaDraft";
 import { DistrictIdleAds } from "@/components/DistrictIdleAds";
 import { SecretSignal } from "@/components/SecretSignal";
 import {
-  cameraXFor, DISTRICT_RU, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, restX, streetWidth,
+  cameraXFor, DISTRICT_RU, isDraftDistrict, isFinalArt, isSceneDistrict, LANES, LAYERS, layerBoxWidth, lookFor, neighbours, panRange, restX, streetWidth,
   SURFACES, surfaceOnScreen, type SceneDistrict,
 } from "@/lib/districts";
+import type { LayerUrls } from "@/lib/districtAssets";
 import { haptic } from "@/lib/haptics";
 import { WebApp } from "@/lib/telegram";
 import { lowEnd, motionAllowed, reducedMotion } from "@/lib/walkPrefs";
@@ -22,10 +24,10 @@ import "@/styles/districts.css";
 import { t } from "@/i18n";
 
 /**
- * Экран района (PR 2 районов — движок сцены). Открыт всем игрокам: /district?d=rows|port
- * (или прямой ссылкой с start_param «district-rows» / «district-port»).
- * PR 3: полоска «Центр · Неон-ряды · Порт», протяжка за край улицы — к соседу, «Назад» — в Центр («Прогулка»),
- * «Выйти» — на главную. Рисунки обоих районов — финальные (свой дальний план, значка «Черновик» нет).
+ * Экран района. Открыт всем игрокам: /district?d=rows|port|arena
+ * (или прямой ссылкой с start_param «district-rows» / «district-port» / «district-arena»).
+ * Полоска «Центр · Неон-ряды · Порт · Арена», протяжка за край улицы — к соседу, «Назад» — в Центр («Прогулка»),
+ * «Выйти» — на главную. «Неон-ряды» и «Порт» — финальный рисунок. «Арена» — черновик-заглушка до PR 3.
  *
  * PR 6b: касание купленного места — карточка объявления (показы, открытия и переходы считаются, как в Центре),
  * касание свободного — покупка этого места (/ads?district=…&spot=…).
@@ -53,6 +55,8 @@ function useViewport() {
 
 /** проезд камеры к месту по ссылке, мс */
 export const FOCUS_PAN_MS = 650;
+/** черновик не грузит картинки: камере достаточно любого набора адресов, чтобы включиться */
+const DRAFT_URLS: LayerUrls = { mid: "draft" };
 
 export function DistrictScene({
   district,
@@ -75,7 +79,8 @@ export function DistrictScene({
   const camRef = useRef<DistrictCamera | null>(null);
   const hintsRef = useRef<EdgeHintsHandle>(null);
   const lastX = useRef<number | null>(null);
-  const { data: ads } = useDistrictAds(district);
+  const draft = isDraftDistrict(district);
+  const { data: ads } = useDistrictAds(district, !draft);
   const [picked, setPicked] = useState<string | null>(null);
   const live = useMemo(
     () => (ads?.spots ?? []).filter((s) => s.ad && SURFACES[district]?.some((v) => v.spot === s.key)),
@@ -102,8 +107,14 @@ export function DistrictScene({
 
   // слои текущего района — по требованию; смена фазы подменяет рисунок, когда новый уже декодирован
   useEffect(() => {
+    if (draft) {
+      setFailed(false);
+      setUrls(DRAFT_URLS);
+      return;
+    }
     let live = true;
     setFailed(false);
+    setUrls((prev) => (prev === DRAFT_URLS ? null : prev));
     loadDistrict(district, look.art, lite).then(
       (u) => live && setUrls(u),
       () => live && setFailed(true),
@@ -111,7 +122,7 @@ export function DistrictScene({
     return () => {
       live = false;
     };
-  }, [district, look.art, lite]);
+  }, [district, look.art, lite, draft]);
 
   // соседний район — в простое, когда текущий уже на экране
   useEffect(() => {
@@ -184,11 +195,11 @@ export function DistrictScene({
   // жизнь улицы — разовые события; не на слабых устройствах и не при «меньше движения»
   useEffect(() => {
     const mid = midRef.current;
-    if (!mid || !urls || lite || !motionAllowed()) return;
+    if (!mid || !urls || lite || !motionAllowed() || draft || !LANES[district].length) return;
     const life = startDistrictLife(mid, LANES[district]);
     if (import.meta.env.DEV) (window as unknown as { __districtSpawn?: unknown }).__districtSpawn = life.spawn;
     return life.stop;
-  }, [urls, lite, district]);
+  }, [urls, lite, district, draft]);
 
   // показы — раз в сутки на объявление (сервер дедупит, клиент не повторяет), когда улица уже на экране
   useEffect(() => {
@@ -233,14 +244,19 @@ export function DistrictScene({
   return (
     <div
       ref={hostRef}
-      className={`dz${lite ? " dz-lite" : ""}${urls ? " ready" : ""}`}
+      className={`dz${lite ? " dz-lite" : ""}${draft ? " dz-draft" : ""}${urls ? " ready" : ""}`}
       data-district={district}
-      aria-label={t("city.districtAria", { district: DISTRICT_RU[district] })}
+      aria-label={t("city.districtAria", { district: draft ? t("district.arenaTitle") : DISTRICT_RU[district] })}
       data-art={look.art}
       data-tint={look.tint ?? undefined}
       style={{ ["--dz-street" as string]: `${sw}px` } as CSSProperties}
     >
-      {urls &&
+      {urls && draft && (
+        <div ref={midRef} className="dz-layer dz-mid" data-k={1} style={{ width: sw, marginLeft: -sw / 2 }}>
+          <ArenaBowl />
+        </div>
+      )}
+      {urls && !draft &&
         layers.map(({ id, k }) => {
           const w = layerBoxWidth(k, vw, vh);
           return (
@@ -260,12 +276,19 @@ export function DistrictScene({
                   onAct={(k) => act.current(k)}
                 />
               )}
-              {(id === "mid" || id === "flat") && <SecretSignal place={district} active={!!urls} still={lite || !motionAllowed()} />}
+              {(id === "mid" || id === "flat") && !isDraftDistrict(district) && (
+                <SecretSignal place={district} active={!!urls} still={lite || !motionAllowed()} />
+              )}
             </div>
           );
         })}
       {look.tint && <div className={`dz-tint ${look.tint}`} aria-hidden="true" />}
       <div className="dz-ui">
+        {draft && (
+          <div className="dz-head">
+            <h1>{t("district.arenaTitle")}</h1>
+          </div>
+        )}
         <div className="walk-top">
           <button
             type="button"
