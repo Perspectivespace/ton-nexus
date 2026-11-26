@@ -97,10 +97,10 @@ export const SURFACES: Partial<Record<SceneDistrict, Surface[]>> = {
  * Замерены на мастер-арте 1152×864. В SURFACES не входят: рекламу и тап повесит PR 4.
  */
 export const ARENA_PANELS: Surface[] = [
-  { spot: "arena_facade", kind: "facade_screen", x: 0.4089, y: 0.3438, w: 0.2118, h: 0.1701 }, // экран на фасаде чаши
-  { spot: "arena_line", kind: "line", x: 0.3707, y: 0.5440, w: 0.2873, h: 0.0486 }, // строка вдоль кольца
-  { spot: "arena_neon", kind: "neon", x: 0.4540, y: 0.6088, w: 0.1198, h: 0.0532 }, // вывеска над воротами
-  { spot: "arena_banner", kind: "banner", x: 0.4549, y: 0.0405, w: 0.0903, h: 0.0903 }, // голо-баннер в чистом небе над кольцом
+  { spot: "arena_facade", kind: "facade_screen", x: 0.3976, y: 0.2731, w: 0.2101, h: 0.1528 }, // экран на фасаде чаши
+  { spot: "arena_line", kind: "line", x: 0.3785, y: 0.4676, w: 0.2465, h: 0.0417 }, // строка вдоль кольца
+  { spot: "arena_neon", kind: "neon", x: 0.4358, y: 0.5671, w: 0.1319, h: 0.0509 }, // вывеска над воротами
+  { spot: "arena_banner", kind: "banner", x: 0.4549, y: 0.0185, w: 0.0903, h: 0.0799 }, // голо-баннер в чистом небе над кольцом
 ];
 
 /** габарит места с учётом наклона (доли рисунка 4:3) — для проверки, что трассы жизни улицы его не пересекают */
