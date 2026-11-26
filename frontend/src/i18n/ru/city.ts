@@ -66,6 +66,8 @@ export const city = {
   "idle.yourSign": "Твоя вывеска",
   "idle.adSpacePrice": "Место для рекламы · {p}",
   "idle.shineRows": "Засветись на Неон-рядах",
+  "idle.shinePort": "Засветись в Порту",
+  "idle.shineArena": "Засветись на Арене",
   "idle.lineWaits": "Бегущая строка ждёт твой текст",
   "city.districtAria": "Район «{district}»",
   "city.loadFail": "Не удалось загрузить",

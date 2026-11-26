@@ -19,6 +19,15 @@ const box = ([x, y, w, h]: Rect): CSSProperties => ({ left: pc(x, W), top: pc(y,
 
 /** весь пояс рекламы: от башни до вывесок у земли */
 export const CROP_ALL: Rect = [0, 520, 720, 490];
+
+/**
+ * Номер места рисуется над рамкой (18 px + 5 px зазор, ~12 % высоты кадра на 360).
+ * Если до верхнего края меньше 8 % высоты, номер обрежется — ставим его под рамку.
+ * 8 %: баннер Арены у самого верха (≈2,5 %) — да; строка на башне Центра (≈11 %) и баннер Рядов (≈14 %) — нет.
+ */
+export function slotBadgeBelow(slotTop: number, cropY: number, cropH: number): boolean {
+  return cropH > 0 && (slotTop - cropY) / cropH < 0.08;
+}
 /** кадр вокруг места: zoom — во сколько раз крупнее полного кадра по ширине, aspect — ширина / высота */
 export function cropAround(key: string, zoom = 2, aspect = 1.6): Rect {
   const [x, y, w, h] = AD_SPOT_BOX[key] ?? AD_SPOT_BOX.banner_sky;
@@ -123,12 +132,16 @@ export function AdScene({
         {src ? <img className="cab-img" src={src} alt="" decoding="async" /> : <span className="cab-img cab-noimg" />}
         <div className={`cads-live cab-live ${lit ? "is-lit" : "is-unlit"}`}>
           {sign && <Sign {...sign} />}
-          {slots?.map((s) => (
+          {slots?.map((s) => {
+            const boxPx = AD_SPOT_BOX[s.key];
+            const below = boxPx ? slotBadgeBelow(boxPx[1], y, ch) : false;
+            return (
             <button
               key={s.key}
               type="button"
-              className={`cab-slot s-${s.state}`}
-              style={box(AD_SPOT_BOX[s.key])}
+              className={`cab-slot s-${s.state}${below ? " s-badge-below" : ""}`}
+              data-spot={s.key}
+              style={box(boxPx)}
               disabled={s.state === "off" || !onPick}
               aria-pressed={s.state === "picked"}
               aria-label={s.label}
@@ -136,7 +149,8 @@ export function AdScene({
             >
               <b>{s.n}</b>
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
       {children}

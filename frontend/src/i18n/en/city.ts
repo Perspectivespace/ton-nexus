@@ -68,6 +68,8 @@ export const city: Record<keyof typeof ru, string> = {
   "idle.yourSign": "Your sign",
   "idle.adSpacePrice": "Ad space · {p}",
   "idle.shineRows": "Shine on Neon Rows",
+  "idle.shinePort": "Shine at the Port",
+  "idle.shineArena": "Shine at the Arena",
   "idle.lineWaits": "This line wants your text",
   "city.districtAria": "District “{district}”",
   "city.loadFail": "Couldn't load",

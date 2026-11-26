@@ -66,6 +66,18 @@ const PORT_BOARD = {
     { key: "port_neon", format: "neon", district: "port", title: "Неоновая вывеска над воротами склада", on_sale: true, price_day: "0.3", ad: null },
   ],
 };
+const ARENA_BOARD = {
+  ...BOARD,
+  district: "arena",
+  image_upload: true as boolean,
+  limits: { ...BOARD.limits, facade_screen: { title_max: 24, subtitle_max: 32 } },
+  spots: [
+    { key: "arena_facade", format: "facade_screen", district: "arena", title: "Экран на фасаде чаши", on_sale: true, price_day: "1.5", ad: null },
+    { key: "arena_line", format: "line", district: "arena", title: "Бегущая строка вдоль кольца", on_sale: true, price_day: "1", ad: null },
+    { key: "arena_neon", format: "neon", district: "arena", title: "Неоновая вывеска над воротами", on_sale: true, price_day: "0.3", ad: null },
+    { key: "arena_banner", format: "banner", district: "arena", title: "Голо-баннер над площадью", on_sale: true, price_day: "0.5", ad: null },
+  ],
+};
 
 function quote(b: { spot: string; start: string; days: number; link_url?: string }) {
   if (b.link_url?.includes("bit.ly")) return [400, { detail: "Ссылка: сокращатели ссылок запрещены — укажите полный адрес" }];
@@ -86,6 +98,7 @@ function route(method: string, path: string, body: unknown): [number, unknown] {
   if (path === "/api/v1/city-ads" && method === "GET") return [200, BOARD];
   if (path === "/api/v1/city-ads?district=rows") return [200, ROWS_BOARD];
   if (path === "/api/v1/city-ads?district=port") return [200, PORT_BOARD];
+  if (path === "/api/v1/city-ads?district=arena") return [200, ARENA_BOARD];
   if (path === "/api/v1/me") return [200, me];
   if (path === "/api/v1/city-ads/quote") return quote(body as never) as [number, unknown];
   if (path === "/api/v1/city-ads" && method === "POST") {
@@ -278,6 +291,7 @@ describe("покупка в районах (PR 6)", () => {
     // на картинке — места района (рамки на рисунке района), а не кадр Центра
     expect(document.querySelector('.cab-dz[data-district="rows"]')).not.toBeNull();
     expect(document.querySelectorAll(".cab-dz .cab-slot").length).toBe(4);
+    expect(document.querySelectorAll(".cab-dz .cab-slot.s-badge-below")).toHaveLength(0);
     await click(btn("Выбрать даты"));
     await wait(30);
     const q = calls.find((c) => c.path.endsWith("/quote"))!;
@@ -379,6 +393,23 @@ describe("покупка в районах (PR 6)", () => {
     await click(btn("Выбрать даты"));
     await wait(30);
     expect(calls.filter((c) => c.path.endsWith("/quote")).at(-1)!.body).toMatchObject({ spot: "port_line", district: "port" });
+  });
+
+  it("выбор района: Арена — четыре места на рисунке «Чаши»; ?spot=arena_line выбирает строку вдоль кольца", async () => {
+    await render(<CityAds />, "/ads?district=arena&spot=arena_line");
+    expect(btn("Арена").getAttribute("aria-checked")).toBe("true");
+    expect(document.querySelector('.cab-dz[data-district="arena"]')).not.toBeNull();
+    expect(document.querySelector('.cab-slot[data-spot="arena_banner"]')?.classList.contains("s-badge-below")).toBe(true);
+    expect(document.querySelector('.cab-slot[data-spot="arena_line"]')?.classList.contains("s-badge-below")).toBe(false);
+    expect(document.querySelectorAll(".cab-slot.s-badge-below")).toHaveLength(1);
+    expect(calls.some((c) => c.path === "/api/v1/city-ads?district=arena")).toBe(true);
+    expect(btn(/Бегущая строка вдоль кольца/).getAttribute("aria-checked")).toBe("true");
+    expect(btn(/Экран на фасаде чаши/).textContent).toContain("1.5 TON");
+    expect(btn(/Голо-баннер над площадью/).textContent).toContain("0.5 TON");
+    expect(btn(/Неоновая вывеска над воротами/).textContent).toContain("0.3 TON");
+    await click(btn("Выбрать даты"));
+    await wait(30);
+    expect(calls.filter((c) => c.path.endsWith("/quote")).at(-1)!.body).toMatchObject({ spot: "arena_line", district: "arena" });
   });
 
   it("порог владельца действует и в районе", async () => {

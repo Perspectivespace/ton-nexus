@@ -14,6 +14,11 @@ import {
   ton,
   tonToNano,
   unshownDays,
+  AD_DISTRICTS,
+  districtOfSpot,
+  isAdDistrict,
+  spotName,
+  SPOT_SHORT,
 } from "./cityAdBuy";
 import type { CityAdMine, CityAdOwner } from "@/api/hooks";
 
@@ -102,5 +107,23 @@ describe("статусы и действия", () => {
     expect(refundOnReject(ad(), today)).toBe(2_500_000_000);
     // на проверке, ни разу не одобрено: всё удержано
     expect(refundOnReject(ad({ status: "pending", revenue_nano: 0, held_nano: 3_500_000_000 }), today)).toBe(3_500_000_000);
+  });
+});
+
+describe("районы мест", () => {
+  it("четыре района покупки, место Арены не путается с Центром", () => {
+    expect(AD_DISTRICTS).toEqual(["centre", "rows", "port", "arena"]);
+    expect(isAdDistrict("arena")).toBe(true);
+    expect(isAdDistrict("moon")).toBe(false);
+    expect(districtOfSpot("arena_facade")).toBe("arena");
+    expect(districtOfSpot("arena_line")).toBe("arena");
+    expect(districtOfSpot("arena_neon")).toBe("arena");
+    expect(districtOfSpot("arena_banner")).toBe("arena");
+    expect(districtOfSpot("rows_facade")).toBe("rows");
+    expect(districtOfSpot("port_neon")).toBe("port");
+    expect(districtOfSpot("tower_line")).toBe("centre");
+    expect(districtOfSpot(null)).toBe("centre");
+    expect(SPOT_SHORT.arena_line).toBe("Строка вдоль кольца");
+    expect(spotName("arena_facade", "Экран на фасаде чаши", "arena")).toBe("Арена · Экран на фасаде чаши");
   });
 });
