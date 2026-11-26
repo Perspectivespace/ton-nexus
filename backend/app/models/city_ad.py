@@ -31,7 +31,7 @@ from app.db.base import Base
 AD_STATUSES = ("pending", "approved", "rejected", "cancelled", "expired")
 AD_EVENT_KINDS = ("impression", "open", "click")
 SPOT_FORMATS = ("line", "banner", "neon", "facade_screen")
-DISTRICTS = ("centre", "rows", "port")  # Центр, «Неон-ряды», «Порт»
+DISTRICTS = ("centre", "rows", "port", "arena")  # Центр, «Неон-ряды», «Порт», «Арена-дистрикт»
 
 
 class CityAdSpot(Base):
@@ -44,7 +44,7 @@ class CityAdSpot(Base):
     __tablename__ = "city_ad_spots"
     __table_args__ = (
         CheckConstraint("format IN ('line', 'banner', 'neon', 'facade_screen')", name="ck_city_ad_spots_format"),
-        CheckConstraint("district IN ('centre', 'rows', 'port')", name="ck_city_ad_spots_district"),
+        CheckConstraint("district IN ('centre', 'rows', 'port', 'arena')", name="ck_city_ad_spots_district"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -53,7 +53,7 @@ class CityAdSpot(Base):
     title: Mapped[str] = mapped_column(String(64), nullable=False)
     sort: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true(), nullable=False)
-    # район города: centre — главная страница (все места до районов), rows — «Неон-ряды», port — «Порт»
+    # район города: centre — главная (места до районов), rows — «Неон-ряды», port — «Порт», arena — «Арена-дистрикт»
     district: Mapped[str] = mapped_column(String(16), default="centre", server_default="centre", nullable=False)
 
 
