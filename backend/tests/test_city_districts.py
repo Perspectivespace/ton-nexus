@@ -31,6 +31,7 @@ D = lambda n: TODAY + timedelta(days=n)  # noqa: E731
 CENTRE = ("tower_line", "banner_sky", "banner_street", "neon_left", "neon_right")
 ROWS = ("rows_facade", "rows_line", "rows_neon", "rows_banner")
 PORT = ("port_line", "port_banner_cargo", "port_banner_tram", "port_neon")
+ARENA = ("arena_facade", "arena_line", "arena_neon", "arena_banner")
 # так выглядела настройка city_ads до районов (её хранит действующая база)
 OLD_SETTING = {
     "min_level": 3,
@@ -96,11 +97,14 @@ class Spots(unittest.TestCase):
         self.assertEqual(ads.district_keys("centre"), CENTRE)
         self.assertEqual(ads.district_keys("rows"), ROWS)
         self.assertEqual(ads.district_keys("port"), PORT)
+        self.assertEqual(ads.district_keys("arena"), ARENA)
         fmt = {k: f for k, f, _, _ in ads.SPOTS}
         self.assertEqual([fmt[k] for k in ROWS], ["facade_screen", "line", "neon", "banner"])
         self.assertEqual([fmt[k] for k in PORT], ["line", "banner", "banner", "neon"])
-        self.assertEqual(sum(1 for f in fmt.values() if f == "facade_screen"), 1)  # экран — только в «Неон-рядах»
+        self.assertEqual([fmt[k] for k in ARENA], ["facade_screen", "line", "neon", "banner"])
+        self.assertEqual(sum(1 for f in fmt.values() if f == "facade_screen"), 2)  # экран — «Неон-ряды» и «Арена»
         self.assertEqual(ads.FORMAT_RU["facade_screen"], "Экран на фасаде")
+        self.assertEqual(ads.DISTRICT_RU["arena"], "Арена")
 
     def test_migration_copy_matches_code(self):
         path = pathlib.Path(__file__).resolve().parents[1] / "alembic" / "versions" / "020_city_districts.py"
@@ -108,7 +112,11 @@ class Spots(unittest.TestCase):
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         self.assertEqual((mod.revision, mod.down_revision), ("020", "019"))
-        code = {k: (f, t, srt, ads.SPOT_DISTRICT[k]) for k, f, t, srt in ads.SPOTS if ads.SPOT_DISTRICT[k] != "centre"}
+        code = {
+            k: (f, t, srt, ads.SPOT_DISTRICT[k])
+            for k, f, t, srt in ads.SPOTS
+            if ads.SPOT_DISTRICT[k] in ("rows", "port")
+        }
         self.assertEqual({k: (f, t, srt, d) for k, f, t, srt, d in mod.NEW_SPOTS}, code)
 
     def test_migration_021_puts_district_spots_on_sale(self):
@@ -184,6 +192,103 @@ class Spots(unittest.TestCase):
         with engine.connect() as conn:
             self.assertEqual(conn.scalar(sa.text("SELECT count(*) FROM economy_settings")), 0)
 
+    def test_migration_030_arena_on_sale(self):
+        import json
+
+        import sqlalchemy as sa
+        from alembic.migration import MigrationContext
+        from alembic.operations import Operations
+        from sqlalchemy.sql.elements import TextClause
+
+        from app.models import EconomySetting
+        from app.models.city_ad import CityAdSpot
+
+        mod = _migration("030_arena_district.py")
+        self.assertEqual((mod.revision, mod.down_revision), ("030", "029"))
+        self.assertEqual(mod.ARENA_KEYS, ARENA)
+        code = {k: (f, t, srt, "arena") for k, f, t, srt in ads.SPOTS if k in ARENA}
+        self.assertEqual({k: (f, t, srt, d) for k, f, t, srt, d in mod.NEW_SPOTS}, code)
+        check = next(c for c in CityAdSpot.__table__.constraints if c.name == "ck_city_ad_spots_district")
+        sql = check.sqltext.text if isinstance(check.sqltext, TextClause) else str(check.sqltext)
+        self.assertEqual(sql, mod.NEW_DISTRICT_CHECK)
+
+        # действующая база: настройка до арены (своя цена Центра, место порта снято) и места арены ещё не вписаны
+        old = json.loads(json.dumps(DEFAULTS["city_ads"][0]))
+        for k in ARENA:
+            old["spots"].pop(k, None)
+        old["spots"]["neon_left"] = {"price_day": "0.25", "enabled": False}
+        old["spots"]["port_neon"] = {"price_day": "0.7", "enabled": False}
+        # повторный заход: места уже продаются, у одного своя цена
+        again = json.loads(json.dumps(old))
+        again["spots"]["arena_neon"] = {"price_day": "0.4", "enabled": False}
+        for name, value in (("old", old), ("again", again)):
+            with self.subTest(name):
+                engine = sa.create_engine("sqlite://")
+                EconomySetting.__table__.create(engine)
+                CityAdSpot.__table__.create(engine)
+                with engine.begin() as conn:
+                    conn.execute(
+                        sa.insert(EconomySetting.__table__).values(key="city_ads", value_json=json.dumps(value, ensure_ascii=False))
+                    )
+                    conn.execute(sa.insert(EconomySetting.__table__).values(key="other", value_json='{"x": 1}'))
+
+                def run(fn):
+                    with engine.begin() as conn, Operations.context(MigrationContext.configure(conn)):
+                        fn()
+
+                def stored(key="city_ads"):
+                    with engine.connect() as conn:
+                        return json.loads(conn.scalar(sa.text("SELECT value_json FROM economy_settings WHERE key = :k"), {"k": key}))
+
+                def spot_rows():
+                    with engine.connect() as conn:
+                        return conn.execute(sa.text("SELECT key, format, title, sort, district FROM city_ad_spots ORDER BY sort")).all()
+
+                run(mod.seed_spots)
+                run(lambda: mod.apply_settings(True))
+                got = stored()
+                cfg = ads.normalize(got)
+                for k in ARENA:
+                    self.assertTrue(cfg["spots"][k]["enabled"], k)
+                self.assertEqual(got["spots"]["neon_left"], value["spots"]["neon_left"])
+                self.assertEqual(got["spots"]["port_neon"], {"price_day": "0.7", "enabled": False})
+                self.assertEqual(ads.spot_price_day(cfg, "arena_facade"), "1.5")
+                self.assertEqual(ads.spot_price_day(cfg, "arena_line"), "1")
+                self.assertEqual(ads.spot_price_day(cfg, "arena_banner"), "0.5")
+                if name == "again":
+                    self.assertEqual(got["spots"]["arena_neon"], {"price_day": "0.4", "enabled": True})
+                else:
+                    self.assertEqual(got["spots"]["arena_neon"], {"enabled": True})
+                self.assertEqual(
+                    [(r[0], r[1], r[4]) for r in spot_rows()],
+                    [(k, f, "arena") for k, f, _, _ in ads.SPOTS if k in ARENA],
+                )
+                self.assertEqual(stored("other"), {"x": 1})
+                run(mod.seed_spots)  # повторный запуск не плодит места
+                run(lambda: mod.apply_settings(True))
+                self.assertEqual(len(spot_rows()), 4)
+                self.assertEqual(stored(), got)
+                run(lambda: mod.apply_settings(False))
+                down = stored()
+                self.assertFalse(any(k in down["spots"] for k in ARENA))
+                self.assertEqual(down["spots"]["neon_left"], value["spots"]["neon_left"])
+                self.assertEqual(down["spots"]["port_neon"], value["spots"]["port_neon"])
+
+    def test_migration_030_without_setting_row(self):
+        import sqlalchemy as sa
+        from alembic.migration import MigrationContext
+        from alembic.operations import Operations
+
+        from app.models import EconomySetting
+
+        mod = _migration("030_arena_district.py")
+        engine = sa.create_engine("sqlite://")
+        EconomySetting.__table__.create(engine)
+        with engine.begin() as conn, Operations.context(MigrationContext.configure(conn)):
+            mod.apply_settings(True)
+        with engine.connect() as conn:
+            self.assertEqual(conn.scalar(sa.text("SELECT count(*) FROM economy_settings")), 0)
+
     def test_migration_023_any_level(self):
         import json
 
@@ -239,13 +344,15 @@ class Spots(unittest.TestCase):
         async def body(s):
             rows = (await s.execute(select(CityAdSpot.key, CityAdSpot.district, CityAdSpot.enabled))).all()
             got = {k: (d, e) for k, d, e in rows}
-            self.assertEqual(len(got), 13)
+            self.assertEqual(len(got), len(ads.SPOTS))
             for k in CENTRE:
                 self.assertEqual(got[k], ("centre", True))
             for k in ROWS:
                 self.assertEqual(got[k][0], "rows")
             for k in PORT:
                 self.assertEqual(got[k][0], "port")
+            for k in ARENA:
+                self.assertEqual(got[k][0], "arena")
             self.assertEqual(await ads.ensure_spots(s), 0)
 
         _run(body)
@@ -262,9 +369,11 @@ class Pricing(unittest.TestCase):
         self.assertEqual([ads.spot_price_day(cfg, k) for k in CENTRE], ["1", "0.5", "0.5", "0.3", "0.3"])
         self.assertEqual([ads.spot_price_day(cfg, k) for k in ROWS], ["1.5", "1", "0.3", "0.5"])
         self.assertEqual([ads.spot_price_day(cfg, k) for k in PORT], ["1", "0.5", "0.5", "0.3"])
+        self.assertEqual([ads.spot_price_day(cfg, k) for k in ARENA], ["1.5", "1", "0.3", "0.5"])
         self.assertEqual(ads.price_nano(cfg, "rows_facade", 7), (1_500_000_000, 10_500_000_000))
-        # места районов продаются (PR 6); цена — по типу места
-        for k in ROWS + PORT:
+        self.assertEqual(ads.price_nano(cfg, "arena_facade", 2), (1_500_000_000, 3_000_000_000))
+        # места районов продаются; цена — по типу места
+        for k in ROWS + PORT + ARENA:
             self.assertEqual(cfg["spots"][k], {"enabled": True})
         self.assertEqual(cfg["limits"]["facade_screen"], {"title_max": 24, "subtitle_max": 32})
 
@@ -273,6 +382,8 @@ class Pricing(unittest.TestCase):
         self.assertEqual(cfg["spots"]["tower_line"], {"price_day": "1", "enabled": True})
         self.assertEqual(cfg["spots"]["neon_right"], {"price_day": "0.3", "enabled": True})
         self.assertEqual(cfg["spots"]["rows_facade"], {"enabled": True})
+        self.assertEqual(cfg["spots"]["arena_facade"], {"enabled": True})
+        self.assertEqual(ads.spot_price_day(cfg, "arena_line"), "1")
         self.assertEqual(cfg["prices"]["facade_screen"]["price_day"], "1.5")
         self.assertEqual(ads.normalize(cfg), cfg)  # повторная нормализация ничего не меняет
 
@@ -327,8 +438,13 @@ class Board(unittest.TestCase):
             self.assertEqual(spots["rows_facade"]["title"], "Экран на фасаде рынка")
             port = await ads_api.city_ads_board(Response(), db=s, district="port")
             self.assertEqual([x["key"] for x in port["spots"]], list(PORT))
+            arena = await ads_api.city_ads_board(Response(), db=s, district="arena")
+            self.assertEqual([x["key"] for x in arena["spots"]], list(ARENA))
+            self.assertEqual(arena["spots"][0]["title"], "Экран на фасаде чаши")
+            self.assertEqual([x["price_day"] for x in arena["spots"]], ["1.5", "1", "0.3", "0.5"])
+            self.assertTrue(all(x["on_sale"] for x in arena["spots"]))
             every = await ads_api.city_ads_board(Response(), db=s, district="all")
-            self.assertEqual(len(every["spots"]), 13)
+            self.assertEqual(len(every["spots"]), len(ads.SPOTS))
             with self.assertRaises(HTTPException) as e:
                 await ads_api.city_ads_board(Response(), db=s, district="moon")
             self.assertEqual(e.exception.status_code, 400)
@@ -340,12 +456,14 @@ class QuoteAndBook(unittest.TestCase):
     def test_on_sale_and_owner_can_switch_off(self):
         async def body(s):
             u = await _user(s)
-            for k in ROWS + PORT:  # по умолчанию все места районов продаются
+            for k in ROWS + PORT + ARENA:  # по умолчанию все места районов продаются
                 with self.subTest(k=k):
                     q = await ads.quote(s, user=u, spot_key=k, start=D(1), days=1, today=TODAY, district=ads.SPOT_DISTRICT[k])
                     self.assertEqual(q.district, ads.SPOT_DISTRICT[k])
             q = await ads.quote(s, user=u, spot_key="rows_facade", start=D(1), days=3, today=TODAY, district="rows")
             self.assertEqual((q.district, q.format, q.price_day, q.total), ("rows", "facade_screen", "1.5", "4.5"))
+            q = await ads.quote(s, user=u, spot_key="arena_banner", start=D(1), days=2, today=TODAY, district="arena")
+            self.assertEqual((q.district, q.format, q.price_day, q.total), ("arena", "banner", "0.5", "1"))
             # владелец снимает место с продажи — купить нельзя, витрина показывает «не продаётся»
             await set_setting(s, key="city_ads", value={"spots": {"port_neon": {"enabled": False}}})
             await s.commit()
@@ -374,6 +492,8 @@ class QuoteAndBook(unittest.TestCase):
             await _sell(s, "port_line")
             with self.assertRaises(ads.CityAdError):
                 await ads.quote(s, user=u, spot_key="port_line", start=D(1), days=1, today=TODAY, district="rows")
+            with self.assertRaises(ads.CityAdError):
+                await ads.quote(s, user=u, spot_key="arena_line", start=D(1), days=1, today=TODAY, district="port")
             with self.assertRaises(ads.CityAdError):
                 await ads.quote(s, user=u, spot_key="tower_line", start=D(1), days=1, today=TODAY, district="moon")
             q = await ads.quote(s, user=u, spot_key="tower_line", start=D(1), days=1, today=TODAY, district="centre")
@@ -416,6 +536,9 @@ class QuoteAndBook(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 ads_api.BookBody(spot="port_banner_tram", start=D(1), days=1, title="X", color="cyan", district="moon")
             self.assertIsNone(ads_api.QuoteBody(spot="tower_line", start=D(1), days=1).district)
+            self.assertEqual(
+                ads_api.QuoteBody(spot="arena_line", start=D(1), days=1, district="arena").district, "arena"
+            )
             bb = ads_api.BookBody(
                 spot="port_banner_tram", start=ads.game_day() + timedelta(days=1), days=1, title="TRAM", color="cyan",
                 district="port",

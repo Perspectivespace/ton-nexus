@@ -1,5 +1,5 @@
 """Реклама в городе — HTTP API: витрина и расчёт цены (PR 1); бронь, мои объявления, отмена, смена ссылки,
-модерация владельцем (PR 2). Районы: витрина, расчёт и бронь принимают district (centre / rows / port)."""
+модерация владельцем (PR 2). Районы: витрина, расчёт и бронь принимают district (centre / rows / port / arena)."""
 
 from collections.abc import Awaitable, Callable
 from datetime import date, datetime
@@ -21,7 +21,7 @@ from app.services.roles import is_platform_owner
 router = APIRouter(prefix="/city-ads", tags=["city-ads"])
 
 
-DISTRICT_PATTERN = "^(centre|rows|port)$"
+DISTRICT_PATTERN = "^(centre|rows|port|arena)$"
 
 
 class QuoteBody(BaseModel):
@@ -74,7 +74,7 @@ async def city_ads_board(
 ):
     """Места и одобренные объявления на сегодня (МСК) — для города. Публично, без данных о пользователях.
 
-    ?district=centre (по умолчанию — как до районов) | rows | port | all."""
+    ?district=centre (по умолчанию — как до районов) | rows | port | arena | all."""
     if district != "all" and district not in ads_svc.DISTRICT_RU:
         raise HTTPException(status_code=400, detail="неизвестный район")
     data = await ads_svc.board(db, district=district)

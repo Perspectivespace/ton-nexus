@@ -84,7 +84,7 @@ class Events(unittest.TestCase):
 
     def test_district_ads_counted_like_centre(self):
         """PR 6b: показы, открытия и переходы в «Неон-рядах» и «Порту» считаются так же; район — у места объявления.
-        Все 13 мест города × 3 вида событий за сутки помещаются в дневной потолок одного человека."""
+        Все места города × 3 вида событий за сутки помещаются в дневной потолок одного человека."""
 
         async def body(s):
             live = [await _live_ad(s, spot=k) for k in ads.SPOT_KEYS]
@@ -102,7 +102,7 @@ class Events(unittest.TestCase):
             for ad in live:
                 d = spots[ad.spot_id].district
                 by_district[d] = by_district.get(d, 0) + counts[ad.id]["click"]
-            self.assertEqual(by_district, {"centre": 5, "rows": 4, "port": 4})
+            self.assertEqual(by_district, {"centre": 5, "rows": 4, "port": 4, "arena": 4})
 
         _run(body)
 
