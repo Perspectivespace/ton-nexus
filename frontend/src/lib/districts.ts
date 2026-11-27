@@ -8,7 +8,7 @@ import { tmap } from "@/i18n";
  * поэтому по ширине она ~2,9 экрана телефона: её ведут пальцем (инерция и «резинка» — как в «Прогулке»).
  * Слои едут с разной скоростью: небо 0.25, горизонт 0.55, улица 1, ближний план 1.3 (параллакс).
  * Нарисованы только день и ночь; рассвет и вечер — подкраска поверх (день + розовая дымка, ночь + тёплый закат).
- * «Неон-ряды», «Порт» и «Арена» — финальный рисунок (свой дальний план). Уличная жизнь — у Рядов и Порта.
+ * «Неон-ряды», «Порт» и «Арена» — финальный рисунок (свой дальний план). Уличная жизнь — у Рядов, Порта и Арены.
  * На слабых устройствах — одна сведённая картинка без параллакса и без уличных событий.
  */
 export type DistrictId = "centre" | "rows" | "port" | "arena";
@@ -205,9 +205,9 @@ export function districtFromStart(startParam: string | null | undefined): SceneD
  * x — участок пути (доли ширины рисунка: откуда и докуда), если едет не через всю улицу: трамвай — только по эстакаде,
  * катер — только по воде; на концах участка проявляется и гаснет.
  */
-export type Sprite = "car" | "drone" | "walker" | "tram" | "boat";
+export type Sprite = "car" | "drone" | "walker" | "tram" | "boat" | "shuttle" | "camdrone" | "spectator";
 export type Lane = {
-  kind: "car" | "tram" | "boat" | "drone" | "walker";
+  kind: "car" | "tram" | "boat" | "drone" | "walker" | "shuttle" | "camdrone" | "spectator";
   y: number;
   w: number;
   h: number;
@@ -217,7 +217,27 @@ export type Lane = {
   x?: [number, number];
 };
 /** пропорции спрайтов (ширина / высота) — по ним h трассы = w · 4/3 / пропорция */
-export const SPRITE_ASPECT: Record<Sprite, number> = { car: 4.098, drone: 1.574, walker: 0.546, tram: 4.528, boat: 2.8 };
+export const SPRITE_ASPECT: Record<Sprite, number> = {
+  car: 4.098,
+  drone: 1.574,
+  walker: 0.546,
+  tram: 4.528,
+  boat: 2.8,
+  shuttle: 5.106,
+  camdrone: 3.491,
+  spectator: 0.579,
+};
+/** имя файла в src/assets/districts/life (без расширения) */
+export const SPRITE_FILE: Record<Sprite, string> = {
+  car: "rows-car",
+  drone: "rows-drone",
+  walker: "rows-walker",
+  tram: "port-tram",
+  boat: "port-boat",
+  shuttle: "arena-shuttle",
+  camdrone: "arena-drone",
+  spectator: "arena-spectator",
+};
 const sized = (sprite: Sprite, y: number, w: number, dur: [number, number], bob?: number, x?: [number, number]): Lane => ({
   kind: sprite,
   sprite,
@@ -230,7 +250,11 @@ const sized = (sprite: Sprite, y: number, w: number, dur: [number, number], bob?
 });
 /** трассы событий по районам (в долях рисунка улицы); не пересекают рекламные поверхности (SURFACES) */
 export const LANES: Record<SceneDistrict, Lane[]> = {
-  arena: [], // уличной жизни нет: кольцо и свечение статичные (умолчание PR 3)
+  arena: [
+    sized("shuttle", 0.11, 0.082, [12000, 16000]), // ВИП-шаттл в верхнем небе, сразу под голо-баннером
+    sized("camdrone", 0.175, 0.058, [10000, 14000], 0.1), // дрон трансляции у голо-кольца, лёгкое покачивание
+    sized("spectator", 0.836, 0.0305, [18000, 24000], 0.02), // зритель по площади: ниже «Вход», выше полоски районов
+  ],
   rows: [
     sized("car", 0.21, 0.05, [6500, 8500]), // ховер-кар над куполом рынка
     sized("car", 0.15, 0.028, [9000, 12000]), // дальняя воздушная трасса
