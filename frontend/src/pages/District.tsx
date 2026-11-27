@@ -2,7 +2,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { sendCityAdEvent, useDistrictAds } from "@/api/hooks";
 import { AdCard } from "@/components/AdCard";
+import { ArenaEntrySheet } from "@/components/ArenaEntrySheet";
 import { pushBack } from "@/lib/backButton";
+import { useArenaLobby } from "@/lib/arena/hooks";
+import { arenaPosterModel } from "@/lib/arena/poster";
+import { isPosterSpot } from "@/lib/cityAdBuy";
 import { useCityPhase } from "@/lib/cityPhase";
 import { DistrictCamera, type CamLayer } from "@/lib/districtCamera";
 import { ARRIVE_MS, districtNav, neighbourOf } from "@/lib/districtNav";
@@ -20,6 +24,7 @@ import { haptic } from "@/lib/haptics";
 import { WebApp } from "@/lib/telegram";
 import { lowEnd, motionAllowed, reducedMotion } from "@/lib/walkPrefs";
 import "@/styles/districts.css";
+import "@/styles/arena-district.css";
 import { t } from "@/i18n";
 
 /**
@@ -30,6 +35,7 @@ import { t } from "@/i18n";
  *
  * PR 6b: касание купленного места — карточка объявления (показы, открытия и переходы считаются, как в Центре),
  * касание свободного — покупка этого места (/ads?district=…&spot=…).
+ * PR 5 (Арена): тап по афише на фасаде — /arena; тап по воротам — карточка входа (/arena, /arena/history, очередь).
  * ?spot=<место> (ссылка из «Моих объявлений»): место за экраном — камера разово подъезжает к нему (requestAnimationFrame,
  * ~0.65 с; при «меньше движения» и на слабых устройствах — сразу), потом открывается карточка, если объявление в эфире.
  *
@@ -76,19 +82,49 @@ export function DistrictScene({
   const hintsRef = useRef<EdgeHintsHandle>(null);
   const lastX = useRef<number | null>(null);
   const { data: ads } = useDistrictAds(district, !!SURFACES[district]);
+  const lobby = useArenaLobby({ enabled: district === "arena", poll: 15_000 });
+  const poster = useMemo(
+    () =>
+      district === "arena"
+        ? arenaPosterModel({ lobby: lobby.data, status: lobby.isError ? "err" : lobby.data ? "ok" : "pending" })
+        : null,
+    [district, lobby.data, lobby.isError],
+  );
   const [picked, setPicked] = useState<string | null>(null);
+  const [entry, setEntry] = useState(false);
   const live = useMemo(
-    () => (ads?.spots ?? []).filter((s) => s.ad && SURFACES[district]?.some((v) => v.spot === s.key)),
+    () =>
+      (ads?.spots ?? []).filter(
+        (s) => s.ad && !isPosterSpot(s.key) && SURFACES[district]?.some((v) => v.spot === s.key),
+      ),
     [ads, district],
   );
   const pickedSpot = live.find((s) => s.key === picked) ?? null;
-  // касание места (камера — палец почти не сдвинулся; клавиатура — Enter): реклама → карточка, свободное → покупка
+  // касание места (камера — палец почти не сдвинулся; клавиатура — Enter):
+  // афиша → /arena, ворота → карточка входа, реклама → карточка, свободное → покупка
   const act = useRef<(spot: string | null) => void>(() => {});
   act.current = (key) => {
-    if (!key) return setPicked(null); // касание улицы мимо мест закрывает карточку
+    if (!key) {
+      setPicked(null);
+      setEntry(false);
+      return;
+    }
+    if (key === "arena_facade") {
+      haptic.tap();
+      navigate("/arena");
+      return;
+    }
+    if (key === "arena_gate") {
+      haptic.tap();
+      setPicked(null);
+      setEntry(true);
+      return;
+    }
+    if (isPosterSpot(key)) return;
     const s = ads?.spots.find((x) => x.key === key);
     if (s?.ad) {
       haptic.tap();
+      setEntry(false);
       setPicked(key);
       return;
     }
@@ -216,17 +252,20 @@ export function DistrictScene({
     else open();
   }, [focus, urls, ads, live, district, lite]);
 
-  // открыта карточка: «Назад» закрывает её, полоска районов прячется (как в «Прогулке» Центра)
+  // открыта карточка объявления или входа: «Назад» закрывает её, полоска районов прячется (как в «Прогулке» Центра)
   useEffect(() => {
-    if (!pickedSpot) return;
+    if (!pickedSpot && !entry) return;
     const root = document.documentElement;
     root.classList.add("city-walk-card");
-    const off = pushBack(() => setPicked(null));
+    const off = pushBack(() => {
+      setPicked(null);
+      setEntry(false);
+    });
     return () => {
       off();
       root.classList.remove("city-walk-card");
     };
-  }, [pickedSpot]);
+  }, [pickedSpot, entry]);
 
   const sw = streetWidth(vw, vh);
   const layers = lite ? [{ id: "flat" as const, k: 1 }] : LAYERS;
@@ -258,6 +297,7 @@ export function DistrictScene({
                   still={lite || !motionAllowed()}
                   picked={pickedSpot?.key ?? null}
                   onAct={(k) => act.current(k)}
+                  poster={poster}
                 />
               )}
               {(id === "mid" || id === "flat") && district !== "arena" && (
@@ -287,6 +327,7 @@ export function DistrictScene({
         <EdgeHints ref={hintsRef} current={district} />
         <DistrictStrip current={district} onGo={go} />
         {pickedSpot && ads && <AdCard key={pickedSpot.key} spot={pickedSpot} day={ads.day} onClose={() => setPicked(null)} />}
+        {entry && poster && <ArenaEntrySheet model={poster} onClose={() => setEntry(false)} />}
       </div>
     </div>
   );

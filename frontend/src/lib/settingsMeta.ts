@@ -384,7 +384,7 @@ export const SETTINGS: Record<string, SettingMeta> = {
       port_banner_cargo: { label: "Порт · баннер на контейнерах" },
       port_banner_tram: { label: "Порт · баннер на станции трамвая" },
       port_neon: { label: "Порт · вывеска над воротами склада" },
-      arena_facade: { label: "Арена · экран на фасаде чаши" },
+      arena_facade: { label: "Арена · экран на фасаде чаши", hint: "Всегда афиша Арены, не продаётся" },
       arena_line: { label: "Арена · строка вдоль кольца" },
       arena_neon: { label: "Арена · вывеска над воротами" },
       arena_banner: { label: "Арена · баннер над площадью" },

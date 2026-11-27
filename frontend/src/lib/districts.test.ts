@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ARENA_PANELS, ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, isFinalArt, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
+  ARENA_GATES, ARENA_PANELS, ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, isFinalArt, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
   SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES, surfaceBounds,
 } from "./districts";
 
@@ -162,6 +162,22 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
     const b = surfaceBounds(line);
     expect(b.h).toBeGreaterThan(line.h * 2);
     expect(b.y + b.h / 2).toBeCloseTo(line.y + line.h / 2, 6);
+  });
+
+  it("Арена: golden gates sit below the neon sign, inside the frame, and are not an ad surface", () => {
+    const n = ARENA_PANELS.find((s) => s.spot === "arena_neon")!;
+    expect(ARENA_GATES.y).toBeGreaterThan(n.y + n.h);
+    expect(ARENA_GATES.x).toBeGreaterThanOrEqual(0);
+    expect(ARENA_GATES.y).toBeGreaterThanOrEqual(0);
+    expect(ARENA_GATES.x + ARENA_GATES.w).toBeLessThanOrEqual(1);
+    expect(ARENA_GATES.y + ARENA_GATES.h).toBeLessThanOrEqual(1);
+    expect(SURFACES.arena?.some((s) => s.spot === "arena_gate")).toBe(false);
+    // at 360 and 390 the hit stays above the 44 px minimum
+    for (const [vw, vh] of [[390, 844], [360, 640]]) {
+      const sw = Math.max(vw, Math.round(vh * ART_ASPECT));
+      expect(ARENA_GATES.w * sw).toBeGreaterThanOrEqual(44);
+      expect(ARENA_GATES.h * vh).toBeGreaterThanOrEqual(44);
+    }
   });
 
   it("Арена: four ad surfaces (bowl facade screen, ring ticker, gate sign, sky holo-banner), inside the frame", () => {

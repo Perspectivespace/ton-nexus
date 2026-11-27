@@ -13,7 +13,7 @@ PR 1: расчёт. PR 2: бронь с оплатой с баланса, мод
 arena — «Арена-дистрикт» (экран на фасаде чаши, строка вдоль кольца, вывеска над воротами, голо-баннер над площадью).
 Цена за сутки — по типу места (настройка ``prices``); у места может быть своя цена (``spots.<место>.price_day``).
 У мест Центра своя цена задана, как и раньше, — их цены не меняются. Места районов продаются (ряды и порт — миграция 021,
-арена — 030); владелец может снять любое.
+арена — 030, экран фасада снят с продажи в 031 — это афиша Арены); владелец может снять любое другое.
 
 Сутки — по МСК (app.services.gameday). Одно объявление на место в сутки (city_ad_days, UNIQUE(spot, day)).
 Начать показ можно не раньше завтрашнего дня (до начала владелец успевает проверить объявление)
@@ -85,6 +85,8 @@ SPOT_DISTRICT: dict[str, str] = {
     )
     for k in SPOT_KEYS
 }
+# экран на фасаде чаши всегда афиша Арены: купить нельзя, даже если в настройке enabled=true
+POSTER_SPOTS = frozenset({"arena_facade"})
 
 
 def district_keys(district: str) -> tuple[str, ...]:
@@ -305,6 +307,8 @@ async def _spot(session: AsyncSession, key: str) -> CityAdSpot:
 
 
 def spot_on_sale(cfg: dict[str, Any], spot: CityAdSpot) -> bool:
+    if spot.key in POSTER_SPOTS:
+        return False
     return bool(spot.enabled) and bool(cfg["spots"].get(spot.key, {}).get("enabled", False))
 
 

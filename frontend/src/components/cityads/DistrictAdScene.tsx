@@ -2,10 +2,13 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { CityAdFormat } from "@/api/hooks";
 import { IdleSurface } from "@/components/IdleSpot";
 import { loadDistrict } from "@/lib/districtAssets";
+import { isPosterSpot } from "@/lib/cityAdBuy";
 import { ART_ASPECT, SCENE_DISTRICTS, SURFACES, lookFor, surfaceBounds, type SceneDistrict, type Surface } from "@/lib/districts";
+import { t } from "@/i18n";
 import { useCityPhase, type CityPhase } from "@/lib/cityPhase";
 import { AdScene, CROP_ALL, cropAround, slotBadgeBelow, type SceneSlot, type SignContent } from "./AdScene";
 import "@/styles/idle-ads.css";
+import "@/styles/arena-district.css";
 
 /**
  * Кусок района с местами рекламы — для покупки, «Моих объявлений» и модерации (PR 6).
@@ -128,6 +131,16 @@ export function DistrictAdScene({
               <IdleSurface spot={signAt.spot} kind={signAt.kind} style={boxOf(signAt)} i={0} price={null} still ad={sign.ad} />
             </div>
           )}
+          <div className="dz-idles" aria-hidden="true">
+            {surfaces.filter((s) => isPosterSpot(s.spot) && s.spot !== sign?.spot).map((s) => (
+              <div key={s.spot} className="dz-idle k-facade_screen dz-poster still" style={boxOf(s)} data-spot={s.spot} data-kind="poster">
+                <span className="in">
+                  <span className="tag">{t("poster.kicker")}</span>
+                  <span className="t">{t("poster.reservedTitle")}</span>
+                </span>
+              </div>
+            ))}
+          </div>
           {slots?.map((sl) => {
             const s = surfaces.find((v) => v.spot === sl.key);
             if (!s) return null;

@@ -87,6 +87,12 @@ export const ARENA_PANELS: Surface[] = [
   { spot: "arena_neon", kind: "neon", x: 0.4358, y: 0.5671, w: 0.1319, h: 0.0509 }, // вывеска над воротами
   { spot: "arena_banner", kind: "banner", x: 0.4549, y: 0.0185, w: 0.0903, h: 0.0799 }, // голо-баннер в чистом небе над кольцом
 ];
+/**
+ * Золотые ворота чаши (доли рисунка улицы 4:3, одинаковы днём и ночью).
+ * Не рекламное место: зона касания и плашка входа в игру (PR 5). Чуть ниже вывески
+ * arena_neon (низ 0.6180), по внутреннему проёму дверей, не заходя на площадь.
+ */
+export const ARENA_GATES = { x: 0.415, y: 0.625, w: 0.17, h: 0.21 };
 
 export const SURFACES: Partial<Record<SceneDistrict, Surface[]>> = {
   rows: [

@@ -20,13 +20,14 @@ export function useArenaHistory() {
   });
 }
 
-/** Лобби: типы комнат, сколько ждут, моя активная комната. Опрос ~1 с, пока экран открыт. */
-export function useArenaLobby(opts: { poll?: boolean; enabled?: boolean } = {}) {
+/** Лобби: типы комнат, сколько ждут, моя активная комната. Опрос ~1 с на экране «Арены»; на районе — реже (мс). */
+export function useArenaLobby(opts: { poll?: boolean | number; enabled?: boolean } = {}) {
+  const interval = opts.poll === true ? 1000 : typeof opts.poll === "number" ? opts.poll : false;
   return useQuery({
     queryKey: arenaKeys.lobby,
     queryFn: arenaApi.rooms,
     enabled: opts.enabled ?? true,
-    refetchInterval: opts.poll ? 1000 : false,
+    refetchInterval: interval,
     refetchOnMount: "always",
     retry: false,
   });

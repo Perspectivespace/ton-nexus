@@ -93,6 +93,12 @@ export const AD_DISTRICT_RU = tmap("district.", AD_DISTRICTS);
 /** то же для админки владельца — всегда по-русски */
 export const AD_DISTRICT_OWNER = tmap("district.", AD_DISTRICTS, "ru");
 export const isAdDistrict = (v: unknown): v is AdDistrict => v === "centre" || v === "rows" || v === "port" || v === "arena";
+/** места, зарезервированные под афишу района: на улице всегда афиша, купить нельзя */
+export const POSTER_SPOTS: ReadonlySet<string> = new Set(["arena_facade"]);
+export const isPosterSpot = (key: string | null | undefined): boolean => !!key && POSTER_SPOTS.has(key);
+/** места, которые можно выбрать в «Разместить рекламу» (не афиша и в продаже) */
+export const buyableSpots = <T extends { key: string; on_sale?: boolean }>(spots: T[]): T[] =>
+  spots.filter((s) => s.on_sale && !isPosterSpot(s.key));
 /** район места по ключу (как на сервере: rows_… / port_… / arena_…, остальные — Центр) */
 export const districtOfSpot = (key: string | null | undefined): AdDistrict =>
   key?.startsWith("rows_") ? "rows" : key?.startsWith("port_") ? "port" : key?.startsWith("arena_") ? "arena" : "centre";
