@@ -31,6 +31,6 @@ describe("districtLife: one-shot frames", () => {
   });
 
   it("every sprite has an asset", () => {
-    for (const url of Object.values(SPRITES)) expect(String(url)).toMatch(/(rows-(car|drone|walker)|port-(tram|boat))|^data:image\/webp/);
+    for (const url of Object.values(SPRITES)) expect(String(url)).toMatch(/(rows-(car|drone|walker)|port-(tram|boat)|arena-(shuttle|spectator))|^data:image\/webp/);
   });
 });

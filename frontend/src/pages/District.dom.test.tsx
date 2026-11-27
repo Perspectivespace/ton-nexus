@@ -268,7 +268,7 @@ describe("district screen", () => {
     };
     await render("/district?d=arena");
     expect(m.load).toHaveBeenCalledWith("arena", "night", false);
-    expect(m.life).not.toHaveBeenCalled();
+    expect(m.life).toHaveBeenCalledTimes(1);
     const layers = [...el.querySelectorAll<HTMLElement>(".dz-layer")];
     expect(layers.map((l) => [l.className, l.dataset.k])).toEqual([
       ["dz-layer dz-sky", "0.25"],
@@ -297,11 +297,13 @@ describe("district screen", () => {
     expect(el.querySelector(".az-gate-plate")?.textContent).toBe("Вход");
   });
 
-  it("arena lite: one flat picture", async () => {
+  it("arena lite: one flat picture, no street events", async () => {
+    m.life.mockClear();
     await render("/district?d=arena&lite=1");
     expect([...el.querySelectorAll(".dz-layer")].map((l) => l.className)).toEqual(["dz-layer dz-flat"]);
     expect(el.querySelector(".dz-flat img")?.getAttribute("src")).toBe("/flat-night.webp");
     expect(el.querySelector(".dz-badge")).toBeNull();
+    expect(m.life).not.toHaveBeenCalled();
   });
 
   it("unknown district falls back to Неон-ряды", async () => {

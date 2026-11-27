@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ARENA_GATES, ARENA_PANELS, ART_ASPECT, cameraXFor, restX, surfaceOnScreen, districtFromStart, isFinalArt, LANES, LAYERS, layerBoxWidth, layerFiles, layerX, lookFor, neighbours, OWN_FAR, panRange,
-  SCENE_DISTRICTS, SPRITE_ASPECT, streetScreens, streetWidth, SURFACES, surfaceBounds,
+  SCENE_DISTRICTS, SPRITE_ASPECT, SPRITE_FILE, streetScreens, streetWidth, SURFACES, surfaceBounds,
 } from "./districts";
 
 type Fs = { existsSync(path: URL): boolean; statSync(path: URL): { size: number }; readFileSync(path: URL): Uint8Array };
@@ -94,10 +94,9 @@ describe("districts: launch link and street lanes", () => {
     expect(districtFromStart(undefined)).toBeNull();
   });
 
-  it("arena is final painted art: webp layers, four ad spots in SURFACES, no street life", () => {
+  it("arena is final painted art: webp layers, four ad spots in SURFACES", () => {
     expect(isFinalArt("arena")).toBe(true);
     expect(SURFACES.arena).toBe(ARENA_PANELS);
-    expect(LANES.arena).toEqual([]);
     expect(ARENA_PANELS.map((s) => s.spot)).toEqual(["arena_facade", "arena_line", "arena_neon", "arena_banner"]);
     expect(ARENA_PANELS.map((s) => s.kind)).toEqual(["facade_screen", "line", "neon", "banner"]);
     for (const s of ARENA_PANELS) {
@@ -110,7 +109,6 @@ describe("districts: launch link and street lanes", () => {
 
   it("lanes stay inside the picture", () => {
     for (const d of SCENE_DISTRICTS) {
-      if (!LANES[d].length) continue; // Арена: уличной жизни нет (умолчание PR 3)
       expect(LANES[d].length).toBeGreaterThan(0);
       for (const l of LANES[d]) {
         expect(l.y).toBeGreaterThan(0);
@@ -216,7 +214,7 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
     expect(port.every((l) => l.sprite)).toBe(true);
     expect(new Set(port.map((l) => l.sprite))).toEqual(new Set(["tram", "boat", "drone", "car"]));
     for (const l of port) {
-      const file = new URL(`../assets/districts/life/${l.sprite === "tram" || l.sprite === "boat" ? "port" : "rows"}-${l.sprite}.webp`, import.meta.url);
+      const file = new URL(`../assets/districts/life/${SPRITE_FILE[l.sprite!]}.webp`, import.meta.url);
       const { w, h } = webpSize(fs.readFileSync(file));
       expect(w / h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
       expect((l.w * ART_ASPECT) / l.h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
@@ -236,7 +234,7 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
     expect(rows.every((l) => l.sprite)).toBe(true);
     expect(new Set(rows.map((l) => l.sprite))).toEqual(new Set(["car", "drone", "walker"]));
     for (const l of rows) {
-      const file = new URL(`../assets/districts/life/rows-${l.sprite}.webp`, import.meta.url);
+      const file = new URL(`../assets/districts/life/${SPRITE_FILE[l.sprite!]}.webp`, import.meta.url);
       const { w, h } = webpSize(fs.readFileSync(file));
       expect(w / h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
       expect((l.w * ART_ASPECT) / l.h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
@@ -245,6 +243,27 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
     const walker = rows.find((l) => l.sprite === "walker")!;
     expect(walker.y + walker.h).toBeLessThan(0.93); // ноги на мостовой, не под ближним планом
     expect(walker.bob).toBeGreaterThan(0);
+  });
+
+  it("Арена street life: VIP shuttle and plaza spectator, matching their proportions", () => {
+    const arena = LANES.arena;
+    expect(arena.every((l) => l.sprite)).toBe(true);
+    expect(new Set(arena.map((l) => l.sprite))).toEqual(new Set(["shuttle", "spectator"]));
+    for (const l of arena) {
+      const file = new URL(`../assets/districts/life/${SPRITE_FILE[l.sprite!]}.webp`, import.meta.url);
+      const { w, h } = webpSize(fs.readFileSync(file));
+      expect(w / h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
+      expect((l.w * ART_ASPECT) / l.h).toBeCloseTo(SPRITE_ASPECT[l.sprite!], 1);
+      expect(fs.statSync(file).size).toBeLessThan(12 * 1024);
+    }
+    const shuttle = arena.find((l) => l.sprite === "shuttle")!;
+    expect(shuttle.y).toBeGreaterThan(0.0984); // ниже голо-баннера
+    expect(shuttle.y + shuttle.h).toBeLessThan(0.15);
+    expect(shuttle.bob).toBeUndefined();
+    const spectator = arena.find((l) => l.sprite === "spectator")!;
+    expect(spectator.y).toBeGreaterThanOrEqual(ARENA_GATES.y + ARENA_GATES.h); // ниже ворот и плашки «Вход»
+    expect(spectator.y + spectator.h).toBeLessThan(0.915); // выше полоски районов
+    expect(spectator.bob).toBeGreaterThan(0);
   });
 });
 
