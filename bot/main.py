@@ -1,6 +1,7 @@
 """
-Thin Telegram bot — /start + Mini App button.
-No business logic; all economy lives in FastAPI.
+Thin Telegram bot — /start + Mini App button, plus support-ticket
+handlers in the closed support chat (see support.py).
+No economy logic; that lives in FastAPI.
 """
 
 from __future__ import annotations
@@ -9,6 +10,7 @@ import asyncio
 import logging
 import os
 
+import httpx
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
@@ -19,6 +21,13 @@ from aiogram.types import (
 )
 from dotenv import load_dotenv
 
+from support import (
+    HTTP_TIMEOUT,
+    SupportConfig,
+    SupportHandlers,
+    TicketApi,
+    parse_support_chat_id,
+)
 from texts import text
 
 load_dotenv()
@@ -28,6 +37,8 @@ log = logging.getLogger("ton-nexus-bot")
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "").rstrip("/")
+API_BASE_URL = (os.getenv("API_BASE_URL") or "").strip().rstrip("/")
+SUPPORT_CHAT_ID = parse_support_chat_id(os.getenv("SUPPORT_CHAT_ID"))
 OWNER_IDS = {
     int(x.strip())
     for x in os.getenv("TELEGRAM_OWNER_IDS", "").split(",")
@@ -90,8 +101,23 @@ async def main() -> None:
     dp.message.register(cmd_help, Command("help"))
     dp.message.register(cmd_ping, Command("ping"))
 
-    log.info("starting thin bot; webapp=%s", WEBAPP_URL or "(not set)")
-    await dp.start_polling(bot)
+    cfg = SupportConfig(
+        chat_id=SUPPORT_CHAT_ID,
+        api_base=API_BASE_URL,
+        bot_token=BOT_TOKEN,
+    )
+    if SUPPORT_CHAT_ID is not None and not API_BASE_URL:
+        log.warning("[support] SUPPORT_CHAT_ID is set, but API_BASE_URL is empty; ticket buttons will not work")
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(HTTP_TIMEOUT)) as http:
+        SupportHandlers(cfg, TicketApi(cfg, http)).register(dp)
+        log.info(
+            "starting thin bot; webapp=%s support_chat=%s api=%s",
+            WEBAPP_URL or "(not set)",
+            SUPPORT_CHAT_ID if SUPPORT_CHAT_ID is not None else "(not set)",
+            API_BASE_URL or "(not set)",
+        )
+        await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
