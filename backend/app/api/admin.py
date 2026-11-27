@@ -154,3 +154,23 @@ async def owner_stats(
         "total_users": total or 0,
         "registrations_today": today or 0,
     }
+
+
+class SupportStatsOut(BaseModel):
+    open_count: int
+    answered_count: int
+    closed_count: int
+    total_count: int
+
+
+@router.get("/support/stats", response_model=SupportStatsOut)
+async def support_stats(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not is_platform_owner(user):
+        raise HTTPException(status_code=403, detail="owner only")
+    from app.services import support_tickets as tickets
+
+    return SupportStatsOut(**(await tickets.stats(db)))
+

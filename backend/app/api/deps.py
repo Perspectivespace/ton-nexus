@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,3 +62,18 @@ async def get_current_user(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+def require_bot(x_bot_token: str | None = Header(default=None, alias="X-Bot-Token")) -> None:
+    """Внутренние эндпоинты бота: заголовок X-Bot-Token должен совпадать с TELEGRAM_BOT_TOKEN.
+
+    Отдельного секрета в репозитории нет — бот и API уже делят один токен. Без токена в настройках
+    отвечаем 503, чтобы локальная среда без бота не путалась с ошибкой авторизации.
+    """
+    expected = (settings.telegram_bot_token or "").strip()
+    if not expected:
+        raise HTTPException(status_code=503, detail="bot token not configured")
+    given = (x_bot_token or "").strip()
+    if len(given) != len(expected) or not secrets.compare_digest(given.encode(), expected.encode()):
+        raise HTTPException(status_code=401, detail="bot auth required")
+
