@@ -5,7 +5,6 @@ import walkerUrl from "@/assets/districts/life/rows-walker.webp";
 import tramUrl from "@/assets/districts/life/port-tram.webp";
 import boatUrl from "@/assets/districts/life/port-boat.webp";
 import shuttleUrl from "@/assets/districts/life/arena-shuttle.webp";
-import camdroneUrl from "@/assets/districts/life/arena-drone.webp";
 import spectatorUrl from "@/assets/districts/life/arena-spectator.webp";
 
 /**
@@ -15,12 +14,12 @@ import spectatorUrl from "@/assets/districts/life/arena-spectator.webp";
  * без «меньше движения». Элементы живут внутри слоя улицы и едут вместе с ним (параллакс).
  * Финальные районы — нарисованные спрайты: «Неон-ряды» — ховер-кар, дрон-курьер, прохожий под зонтом
  * (шаг — лёгкое покачивание в том же разовом прогоне); «Порт» — небо-трамвай по эстакаде, катер по каналу, дрон и ховер-кар;
- * «Арена» — ВИП-шаттл в верхнем небе, дрон трансляции у кольца, зритель по площади перед воротами.
+ * «Арена» — ВИП-шаттл в верхнем небе и зритель по площади перед воротами.
  * Трасса с участком пути (lane.x) — едет только по нему и проявляется/гаснет на его концах.
  */
 export const SPRITES: Record<Sprite, string> = {
   car: carUrl, drone: droneUrl, walker: walkerUrl, tram: tramUrl, boat: boatUrl,
-  shuttle: shuttleUrl, camdrone: camdroneUrl, spectator: spectatorUrl,
+  shuttle: shuttleUrl, spectator: spectatorUrl,
 };
 
 /**

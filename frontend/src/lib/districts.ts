@@ -205,9 +205,9 @@ export function districtFromStart(startParam: string | null | undefined): SceneD
  * x — участок пути (доли ширины рисунка: откуда и докуда), если едет не через всю улицу: трамвай — только по эстакаде,
  * катер — только по воде; на концах участка проявляется и гаснет.
  */
-export type Sprite = "car" | "drone" | "walker" | "tram" | "boat" | "shuttle" | "camdrone" | "spectator";
+export type Sprite = "car" | "drone" | "walker" | "tram" | "boat" | "shuttle" | "spectator";
 export type Lane = {
-  kind: "car" | "tram" | "boat" | "drone" | "walker" | "shuttle" | "camdrone" | "spectator";
+  kind: "car" | "tram" | "boat" | "drone" | "walker" | "shuttle" | "spectator";
   y: number;
   w: number;
   h: number;
@@ -224,7 +224,6 @@ export const SPRITE_ASPECT: Record<Sprite, number> = {
   tram: 4.528,
   boat: 2.8,
   shuttle: 5.106,
-  camdrone: 3.491,
   spectator: 0.579,
 };
 /** имя файла в src/assets/districts/life (без расширения) */
@@ -235,7 +234,6 @@ export const SPRITE_FILE: Record<Sprite, string> = {
   tram: "port-tram",
   boat: "port-boat",
   shuttle: "arena-shuttle",
-  camdrone: "arena-drone",
   spectator: "arena-spectator",
 };
 const sized = (sprite: Sprite, y: number, w: number, dur: [number, number], bob?: number, x?: [number, number]): Lane => ({
@@ -252,7 +250,6 @@ const sized = (sprite: Sprite, y: number, w: number, dur: [number, number], bob?
 export const LANES: Record<SceneDistrict, Lane[]> = {
   arena: [
     sized("shuttle", 0.11, 0.082, [12000, 16000]), // ВИП-шаттл в верхнем небе, сразу под голо-баннером
-    sized("camdrone", 0.175, 0.058, [10000, 14000], 0.1), // дрон трансляции у голо-кольца, лёгкое покачивание
     sized("spectator", 0.836, 0.0305, [18000, 24000], 0.02), // зритель по площади: ниже «Вход», выше полоски районов
   ],
   rows: [

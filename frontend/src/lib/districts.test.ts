@@ -245,10 +245,10 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
     expect(walker.bob).toBeGreaterThan(0);
   });
 
-  it("Арена street life: VIP shuttle, broadcast drone and plaza spectator, matching their proportions", () => {
+  it("Арена street life: VIP shuttle and plaza spectator, matching their proportions", () => {
     const arena = LANES.arena;
     expect(arena.every((l) => l.sprite)).toBe(true);
-    expect(new Set(arena.map((l) => l.sprite))).toEqual(new Set(["shuttle", "camdrone", "spectator"]));
+    expect(new Set(arena.map((l) => l.sprite))).toEqual(new Set(["shuttle", "spectator"]));
     for (const l of arena) {
       const file = new URL(`../assets/districts/life/${SPRITE_FILE[l.sprite!]}.webp`, import.meta.url);
       const { w, h } = webpSize(fs.readFileSync(file));
@@ -260,10 +260,6 @@ describe("districts: final «Неон-ряды» — ad surfaces and street life
     expect(shuttle.y).toBeGreaterThan(0.0984); // ниже голо-баннера
     expect(shuttle.y + shuttle.h).toBeLessThan(0.15);
     expect(shuttle.bob).toBeUndefined();
-    const drone = arena.find((l) => l.sprite === "camdrone")!;
-    expect(drone.y).toBeGreaterThanOrEqual(0.15);
-    expect(drone.y + drone.h).toBeLessThanOrEqual(0.23);
-    expect(drone.bob).toBeGreaterThan(0);
     const spectator = arena.find((l) => l.sprite === "spectator")!;
     expect(spectator.y).toBeGreaterThanOrEqual(ARENA_GATES.y + ARENA_GATES.h); // ниже ворот и плашки «Вход»
     expect(spectator.y + spectator.h).toBeLessThan(0.915); // выше полоски районов
