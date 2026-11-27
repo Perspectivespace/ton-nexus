@@ -15,8 +15,10 @@ import {
   tonToNano,
   unshownDays,
   AD_DISTRICTS,
+  buyableSpots,
   districtOfSpot,
   isAdDistrict,
+  isPosterSpot,
   spotName,
   SPOT_SHORT,
 } from "./cityAdBuy";
@@ -125,5 +127,20 @@ describe("районы мест", () => {
     expect(districtOfSpot(null)).toBe("centre");
     expect(SPOT_SHORT.arena_line).toBe("Строка вдоль кольца");
     expect(spotName("arena_facade", "Экран на фасаде чаши", "arena")).toBe("Арена · Экран на фасаде чаши");
+  });
+});
+
+describe("афиша не продаётся", () => {
+  it("arena_facade is a poster-only spot and is hidden from the buy list even if on_sale is still true", () => {
+    expect(isPosterSpot("arena_facade")).toBe(true);
+    expect(isPosterSpot("arena_line")).toBe(false);
+    expect(isPosterSpot("rows_facade")).toBe(false);
+    const spots = [
+      { key: "arena_facade", on_sale: true },
+      { key: "arena_line", on_sale: true },
+      { key: "arena_neon", on_sale: false },
+      { key: "arena_banner", on_sale: true },
+    ];
+    expect(buyableSpots(spots).map((s) => s.key)).toEqual(["arena_line", "arena_banner"]);
   });
 });

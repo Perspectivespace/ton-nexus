@@ -395,16 +395,19 @@ describe("покупка в районах (PR 6)", () => {
     expect(calls.filter((c) => c.path.endsWith("/quote")).at(-1)!.body).toMatchObject({ spot: "port_line", district: "port" });
   });
 
-  it("выбор района: Арена — четыре места на рисунке «Чаши»; ?spot=arena_line выбирает строку вдоль кольца", async () => {
+  it("выбор района: Арена — три продаваемых места; фасад — афиша, не в списке покупки; ?spot=arena_line выбирает строку", async () => {
     await render(<CityAds />, "/ads?district=arena&spot=arena_line");
     expect(btn("Арена").getAttribute("aria-checked")).toBe("true");
     expect(document.querySelector('.cab-dz[data-district="arena"]')).not.toBeNull();
+    expect(document.querySelector('.cab-slot[data-spot="arena_facade"]')).toBeNull();
+    expect(document.querySelector('.dz-poster[data-spot="arena_facade"]')?.textContent).toContain("Афиша Арены");
+    expect(document.querySelectorAll(".cab-slot")).toHaveLength(3);
     expect(document.querySelector('.cab-slot[data-spot="arena_banner"]')?.classList.contains("s-badge-below")).toBe(true);
     expect(document.querySelector('.cab-slot[data-spot="arena_line"]')?.classList.contains("s-badge-below")).toBe(false);
     expect(document.querySelectorAll(".cab-slot.s-badge-below")).toHaveLength(1);
     expect(calls.some((c) => c.path === "/api/v1/city-ads?district=arena")).toBe(true);
     expect(btn(/Бегущая строка вдоль кольца/).getAttribute("aria-checked")).toBe("true");
-    expect(btn(/Экран на фасаде чаши/).textContent).toContain("1.5 TON");
+    expect(btn(/Экран на фасаде чаши/)).toBeUndefined();
     expect(btn(/Голо-баннер над площадью/).textContent).toContain("0.5 TON");
     expect(btn(/Неоновая вывеска над воротами/).textContent).toContain("0.3 TON");
     await click(btn("Выбрать даты"));

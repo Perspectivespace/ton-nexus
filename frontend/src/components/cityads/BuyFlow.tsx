@@ -15,6 +15,8 @@ import { Button, Field, Panel, Sheet, Tag } from "@/components/ui";
 import { AD_PALETTE, adVars } from "@/lib/cityAdPalette";
 import { haptic } from "@/lib/haptics";
 import {
+  buyableSpots,
+  isPosterSpot,
   COLOR_RU,
   AD_DISTRICTS,
   AD_DISTRICT_RU,
@@ -91,7 +93,7 @@ export function BuyFlow({
   onLocked: () => void;
   onDone: () => void;
 }) {
-  const sale = board.spots.filter((s) => s.on_sale);
+  const sale = buyableSpots(board.spots);
   const tomorrow = addDays(board.day, 1);
   const minDays = board.min_days ?? 1;
   const maxDays = board.max_days ?? 30;
@@ -486,7 +488,7 @@ function SpotStep({
   onPick: (k: string) => void;
   sign: PlaceSign | null;
 }) {
-  const spots = board.spots;
+  const spots = board.spots.filter((s) => !isPosterSpot(s.key));
   const none = !spots.some((s) => s.on_sale);
   const slots: SceneSlot[] = spots.map((s, i) => ({
     key: s.key,

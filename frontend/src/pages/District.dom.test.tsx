@@ -30,8 +30,19 @@ const m = vi.hoisted(() => ({
       prices?: Record<string, string>;
     };
   },
+  lobby: {
+    data: undefined as
+      | {
+          types: { type: string; seats: number; board: number; stake_nano: string; prizes_nano: string[]; pot_nano: string; commission_bps: number; waiting: number }[];
+          active_room_id: number | null;
+          server_time: string;
+        }
+      | undefined,
+    isError: false,
+  },
 }));
 vi.mock("@/api/hooks", () => ({ useMe: () => m.me, useDistrictAds: () => m.ads, sendCityAdEvent: m.event, useCitySignal: () => ({ data: m.signal }) }));
+vi.mock("@/lib/arena/hooks", () => ({ useArenaLobby: () => m.lobby }));
 vi.mock("@/lib/districtAssets", () => ({ loadDistrict: m.load, preloadWhenIdle: () => () => {} }));
 vi.mock("@/lib/districtLife", () => ({ startDistrictLife: m.life }));
 vi.mock("@/lib/cityPhase", () => ({ useCityPhase: () => ({ phase: m.phase, upcoming: null }) }));
@@ -72,6 +83,14 @@ beforeEach(() => {
   m.me = { data: { is_owner: true }, isLoading: false };
   m.phase = "night";
   m.signal = undefined;
+  m.lobby = {
+    data: {
+      types: [{ type: "a4", seats: 4, board: 9, stake_nano: "100000000", prizes_nano: ["360000000"], pot_nano: "400000000", commission_bps: 1000, waiting: 0 }],
+      active_room_id: null,
+      server_time: "2026-11-27T12:00:00Z",
+    },
+    isError: false,
+  };
   m.ads = {
     data: {
       spots: [
@@ -266,7 +285,16 @@ describe("district screen", () => {
     expect(el.querySelector(".ss-holo")).toBeNull();
     const idle = [...el.querySelectorAll<HTMLElement>(".dz-mid .dz-idle")];
     expect(idle.map((n) => n.dataset.spot)).toEqual(["arena_facade", "arena_line", "arena_neon", "arena_banner"]);
-    expect(el.querySelectorAll(".dz-mid .dz-hit")).toHaveLength(4);
+    expect(idle[0].classList.contains("dz-poster")).toBe(true);
+    expect(idle[0].querySelector(".t")?.textContent).toBe("Арена ждёт бойцов");
+    expect([...el.querySelectorAll<HTMLElement>(".dz-mid .dz-hit")].map((n) => [n.dataset.spot, n.dataset.kind])).toEqual([
+      ["arena_facade", "poster"],
+      ["arena_line", "buy"],
+      ["arena_neon", "buy"],
+      ["arena_banner", "buy"],
+      ["arena_gate", "enter"],
+    ]);
+    expect(el.querySelector(".az-gate-plate")?.textContent).toBe("Вход");
   });
 
   it("arena lite: one flat picture", async () => {
@@ -338,19 +366,22 @@ describe("district: idle promo on free ad spots (Неон-ряды)", () => {
     expect(idle[0].textContent).toBe("Место для рекламы · от 1 TON/сутки");
   });
 
-  it("Арена: the 4 free spots show promo; the ring ticker and sky banner sit in the street layer", async () => {
+  it("Арена: facade is the event poster, the other 3 free spots still show promo", async () => {
     m.ads = { data: { spots: [], prices: { facade_screen: "1.5", line: "1", banner: "0.5", neon: "0.3" } } };
     await render("/district?d=arena");
     const idle = [...el.querySelectorAll<HTMLElement>(".dz-mid .dz-idle")];
     expect(idle.map((n) => n.dataset.spot)).toEqual(["arena_facade", "arena_line", "arena_neon", "arena_banner"]);
     expect(idle.map((n) => n.className.split(" ")[1])).toEqual(["k-facade_screen", "k-line", "k-neon", "k-banner"]);
     expect(idle.every((n) => n.style.transform === "")).toBe(true);
-    expect(idle[0].querySelector(".t")?.textContent).toBe("Место для рекламы");
-    expect(idle[0].querySelector(".p")?.textContent).toBe("от 1,5 TON/сутки");
+    expect(idle[0].classList.contains("dz-poster")).toBe(true);
+    expect(idle[0].querySelector(".tag")?.textContent).toBe("Арена");
+    expect(idle[0].querySelector(".t")?.textContent).toBe("Арена ждёт бойцов");
+    expect(idle[0].querySelector(".p")?.textContent).toBe("от 0.1 TON");
     expect(idle[1].textContent).toBe("Место для рекламы · от 1 TON/сутки");
     expect(idle[2].textContent).toBe("Засветись тут");
     expect(idle[3].textContent).toBe("Засветись тут");
     expect(el.querySelector(".ss-holo")).toBeNull();
+    expect(el.querySelector(".az-gate-k")?.textContent).toBe("Вход");
   });
 
   it("low-end: promo stays on the flattened image, still (first slogan, no rotation)", async () => {
@@ -499,13 +530,66 @@ describe("district: taps on ad spots (PR 6b)", () => {
       },
     };
     await render("/district?d=arena");
-    expect(hit("arena_facade").dataset.kind).toBe("ad");
+    // даже если на фасаде ещё висит старое объявление — это афиша, не реклама и не покупка
+    expect(hit("arena_facade").dataset.kind).toBe("poster");
+    expect(el.querySelector('.dz-poster[data-spot="arena_facade"]')?.textContent).toContain("Арена ждёт бойцов");
+    expect(el.querySelector('.dz-poster[data-spot="arena_facade"]')?.textContent).not.toContain("ARENA CUP");
     expect(hit("arena_line").dataset.kind).toBe("buy");
     expect(hit("arena_line").style.left).toBe("37.85%");
     await tap(hit("arena_line"));
     expect(path).toBe("/ads");
     expect(new URLSearchParams(search).get("district")).toBe("arena");
     expect(new URLSearchParams(search).get("spot")).toBe("arena_line");
+  });
+
+  it("Арена: tapping the facade poster goes to /arena, not to ad buying", async () => {
+    m.lobby.data!.types[0].waiting = 3;
+    m.ads = {
+      data: {
+        spots: [
+          { key: "arena_facade", price_day: "1.5", on_sale: false, ad: null },
+          { key: "arena_line", price_day: "1", on_sale: true, ad: null },
+          { key: "arena_neon", price_day: "0.3", on_sale: true, ad: null },
+          { key: "arena_banner", price_day: "0.5", on_sale: true, ad: null },
+        ],
+      },
+    };
+    await render("/district?d=arena");
+    expect(el.querySelector(".dz-poster .t")?.textContent).toBe("3 ждут бой");
+    expect(el.querySelector(".dz-poster .p")?.textContent).toBe("от 0.1 TON");
+    await tap(hit("arena_facade"));
+    expect(path).toBe("/arena");
+    expect(search).toBe("");
+  });
+
+  it("Арена: tapping the gates opens the entry sheet with play, history and the live queue", async () => {
+    m.lobby.data!.types[0].waiting = 3;
+    await render("/district?d=arena");
+    expect(el.querySelector(".az-entry")).toBeNull();
+    await tap(hit("arena_gate"));
+    const sheet = el.querySelector(".az-entry")!;
+    expect(sheet.querySelector("#az-entry-title")?.textContent).toBe("Арена");
+    expect(sheet.querySelector(".cc-sub")?.textContent).toContain("3 в очереди");
+    const links = [...sheet.querySelectorAll("a")].map((a) => [a.getAttribute("href"), a.textContent]);
+    expect(links).toEqual([
+      ["/arena", "В бой"],
+      ["/arena/history", "История боёв"],
+    ]);
+  });
+
+  it("Арена: closed lobby hides the queue and keeps history in the gate sheet", async () => {
+    m.lobby = { data: undefined, isError: true };
+    await render("/district?d=arena");
+    expect(el.querySelector(".dz-poster .tag")?.textContent).toBe("Арена");
+    expect(el.querySelector(".dz-poster .t")?.textContent).toBe("Скоро откроем");
+    expect(el.querySelector(".dz-poster .p")).toBeNull();
+    expect(hit("arena_facade").getAttribute("aria-label")).toBe("Афиша Арены. Сейчас закрыта");
+    await tap(hit("arena_gate"));
+    const sheet = el.querySelector(".az-entry")!;
+    expect(sheet.textContent).toContain("«Арена» пока закрыта");
+    expect(sheet.textContent).toContain("История боёв по-прежнему доступна.");
+    expect(sheet.querySelector('a[href="/arena"]')).toBeNull();
+    expect(sheet.querySelector('a[href="/arena/history"]')?.textContent).toBe("История боёв");
   });
 });
 

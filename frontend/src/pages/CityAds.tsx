@@ -9,7 +9,7 @@ import { PlaceScene } from "@/components/cityads/DistrictAdScene";
 import { BuyFlow } from "@/components/cityads/BuyFlow";
 import { MyAds } from "@/components/cityads/MyAds";
 import { useScreenBack } from "@/lib/backButton";
-import { districtOfSpot, isAdDistrict, spotTitle, tonToNano, ton, type AdDistrict } from "@/lib/cityAdBuy";
+import { buyableSpots, isPosterSpot, districtOfSpot, isAdDistrict, spotTitle, tonToNano, ton, type AdDistrict } from "@/lib/cityAdBuy";
 import "@/styles/city-ads-buy.css";
 import { t, tp } from "@/i18n";
 
@@ -102,11 +102,13 @@ export function CityAds() {
 
 function Locked({ board, me, district }: { board: CityAdsBoard; me: MeOut; district: AdDistrict }) {
   const need = board.min_level ?? 1;
-  const cheapest = board.spots
-    .filter((s) => s.on_sale && s.price_day)
+  const listed = board.spots.filter((s) => !isPosterSpot(s.key));
+  const sale = buyableSpots(listed);
+  const cheapest = sale
+    .filter((s) => s.price_day)
     .reduce((m, s) => Math.min(m, tonToNano(s.price_day)), Infinity);
-  const onSale = board.spots.filter((s) => s.on_sale).length;
-  const slots: SceneSlot[] = board.spots.map((s, i) => ({ key: s.key, n: i + 1, state: s.on_sale ? "free" : "off", label: spotTitle(s.key, s.title) }));
+  const onSale = sale.length;
+  const slots: SceneSlot[] = listed.map((s, i) => ({ key: s.key, n: i + 1, state: s.on_sale ? "free" : "off", label: spotTitle(s.key, s.title) }));
   return (
     <div className="space-y-3">
       <PlaceScene district={district} slots={slots} className="cab-dim" label={t("ad.sceneAria")}>

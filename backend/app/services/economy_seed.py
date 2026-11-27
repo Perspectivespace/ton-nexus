@@ -109,7 +109,7 @@ DEFAULTS: dict[str, tuple[object, str]] = {
                 "port_banner_tram": {"enabled": True},
                 "port_neon": {"enabled": True},
                 # Арена-дистрикт: цена — по типу места; продаются сразу (миграция 030)
-                "arena_facade": {"enabled": True},
+                "arena_facade": {"enabled": False},  # афиша Арены, не продаётся (PR 5)
                 "arena_line": {"enabled": True},
                 "arena_neon": {"enabled": True},
                 "arena_banner": {"enabled": True},
