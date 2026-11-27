@@ -6,6 +6,7 @@ from app.models.integrity import IntegrityEvent
 from app.models.miner import Miner, MinerUpgradeLog
 from app.models.promo import DailyCheckIn, PromoCode, PromoRedemption
 from app.models.secret_promo import PromoFailedAttempt, SecretPromoAppearance, SecretPromoCampaign, SecretPromoClaim
+from app.models.support_ticket import SupportTicket
 from app.models.task import Task, TaskOwnerAction, TaskProof, TaskPurchase, TaskSubmission
 from app.models.client_error import ClientError
 from app.models.city_ad import CityAd, CityAdDay, CityAdEvent, CityAdImage, CityAdSpot
@@ -55,6 +56,7 @@ __all__ = [
     "SecretPromoCampaign",
     "SecretPromoAppearance",
     "SecretPromoClaim",
+    "SupportTicket",
     "PromoFailedAttempt",
     "DailyCheckIn",
     "WithdrawRequest",

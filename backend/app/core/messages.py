@@ -228,7 +228,15 @@ EN: dict[str, str] = {
     "Меньше минимума": "Below minimum",
     "Заявка #{id}": "Request #{id}",
     "Заявка #{id} отклонена": "Request #{id} rejected",
+    # ── тикеты поддержки ──
+    "Текст обращения: от 5 до 2000 символов": "Support message: 5 to 2000 characters",
+    "Неизвестная категория обращения": "Unknown support category",
+    "Подождите 3 минуты перед новым обращением": "Please wait 3 minutes before sending another ticket",
+    "Слишком много обращений за сутки — попробуйте завтра": "Too many tickets today, try again tomorrow",
+    "Текст ответа: от 1 до 4000 символов": "Reply text: 1 to 4000 characters",
+    "Игрок не найден": "Player not found",
 }
+
 
 CATALOGS: dict[str, dict[str, str]] = {"en": EN}
 

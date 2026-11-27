@@ -52,11 +52,26 @@ class Settings(BaseSettings):
     # а если туда нельзя писать — ~/.local/state/ton-nexus/proofs пользователя API.
     proof_upload_dir: str = ""
 
+    # Закрытый Telegram-чат для тикетов поддержки. Пусто — тикет сохраняется, в чат не уходит.
+    support_chat_id: int | None = None
+
     @field_validator("database_url", mode="before")
     @classmethod
     def _fix_db_url(cls, v: object) -> object:
         if isinstance(v, str):
             return normalize_database_url(v)
+        return v
+
+    @field_validator("support_chat_id", mode="before")
+    @classmethod
+    def _parse_support_chat_id(cls, v: object) -> object:
+        if v is None or v == "":
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return None
+            return int(s)
         return v
 
 
