@@ -18,8 +18,8 @@ export function ArenaPoster({
 }) {
   const stake = model.stakeNano ? t("poster.stakeFrom", { stake: fmtTon(model.stakeNano) }) : null;
   const title =
-    model.kind === "closed" ? t("poster.closedTitle") : model.kind === "queue" ? tp("poster.waiting", model.waiting) : t("poster.openTitle");
-  const sub = model.kind === "closed" ? t("poster.closedSub") : stake ?? (model.kind === "open" ? t("poster.openSub") : null);
+    model.kind === "closed" ? t("poster.closedSub") : model.kind === "queue" ? tp("poster.waiting", model.waiting) : t("poster.openTitle");
+  const sub = model.kind === "closed" ? null : stake ?? (model.kind === "open" ? t("poster.openSub") : null);
   return (
     <div
       className={`dz-idle k-facade_screen dz-poster${still ? " still" : ""}${model.kind === "closed" ? " is-closed" : ""}`}

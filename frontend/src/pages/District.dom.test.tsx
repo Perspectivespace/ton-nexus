@@ -580,8 +580,9 @@ describe("district: taps on ad spots (PR 6b)", () => {
   it("Арена: closed lobby hides the queue and keeps history in the gate sheet", async () => {
     m.lobby = { data: undefined, isError: true };
     await render("/district?d=arena");
-    expect(el.querySelector(".dz-poster .t")?.textContent).toBe("Арена");
-    expect(el.querySelector(".dz-poster .p")?.textContent).toBe("Скоро откроем");
+    expect(el.querySelector(".dz-poster .tag")?.textContent).toBe("Арена");
+    expect(el.querySelector(".dz-poster .t")?.textContent).toBe("Скоро откроем");
+    expect(el.querySelector(".dz-poster .p")).toBeNull();
     expect(hit("arena_facade").getAttribute("aria-label")).toBe("Афиша Арены. Сейчас закрыта");
     await tap(hit("arena_gate"));
     const sheet = el.querySelector(".az-entry")!;

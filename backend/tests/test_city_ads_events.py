@@ -87,7 +87,7 @@ class Events(unittest.TestCase):
         Все места города × 3 вида событий за сутки помещаются в дневной потолок одного человека."""
 
         async def body(s):
-            live = [await _live_ad(s, spot=k) for k in ads.SPOT_KEYS]
+            live = [await _live_ad(s, spot=k) for k in ads.SPOT_KEYS if k not in ads.POSTER_SPOTS]
             u = await _user(s)
             got = [
                 await ads.record_event(s, user=u, ad_id=ad.id, kind=k, today=D(1)) for ad in live for k in ("impression", "open", "click")
@@ -102,7 +102,7 @@ class Events(unittest.TestCase):
             for ad in live:
                 d = spots[ad.spot_id].district
                 by_district[d] = by_district.get(d, 0) + counts[ad.id]["click"]
-            self.assertEqual(by_district, {"centre": 5, "rows": 4, "port": 4, "arena": 4})
+            self.assertEqual(by_district, {"centre": 5, "rows": 4, "port": 4, "arena": 3})
 
         _run(body)
 
