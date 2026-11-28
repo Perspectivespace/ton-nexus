@@ -15,7 +15,14 @@ from app.models.deposit import TonDeposit
 from app.models.user import User
 from app.services.economy import get_setting
 from app.services.roles import is_admin, is_platform_owner
-from app.services.ton_deposits import DepositError, assign_manual, ensure_memo, poll_if_due
+from app.services.ton_deposits import (
+    MAX_DEPOSIT_TON,
+    DepositError,
+    assign_manual,
+    deposits_enabled,
+    ensure_memo,
+    poll_if_due,
+)
 from app.services.ton_wallet import WalletError, normalize_address
 from pytoniq_core import begin_cell
 
@@ -47,7 +54,7 @@ async def info(user: User = Depends(get_current_user), db: AsyncSession = Depend
     memo = await ensure_memo(db, user)
     await db.commit()
     return {
-        "enabled": bool(cfg.get("enabled", False)) and bool(cfg.get("project_address")),
+        "enabled": deposits_enabled(cfg),
         "project_address": _friendly(cfg.get("project_address", ""), network),
         "memo": memo,
         "min_ton": str(cfg.get("min_ton", "0.1")),
@@ -58,7 +65,7 @@ async def info(user: User = Depends(get_current_user), db: AsyncSession = Depend
 @router.get("/tx-payload")
 async def tx_payload(amount: str = "1", user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     cfg = await get_setting(db, "ton_deposits") or {}
-    if not cfg.get("enabled") or not cfg.get("project_address"):
+    if not deposits_enabled(cfg):
         raise HTTPException(status_code=400, detail="Пополнение временно недоступно")
     try:
         amt = Decimal(amount.strip().replace(",", "."))
@@ -71,7 +78,7 @@ async def tx_payload(amount: str = "1", user: User = Depends(get_current_user), 
     min_ton = Decimal(str(cfg.get("min_ton", "0.1")))
     if amt < min_ton:
         raise HTTPException(status_code=400, detail=f"Минимум {min_ton} TON")
-    if amt > Decimal("10000"):
+    if amt > MAX_DEPOSIT_TON:
         raise HTTPException(status_code=400, detail="Сумма слишком большая")
     network = await _network(db)
     memo = await ensure_memo(db, user)

@@ -8,6 +8,7 @@ from app.api.client_errors import router as client_errors_router
 from app.api.deploy import router as deploy_router
 from app.api.economy import router as economy_router
 from app.api.engagement import router as engagement_router
+from app.api.help import router as help_router
 from app.api.integrity import router as integrity_router
 from app.api.me import router as me_router
 from app.api.miner import router as miner_router
@@ -33,6 +34,7 @@ api_router.include_router(wallet_router)
 api_router.include_router(deposits_router)
 api_router.include_router(balance_router)
 api_router.include_router(engagement_router)
+api_router.include_router(help_router)
 api_router.include_router(tower_router)
 api_router.include_router(ratings_router)
 api_router.include_router(arena_router)
